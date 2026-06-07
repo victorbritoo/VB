@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="VB">
+<meta name="theme-color" content="#f5f5f3">
+<title>VB</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:32px 36px 40px;}
+input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
+.vb-screen{display:none;min-height:100vh;}
+/* === FINANCIAMENTOS === */
+
+  input::placeholder { color: #ccc; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  .card { background: #f5f5f3; width: 100%; max-width: 390px; margin: 0 auto; padding: 32px 36px 40px; }
+  .logo { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: #111; line-height: 1; margin-bottom: 6px; margin-left: 10px; }
+  .simulacao-label { font-size: 11px; letter-spacing: 5px; color: #888; margin-bottom: 6px; font-weight: 500; margin-left: 10px; }
+  .divider { border: none; border-top: 0.5px solid #ccc; margin-bottom: 14px; }
+  .field-card { background: #fff; border-radius: 14px; padding: 18px 20px; margin-bottom: 6px; border: 0.5px solid #e0e0e0; }
+  .field-label { font-size: 10px; letter-spacing: 2.5px; color: #999; margin-bottom: 6px; font-weight: 500; }
+  .valor-row { display: flex; align-items: baseline; gap: 4px; }
+  .valor-prefix { font-size: 18px; color: #aaa; font-weight: 500; }
+  input[type="text"], input[type="number"] { border: none; background: transparent; outline: none; color: #111; font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 700; -webkit-appearance: none; }
+  .input-big { font-size: 32px; width: 100%; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 0; }
+  .col-item { padding: 4px 0; }
+  .col-icon { width: 24px; height: 24px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: #555; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
+  .col-label { font-size: 9px; letter-spacing: 2px; color: #999; margin-bottom: 1px; font-weight: 500; }
+  .input-mid { font-size: 15px; width: 100%; font-weight: 300; }
+  .col-sub { font-size: 9px; letter-spacing: 2px; color: #bbb; margin-top: 1px; font-weight: 500; }
+  .result-card { background: #fff; border-radius: 14px; padding: 22px 20px; margin-bottom: 6px; border: 0.5px solid #e0e0e0; text-align: center; }
+  .result-label { font-size: 10px; letter-spacing: 3px; color: #999; margin-bottom: 6px; font-weight: 500; }
+  .result-accent { width: 26px; height: 2px; background: #c9a84c; margin: 0 auto 14px; }
+  .result-value { font-size: 46px; font-weight: 700; color: #111; letter-spacing: -1px; line-height: 1; }
+  .result-prefix { font-size: 22px; font-weight: 400; }
+  .total-row { background: #fff; border-radius: 14px; border: 0.5px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; margin-bottom: 6px; }
+  .total-label { font-size: 10px; letter-spacing: 2.5px; color: #999; font-weight: 500; }
+  .total-value { font-size: 17px; font-weight: 700; color: #111; }
+  .logo-bottom { text-align: right; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 400; letter-spacing: 1px; color: #111; margin-right: 10px; }
+  .error { font-size: 12px; color: #c00; text-align: center; padding: 4px 0; display: none; margin-bottom: 6px; }
+
+
+  @media print {
+    body > * { display: none !important; }
+    #fin-overlayTabela { display: block !important; position: static !important; overflow: visible !important; padding: 16px !important; }
+    #tabelaBtns, #fin-tabelaHint { display: none !important; }
+    * { -webkit-print-color-adjust: exact; color-adjust: exact; }
+  }
+  #fin-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #f5f5f3;
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 36px;
+  }
+  #fin-overlay.show { display: flex; }
+
+  #fin-overlayCard {
+    background: #f5f5f3;
+    width: 100%;
+    max-width: 390px;
+  }
+  .ov-logo { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: #111; margin-bottom: 6px; margin-left: 4px; margin-top: 32px; }
+  .ov-sub { font-size: 11px; letter-spacing: 5px; color: #888; font-weight: 500; margin-bottom: 6px; margin-left: 4px; }
+  .ov-divider { border: none; border-top: 0.5px solid #ccc; margin-bottom: 18px; }
+  .ov-card { background: #fff; border-radius: 14px; padding: 16px 20px; margin-bottom: 6px; border: 0.5px solid #e0e0e0; }
+  .ov-label { font-size: 10px; letter-spacing: 2.5px; color: #999; margin-bottom: 6px; font-weight: 500; }
+  .ov-row { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+  .ov-prefix { font-size: 18px; font-weight: 500; color: #aaa; }
+  .ov-big { font-size: 32px; font-weight: 700; color: #111; letter-spacing: -1px; }
+  .ov-accent { width: 26px; height: 2px; background: #c9a84c; margin: 0 auto 12px; }
+  .ov-prestacao-big { font-size: 46px; font-weight: 700; color: #111; letter-spacing: -1px; }
+  .ov-two { display: grid; grid-template-columns: 1fr 1fr; }
+  .ov-half { padding: 8px 0; }
+  .ov-half:last-child { padding-left: 16px; border-left: 0.5px solid #e0e0e0; }
+  .ov-hlabel { font-size: 9px; letter-spacing: 2px; color: #aaa; font-weight: 500; margin-bottom: 2px; }
+  .ov-hval { font-size: 20px; font-weight: 700; color: #111; }
+  .ov-hsub { font-size: 9px; letter-spacing: 2px; color: #aaa; font-weight: 500; margin-top: 1px; }
+  .ov-total { background: #fff; border-radius: 14px; border: 0.5px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; margin-bottom: 6px; }
+  .ov-tlabel { font-size: 10px; letter-spacing: 2.5px; color: #999; font-weight: 500; }
+  .ov-tval { font-size: 17px; font-weight: 700; color: #111; }
+  .ov-hint { font-size: 11px; letter-spacing: 1px; color: #bbb; text-align: center; margin-top: 20px; font-weight: 400; }
+  .ov-close { margin-top: 14px; width: 100%; padding: 13px; border: 0.5px solid #ddd; border-radius: 14px; background: #fff; font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size: 12px; letter-spacing: 2px; color: #aaa; font-weight: 500; cursor: pointer; max-width: 390px; }
+
+/* === ANTECIPAÇÃO === */
+
+  input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  
+  .card{background:#f5f5f3;width:100%;max-width:390px}
+  .logo{font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;margin-bottom:4px;margin-left:10px}
+  .sub{font-size:11px;letter-spacing:5px;color:#888;margin-bottom:6px;font-weight:500;margin-left:10px}
+  .hr{border:none;border-top:0.5px solid #ccc;margin-bottom:14px}
+  .fc{background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:6px;border:0.5px solid #e0e0e0}
+  .fl{font-size:10px;letter-spacing:2.5px;color:#999;margin-bottom:6px;font-weight:500;text-align:center}
+  .vrow{display:flex;align-items:baseline;justify-content:center;gap:4px}
+  .pfx{font-size:18px;color:#aaa;font-weight:500}
+  input{border:none;background:transparent;outline:none;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;font-weight:700;-webkit-appearance:none}
+  .ibig{font-size:32px;width:100%;text-align:center}
+  .rc{background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:6px;border:0.5px solid #e0e0e0;text-align:center}
+  .gold{width:26px;height:2px;background:#c9a84c;margin:6px auto 10px}
+  .twocol{display:grid;grid-template-columns:1fr 1fr}
+  .ch{padding:4px 16px;text-align:center}
+  .ch:last-child{border-left:0.5px solid #e0e0e0}
+  .cl{font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px}
+  .cs{font-size:9px;letter-spacing:2px;color:#bbb;margin-top:1px;font-weight:500}
+  .mg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+  .mc{background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:12px 14px;text-align:center}
+  .ml{font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px}
+  .mv{font-size:14px;font-weight:700;color:#111}
+  .ts{background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:16px 20px;margin-bottom:6px}
+  #ant-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:9999;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 36px;overflow-y:auto}
+  #ant-overlay.show{display:flex}
+  #ant-overlayCard{background:#f5f5f3;width:100%;max-width:390px}
+  .ol{font-family:Georgia,serif;font-size:32px;font-weight:400;color:#111;margin-bottom:4px;margin-left:4px;margin-top:32px}
+  .os{font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;margin-left:4px}
+  .od{border:none;border-top:0.5px solid #ccc;margin-bottom:6px}
+  .oc{background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:6px;border:0.5px solid #e0e0e0}
+  .or{display:flex;justify-content:space-between;align-items:center;padding:4px 0}
+  .olk{font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500}
+  .ov{font-size:14px;font-weight:700;color:#111}
+  #ant-overlayTabela{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#222;z-index:10000;overflow-y:auto;padding:20px 8px 40px;}
+  #ant-overlayTabela{display:none}
+  #ant-tabelaImagem{display:none;width:100%;max-width:700px;border-radius:4px}
+  #ant-tabelaDica{display:none;max-width:500px;margin:12px auto 0;text-align:center}
+
+</style>
+</head>
+<body>
+
+<div id="screen-home">
+  <div class="card">
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
+    <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
+    <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
+    <button onclick="showScreen('fin')" style="display:block;width:100%;padding:14px 18px;border:none;border-radius:14px;background:#111;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#fff;">Financiamentos</div>
+    </button>
+    <button onclick="showScreen('ant')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Antecipação</div>
+    </button>
+    <button onclick="showScreen('pag')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Pagamentos</div>
+    </button>
+    <button onclick="showScreen('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Vendas</div>
+    </button>
+  </div>
+</div>
+
+<div id="screen-fin" class="vb-screen">
+<div class="card">
+  <div id="fin-captureZone" style="background:#f5f5f3;padding:24px 0 20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+
+  </div>
+  <div class="simulacao-label">SIMULAÇÃO</div>
+  <hr class="divider">
+
+  <div class="field-card">
+    <div class="field-label" style="text-align:center;">VALOR FINANCIADO</div>
+    <div class="valor-row" style="justify-content:center">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center" id="fin-valor" type="text" inputmode="numeric" value="" placeholder="0,00">
+    </div>
+  </div>
+
+  <div class="field-card" style="padding: 14px 20px; margin-bottom: 6px;">
+    <div class="two-col">
+      <div style="display:flex; align-items:center; gap:12px; padding-right:16px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">☰</div>
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">PRAZO</div>
+          <input class="input-mid" style="text-align:left;width:44px;font-size:20px;font-weight:700;color:#111;" id="fin-prazo" type="text" inputmode="numeric" pattern="[0-9]*" value="" placeholder="0" min="1" max="360">
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-top:1px;">MESES</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding-left:16px; border-left:0.5px solid #e0e0e0;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#555;flex-shrink:0;">%</div>
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">TAXA DE JUROS</div>
+          <div style="display:flex;align-items:baseline;gap:2px;">
+            <input class="input-mid" style="text-align:left;width:52px;font-size:20px;font-weight:700;color:#111;" id="fin-taxa" type="text" inputmode="numeric" value="" placeholder="0,00">
+            <span style="font-size:11px;color:#aaa;font-weight:500;">% a.m.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-card" style="margin-bottom:6px;">
+    <div class="result-label">VALOR DA PRESTAÇÃO</div>
+    <div class="result-accent"></div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
+      <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
+      <input id="fin-parcela" type="text" inputmode="numeric" value="" placeholder="0,00" style="border:none;background:transparent;outline:none;font-size:46px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;width:220px;text-align:center;padding:0;">
+    </div>
+  </div>
+
+  <div class="error" id="fin-erro">Preencha todos os campos corretamente.</div>
+
+  <div class="total-row" style="margin-bottom:0;">
+    <span class="total-label">TOTAL FINANCIADO</span>
+    <span class="total-value" id="fin-total"></span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;margin-bottom:0;">
+    <button onclick="FIN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
+    <button onclick="FIN_abrirOverlay()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
+  </div>
+
+  </div><!-- fim captureZone -->
+
+  <div class="field-card no-print" style="margin-top:16px;text-align:center;">
+    <div class="field-label">TOTAL DE JUROS</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
+      <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
+      <span style="font-size:32px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;" id="fin-totalJuros">---</span>
+    </div>
+  </div>
+
+  <div class="field-card no-print" style="margin-top:16px;">
+    <div class="field-label" style="margin-bottom:6px;">GERAR TABELA DE PARCELAS</div>
+
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">DESCRIÇÃO</div>
+      <input id="fin-tabelaDesc" type="text" placeholder="Ex: Fiat Toro Ranch 2024" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PRIMEIRO VENCIMENTO</div>
+      <input id="fin-tabelaData" type="date" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+
+    <button onclick="FIN_compartilharTabela()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
+  </div>
+
+</div>
+
+<!-- OVERLAY TABELA -->
+<div id="fin-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
+  <img id="fin-tabelaImagem" style="display:none;width:100%;max-width:390px;margin:0 auto;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
+  <div id="fin-tabelaImagemDica" style="display:none;max-width:390px;margin:14px auto 0;text-align:center;">
+    <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
+    <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
+    <button onclick="FIN_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+  </div>
+</div>
+
+
+<div id="fin-overlay">
+  <div id="fin-overlayCard">
+    <div class="ov-logo">VB</div>
+    <div class="ov-sub">SIMULAÇÃO</div>
+    <hr class="ov-divider">
+    <div class="ov-card" style="text-align:center;">
+      <div class="ov-label">VALOR FINANCIADO</div>
+      <div class="ov-row"><span class="ov-prefix">R$</span><span class="ov-big" id="fin-ov-valor"></span></div>
+    </div>
+    <div class="ov-card" style="text-align:center;">
+      <div class="ov-label">VALOR DA PRESTAÇÃO</div>
+      <div class="ov-accent"></div>
+      <div class="ov-row"><span class="ov-prefix">R$</span><span class="ov-prestacao-big" id="fin-ov-parcela"></span></div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-two">
+        <div class="ov-half">
+          <div class="ov-hlabel">PRAZO</div>
+          <div class="ov-hval" id="fin-ov-prazo"></div>
+          <div class="ov-hsub">MESES</div>
+        </div>
+        <div class="ov-half">
+          <div class="ov-hlabel">TAXA DE JUROS</div>
+          <div style="display:flex;align-items:baseline;gap:2px;">
+            <span class="ov-hval" id="fin-ov-taxa"></span>
+            <span class="ov-hsub">% a.m.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ov-total">
+      <span class="ov-tlabel">TOTAL FINANCIADO</span>
+      <span class="ov-tval" id="fin-ov-total"></span>
+    </div>
+    <div class="ov-hint">↑ TIRE O PRINT E ENVIE ↑</div>
+  </div>
+  <button class="ov-close" onclick="FIN_fecharOverlay()">FECHAR</button>
+</div>
+</div>
+
+<div id="screen-ven" class="vb-screen">
+<div class="card">
+
+  <!-- HEADER -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+    <button id="ven-btnPersonalizar" onclick="VEN_togglePersonalizar()" style="border:0.5px solid #c9a84c;border-radius:8px;background:#fff;font-size:8px;letter-spacing:0.5px;color:#c9a84c;font-weight:700;cursor:pointer;margin-top:12px;padding:5px 8px;white-space:nowrap;">PERSONALIZAR</button>
+  </div>
+  <div class="simulacao-label">VENDAS</div>
+  <hr class="divider">
+
+  <!-- VALOR TOTAL DA VENDA -->
+  <div class="field-card">
+    <div class="field-label" style="text-align:center;">VALOR TOTAL DA VENDA</div>
+    <div class="valor-row" style="justify-content:center">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center" id="ven-total" type="text" inputmode="numeric" placeholder="0,00">
+    </div>
+  </div>
+
+  <!-- PARCELAS -->
+  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;text-align:center;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARCELAS</div>
+    <input class="input-big" style="text-align:center;width:80px;font-size:28px;font-weight:700;color:#111;" id="ven-qtd" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-top:4px;">VEZES</div>
+  </div>
+
+  <!-- VALOR DA PARCELA -->
+  <div id="ven-cardParcela" class="field-card" style="margin-bottom:6px;">
+    <div class="field-label" style="text-align:center;">VALOR DA PARCELA</div>
+    <div class="valor-row" style="justify-content:center;">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center;" id="ven-parcela" type="text" inputmode="numeric" placeholder="0,00">
+    </div>
+  </div>
+
+
+
+  <!-- SEÇÃO PERSONALIZAR PARCELAS -->
+  <div id="ven-secPersonalizado" style="display:none;margin-bottom:6px;">
+    <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:14px 16px;">
+      <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:8px;text-align:center;">PARCELAS INDIVIDUAIS</div>
+      <div style="display:grid;grid-template-columns:20px 1fr 1fr 20px;gap:6px;margin-bottom:6px;">
+        <span></span>
+        <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VALOR</span>
+        <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VENCIMENTO</span>
+        <span></span>
+      </div>
+      <div id="ven-listaParcelas"></div>
+    </div>
+  </div>
+
+  <!-- GERAR TABELA -->
+  <div class="field-card" style="margin-top:6px;">
+    <div class="field-label" style="margin-bottom:8px;">GERAR TABELA</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">DESCRIÇÃO</div>
+      <input id="ven-tabelaDesc" type="text" placeholder="Ex: Rolex Submariner 2024" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div id="ven-secTabelaData" style="margin-bottom:8px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PRIMEIRO VENCIMENTO</div>
+      <input id="ven-tabelaData" type="date" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="VEN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
+      <button onclick="VEN_gerarTabela()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
+    </div>
+  </div>
+
+</div>
+
+
+
+<!-- OVERLAY TABELA -->
+<div id="ven-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
+  <img id="ven-tabelaImagem" style="display:none;width:100%;max-width:390px;margin:0 auto;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
+  <div id="ven-tabelaImagemDica" style="display:none;max-width:390px;margin:14px auto 0;text-align:center;">
+    <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
+    <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
+    <button onclick="VEN_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+  </div>
+</div>
+
+</div>
+<div id="screen-ant" class="vb-screen">
+<div class="card">
+  <!-- TOPO -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+    
+      </div>
+      <div class="sub" style="margin-bottom:0;">ANTECIPAÇÃO</div>
+    </div>
+    <button id="ant-btnPersonalizar" onclick="ANT_toggleModo()" style="border:0.5px solid #c9a84c;border-radius:8px;background:#fff;font-size:8px;letter-spacing:0.5px;color:#c9a84c;font-weight:700;cursor:pointer;margin-top:12px;padding:5px 8px;white-space:nowrap;">PERSONALIZAR</button>
+  </div>
+  <hr class="hr" style="margin-bottom:6px;">
+
+  <!-- CLIENTE + DATA — em card -->
+  <div class="fc" style="padding:12px 16px;margin-bottom:6px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;min-width:52px;">CLIENTE</span>
+      <input id="ant-tabelaCliente" type="text" placeholder="Nome" style="flex:1;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:11px;font-weight:600;color:#111;padding:2px 0;font-family:-apple-system,sans-serif;">
+    </div>
+    <div id="ant-secDataOp" style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;min-width:52px;">DATA OP.</span>
+      <input id="ant-dataOperacao" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" style="flex:1;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:11px;font-weight:600;color:#111;font-family:-apple-system,sans-serif;">
+    </div>
+  </div>
+  <hr class="hr">
+
+  <div class="fc">
+    <div class="fl">VALOR BRUTO TOTAL</div>
+    <div class="vrow"><span class="pfx">R$</span><input class="ibig" id="ant-valorBruto" type="text" inputmode="numeric" placeholder="0,00"></div>
+  </div>
+
+  <div class="fc">
+    <div class="fl">VALOR POR TÍTULO</div>
+    <div class="vrow"><span class="pfx">R$</span><input class="ibig" id="ant-valorParcela" type="text" inputmode="numeric" placeholder="0,00"></div>
+  </div>
+
+  <!-- Mini bruto+liquido side by side in personalizado (hidden in simple) -->
+  <div id="ant-secBrutoLiqPers" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+      <div class="mc">
+        <div class="ml">VALOR BRUTO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <span id="ant-valorBrutoDisp" style="font-size:16px;font-weight:700;color:#111;">---</span>
+        </div>
+      </div>
+      <div class="mc">
+        <div class="ml">VALOR LÍQUIDO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <span id="ant-valorLiqDisp" style="font-size:16px;font-weight:700;color:#111;">---</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ant-secLiquidoFull" class="rc">
+    <div class="fl">VALOR LÍQUIDO TOTAL</div>
+    <div class="gold"></div>
+    <div class="vrow"><span class="pfx">R$</span>
+      <input id="ant-valorLiquido" type="text" inputmode="numeric" placeholder="0,00" style="font-size:42px;font-weight:700;color:#111;letter-spacing:-1px;width:220px;text-align:center;padding:0;">
+    </div>
+  </div>
+
+  <div class="fc" style="padding:12px 0;margin-bottom:6px;">
+    <div class="twocol">
+      <div class="ch" id="ant-secQtd">
+        <div class="cl">QUANTIDADE</div>
+        <input id="ant-qtd" type="text" inputmode="numeric" placeholder="0" style="font-size:20px;font-weight:400;text-align:center;width:60px;">
+        <div class="cs">TÍTULOS</div>
+      </div>
+      <div class="ch">
+        <div class="cl">TAXA DE JUROS</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:1px;">
+          <input id="ant-taxa" type="text" inputmode="numeric" placeholder="0,00" style="font-size:20px;font-weight:400;text-align:center;width:60px;">
+          <span class="cs">% a.m.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO MODO PERSONALIZADO -->
+  <div id="ant-secPersonalizado" style="display:none;margin-bottom:6px;">
+    <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:14px 16px;">
+      <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:6px;">TÍTULOS INDIVIDUAIS</div>
+      <div style="display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;margin-bottom:4px;">
+        <span></span>
+        <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VALOR</span>
+        <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VENCIMENTO</span>
+        <span></span>
+      </div>
+      <div id="ant-listaTitulos" style="width:100%;"></div>
+      <button onclick="ANT_adicionarTitulo()" style="width:100%;padding:9px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ TÍTULO</button>
+    </div>
+  </div>
+
+  <div class="mg">
+    <div class="mc">
+      <div class="ml">TARIFA</div>
+      <div class="vrow" style="justify-content:center;gap:2px;">
+        <span style="font-size:11px;color:#aaa;font-weight:500;">R$</span>
+        <input id="ant-tarifa" type="text" inputmode="numeric" style="font-size:14px;font-weight:700;width:70px;text-align:center;">
+      </div>
+    </div>
+    <div class="mc">
+      <div class="ml">PRAZO MÉDIO</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
+        <span id="ant-prazoMedio" class="mv">---</span>
+        <span style="font-size:9px;color:#bbb;font-weight:500;">dias</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mg">
+    <div class="mc"><div class="ml">TOTAL JUROS</div><div class="mv" id="ant-totJuros">---</div></div>
+    <div class="mc"><div class="ml">JUROS + TARIFA</div><div class="mv" id="ant-totDesc">---</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+    <button onclick="ANT_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
+    <button onclick="ANT_abrirOverlay()" style="padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
+  </div>
+
+  <!-- GERAR TABELA -->
+  <div class="ts">
+    <div id="ant-secGerarLabel" style="display:block;">
+    <div class="fl" style="text-align:left;margin-bottom:6px;">GERAR TABELA</div>
+    <div id="ant-secTabelaData" style="margin-bottom:6px;">
+      <div class="cl" style="margin-bottom:4px;">PRIMEIRO VENCIMENTO</div>
+      <input id="ant-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;font-weight:400;color:#111;padding:4px 0;font-family:-apple-system,sans-serif;">
+    </div>
+    </div><!-- end secGerarLabel -->
+    <button onclick="ANT_gerarTabela()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
+  </div>
+</div>
+
+<!-- OVERLAY RESUMO -->
+<div id="ant-overlay">
+  <div id="ant-overlayCard">
+    <div class="ol">VB</div><div class="os">ANTECIPAÇÃO</div><hr class="od">
+    <div class="oc">
+      <div class="or"><div><div class="olk">DATA DA OPERAÇÃO</div><div class="ov" id="ant-ov-data"></div></div><div style="text-align:right"><div class="olk">PRAZO MÉDIO</div><div class="ov" id="ant-ov-prazo"></div></div></div>
+      <div class="or"><div><div class="olk">TAXA</div><div class="ov" id="ant-ov-taxa"></div></div><div style="text-align:right"><div class="olk">QUANTIDADE</div><div class="ov" id="ant-ov-qtd"></div></div></div>
+    </div>
+    <!-- Lista de títulos (modo personalizado) -->
+    <div id="ant-ov-ANT_titulos" style="display:none;background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:12px 16px;margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:6px;">TÍTULOS</div>
+      <div id="ant-ov-ANT_titulos-lista"></div>
+    </div>
+    <div class="oc">
+      <div class="or"><div class="olk">VALOR BRUTO</div><div class="ov" id="ant-ov-vb"></div></div>
+      <div class="or"><div class="olk">JUROS</div><div class="ov" id="ant-ov-juros"></div></div>
+      <div class="or"><div class="olk">TARIFA</div><div class="ov" id="ant-ov-tar"></div></div>
+      <div class="or" style="border-top:0.5px solid #eee;margin-top:4px;padding-top:8px;"><div class="olk" style="color:#111;font-weight:700;">VALOR LÍQUIDO</div><div class="ov" id="ant-ov-liq"></div></div>
+    </div>
+  </div>
+  <button onclick="ANT_fecharOverlay()" style="margin-top:16px;width:100%;max-width:390px;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+</div>
+
+<!-- OVERLAY TABELA -->
+<div id="ant-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a1a;z-index:10000;overflow-y:auto;padding:16px 8px 40px;align-items:center;">
+  <img id="ant-tabelaImagem" style="display:none;width:100%;max-width:700px;margin:0 auto;border-radius:4px;display:block;">
+  <div id="ant-tabelaDica" style="display:none;max-width:500px;margin:12px auto 0;text-align:center;">
+    <div style="font-size:12px;letter-spacing:1px;color:#aaa;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
+    <div style="font-size:11px;color:#666;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
+    <button onclick="ANT_fecharTabela()" style="width:100%;max-width:500px;padding:12px;border:0.5px solid #444;border-radius:14px;background:#333;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+  </div>
+</div>
+
+
+</div>
+
+<div id="screen-pag" class="vb-screen">
+<div class="card">
+  <!-- Cabeçalho -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+    <div onclick="showScreen('home')" style="font-family:Georgia,serif;font-size:32px;font-weight:400;color:#111;cursor:pointer;">VB</div>
+
+  </div>
+  <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">PAGAMENTOS</div>
+  <div style="border:none;border-top:0.5px solid #ccc;margin-bottom:6px;"></div>
+
+  <!-- Valor Total -->
+  <div class="fc" style="text-align:center;margin-bottom:6px;">
+    <div style="font-size:10px;letter-spacing:2.5px;color:#999;margin-bottom:6px;font-weight:500;text-align:center;">VALOR TOTAL</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
+      <span style="font-size:18px;color:#aaa;font-weight:500;">R$</span>
+      <input id="pag-total" type="text" inputmode="numeric" placeholder="0,00" style="font-size:32px;font-weight:700;color:#111;border:none;background:transparent;outline:none;width:100%;text-align:center;padding:0;font-family:-apple-system,sans-serif;">
+    </div>
+  </div>
+
+  <!-- Pagamentos -->
+  <div class="fc" style="margin-bottom:6px;">
+    <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:6px;display:flex;justify-content:space-between;">
+      <span>PAGAMENTOS</span>
+      <span id="pag-soma" style="color:#111;font-weight:700;">---</span>
+    </div>
+    <div id="pag-lista" style="overflow:hidden;"></div>
+    <button onclick="PAG_addLinha()" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">+ ADICIONAR</button>
+  </div>
+
+  <!-- Saldo -->
+  <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;margin-bottom:6px;">
+    <span style="font-size:10px;letter-spacing:2.5px;color:#999;font-weight:500;">SALDO</span>
+    <span id="pag-saldo" style="font-size:18px;font-weight:700;color:#111;">R$ ---</span>
+  </div>
+
+  <!-- Botões -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+    <button onclick="PAG_limpar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">LIMPAR</button>
+    <button onclick="PAG_compartilhar()" style="padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">COMPARTILHAR</button>
+  </div>
+</div>
+
+<!-- Overlay pagamentos -->
+<div id="pag-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:40px 36px;">
+  <div style="max-width:390px;margin:0 auto;" id="pag-overlayCard">
+    <div onclick="PAG_fecharTabela()" style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;cursor:pointer;">VB</div>
+    <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">PAGAMENTOS</div>
+    <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:6px;">
+    <!-- Valor Total -->
+    <div style="background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:6px;border:0.5px solid #e0e0e0;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;margin-bottom:6px;font-weight:500;text-align:center;">VALOR TOTAL</div>
+      <div style="font-size:28px;font-weight:700;color:#111;text-align:center;letter-spacing:-0.5px;" id="pag-ov-total">---</div>
+    </div>
+    <!-- Lista pagamentos -->
+    <div style="background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:6px;border:0.5px solid #e0e0e0;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;margin-bottom:6px;font-weight:500;">PAGAMENTOS</div>
+      <div id="pag-ov-lista"></div>
+    </div>
+    <!-- Saldo -->
+    <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;margin-bottom:6px;">
+      <span style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;">SALDO</span>
+      <span style="font-size:18px;font-weight:700;" id="pag-ov-saldo">---</span>
+    </div>
+    <button onclick="PAG_fecharTabela()" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+  </div>
+</div>
+</div>
+
+<script>
+function showScreen(name){
+  document.getElementById('screen-home').style.display=name==='home'?'block':'none';
+  ['fin','ant','pag','ven'].forEach(function(s){
+    document.getElementById('screen-'+s).style.display=s===name?'block':'none';
+  });
+  window.scrollTo(0,0);
+  if(name==='ant') setTimeout(ANT_resetOnEnter,50);
+}
+
+/* === FINANCIAMENTOS JS === */
+
+function FIN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function FIN_formatBR(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function FIN_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
+
+function FIN_solveRate(PV, PMT, n){
+  if(PMT*n <= PV) return NaN;
+  var i = 0.01;
+  for(var k=0; k<200; k++){
+    var f = FIN_calcPrice(PV,i,n) - PMT;
+    var ip = i*1.0001;
+    var df = (FIN_calcPrice(PV,ip,n) - FIN_calcPrice(PV,i,n))/(i*0.0001);
+    var di = f/df;
+    i -= di;
+    if(i<=0) i=0.0001;
+    if(Math.abs(di)<1e-10) break;
+  }
+  return i;
+}
+
+var parcelaManual = false;
+
+function FIN_updateTotal(){
+  var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
+  var n = parseInt(document.getElementById('fin-prazo').value||'0');
+  if(!isNaN(pmt) && pmt>0 && n>0){
+    document.getElementById('fin-total').textContent = 'R$ '+FIN_formatBR(pmt*n);
+  } else {
+    document.getElementById('fin-total').textContent = 'R$ ---';
+  }
+}
+
+function FIN_update(){
+  var PV  = FIN_parseBR(document.getElementById('fin-valor').value);
+  var i   = FIN_parseBR(document.getElementById('fin-taxa').value)/100;
+  var n   = parseInt(document.getElementById('fin-prazo').value||'0');
+  var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
+  var erro = document.getElementById('fin-erro');
+
+  if(parcelaManual){
+    var pvOk  = !isNaN(PV)  && PV>0;
+    var pmtOk = !isNaN(pmt) && pmt>0;
+    var nOk   = !isNaN(n)   && n>0;
+    if(pvOk && pmtOk && nOk){
+      var rate = FIN_solveRate(PV, pmt, n);
+      if(!isNaN(rate) && rate>0){
+        var taxaFmt = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+        document.getElementById('fin-taxa').value = taxaFmt;
+        erro.style.display='none';
+      }
+    }
+    FIN_updateTotal();
+    var pmtV=FIN_parseBR(document.getElementById('fin-parcela').value);
+    var nV=parseInt(document.getElementById('fin-prazo').value||'0');
+    var pvV=FIN_parseBR(document.getElementById('fin-valor').value);
+    if(pmtV>0&&nV>0&&pvV>0) document.getElementById('fin-totalJuros').textContent=FIN_formatBR(pmtV*nV-pvV);
+    return;
+  }
+
+  if(isNaN(PV)||isNaN(i)||isNaN(n)||PV<=0||i<0||n<=0){
+    erro.style.display='block';
+    document.getElementById('fin-parcela').value='';
+    document.getElementById('fin-total').textContent='R$ ---';
+    return;
+  }
+  erro.style.display='none';
+  var calc=Math.ceil(FIN_calcPrice(PV,i,n)*100)/100;
+  document.getElementById('fin-parcela').value=FIN_formatBR(calc);
+  document.getElementById('fin-total').textContent='R$ '+FIN_formatBR(calc*n);
+  document.getElementById('fin-totalJuros').textContent=FIN_formatBR(calc*n - PV);
+}
+
+function FIN_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
+
+function FIN_initTabela(){
+  var hoje = new Date();
+  var prox = new Date(hoje.getFullYear(), hoje.getMonth()+1, hoje.getDate());
+  var y=prox.getFullYear(), m=String(prox.getMonth()+1).padStart(2,'0'), d=String(prox.getDate()).padStart(2,'0');
+  document.getElementById('fin-tabelaData').value = y+'-'+m+'-'+d;
+}
+
+
+
+
+
+function pad(s, n){ s = String(s); while(s.length < n) s = ' '+s; return s; }
+function padR(s, n){ s = String(s); while(s.length < n) s += ' '; return s; }
+
+function FIN_gerarTabela(){
+  FIN_compartilharTabela();
+}
+function FIN_fecharTabela(){
+  document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+  var ot=document.getElementById('fin-overlayTabela'); if(ot) ot.style.display='none';
+  var img=document.getElementById('fin-tabelaImagem'); if(img){img.style.display='none';img.src='';}
+  var dica=document.getElementById('fin-tabelaImagemDica'); if(dica) dica.style.display='none';
+}
+function FIN_compartilharTabela(){
+  var pmt    = FIN_parseBR(document.getElementById('fin-parcela').value);
+  var n      = parseInt(document.getElementById('fin-prazo').value||'0');
+  var valor  = document.getElementById('fin-valor').value || '';
+  var desc   = document.getElementById('fin-tabelaDesc').value.trim().toUpperCase();
+  var dataStr= document.getElementById('fin-tabelaData').value;
+  if(!pmt||!n||!dataStr){ alert('Preencha os dados antes de compartilhar.'); return; }
+
+  var titulo = desc || 'TABELA DE PARCELAS';
+  var parts  = dataStr.split('-');
+  var base   = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  var linhas = []; var total = 0;
+  for(var i=0;i<n;i++){
+    var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
+    total += pmt;
+    linhas.push({
+      parc : String(i+1).padStart(2,'0'),
+      valor: 'R$ '+FIN_formatBR(pmt),
+      data : String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
+    });
+  }
+
+  var W = 390, H = 844, esc = 3;
+  var pad = 18, padV = 12;
+  var altVB  = 28;
+  var altTit = 28, altHead = 22, altTot = 22;
+  var altRows = H - padV*2 - altVB - altTit - altHead - altTot;
+  var altRow  = Math.min(26, Math.max(13, Math.floor(altRows / n)));
+  var fs      = Math.min(12, Math.max(7, Math.floor(altRow * 0.52)));
+  // Recalculate actual canvas height based on capped row size
+  H = padV*2 + altVB + altTit + altHead + (altRow * n) + altTot;
+  var c1 = pad + (W/3 - pad)/2;
+  var c2 = W/2;
+  var c3 = W - pad - (W/3 - pad)/2;
+
+  var cv = document.createElement('canvas');
+  cv.width  = W * esc;
+  cv.height = H * esc;
+  var ctx = cv.getContext('2d');
+  ctx.scale(esc, esc);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,W,H);
+
+  var y = padV;
+
+  // VB logo — mesmo estilo da simulação (Georgia, peso normal)
+  ctx.fillStyle = '#111';
+  ctx.font = '400 24px Georgia, "Times New Roman", serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('VB', pad, y + altVB*0.75);
+  y += altVB;
+
+  // Título (nome do veículo)
+  ctx.fillStyle = '#111';
+  ctx.font = 'bold '+(fs+3)+'px Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(titulo, W/2, y + altTit*0.65);
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(pad, y+altTit-3); ctx.lineTo(W-pad, y+altTit-3); ctx.stroke();
+  y += altTit;
+
+  // Header
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(pad, y, W-pad*2, altHead);
+  ctx.fillStyle = '#666';
+  ctx.font = '600 '+(fs-1)+'px Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Parcela', c1, y+altHead*0.68);
+  ctx.fillText('Valor',   c2, y+altHead*0.68);
+  ctx.fillText('Data',    c3, y+altHead*0.68);
+  y += altHead;
+
+  // Linhas
+  for(var i=0;i<n;i++){
+    ctx.fillStyle = i%2===0?'#fff':'#f7f7f7';
+    ctx.fillRect(pad, y, W-pad*2, altRow);
+    ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
+    ctx.beginPath(); ctx.moveTo(pad,y+altRow); ctx.lineTo(W-pad,y+altRow); ctx.stroke();
+    var cy = y + altRow*0.66;
+    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(linhas[i].parc,  c1, cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillText(linhas[i].valor, c2, cy);
+    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillText(linhas[i].data,  c3, cy);
+    y += altRow;
+  }
+
+  // Total
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad,y,W-pad*2,altTot);
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Total',               c1, y+altTot*0.68);
+  ctx.fillText('R$ '+FIN_formatBR(total), c2, y+altTot*0.68);
+
+  var dataURL = cv.toDataURL('image/png');
+  var img = document.getElementById('fin-tabelaImagem');
+  img.src = dataURL;
+  img.style.display = 'block';
+  document.getElementById('fin-tabelaImagemDica').style.display = 'block';
+  document.getElementById('fin-overlayTabela').style.display = 'block';
+  document.getElementById('fin-overlayTabela').scrollTop = 0;
+}
+
+function FIN_abrirOverlay(){
+  document.getElementById('fin-ov-valor').textContent  = document.getElementById('fin-valor').value || '---';
+  document.getElementById('fin-ov-parcela').textContent = document.getElementById('fin-parcela').value || '---';
+  document.getElementById('fin-ov-prazo').textContent   = document.getElementById('fin-prazo').value || '---';
+  document.getElementById('fin-ov-taxa').textContent    = document.getElementById('fin-taxa').value || '---';
+  document.getElementById('fin-ov-total').textContent   = document.getElementById('fin-total').textContent;
+  document.getElementById('fin-overlay').classList.add('show');
+}
+function FIN_fecharOverlay(){
+  document.getElementById('fin-overlay').classList.remove('show');
+}
+
+function FIN_limpar(){
+  FIN_parcelaManual=false;
+  ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
+   'fin-tabelaDesc'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('fin-total').textContent='';
+  document.getElementById('fin-totalJuros').textContent='---';
+  document.getElementById('fin-erro').style.display='none';
+  // Reset tabelaData to today + 1 month
+  var hoje=new Date();
+  var prox=new Date(hoje.getFullYear(),hoje.getMonth()+1,hoje.getDate());
+  var y=prox.getFullYear(),m=String(prox.getMonth()+1).padStart(2,'0'),d=String(prox.getDate()).padStart(2,'0');
+  document.getElementById('fin-tabelaData').value=y+'-'+m+'-'+d;
+}
+
+document.getElementById('fin-valor').addEventListener('input',function(){
+  parcelaManual=false;
+  var raw=this.value.replace(/\D/g,'');
+  if(!raw){this.value='';FIN_update();return;}
+  this.value=FIN_formatBR(parseInt(raw)/100);
+  FIN_update();
+});
+document.getElementById('fin-taxa').addEventListener('input',function(){
+  parcelaManual=false;
+  var raw=this.value.replace(/\D/g,'');
+  if(!raw){this.value='';FIN_update();return;}
+  this.value=FIN_formatBR(parseInt(raw)/100);
+  FIN_update();
+});
+document.getElementById('fin-prazo').addEventListener('input',function(){
+  this.value=this.value.replace(/\D/g,'');
+  FIN_update();
+});
+document.getElementById('fin-parcela').addEventListener('input',function(){
+  parcelaManual=true;
+  var raw=this.value.replace(/\D/g,'');
+  if(!raw){this.value='';FIN_update();return;}
+  this.value=FIN_formatBR(parseInt(raw)/100);
+  FIN_update();
+});
+
+FIN_initTabela();
+
+/* === VENDAS JS === */
+
+function VEN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function VEN_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function VEN_maskVal(el, cb){
+  el.addEventListener('input', function(){
+    var raw = this.value.replace(/\D/g,'');
+    if(!raw){ this.value=''; if(cb) cb(); return; }
+    this.value = VEN_formatBR(parseInt(raw)/100);
+    if(cb) cb();
+  });
+}
+
+var VEN_parcelaManual = false;
+var VEN_modoPersonalizado = false;
+var VEN_parcelas = [];
+var VEN_parcelaCounter = 0;
+
+function VEN_update(){
+  var total   = VEN_parseBR(document.getElementById('ven-total').value);
+  var qtd     = parseInt(document.getElementById('ven-qtd').value||'0');
+  var parcela = VEN_parseBR(document.getElementById('ven-parcela').value);
+  var totalOk   = !isNaN(total)   && total>0;
+  var qtdOk     = !isNaN(qtd)     && qtd>0;
+  var parcelaOk = !isNaN(parcela) && parcela>0;
+
+  if(VEN_parcelaManual){
+    if(parcelaOk && qtdOk && !totalOk){
+      document.getElementById('ven-total').value = VEN_formatBR(parcela*qtd);
+    }
+    return;
+  }
+  if(totalOk && qtdOk){
+    document.getElementById('ven-parcela').value = VEN_formatBR(total/qtd);
+  }
+}
+
+VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_update(); });
+VEN_maskVal(document.getElementById('ven-parcela'), function(){ VEN_parcelaManual=true; VEN_update(); });
+document.getElementById('ven-qtd').addEventListener('input', function(){
+  this.value = this.value.replace(/\D/g,'');
+  VEN_update();
+});
+
+function VEN_limpar(){
+  VEN_parcelaManual = false;
+  if(VEN_modoPersonalizado) VEN_togglePersonalizar();
+  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value='';
+  });
+  VEN_initTabela();
+}
+
+function VEN_initTabela(){
+  var hoje = new Date();
+  var prox = new Date(hoje.getFullYear(), hoje.getMonth()+1, hoje.getDate());
+  var y=prox.getFullYear(), m=String(prox.getMonth()+1).padStart(2,'0'), d=String(prox.getDate()).padStart(2,'0');
+  document.getElementById('ven-tabelaData').value = y+'-'+m+'-'+d;
+}
+
+// ── PERSONALIZAR ─────────────────────────────────────────────────────────────
+function VEN_syncFromParcelas(){
+  var count = VEN_parcelas.length;
+  var soma  = VEN_parcelas.reduce(function(a,p){ return a + (VEN_parseBR(p.valor)||0); }, 0);
+  document.getElementById('ven-qtd').value   = count > 0 ? String(count) : '';
+  document.getElementById('ven-total').value = soma > 0 ? VEN_formatBR(soma) : '';
+  document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? VEN_formatBR(soma/count) : '';
+}
+
+function VEN_togglePersonalizar(){
+  VEN_modoPersonalizado = !VEN_modoPersonalizado;
+  var sec  = document.getElementById('ven-secPersonalizado');
+  var btn  = document.getElementById('ven-btnPersonalizar');
+  var secData = document.getElementById('ven-secTabelaData');
+
+  if(VEN_modoPersonalizado){
+    btn.textContent = 'SIMPLES';
+    btn.style.background = '#c9a84c';
+    btn.style.color = '#fff';
+    sec.style.display = 'block';
+    secData.style.display = 'none';
+    document.getElementById('ven-cardParcela').style.display = 'none';
+    VEN_popularParcelas();
+  } else {
+    btn.textContent = 'PERSONALIZAR';
+    btn.style.background = '#fff';
+    btn.style.color = '#c9a84c';
+    sec.style.display = 'none';
+    secData.style.display = 'block';
+    document.getElementById('ven-cardParcela').style.display = 'block';
+    VEN_parcelas = [];
+    VEN_parcelaCounter = 0;
+  }
+}
+
+function VEN_popularParcelas(){
+  var qtd     = parseInt(document.getElementById('ven-qtd').value||'0');
+  var parcela = VEN_parseBR(document.getElementById('ven-parcela').value)||0;
+  var dataStr = document.getElementById('ven-tabelaData').value;
+  var base    = null;
+  if(dataStr){ var p=dataStr.split('-'); base=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); }
+  if(!base || isNaN(base.getTime())){ base=new Date(); base=new Date(base.getFullYear(),base.getMonth()+1,base.getDate()); }
+
+  VEN_parcelas = [];
+  VEN_parcelaCounter = 0;
+  for(var i=0; i<qtd; i++){
+    VEN_parcelaCounter++;
+    var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
+    var ds = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    VEN_parcelas.push({ id: VEN_parcelaCounter, valor: parcela>0 ? VEN_formatBR(parcela) : '', data: ds });
+  }
+  VEN_renderParcelas();
+}
+
+function VEN_renderParcelas(){
+  var lista = document.getElementById('ven-listaParcelas');
+  lista.innerHTML = '';
+  VEN_parcelas.forEach(function(p){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px;gap:6px;margin-bottom:8px;align-items:center;';
+    row.innerHTML =
+      '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;">'+String(p.id).padStart(2,'0')+'</span>'+
+      '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;">'+
+        '<span style="font-size:10px;color:#aaa;">R$</span>'+
+        '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="valor"'+
+        ' placeholder="0,00" value="'+(p.valor||'')+'"'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;font-family:-apple-system,sans-serif;">'+
+      '</div>'+
+      '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
+      ' placeholder="DD/MM/AAAA" maxlength="10" value="'+(p.data||'')+'"'+
+      ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;">'+
+      '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;">×</button>';
+    lista.appendChild(row);
+  });
+
+  // Mask valor
+  lista.querySelectorAll('[data-field="valor"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var raw = this.value.replace(/\D/g,'');
+      this.value = raw ? VEN_formatBR(parseInt(raw)/100) : '';
+      var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
+      if(p){ p.valor = this.value; VEN_syncFromParcelas(); }
+    });
+  });
+
+  // Mask data DD/MM/AAAA
+  lista.querySelectorAll('[data-field="data"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var raw = this.value.replace(/\D/g,'');
+      var v = '';
+      if(raw.length>0) v += raw.substring(0,2);
+      if(raw.length>2) v += '/'+raw.substring(2,4);
+      if(raw.length>4) v += '/'+raw.substring(4,8);
+      this.value = v;
+      var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
+      if(p) p.data = this.value;
+    });
+  });
+}
+
+function VEN_removerParcela(id){
+  VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
+  VEN_renderParcelas();
+  VEN_syncFromParcelas();
+}
+
+
+
+// ── GERAR TABELA ─────────────────────────────────────────────────────────────
+function VEN_fecharTabela(){
+  document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+  var ot = document.getElementById('ven-overlayTabela'); if(ot) ot.style.display='none';
+  var img = document.getElementById('ven-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
+  var dica = document.getElementById('ven-tabelaImagemDica'); if(dica) dica.style.display='none';
+}
+
+function VEN_gerarTabela(){
+  var desc    = (document.getElementById('ven-tabelaDesc').value||'').trim().toUpperCase();
+  var titulo  = desc || 'TABELA DE PARCELAS';
+  var linhas  = [];
+
+  if(VEN_modoPersonalizado){
+    var rows = VEN_parcelas.filter(function(p){ return p.valor && p.data && p.data.length===10; });
+    if(rows.length===0){ alert('Preencha valor e data de todas as parcelas.'); return; }
+    rows.forEach(function(p, i){
+      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data });
+    });
+  } else {
+    var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
+    var n       = parseInt(document.getElementById('ven-qtd').value||'0');
+    var dataStr = document.getElementById('ven-tabelaData').value;
+    if(!pmt||!n||!dataStr){ alert('Preencha os dados antes de gerar a tabela.'); return; }
+    var parts = dataStr.split('-');
+    var base  = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    for(var i=0; i<n; i++){
+      var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
+      linhas.push({
+        parc : String(i+1).padStart(2,'0'),
+        valor: 'R$ '+VEN_formatBR(pmt),
+        data : String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
+      });
+    }
+  }
+
+  var n = linhas.length;
+  var total = linhas.reduce(function(a,l){ return a + VEN_parseBR(l.valor.replace('R$ ','')); }, 0);
+
+  // Canvas
+  var W=390, esc=3, padH=18, padV=12;
+  var altVB=28, altTit=28, altHead=22, altTot=22;
+  var altRow = Math.min(26, Math.max(13, Math.floor((844-padV*2-altVB-altTit-altHead-altTot)/n)));
+  var fs = Math.min(12, Math.max(7, Math.floor(altRow*0.52)));
+  var H = padV*2 + altVB + altTit + altHead + altRow*n + altTot;
+  var c1 = padH + (W/3-padH)/2;
+  var c2 = W/2;
+  var c3 = W - padH - (W/3-padH)/2;
+
+  var cv = document.createElement('canvas');
+  cv.width = W*esc; cv.height = H*esc;
+  var ctx = cv.getContext('2d');
+  ctx.scale(esc, esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+  var y = padV;
+
+  // Logo
+  ctx.fillStyle='#111'; ctx.font='400 24px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
+  ctx.fillText('VB', padH, y+altVB*0.75); y+=altVB;
+
+  // Título
+  ctx.font='bold '+(fs+3)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(titulo, W/2, y+altTit*0.65);
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(padH,y+altTit-3); ctx.lineTo(W-padH,y+altTit-3); ctx.stroke();
+  y+=altTit;
+
+  // Header
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altHead);
+  ctx.fillStyle='#666'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Parcela', c1, y+altHead*0.68);
+  ctx.fillText('Valor',   c2, y+altHead*0.68);
+  ctx.fillText('Data',    c3, y+altHead*0.68);
+  y+=altHead;
+
+  // Linhas
+  for(var i=0;i<n;i++){
+    ctx.fillStyle = i%2===0?'#fff':'#f7f7f7';
+    ctx.fillRect(padH,y,W-padH*2,altRow);
+    ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
+    ctx.beginPath(); ctx.moveTo(padH,y+altRow); ctx.lineTo(W-padH,y+altRow); ctx.stroke();
+    var cy = y+altRow*0.66;
+    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(linhas[i].parc, c1, cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillText(linhas[i].valor, c2, cy);
+    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillText(linhas[i].data, c3, cy);
+    y+=altRow;
+  }
+
+  // Total
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altTot);
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(padH,y); ctx.lineTo(W-padH,y); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Total', c1, y+altTot*0.68);
+  ctx.fillText('R$ '+VEN_formatBR(total), c2, y+altTot*0.68);
+
+  var img = document.getElementById('ven-tabelaImagem');
+  img.src = cv.toDataURL('image/png');
+  img.style.display = 'block';
+  document.getElementById('ven-tabelaImagemDica').style.display = 'block';
+  document.getElementById('ven-overlayTabela').style.display = 'block';
+  document.getElementById('ven-overlayTabela').scrollTop = 0;
+}
+
+VEN_initTabela();
+
+
+/* === ANTECIPAÇÃO JS === */
+
+function ANT_parseBR(s){return parseFloat((s||'').replace(/\./g,'').replace(',','.'))}
+function ANT_formatBR(n){return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function ANT_maskVal(el,cb){
+  el.addEventListener('input',function(){
+    var raw=this.value.replace(/\D/g,'');
+    if(!raw){this.value='';if(cb)cb();return;}
+    this.value=ANT_formatBR(parseInt(raw)/100);
+    if(cb)cb();
+  });
+}
+function ANT_getHoje(){
+  var el=document.getElementById('ant-dataOperacao');
+  if(el&&el.value){ var d=ANT_parseDate(el.value); if(d) return d; }
+  var d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function ANT_diasEntre(d1,d2){return Math.round((d2-d1)/(1000*60*60*24))}
+
+function ANT_parseDate(s){
+  if(!s||s.length<10)return null;
+  var p=s.split('/');
+  if(p.length!==3||p[2].length<4)return null;
+  var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  return isNaN(d.getTime())?null:d;
+}
+function ANT_dateStr(d){
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function ANT_maskDate(el,cb){
+  el.addEventListener('input',function(){
+    var raw=this.value.replace(/\D/g,'');
+    var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+    if(cb&&raw.length>=8)cb();
+  });
+}
+
+function ANT_calcPrazos(){
+  var n=parseInt(document.getElementById('ant-qtd').value||'0');
+  var ds=document.getElementById('ant-tabelaData').value;
+  if(!n||!ds)return null;
+  var base=ANT_parseDate(ds);
+  if(!base)return null;
+  var hoje=ANT_getHoje(); var prazos=[];
+  for(var i=0;i<n;i++){
+    var v=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());
+    prazos.push(ANT_diasEntre(hoje,v)+4);
+  }
+  return prazos;
+}
+
+function ANT_getPrazoMedio(){
+  var prazos=ANT_calcPrazos();
+  if(!prazos)return NaN;
+  return prazos.reduce(function(a,b){return a+b;},0)/prazos.length;
+}
+
+// Calcula VL a partir de VB
+function ANT_calcVL(VB,taxa,pm,tar){
+  return VB*(1-taxa*(pm/30))-tar;
+}
+// Calcula VB a partir de VL
+function ANT_calcVBfromVL(VL,taxa,pm,tar){
+  var f=1-taxa*(pm/30);
+  if(f<=0)return NaN;
+  return (VL+tar)/f;
+}
+
+// Rastreia qual campo foi modificado por último
+// Rastreia campos preenchidos manualmente pelo usuário
+var ANT_userFields = new Set();
+
+ANT_maskVal(document.getElementById('ant-valorBruto'),   function(){ ANT_userFields.add('bruto');   ANT_userFields.delete('liquido'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-valorLiquido'),  function(){ ANT_userFields.add('liquido'); ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-tarifa'),        function(){ ANT_modoPersonalizado ? ANT_recalcPersonalizado() : ANT_recalc(); });
+document.getElementById('ant-qtd').addEventListener('input',function(){
+  this.value=this.value.replace(/\D/g,'');
+  ANT_userFields.add('qtd'); ANT_recalc();
+});
+document.getElementById('ant-taxa').addEventListener('input',function(){
+  var raw=this.value.replace(/\D/g,'');
+  if(!raw){this.value=''; ANT_modoPersonalizado?ANT_recalcPersonalizado():ANT_recalc(); return;}
+  this.value=ANT_formatBR(parseInt(raw)/100);
+  if(ANT_modoPersonalizado){ ANT_recalcPersonalizado(); } else { ANT_userFields.add('taxa'); ANT_recalc(); }
+});
+document.getElementById('ant-tabelaData').addEventListener('change', function(){ ANT_recalc(); });
+
+function ANT_recalc(){
+  var VB   = ANT_parseBR(document.getElementById('ant-valorBruto').value);
+  var VP   = ANT_parseBR(document.getElementById('ant-valorParcela').value);
+  var VL   = ANT_parseBR(document.getElementById('ant-valorLiquido').value);
+  var n    = parseInt(document.getElementById('ant-qtd').value||'0');
+  var taxa = ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var tar  = ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
+  var pm   = ANT_getPrazoMedio();
+
+  if(!isNaN(pm)) document.getElementById('ant-prazoMedio').textContent=pm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  var vbOk=!isNaN(VB)&&VB>0, vpOk=!isNaN(VP)&&VP>0, vlOk=!isNaN(VL)&&VL>0;
+  var nOk=n>0, tOk=!isNaN(taxa)&&taxa>0, pmOk=!isNaN(pm);
+
+  var hasLiq  = ANT_userFields.has('liquido');
+  var hasBruto= ANT_userFields.has('bruto');
+  var hasPaRC = ANT_userFields.has('parcela');
+
+  // CASO 1: Usuário preencheu Líquido → calcular Bruto a partir do Líquido
+  if(hasLiq && vlOk && nOk && tOk && pmOk){
+    var newVB=ANT_calcVBfromVL(VL,taxa,pm,tar);
+    if(!isNaN(newVB)&&newVB>0){
+      document.getElementById('ant-valorBruto').value  =ANT_formatBR(newVB);
+      document.getElementById('ant-valorParcela').value=ANT_formatBR(newVB/n);
+      VB=newVB; VP=newVB/n; vbOk=true; vpOk=true;
+    }
+  }
+  // CASO 2: Usuário preencheu Bruto → calcular Parcela e Líquido
+  else if(hasBruto && vbOk){
+    if(nOk){ document.getElementById('ant-valorParcela').value=ANT_formatBR(VB/n); VP=VB/n; vpOk=true; }
+    if(tOk&&pmOk){ var nl=ANT_calcVL(VB,taxa,pm,tar); document.getElementById('ant-valorLiquido').value=ANT_formatBR(nl>0?nl:0); VL=nl; vlOk=true; }
+  }
+  // CASO 3: Usuário preencheu Parcela → calcular Bruto e Líquido
+  else if(hasPaRC && vpOk && nOk){
+    document.getElementById('ant-valorBruto').value=ANT_formatBR(VP*n); VB=VP*n; vbOk=true;
+    if(tOk&&pmOk){ var nl=ANT_calcVL(VB,taxa,pm,tar); document.getElementById('ant-valorLiquido').value=ANT_formatBR(nl>0?nl:0); VL=nl; vlOk=true; }
+  }
+
+  // Atualizar totais
+  VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
+  n=parseInt(document.getElementById('ant-qtd').value||'0');
+  taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var prazos=ANT_calcPrazos();
+  if(!isNaN(VB)&&VB>0&&n>0&&!isNaN(taxa)&&taxa>0&&prazos){
+    var vpt=VB/n, tj=0;
+    for(var i=0;i<n;i++) tj+=vpt*taxa*(prazos[i]/30);
+    var tl=VB-tj-tar;
+    document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(tj);
+    document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(tj+tar);
+    if(!hasLiq) document.getElementById('ant-valorLiquido').value=ANT_formatBR(tl>0?tl:0);
+  }
+}
+
+function ANT_limpar(){
+  if(ANT_modoPersonalizado){ ANT_toggleModo(); }
+  ANT_userFields.clear();
+  ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('ant-prazoMedio').textContent='---';
+  document.getElementById('ant-totJuros').textContent='---';
+  document.getElementById('ant-totDesc').textContent='---';
+  ANT_titulos=[]; ANT_tituloCounter=0;
+  var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
+  ANT_initData();
+}
+
+function ANT_initData(){
+  var hoje=new Date();
+  document.getElementById('ant-dataOperacao').value=ANT_dateStr(hoje);
+  var prox=new Date(hoje.getFullYear(),hoje.getMonth()+1,hoje.getDate());
+  document.getElementById('ant-tabelaData').value=ANT_dateStr(prox);
+  document.getElementById('ant-tabelaCliente').value='';
+  if(!document.getElementById('ant-tarifa').value) document.getElementById('ant-tarifa').value='11,45';
+}
+
+function ANT_abrirOverlay(){
+  var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
+  var hoje=ANT_getHoje();
+  // Sort titles chronologically
+  if(ANT_modoPersonalizado){ ANT_titulos.sort(function(a,b){ var da=ANT_parseDate(a.data),db=ANT_parseDate(b.data); if(!da)return 1; if(!db)return -1; return da-db; }); ANT_renderTitulos(); }
+  var hd=String(hoje.getDate()).padStart(2,'0'),hm=String(hoje.getMonth()+1).padStart(2,'0'),ha=hoje.getFullYear();
+  var VB,n,tj,tl,pm,res=null;
+
+  if(ANT_modoPersonalizado){
+    if(!taxa||taxa<=0){alert('Preencha a taxa.');return;}
+    var res=ANT_getTitulosPersonalizados();
+    if(res.rows.length===0){alert('Adicione títulos com valor e data.');return;}
+    VB=res.rows.reduce(function(a,r){return a+r.vb;},0);
+    n=res.rows.length; tj=res.totalJuros; tl=res.totalLiq;
+    var pt=res.rows.reduce(function(a,r){return a+r.vb;},0);
+    pm=res.rows.reduce(function(a,r){return a+r.prazo*r.vb;},0)/pt;
+  } else {
+    VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
+    n=parseInt(document.getElementById('ant-qtd').value||'0');
+    var prazos=ANT_calcPrazos();
+    if(!VB||!n||!taxa||!prazos){alert('Preencha os campos.');return;}
+    var vpt=VB/n; tj=0;
+    // prazo médio ponderado (para valores iguais = simples)
+    var pt=0;
+    for(var i=0;i<n;i++){ tj+=vpt*taxa*(prazos[i]/30); pt+=prazos[i]*vpt; }
+    pm=pt/VB;
+    tl=VB-tj-tar;
+  }
+
+  document.getElementById('ant-ov-data').textContent=hd+'/'+hm+'/'+ha;
+  document.getElementById('ant-ov-prazo').textContent=pm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dias';
+  document.getElementById('ant-ov-taxa').textContent=(taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
+  document.getElementById('ant-ov-qtd').textContent=n+' títulos';
+  document.getElementById('ant-ov-vb').textContent='R$ '+ANT_formatBR(VB);
+  document.getElementById('ant-ov-juros').textContent='R$ '+ANT_formatBR(tj);
+  document.getElementById('ant-ov-tar').textContent='R$ '+ANT_formatBR(tar);
+  document.getElementById('ant-ov-liq').textContent='R$ '+ANT_formatBR(tl);
+  document.getElementById('ant-ov-liq').textContent='R$ '+ANT_formatBR(tl);
+
+  // Títulos individuais no overlay
+  var ovTit = document.getElementById('ant-ov-ANT_titulos');
+  var ovLista = document.getElementById('ant-ov-ANT_titulos-lista');
+  if(ANT_modoPersonalizado && res && res.rows.length>0){
+    ovTit.style.display='block';
+    ovLista.innerHTML = res.rows.map(function(r){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:0.5px solid #f0f0f0;">'+
+        '<span style="font-size:11px;color:#aaa;min-width:24px;">'+r.nro+'</span>'+
+        '<span style="font-size:13px;font-weight:700;color:#111;flex:1;text-align:center;">R$ '+ANT_formatBR(r.vb)+'</span>'+
+        '<span style="font-size:12px;color:#555;">'+r.venc+'</span>'+
+      '</div>';
+    }).join('');
+  } else {
+    ovTit.style.display='none';
+  }
+
+  document.getElementById('ant-overlay').classList.add('show');
+}
+function ANT_fecharOverlay(){document.getElementById('ant-overlay').classList.remove('show');}
+function ANT_fecharTabela(){
+  document.getElementById('ant-overlayTabela').style.display='none';
+  var img=document.getElementById('ant-tabelaImagem');
+  img.style.display='none'; img.src='';
+  document.getElementById('ant-tabelaDica').style.display='none';
+}
+
+function ANT_titleCase(s){return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();})}
+
+function ANT_gerarTabela(){
+  var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
+  var cliente=(document.getElementById('ant-tabelaCliente').value.trim().toUpperCase())||'CLIENTE';
+  var hoje=ANT_getHoje();
+  var hd=String(hoje.getDate()).padStart(2,'0'),hm=String(hoje.getMonth()+1).padStart(2,'0'),ha=hoje.getFullYear();
+  var hojeStr=hd+'/'+hm+'/'+ha;
+  var VB,n,rows,tj,tlFinal,pm;
+
+  if(ANT_modoPersonalizado){
+    if(!taxa||taxa<=0){alert('Preencha a taxa.');return;}
+    var res=ANT_getTitulosPersonalizados();
+    if(res.rows.length===0){alert('Adicione títulos com valor e data.');return;}
+    rows=res.rows; tj=res.totalJuros; VB=res.rows.reduce(function(a,r){return a+r.vb;},0);
+    n=rows.length; tlFinal=res.totalLiq;
+    var prs=res.rows.map(function(r){return {prazo:r.prazo,valor:r.vb};});
+    var pt=prs.reduce(function(a,x){return a+x.valor;},0);
+    pm=prs.reduce(function(a,x){return a+x.prazo*x.valor;},0)/pt;
+  } else {
+    VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
+    n=parseInt(document.getElementById('ant-qtd').value||'0');
+    var prazos=ANT_calcPrazos();
+    if(!VB||!n||!taxa||!prazos){alert('Preencha todos os campos.');return;}
+    var ds=document.getElementById('ant-tabelaData').value;
+    var base=ANT_parseDate(ds); if(!base){alert('Data de vencimento inválida.');return;}
+    var vpt=VB/n; rows=[]; tj=0; var tl=0;
+    for(var i=0;i<n;i++){
+      var v=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());
+      var vd=String(v.getDate()).padStart(2,'0'),vm2=String(v.getMonth()+1).padStart(2,'0'),va=v.getFullYear();
+      var j=vpt*taxa*(prazos[i]/30),vl=vpt-j; tj+=j; tl+=vl;
+      rows.push({nro:String(i+1).padStart(2,'0'),vb:vpt,venc:vd+'/'+vm2+'/'+va,prazo:prazos[i],juros:j,vliq:vl});
+    }
+    tlFinal=tl-tar;
+    pm=prazos.reduce(function(a,b){return a+b;},0)/n;
+  }
+
+  // ===== CANVAS =====
+  var esc=3;
+  var W=700, pad=24;
+  var fs=11, fsB=11, lineH=14, headH=18;
+
+  // Calcular altura exata do conteúdo
+  var secVB=6, secLogo=20, secLine1=2;
+  var secInfo=lineH*2+4, secSep1=7;
+  var secTotH=headH, secTotV=lineH+3, secSep2=7;
+  var secRel=lineH+9, secSep3=7;
+  var secTHead=headH, secTLine=2;
+  var secRows=n*lineH;
+  var secTotLine=4, secTotRow=headH, secBottom=8;
+  var H=secVB+secLogo+secLine1+secInfo+secSep1+secTotH+secTotV+secSep2+secRel+secSep3+secTHead+secTLine+secRows+secTotLine+secTotRow+secBottom;
+
+  var cv=document.createElement('canvas');
+  cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d');
+  ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+  var y=secVB;
+  var mono='"Courier New",Courier,monospace';
+
+  // ---- VB ----
+  ctx.fillStyle='#111'; ctx.font='bold 13px '+mono; ctx.textAlign='left';
+  ctx.fillText('VB', pad, y+13);
+  y+=secLogo;
+
+  // Linha topo
+  ctx.strokeStyle='#111'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  y+=secLine1+4;
+
+  // Info — label e valor na mesma linha, sem espaço extra
+  ctx.font=fs+'px '+mono; ctx.fillStyle='#222';
+  ctx.textAlign='left';
+  ctx.fillText('Data da Operação: '+hojeStr, pad, y+fs);
+  ctx.textAlign='left';
+  ctx.fillText('Prazo Médio: '+pm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dias', W*0.56, y+fs);
+  y+=lineH;
+  ctx.textAlign='left';
+  ctx.fillText('Taxa (%): '+(taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}), pad, y+fs);
+  ctx.textAlign='left';
+  ctx.fillText('Quantidade: '+n+' títulos', W*0.56, y+fs);
+  y+=lineH+4;
+
+  // Separador
+  ctx.strokeStyle='#333'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=6;
+
+  // Totais header
+  var cw4=(W-pad*2)/4;
+  ctx.font='bold '+fsB+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.fillText('Valor Bruto',   pad+cw4*0.5, y+fsB);
+  ctx.fillText('Juros',         pad+cw4*1.5, y+fsB);
+  ctx.fillText('Tarifa (-)',    pad+cw4*2.5, y+fsB);
+  ctx.fillText('Valor Líquido', pad+cw4*3.5, y+fsB);
+  y+=headH;
+
+  ctx.strokeStyle='#999'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=3;
+
+  // Totais valores
+  ctx.font=fs+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.fillText('R$ '+ANT_formatBR(VB),      pad+cw4*0.5, y+fs);
+  ctx.fillText('R$ '+ANT_formatBR(tj),      pad+cw4*1.5, y+fs);
+  ctx.fillText('R$ '+ANT_formatBR(tar),     pad+cw4*2.5, y+fs);
+  ctx.fillText('R$ '+ANT_formatBR(tlFinal), pad+cw4*3.5, y+fs);
+  y+=lineH+3;
+
+  // Separador
+  ctx.strokeStyle='#333'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=6;
+
+  // Relação de Títulos — centralizado verticalmente
+  ctx.font='bold '+fsB+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.fillText('Relação de Títulos', W/2, y + secRel/2 + fsB*0.35); // vertically centered
+  y+=secRel;
+
+  ctx.strokeStyle='#333'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=6;
+
+  // Colunas tabela
+  var cW=[128,34,114,100,48,114,114]; // fills W-2*pad=652
+  var cX=[pad]; for(var i=1;i<cW.length;i++) cX.push(cX[i-1]+cW[i-1]);
+  var cC=[]; for(var i=0;i<cW.length;i++) cC.push(cX[i]+cW[i]/2);
+
+  // Header tabela
+  ctx.font='bold '+fsB+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+  var hh=['Cliente','Nro.','Valor Bruto','Vencimento','Prazo','Juros','Valor Líquido'];
+  for(var i=0;i<hh.length;i++) ctx.fillText(hh[i], cC[i], y+fsB);
+  y+=headH;
+
+  ctx.strokeStyle='#111'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=2;
+
+  // Linhas de dados — cliente centralizado na mesma linha do primeiro título
+  for(var i=0;i<rows.length;i++){
+    var cy=y+fs;
+    ctx.font=fs+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+    if(i===0) ctx.fillText(cliente, cC[0], cy);  // cliente centralizado, mesma linha
+    ctx.fillText(rows[i].nro,             cC[1], cy);
+    ctx.fillText('R$ '+ANT_formatBR(rows[i].vb),    cC[2], cy);
+    ctx.fillText(rows[i].venc,            cC[3], cy);
+    ctx.fillText(rows[i].prazo,           cC[4], cy);
+    ctx.fillText('R$ '+ANT_formatBR(rows[i].juros), cC[5], cy);
+    ctx.fillText('R$ '+ANT_formatBR(rows[i].vliq),  cC[6], cy);
+    y+=lineH;
+  }
+
+  // Linha TOTAL
+  ctx.strokeStyle='#111'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=4;
+
+  ctx.font='bold '+fsB+'px '+mono; ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.fillText('TOTAL',                cC[0], y+fsB);
+  ctx.fillText('R$ '+ANT_formatBR(VB),     cC[2], y+fsB);
+  ctx.fillText('R$ '+ANT_formatBR(tj),     cC[5], y+fsB);
+  ctx.fillText('R$ '+ANT_formatBR(tlFinal),cC[6], y+fsB);
+  y+=headH;
+
+  ctx.strokeStyle='#111'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+
+  // Mostrar
+  var dataURL=cv.toDataURL('image/png');
+  var img=document.getElementById('ant-tabelaImagem');
+  img.src=dataURL; img.style.display='block';
+  document.getElementById('ant-tabelaDica').style.display='block';
+  var ot=document.getElementById('ant-overlayTabela');
+  ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
+  ot.scrollTop=0;
+}
+
+// ===== MODO PERSONALIZADO =====
+var ANT_modoPersonalizado = false;
+var ANT_titulos = [];
+var ANT_tituloCounter = 0;
+
+function ANT_toggleModo(){
+  ANT_modoPersonalizado = !ANT_modoPersonalizado;
+  var btn    = document.getElementById('ant-btnPersonalizar');
+  var sec    = document.getElementById('ant-secPersonalizado');
+  var secVB  = document.getElementById('ant-valorBruto').closest('.fc');
+  var secVP  = document.getElementById('ant-valorParcela').closest('.fc');
+  var secQtd = document.getElementById('ant-secQtd');
+  var secTD  = document.getElementById('ant-secTabelaData');
+  var secDO  = document.getElementById('ant-secDataOp');
+  var vliq   = document.getElementById('ant-valorLiquido');
+
+  if(ANT_modoPersonalizado){
+    btn.textContent='SIMPLIFICAR'; btn.style.color='#888'; btn.style.borderColor='#ddd';
+    sec.style.display='block';
+    secVB.style.display='none'; secVP.style.display='none';
+    secQtd.style.opacity='1'; secQtd.style.pointerEvents='none'; secQtd.style.color='#111';
+    var blp=document.getElementById('ant-secBrutoLiqPers'); if(blp) blp.style.display='block';
+    var slf=document.getElementById('ant-secLiquidoFull'); if(slf) slf.style.display='none';
+    secTD.style.display='none';
+    vliq.style.color='#111'; vliq.readOnly=true;
+    // Zera tudo menos taxa e data
+    ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('ant-prazoMedio').textContent='---';
+    document.getElementById('ant-totJuros').textContent='---';
+    document.getElementById('ant-totDesc').textContent='---';
+    try{document.getElementById('ant-secGerarLabel').style.display='none';}catch(e){}
+    ANT_titulos=[]; ANT_tituloCounter=0;
+    document.getElementById('ant-listaTitulos').innerHTML='';
+    ANT_adicionarTitulo();
+  } else {
+    btn.textContent='PERSONALIZAR'; btn.style.color='#c9a84c'; btn.style.borderColor='#c9a84c';
+    sec.style.display='none';
+    secVB.style.display='block'; secVP.style.display='block';
+    secQtd.style.opacity='1'; secQtd.style.pointerEvents='auto';
+    var blp=document.getElementById('ant-secBrutoLiqPers'); if(blp) blp.style.display='none';
+    var slf=document.getElementById('ant-secLiquidoFull'); if(slf) slf.style.display='block';
+    secTD.style.display='block';
+    vliq.style.color='#111'; vliq.readOnly=false;
+    // Zera tudo menos taxa
+    ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('ant-prazoMedio').textContent='---';
+    document.getElementById('ant-totJuros').textContent='---';
+    document.getElementById('ant-totDesc').textContent='---';
+    try{document.getElementById('ant-secGerarLabel').style.display='block';}catch(e){}
+    ANT_userFields.clear(); ANT_recalc();
+  }
+}
+
+function ANT_adicionarTitulo(){
+  ANT_tituloCounter++;
+  ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:''});
+  ANT_renderTitulos();
+  ANT_recalcPersonalizado();
+}
+
+function ANT_removerTitulo(id){
+  ANT_titulos=ANT_titulos.filter(function(t){return t.id!==id;});
+  ANT_renderTitulos(); ANT_recalcPersonalizado();
+}
+
+function ANT_renderTitulos(){
+  var lista=document.getElementById('ant-listaTitulos');
+  lista.innerHTML='';
+  ANT_titulos.forEach(function(t,idx){
+    var row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;align-items:center;margin-bottom:6px;';
+    row.innerHTML=
+      '<span style="font-size:10px;color:#aaa;font-weight:600;text-align:center;">'+String(idx+1).padStart(2,'0')+'</span>'+
+      '<div style="display:flex;align-items:baseline;gap:2px;border-bottom:0.5px solid #ddd;padding-bottom:2px;min-width:0;">'+
+        '<span style="font-size:11px;color:#aaa;flex-shrink:0;">R$</span>'+
+        '<input type="text" inputmode="numeric" placeholder="0,00" data-tid="'+t.id+'" data-field="valor"'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;min-width:0;font-family:-apple-system,sans-serif;"'+
+        (t.valor?' value="'+t.valor+'"':'')+'>'+
+      '</div>'+
+      '<input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" data-tid="'+t.id+'" data-field="data"'+
+      ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;font-family:-apple-system,sans-serif;width:100%;min-width:0;"'+
+      (t.data?' value="'+t.data+'"':'')+'>'+
+      '<button onclick="ANT_removerTitulo('+t.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;">×</button>';
+    lista.appendChild(row);
+  });
+  lista.querySelectorAll('[data-field="valor"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      var raw=this.value.replace(/\D/g,'');
+      this.value=raw?ANT_formatBR(parseInt(raw)/100):'';
+      var t=ANT_titulos.find(function(x){return x.id===parseInt(el.dataset.tid);});
+      if(t) t.valor=this.value;
+      ANT_recalcPersonalizado();
+    });
+  });
+  lista.querySelectorAll('[data-field="data"]').forEach(function(el){
+    ANT_maskDate(el, function(){});
+    el.addEventListener('input',function(){
+      var t=ANT_titulos.find(function(x){return x.id===parseInt(el.dataset.tid);});
+      if(t){ t.data=el.value; ANT_recalcPersonalizado(); }
+    });
+  });
+}
+
+function ANT_recalcPersonalizado(){
+  var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
+  var hoje=ANT_getHoje();
+  var totalVB=0,totalJuros=0,prazos=[];
+  ANT_titulos.forEach(function(t){
+    var v=ANT_parseBR(t.valor||'0');
+    if(isNaN(v)||v<=0) return;
+    totalVB+=v;
+    if(t.data&&!isNaN(taxa)&&taxa>0){
+      var venc=ANT_parseDate(t.data);
+      if(!venc) return;
+      var pr=ANT_diasEntre(hoje,venc)+4;
+      totalJuros+=v*taxa*(pr/30);
+      prazos.push({prazo:pr,valor:v});
+    }
+  });
+  var n=ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0;}).length;
+  var totalLiq=totalVB-totalJuros-tar;
+  if(prazos.length>0){
+    var pesoTotal=prazos.reduce(function(a,x){return a+x.valor;},0);
+    var pmNum=prazos.reduce(function(a,x){return a+x.prazo*x.valor;},0)/pesoTotal;
+    document.getElementById('ant-prazoMedio').textContent=pmNum.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  if(totalVB>0){ document.getElementById('ant-valorBruto').value=ANT_formatBR(totalVB); document.getElementById('ant-valorParcela').value=n>0?ANT_formatBR(totalVB/n):''; }
+  document.getElementById('ant-qtd').value=n>0?n:'';
+  var bd=document.getElementById('ant-valorBrutoDisp'); if(bd) bd.textContent=totalVB>0?ANT_formatBR(totalVB):'---';
+  var ld=document.getElementById('ant-valorLiqDisp'); if(ld) ld.textContent=totalLiq>0?ANT_formatBR(totalLiq):'---';
+  if(totalJuros>0){ document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(totalJuros); document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(totalJuros+tar); }
+  document.getElementById('ant-valorLiquido').value=totalLiq>0?ANT_formatBR(totalLiq):'';
+}
+
+function ANT_getTitulosPersonalizados(){
+  var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
+  var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
+  var hoje=ANT_getHoje(); var rows=[],tj=0,tl=0;
+  ANT_titulos.forEach(function(t,idx){
+    var v=ANT_parseBR(t.valor||'0');
+    if(isNaN(v)||v<=0||!t.data) return;
+    var venc=ANT_parseDate(t.data); if(!venc) return;
+    var pr=ANT_diasEntre(hoje,venc)+4; var j=v*taxa*(pr/30),vl=v-j; tj+=j; tl+=vl;
+    var vd=String(venc.getDate()).padStart(2,'0'),vm2=String(venc.getMonth()+1).padStart(2,'0'),va=venc.getFullYear();
+    rows.push({nro:String(idx+1).padStart(2,'0'),vb:v,venc:vd+'/'+vm2+'/'+va,prazo:pr,juros:j,vliq:vl});
+  });
+  return {rows:rows,totalJuros:tj,totalLiq:tl-tar};
+}
+
+ANT_maskDate(document.getElementById('ant-dataOperacao'), function(){ ANT_recalcPersonalizado(); });
+ANT_maskDate(document.getElementById('ant-tabelaData'), function(){ ANT_recalc(); });
+
+
+function ANT_resetOnEnter(){
+  try{
+    if(ANT_modoPersonalizado){ ANT_toggleModo(); }
+    ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value='';
+    });
+    var tar=document.getElementById('ant-tarifa'); if(tar) tar.value='11,45';
+    var pm=document.getElementById('ant-prazoMedio'); if(pm) pm.textContent='---';
+    var tj=document.getElementById('ant-totJuros'); if(tj) tj.textContent='---';
+    var td=document.getElementById('ant-totDesc'); if(td) td.textContent='---';
+    if(ANT_userFields) ANT_userFields.clear();
+    ANT_titulos=[]; ANT_tituloCounter=0;
+    var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
+      }catch(e){ console.log('ANT reset:',e); }
+}
+ANT_initData();
+
+/* === PAGAMENTOS JS === */
+// ===== PAGAMENTOS =====
+var PAG_pagamentos = [];
+var PAG_counter = 0;
+
+function PAG_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function PAG_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function PAG_maskVal(el, cb){
+  el.addEventListener('input',function(){
+    var raw=this.value.replace(/\D/g,'');
+    if(!raw){this.value='';if(cb)cb();return;}
+    this.value=PAG_formatBR(parseInt(raw)/100);
+    if(cb)cb();
+  });
+}
+
+function PAG_update(){
+  var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
+  var soma=0;
+  PAG_pagamentos.forEach(function(p){
+    soma+=PAG_parseBR(p.valor||'0')||0;
+  });
+  var saldo=total-soma;
+  document.getElementById('pag-saldo').textContent='R$ '+PAG_formatBR(saldo);
+  document.getElementById('pag-saldo').style.color=saldo<0?'#c00':'#111';
+  document.getElementById('pag-soma').textContent='R$ '+PAG_formatBR(soma);
+}
+
+function PAG_addLinha(){
+  PAG_counter++;
+  var id=PAG_counter;
+  PAG_pagamentos.push({id:id,desc:'',valor:''});
+  PAG_render();
+}
+
+function PAG_removeLinha(id){
+  PAG_pagamentos=PAG_pagamentos.filter(function(p){return p.id!==id;});
+  PAG_render();
+  PAG_update();
+}
+
+function PAG_render(){
+  var lista=document.getElementById('pag-lista');
+  lista.innerHTML='';
+  PAG_pagamentos.forEach(function(p){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
+    row.innerHTML=
+      '<input type="text" placeholder="Descrição" data-pid="'+p.id+'" data-field="desc"'+
+      ' style="min-width:0;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;color:#111;padding:3px 0;font-family:-apple-system,sans-serif;"'+
+      (p.desc?' value="'+p.desc+'"':'')+'>'+
+      '<div style="display:flex;align-items:baseline;gap:1px;width:90px;flex-shrink:0;border-bottom:0.5px solid #ddd;">'+
+        '<span style="font-size:10px;color:#aaa;">R$</span>'+
+        '<input type="text" inputmode="numeric" placeholder="0,00" data-pid="'+p.id+'" data-field="valor"'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:70px;text-align:right;font-family:-apple-system,sans-serif;"'+
+        (p.valor?' value="'+p.valor+'"':'')+'>'+
+      '</div>'+
+      '<button onclick="PAG_removeLinha('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;width:20px;flex-shrink:0;text-align:center;">×</button>';
+    lista.appendChild(row);
+  });
+  lista.querySelectorAll('[data-field="desc"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      var p=PAG_pagamentos.find(function(x){return x.id===parseInt(el.dataset.pid);});
+      if(p) p.desc=this.value;
+    });
+  });
+  lista.querySelectorAll('[data-field="valor"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      var raw=this.value.replace(/\D/g,'');
+      this.value=raw?PAG_formatBR(parseInt(raw)/100):'';
+      var p=PAG_pagamentos.find(function(x){return x.id===parseInt(el.dataset.pid);});
+      if(p){ p.valor=this.value; PAG_update(); }
+    });
+  });
+}
+
+function PAG_limpar(){
+  PAG_pagamentos=[]; PAG_counter=0;
+  document.getElementById('pag-total').value='';
+  document.getElementById('pag-saldo').textContent='R$ ---';
+  document.getElementById('pag-soma').textContent='---';
+  PAG_render();
+}
+
+function PAG_compartilhar(){
+  var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
+  var soma=0;
+  PAG_pagamentos.forEach(function(p){soma+=PAG_parseBR(p.valor||'0')||0;});
+  var saldo=total-soma;
+  var rows=PAG_pagamentos.filter(function(p){return p.desc||p.valor;});
+
+  document.getElementById('pag-ov-total').textContent='R$ '+PAG_formatBR(total);
+  var saldoEl=document.getElementById('pag-ov-saldo');
+  saldoEl.textContent='R$ '+(saldo===0?'-':PAG_formatBR(saldo));
+  saldoEl.style.color=saldo<0?'#c00':'#111';
+
+  var lista=document.getElementById('pag-ov-lista');
+  lista.innerHTML='';
+  if(rows.length===0){
+    lista.innerHTML='<div style="font-size:13px;color:#aaa;text-align:center;padding:8px 0;">—</div>';
+  } else {
+    rows.forEach(function(p){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid #f0f0f0;';
+      row.innerHTML='<span style="font-size:13px;color:#555;">'+(p.desc||'').toUpperCase()+'</span>'
+        +'<span style="font-size:13px;font-weight:700;color:#111;">R$ '+(p.valor||'0,00')+'</span>';
+      lista.appendChild(row);
+    });
+    // Add total line
+    var tot=document.createElement('div');
+    tot.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0 0;margin-top:4px;';
+    tot.innerHTML='<span style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;">TOTAL PAGO</span>'
+      +'<span style="font-size:14px;font-weight:700;color:#111;">R$ '+PAG_formatBR(soma)+'</span>';
+    lista.appendChild(tot);
+  }
+
+  document.getElementById('pag-overlayTabela').style.display='block';
+  document.getElementById('pag-overlayTabela').scrollTop=0;
+  window.scrollTo(0,0);
+}
+function PAG_fecharTabela(){
+  document.getElementById('pag-overlayTabela').style.display='none';
+}
+
+PAG_maskVal(document.getElementById('pag-total'), PAG_update);
+
+// Auto-uppercase for text inputs (non-numeric)
+document.querySelectorAll('input[type="text"]').forEach(function(el){
+  var mode = el.getAttribute('inputmode');
+  if(mode !== 'numeric' && mode !== 'decimal'){
+    el.addEventListener('input', function(){
+      var pos = this.selectionStart;
+      this.value = this.value.toUpperCase();
+      this.setSelectionRange(pos, pos);
+    });
+  }
+});
+
+
+</script>
+</body>
+</html>
