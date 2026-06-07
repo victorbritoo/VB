@@ -18,7 +18,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   input::placeholder { color: #ccc; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  .card { background: #f5f5f3; width: 100%; max-width: 390px; margin: 0 auto; padding: 32px 36px 40px; }
+  .card { background: #f5f5f3; width: 100%; max-width: 390px; margin: 0 auto; padding: 32px 36px 40px; position: relative; }
   .logo { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: #111; line-height: 1; margin-bottom: 6px; margin-left: 10px; }
   .simulacao-label { font-size: 11px; letter-spacing: 5px; color: #888; margin-bottom: 6px; font-weight: 500; margin-left: 10px; }
   .divider { border: none; border-top: 0.5px solid #ccc; margin-bottom: 14px; }
@@ -141,6 +141,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
+    <div style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;pointer-events:none;">V: 1.0.15</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -680,6 +681,7 @@ function FIN_solveRate(PV, PMT, n){
 }
 
 var parcelaManual = false;
+var taxaAutoFilled = false;
 
 function FIN_updateTotal(){
   var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
@@ -702,12 +704,34 @@ function FIN_update(){
     var pvOk  = !isNaN(PV)  && PV>0;
     var pmtOk = !isNaN(pmt) && pmt>0;
     var nOk   = !isNaN(n)   && n>0;
-    if(pvOk && pmtOk && nOk){
+    var iOk   = !isNaN(i)   && i>0;
+    if(pvOk && pmtOk) erro.style.display='none';
+
+    if(pvOk && pmtOk && nOk && (!iOk || taxaAutoFilled)){
+      // Valor + parcela + prazo → resolve taxa (inclusive quando taxa foi auto-preenchida)
       var rate = FIN_solveRate(PV, pmt, n);
       if(!isNaN(rate) && rate>0){
         var taxaFmt = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
         document.getElementById('fin-taxa').value = taxaFmt;
+        taxaAutoFilled = true;
         erro.style.display='none';
+      } else {
+        document.getElementById('fin-taxa').value = '';
+        taxaAutoFilled = false;
+        erro.textContent = 'Parcela × prazo não cobre o valor financiado';
+        erro.style.display = 'block';
+      }
+    } else if(pvOk && pmtOk && iOk && !taxaAutoFilled && !nOk){
+      // Valor + taxa (manual) + parcela → resolve prazo
+      var ratio = PV * i / pmt;
+      if(ratio > 0 && ratio < 1){
+        var nCalc = -Math.log(1 - ratio) / Math.log(1 + i);
+        var nRound = Math.round(nCalc);
+        if(nRound > 0 && nRound < 600){
+          document.getElementById('fin-prazo').value = String(nRound);
+          n = nRound;
+          erro.style.display='none';
+        }
       }
     }
     FIN_updateTotal();
@@ -876,7 +900,7 @@ function FIN_fecharOverlay(){
 }
 
 function FIN_limpar(){
-  FIN_parcelaManual=false;
+  FIN_parcelaManual=false; taxaAutoFilled=false;
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -892,14 +916,14 @@ function FIN_limpar(){
 }
 
 document.getElementById('fin-valor').addEventListener('input',function(){
-  parcelaManual=false;
+  parcelaManual=false; taxaAutoFilled=false;
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
   FIN_update();
 });
 document.getElementById('fin-taxa').addEventListener('input',function(){
-  parcelaManual=false;
+  taxaAutoFilled=false;
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
