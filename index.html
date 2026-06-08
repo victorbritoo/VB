@@ -250,14 +250,14 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <span class="total-value" id="fin-total"></span>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;margin-bottom:0;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;margin-bottom:0;">
     <button onclick="FIN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
     <button onclick="FIN_abrirOverlay()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
   </div>
 
   </div><!-- fim captureZone -->
 
-  <div class="field-card no-print" style="margin-top:2px;text-align:center;">
+  <div class="field-card no-print" style="margin-top:4px;text-align:center;">
     <div class="field-label">TOTAL DE JUROS</div>
     <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
       <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
@@ -641,6 +641,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
     <button onclick="PAG_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
   </div>
+</div>
 </div>
 
 <script>
@@ -1919,149 +1920,71 @@ function PAG_limpar(){
 }
 
 function PAG_compartilhar(){
-  var total = PAG_parseBR(document.getElementById('pag-total').value)||0;
-  var soma  = 0;
-  PAG_pagamentos.forEach(function(p){ soma += PAG_parseBR(p.valor||'0')||0; });
-  var saldo = total - soma;
-  var rows  = PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
-
-  // Canvas setup
-  var W=390, esc=3, pad=24;
-  var fs=11, fsB=13, fsSm=9;
-  var lineH=20, cardPad=14, cardGap=6, cardR=14;
-
-  // Heights
-  var hVB     = 38;
-  var hLabel  = 18;
-  var hSep    = 10;
-  var hCardVT = cardPad*2 + fsSm + 6 + 32; // VALOR TOTAL card
-  var hRowItem= 26;
-  var hRowTot = 30;
-  var nRows   = rows.length;
-  var hCardPag= cardPad*2 + fsSm + 6 + (nRows>0 ? nRows*hRowItem + hRowTot : hRowItem);
-  var hCardSaldo = cardPad*2 + 20;
-  var H = 28 + hVB + hLabel + hSep + cardGap +
-          hCardVT + cardGap + hCardPag + cardGap + hCardSaldo + 28;
-
-  var cv = document.createElement('canvas');
-  cv.width = W*esc; cv.height = H*esc;
-  var ctx = cv.getContext('2d');
-  ctx.scale(esc, esc);
-
-  // BG
-  ctx.fillStyle = '#f5f5f3'; ctx.fillRect(0,0,W,H);
-
-  function rRect(x,y,w,h,r){
-    ctx.beginPath();
-    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-    ctx.closePath();
-  }
-
-  var y = 28;
-
-  // VB Logo
-  ctx.fillStyle='#111';
-  ctx.font='400 30px Georgia,"Times New Roman",serif';
-  ctx.textAlign='left';
-  ctx.fillText('VB', pad, y+24);
-  y += hVB;
-
-  // PAGAMENTOS label
-  ctx.font='600 '+fsSm+'px Helvetica,Arial,sans-serif';
-  ctx.fillStyle='#888';
-  ctx.letterSpacing='3px';
-  ctx.fillText('PAGAMENTOS', pad, y+fsSm+2);
-  ctx.letterSpacing='0px';
-  y += hLabel;
-
-  // Separator
+  var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
+  var soma=0;
+  PAG_pagamentos.forEach(function(p){ soma+=PAG_parseBR(p.valor||'0')||0; });
+  var saldo=total-soma;
+  var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
+  var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
+  var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
+  var secRow=lineH,secTotLine=22,secSaldoH=20,secSaldoV=34,secBottom=20;
+  var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSaldoV+secBottom;
+  var cv=document.createElement('canvas');
+  cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d');
+  ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=16;
+  ctx.fillStyle='#111'; ctx.font='400 26px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
+  ctx.fillText('VB',pad,y+22); y+=secLogo;
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(pad,y+4); ctx.lineTo(W-pad,y+4); ctx.stroke();
-  y += hSep;
-
-  // ── Card: VALOR TOTAL ──────────────────────────────────────────────────────
-  y += cardGap;
-  rRect(pad, y, W-pad*2, hCardVT, cardR);
-  ctx.fillStyle='#fff'; ctx.fill();
-  ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; ctx.stroke();
-
-  ctx.fillStyle='#aaa';
-  ctx.font='500 '+fsSm+'px Helvetica,Arial,sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText('VALOR TOTAL', W/2, y+cardPad+fsSm);
-
-  ctx.fillStyle='#111';
-  ctx.font='700 28px -apple-system,Helvetica,Arial,sans-serif';
-  ctx.fillText('R$ '+PAG_formatBR(total), W/2, y+cardPad+fsSm+8+26);
-  y += hCardVT;
-
-  // ── Card: PAGAMENTOS items ─────────────────────────────────────────────────
-  y += cardGap;
-  rRect(pad, y, W-pad*2, hCardPag, cardR);
-  ctx.fillStyle='#fff'; ctx.fill();
-  ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; ctx.stroke();
-
-  ctx.fillStyle='#aaa';
-  ctx.font='500 '+fsSm+'px Helvetica,Arial,sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText('PAGAMENTOS', W/2, y+cardPad+fsSm);
-
-  var ry = y + cardPad + fsSm + 10;
-
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('VALOR TOTAL',W/2,y+12); y+=secTotalH;
+  ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
+  ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('PAGAMENTOS',pad,y+12); y+=secPagHdr;
   if(rows.length===0){
-    ctx.fillStyle='#bbb'; ctx.font=fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText('—', W/2, ry+fsB);
-    ry += hRowItem;
+    ctx.fillStyle='#ccc'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('—',W/2,y+12); y+=secRow;
   } else {
     rows.forEach(function(p){
       ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.4;
-      ctx.beginPath(); ctx.moveTo(pad+12,ry+hRowItem-2); ctx.lineTo(W-pad-12,ry+hRowItem-2); ctx.stroke();
-      ctx.fillStyle='#555'; ctx.font=fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-      ctx.fillText((p.desc||'').toUpperCase(), pad+12, ry+fsB+2);
-      ctx.fillStyle='#111'; ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-      ctx.fillText('R$ '+(p.valor||'0,00'), W-pad-12, ry+fsB+2);
-      ry += hRowItem;
+      ctx.beginPath(); ctx.moveTo(pad,y+lineH-1); ctx.lineTo(W-pad,y+lineH-1); ctx.stroke();
+      ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
+      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+      ctx.fillText('R$ '+(p.valor||'0,00'),W-pad,y+13);
+      y+=secRow;
     });
-    // TOTAL PAGO row
-    ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
-    ctx.beginPath(); ctx.moveTo(pad+12,ry+2); ctx.lineTo(W-pad-12,ry+2); ctx.stroke();
-    ctx.fillStyle='#aaa'; ctx.font='500 '+fsSm+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-    ctx.fillText('TOTAL PAGO', pad+12, ry+fsSm+10);
-    ctx.fillStyle='#111'; ctx.font='700 14px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-    ctx.fillText('R$ '+PAG_formatBR(soma), W-pad-12, ry+fsSm+10);
   }
-  y += hCardPag;
-
-  // ── Card: SALDO ────────────────────────────────────────────────────────────
-  y += cardGap;
-  rRect(pad, y, W-pad*2, hCardSaldo, cardR);
-  ctx.fillStyle='#fff'; ctx.fill();
-  ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; ctx.stroke();
-  ctx.fillStyle='#aaa'; ctx.font='500 '+fsSm+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('SALDO', pad+12, y+hCardSaldo/2+fsSm/2);
-  ctx.fillStyle='#111'; ctx.font='700 16px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-  ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)), W-pad-12, y+hCardSaldo/2+fsSm/2);
-
-  // Watermark
-  VB_drawWatermark(ctx, W, H);
-
-  var img = document.getElementById('pag-tabelaImagem');
-  img.src = cv.toDataURL('image/png');
-  img.style.display = 'block';
-  document.getElementById('pag-tabelaImagemDica').style.display = 'block';
-  document.getElementById('pag-overlayTabela').style.display = 'block';
-  document.getElementById('pag-overlayTabela').scrollTop = 0;
-  window.scrollTo(0,0);
-}
-
-function PAG_fecharTabela(){
-  document.getElementById('pag-overlayTabela').style.display='none';
+  y+=4;
+  ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('TOTAL PAGO',pad,y+14);
+  ctx.fillStyle='#111'; ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('R$ '+PAG_formatBR(soma),W-pad,y+14); y+=secTotLine;
+  ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('SALDO',pad,y+12); y+=secSaldoH;
+  ctx.fillStyle=saldo<0?'#cc0000':'#111';
+  ctx.font='bold 22px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+24);
+  VB_drawWatermark(ctx,W,H);
   var img=document.getElementById('pag-tabelaImagem');
-  if(img){ img.style.display='none'; img.src=''; }
-  document.getElementById('pag-tabelaImagemDica').style.display='none';
+  img.src=cv.toDataURL('image/png');
+  img.style.display='block';
+  document.getElementById('pag-tabelaImagemDica').style.display='block';
+  document.getElementById('pag-overlayTabela').style.display='block';
+  document.getElementById('pag-overlayTabela').scrollTop=0;
+}
+function PAG_fecharTabela(){
+  var ot=document.getElementById('pag-overlayTabela'); if(ot) ot.style.display='none';
+  var img=document.getElementById('pag-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
+  var dica=document.getElementById('pag-tabelaImagemDica'); if(dica) dica.style.display='none';
 }
 
 PAG_maskVal(document.getElementById('pag-total'), PAG_update);
@@ -2139,13 +2062,13 @@ function copyValue(sourceId, btn) {
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.36</span><span class="cl-ver-date">08/06/2026 15:00</span></div>
-      <div class="cl-item">Pagamentos: compartilhar agora gera imagem (canvas) igual à tela, com marca d'água VB</div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.36</span><span class="cl-ver-date">08/06/2026 15:20</span></div>
+      <div class="cl-item">Pagamentos: COMPARTILHAR gera imagem canvas com marca d'água</div>
     </div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.35</span><span class="cl-ver-date">08/06/2026 14:00</span></div>
-      <div class="cl-item">Financiamentos: espaço entre botões e Total de Juros reduzido</div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.35</span><span class="cl-ver-date">08/06/2026 13:55</span></div>
+      <div class="cl-item">Financiamentos: espaço entre TOTAL FINANCIADO e botões reduzido</div>
     </div>
 
     <div class="cl-version">
