@@ -135,13 +135,41 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   #ant-tabelaImagem{display:none;width:100%;max-width:700px;border-radius:4px}
   #ant-tabelaDica{display:none;max-width:500px;margin:12px auto 0;text-align:center}
 
+
+  #changelog-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 99997;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  #changelog-overlay.show { display: flex; }
+  #changelog-sheet {
+    background: #f5f5f3;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 24px 48px;
+    width: 100%;
+    max-width: 390px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .cl-handle { width: 36px; height: 4px; background: #ddd; border-radius: 2px; margin: 0 auto 20px; }
+  .cl-title  { font-size: 9px; letter-spacing: 3px; color: #999; font-weight: 500; margin-bottom: 20px; }
+  .cl-version { margin-bottom: 20px; }
+  .cl-ver-hdr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid #e8e8e8; }
+  .cl-ver-num { font-size: 13px; font-weight: 700; color: #111; }
+  .cl-ver-date{ font-size: 10px; color: #bbb; }
+  .cl-item    { font-size: 12px; color: #555; padding: 4px 0 4px 12px; border-left: 2px solid #e8e8e8; margin-bottom: 4px; line-height: 1.4; }
+  .cl-close   { width: 100%; padding: 12px; border: 0.5px solid #ddd; border-radius: 14px; background: #fff; font-family: -apple-system,sans-serif; font-size: 12px; letter-spacing: 2px; color: #aaa; font-weight: 500; cursor: pointer; margin-top: 8px; }
 </style>
 </head>
 <body>
 
 <div id="screen-home">
   <div class="card">
-    <div style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;pointer-events:none;text-align:right;line-height:1.6;">V: 1.0.16<br>07/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.23<br>07/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -408,7 +436,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
     <div id="ant-secDataOp" style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;min-width:52px;">DATA OP.</span>
-      <input id="ant-dataOperacao" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" style="flex:1;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:11px;font-weight:600;color:#111;font-family:-apple-system,sans-serif;">
+      <input id="ant-dataOperacao" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="flex:1;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:11px;font-weight:600;color:#111;font-family:-apple-system,sans-serif;">
     </div>
   </div>
   <hr class="hr">
@@ -516,7 +544,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="fl" style="text-align:left;margin-bottom:6px;">GERAR TABELA</div>
     <div id="ant-secTabelaData" style="margin-bottom:6px;">
       <div class="cl" style="margin-bottom:4px;">PRIMEIRO VENCIMENTO</div>
-      <input id="ant-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;font-weight:400;color:#111;padding:4px 0;font-family:-apple-system,sans-serif;">
+      <input id="ant-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;font-weight:400;color:#111;padding:4px 0;font-family:-apple-system,sans-serif;">
     </div>
     </div><!-- end secGerarLabel -->
     <button onclick="ANT_gerarTabela()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
@@ -659,6 +687,25 @@ function VB_drawWatermark(ctx, W, H){
   }
   ctx.restore();
 }
+function autoCompleteDate(el){
+  var v = el.value.trim();
+  if(!v) return;
+  var parts = v.split('/');
+  if(parts.length < 2) return;
+  var d = parts[0].replace(/\D/g,'');
+  var m = parts[1].replace(/\D/g,'');
+  if(!d || !m) return;
+  d = d.padStart(2,'0').slice(0,2);
+  m = m.padStart(2,'0').slice(0,2);
+  var y = parts[2] ? parts[2].replace(/\D/g,'') : '';
+  if(!y) y = String(new Date().getFullYear());
+  var novo = d+'/'+m+'/'+y;
+  if(el.value !== novo){
+    el.value = novo;
+    el.dispatchEvent(new Event('input'));
+  }
+}
+
 /* === FINANCIAMENTOS JS === */
 
 function FIN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
@@ -1067,12 +1114,12 @@ function VEN_renderParcelas(){
       '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;">'+String(p.id).padStart(2,'0')+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;">'+
         '<span style="font-size:10px;color:#aaa;">R$</span>'+
-        '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="valor"'+
+        '<input type="text" inputmode="numeric" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
         ' placeholder="0,00" value="'+(p.valor||'')+'"'+
         ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;font-family:-apple-system,sans-serif;">'+
       '</div>'+
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
-      ' placeholder="DD/MM/AAAA" maxlength="10" value="'+(p.data||'')+'"'+
+      ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;">'+
       '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;">×</button>';
     lista.appendChild(row);
@@ -1710,7 +1757,7 @@ function ANT_renderTitulos(){
         ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;min-width:0;font-family:-apple-system,sans-serif;"'+
         (t.valor?' value="'+t.valor+'"':'')+'>'+
       '</div>'+
-      '<input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" data-tid="'+t.id+'" data-field="data"'+
+      '<input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" data-tid="'+t.id+'" data-field="data"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;font-family:-apple-system,sans-serif;width:100%;min-width:0;"'+
       (t.data?' value="'+t.data+'"':'')+'>'+
       '<button onclick="ANT_removerTitulo('+t.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;">×</button>';
@@ -1941,6 +1988,14 @@ document.querySelectorAll('input[type="text"]').forEach(function(el){
 });
 
 
+
+function abrirChangelog(){
+  document.getElementById('changelog-overlay').classList.add('show');
+}
+function fecharChangelog(){
+  document.getElementById('changelog-overlay').classList.remove('show');
+}
+
 </script>
 
 <style>
@@ -1961,5 +2016,111 @@ document.querySelectorAll('input[type="text"]').forEach(function(el){
 }
 </style>
 <div id="vb-watermark"></div>
+
+<!-- CHANGELOG MODAL -->
+<div id="changelog-overlay" onclick="if(event.target===this)fecharChangelog()">
+  <div id="changelog-sheet">
+    <div class="cl-handle"></div>
+    <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.23</span><span class="cl-ver-date">07/06/2026 21:25</span></div>
+      <div class="cl-item">Log de melhorias com hora da alteração a partir desta versão</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.22</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Campos de valor no Vendas personalizado selecionam ao tocar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.21</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Todos os campos de data selecionam o conteúdo ao tocar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.20</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Zero automático no dia e mês ao sair do campo (ex: 10/4 → 10/04/2026)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.19</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Correção: datas nos títulos da Antecipação e parcelas do Vendas agora atualizam corretamente a tabela gerada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.18</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Autocompletar ano nas datas: digita DD/MM e completa para DD/MM/AAAA ao sair do campo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.17</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Data da última atualização exibida na tela inicial</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.16</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Versão exibida no canto superior direito da tela inicial</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.15</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Correção bug: digitar valor + parcela + taxa não apagava mais os campos</div>
+      <div class="cl-item">Financiamento calcula prazo automaticamente quando valor, taxa e parcela estão preenchidos</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.14</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Financiamento: preenchendo valor + parcela + prazo calcula a taxa automaticamente</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.13</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Marca d'água VB nas tabelas geradas (Financiamentos, Vendas e Antecipação)</div>
+      <div class="cl-item">Marca d'água mais discreta na tela do app</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.12</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Marca d'água VB em padrão diagonal em todas as telas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.11</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Tela inicial: removidos subtítulos TABELA PRICE, FACTORING e CONTROLE dos botões</div>
+      <div class="cl-item">Vendas: COMPARTILHAR removido, LIMPAR junto ao GERAR TABELA</div>
+      <div class="cl-item">Parcelas individuais centralizadas no modo personalizado</div>
+      <div class="cl-item">Colunas da tabela Antecipação redistribuídas com mais espaço</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.10</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Vendas personalizado: editar valor de parcela atualiza total e quantidade automaticamente</div>
+      <div class="cl-item">Remover linha também atualiza os campos principais</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.9</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Módulo Vendas: campo valor da parcela ocupa largura total (sem cortar valores grandes)</div>
+      <div class="cl-item">No modo personalizado o campo valor da parcela some para não confundir</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.8</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Módulo Vendas: novo modo personalizado para editar valor e data de cada parcela individualmente</div>
+      <div class="cl-item">Parcelas centralizadas com fonte maior</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.7</span><span class="cl-ver-date">07/06/2026</span></div>
+      <div class="cl-item">Novo módulo Vendas na tela inicial (Tabela Price simplificada sem juros)</div>
+      <div class="cl-item">Campo único de descrição no Gerar Tabela (Financiamentos e Vendas)</div>
+      <div class="cl-item">Correção: botão Gerar Tabela no Financiamentos não funcionava</div>
+    </div>
+
+    <button class="cl-close" onclick="fecharChangelog()">FECHAR</button>
+  </div>
+</div>
+
 </body>
 </html>
