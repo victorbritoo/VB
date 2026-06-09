@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.48</title>
+<title>VB - v1.0.54</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.48<br>09/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.54<br>09/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -819,9 +819,6 @@ function FIN_solveRate(PV, PMT, n){
   return i;
 }
 
-var parcelaManual = false;
-var taxaAutoFilled = false;
-var valorAutoFilled = false;
 
 function FIN_updateTotal(){
   var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
@@ -834,73 +831,41 @@ function FIN_updateTotal(){
 }
 
 function FIN_update(){
-  var PV  = FIN_parseBR(document.getElementById('fin-valor').value);
-  var i   = FIN_parseBR(document.getElementById('fin-taxa').value)/100;
-  var n   = parseInt(document.getElementById('fin-prazo').value||'0');
-  var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
-  var erro = document.getElementById('fin-erro');
-
-  if(parcelaManual){
-    var pvOk  = !isNaN(PV)  && PV>0;
-    var pmtOk = !isNaN(pmt) && pmt>0;
-    var nOk   = !isNaN(n)   && n>0;
-    var iOk   = !isNaN(i)   && i>0;
-    if(pvOk && pmtOk) erro.style.display='none';
-
-    if(!pvOk && pmtOk && nOk && iOk){
-      // Parcela + prazo + taxa → resolve valor financiado (PV)
-      var pvCalc = pmt * (1 - Math.pow(1+i,-n)) / i;
-      if(pvCalc > 0){
-        document.getElementById('fin-valor').value = FIN_formatBR(pvCalc);
-        PV = pvCalc; pvOk = true;
-        valorAutoFilled = true;
-        erro.style.display='none';
-      }
-    } else if(pvOk && pmtOk && nOk && (!iOk || taxaAutoFilled)){
-      // Valor + parcela + prazo → resolve taxa
-      var rate = FIN_solveRate(PV, pmt, n);
-      if(!isNaN(rate) && rate>0){
-        var taxaFmt = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-        document.getElementById('fin-taxa').value = taxaFmt;
-        taxaAutoFilled = true;
-        erro.style.display='none';
-      } else {
-        taxaAutoFilled = false;
-        erro.textContent = 'Parcela × prazo não cobre o valor financiado';
-        erro.style.display = 'block';
-      }
-    } else if(pvOk && pmtOk && iOk && !taxaAutoFilled && !nOk){
-      // Valor + taxa (manual) + parcela → resolve prazo
-      var ratio = PV * i / pmt;
-      if(ratio > 0 && ratio < 1){
-        var nCalc = -Math.log(1 - ratio) / Math.log(1 + i);
-        var nRound = Math.round(nCalc);
-        if(nRound > 0 && nRound < 600){
-          document.getElementById('fin-prazo').value = String(nRound);
-          n = nRound;
-          erro.style.display='none';
-        }
-      }
-    }
-    FIN_updateTotal();
-    var pmtV=FIN_parseBR(document.getElementById('fin-parcela').value);
-    var nV=parseInt(document.getElementById('fin-prazo').value||'0');
-    var pvV=FIN_parseBR(document.getElementById('fin-valor').value);
-    if(pmtV>0&&nV>0&&pvV>0) document.getElementById('fin-totalJuros').textContent=FIN_formatBR(pmtV*nV-pvV);
-    return;
-  }
-
-  if(isNaN(PV)||isNaN(i)||isNaN(n)||PV<=0||i<0||n<=0){
-    erro.style.display='block';
-    document.getElementById('fin-total').textContent='R$ ---';
-    return;
-  }
+  var valEl=document.getElementById('fin-valor');
+  var pmtEl=document.getElementById('fin-parcela');
+  var nEl=document.getElementById('fin-prazo');
+  var iEl=document.getElementById('fin-taxa');
+  var erro=document.getElementById('fin-erro');
+  var active=document.activeElement;
+  var PV=FIN_parseBR(valEl.value);
+  var pmt=FIN_parseBR(pmtEl.value);
+  var n=parseInt(nEl.value||'0');
+  var i=FIN_parseBR(iEl.value)/100;
+  var pvOk=!isNaN(PV)&&PV>0;
+  var pmtOk=!isNaN(pmt)&&pmt>0;
+  var nOk=!isNaN(n)&&n>0;
+  var iOk=!isNaN(i)&&i>0;
   erro.style.display='none';
-  var calc=Math.ceil(FIN_calcPrice(PV,i,n)*100)/100;
-  document.getElementById('fin-parcela').value=FIN_formatBR(calc);
-  document.getElementById('fin-total').textContent='R$ '+FIN_formatBR(calc*n);
-  document.getElementById('fin-totalJuros').textContent=FIN_formatBR(calc*n - PV);
+  if(active===pmtEl){
+    if(!pvOk&&pmtOk&&nOk&&iOk){
+      var pvC=pmt*(1-Math.pow(1+i,-n))/i; if(pvC>0) valEl.value=FIN_formatBR(pvC);
+    } else if(pvOk&&pmtOk&&!nOk&&iOk){
+      var r=PV*i/pmt; if(r>0&&r<1){ var nC=Math.round(-Math.log(1-r)/Math.log(1+i)); if(nC>0&&nC<600) nEl.value=String(nC); }
+    } else if(pvOk&&pmtOk&&nOk&&!iOk){
+      var rate=FIN_solveRate(PV,pmt,n); if(!isNaN(rate)&&rate>0) iEl.value=(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+  } else {
+    if(pvOk&&nOk&&iOk){
+      pmtEl.value=FIN_formatBR(Math.round(FIN_calcPrice(PV,i,n)*100)/100);
+    } else if(!pvOk&&pmtOk&&nOk&&iOk){
+      var pvC2=pmt*(1-Math.pow(1+i,-n))/i; if(pvC2>0) valEl.value=FIN_formatBR(pvC2);
+    }
+  }
+  FIN_updateTotal();
+  var pmtV=FIN_parseBR(pmtEl.value),nV=parseInt(nEl.value||'0'),pvV=FIN_parseBR(valEl.value);
+  if(pmtV>0&&nV>0&&pvV>0) document.getElementById('fin-totalJuros').textContent=FIN_formatBR(pmtV*nV-pvV);
 }
+
 
 function FIN_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
 
@@ -1047,7 +1012,6 @@ function FIN_fecharOverlay(){
 }
 
 function FIN_limpar(){
-  FIN_parcelaManual=false; taxaAutoFilled=false; valorAutoFilled=false;
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -1063,14 +1027,12 @@ function FIN_limpar(){
 }
 
 document.getElementById('fin-valor').addEventListener('input',function(){
-  parcelaManual=false; taxaAutoFilled=false; valorAutoFilled=false;
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
   FIN_update();
 });
 document.getElementById('fin-taxa').addEventListener('input',function(){
-  taxaAutoFilled=false;
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
@@ -2293,12 +2255,18 @@ function QUIT_update(){
   }
 
   var i=taxa/100;
-  var i_daily=Math.pow(1+i,1/30)-1;
-  var quit=0;
-  for(var k=0;k<n;k++){
-    var dInst=new Date(dateProx.getFullYear(),dateProx.getMonth()+k,dateProx.getDate(),12,0,0);
-    var dias=Math.round((dInst-dateQuit)/(1000*60*60*24));
-    quit+=dias<=0?pmt:pmt/Math.pow(1+i_daily,dias);
+  // Dias até a próxima parcela e fração de período
+  var dias1=Math.round((dateProx-dateQuit)/(1000*60*60*24));
+  var fracao=dias1/30; // ex: 28 dias = 0,933 mês
+  // PV base: fórmula de anuidade ajustada pela fração
+  // PV = PMT × (1+i)^(1-f) × [1-(1+i)^-n] / i
+  var pvBase = pmt * Math.pow(1+i, 1-fracao) * (1 - Math.pow(1+i,-n)) / i;
+  var quit = pvBase;
+  // Se 1ª parcela em menos de 30 dias: não desconta os juros dela
+  // Adiciona de volta o desconto que seria aplicado na 1ª parcela
+  if(fracao < 1){
+    var ajuste = pmt * (1 - Math.pow(1+i, -fracao));
+    quit += ajuste;
   }
   var total=n*pmt;
   var desc=total-quit;
@@ -2397,6 +2365,36 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.54</span><span class="cl-ver-date">09/06/2026 16:30</span></div>
+      <div class="cl-item">Quitação: fórmula de anuidade com fração de período — 1ª parcela sem desconto se menos de 30 dias</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.53</span><span class="cl-ver-date">09/06/2026 16:15</span></div>
+      <div class="cl-item">Financiamentos: arredondamento Math.round — resultado bate com Calculadora do Cidadão</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.52</span><span class="cl-ver-date">09/06/2026 15:55</span></div>
+      <div class="cl-item">Quitação: parcela com menos de 30 dias sem desconto; demais descontam por períodos fracionados (dias/30)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.51</span><span class="cl-ver-date">09/06/2026 15:45</span></div>
+      <div class="cl-item">Financiamentos: bug no LIMPAR corrigido</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.50</span><span class="cl-ver-date">09/06/2026 15:30</span></div>
+      <div class="cl-item">Financiamentos: lógica bidirecional reescrita sem flags — qualquer 3 campos calculam o 4º</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.49</span><span class="cl-ver-date">09/06/2026 15:00</span></div>
+      <div class="cl-item">Financiamentos: ao tocar em qualquer campo todos os modos são resetados — permite simulações encadeadas sem conflito</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.48</span><span class="cl-ver-date">09/06/2026 14:45</span></div>
