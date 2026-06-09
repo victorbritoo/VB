@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.38</title>
+<title>VB - v1.0.48</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.38<br>08/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.48<br>09/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -207,6 +207,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </button>
     <button onclick="PIN_request('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Vendas</div>
+    </button>
+    <button onclick="PIN_request('quit')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Quitação Antecipada</div>
     </button>
   </div>
 </div>
@@ -412,7 +415,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
     <div id="ven-secTabelaData" style="margin-bottom:8px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
-      <input id="ven-tabelaData" type="date" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+      <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button onclick="VEN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
@@ -435,6 +438,88 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 </div>
 
 </div>
+<div id="screen-quit" class="vb-screen">
+<div class="card">
+
+  <!-- TOPO -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div>
+      <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+      <div class="simulacao-label">QUITAÇÃO ANTECIPADA</div>
+    </div>
+  </div>
+  <hr class="divider">
+
+  <!-- DATA QUITAÇÃO -->
+  <div class="field-card" style="margin-bottom:4px;text-align:center;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">DATA QUITAÇÃO</div>
+    <input type="text" inputmode="numeric" id="quit-dataQuit" placeholder="DD/MM/AAAA" maxlength="10"
+      onclick="this.select()" onblur="autoCompleteDate(this)"
+      style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:20px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+  </div>
+
+  <!-- VALOR DA PARCELA -->
+  <div class="field-card" style="margin-bottom:4px;">
+    <div class="field-label" style="text-align:center;">VALOR DA PARCELA</div>
+    <div class="valor-row" style="justify-content:center;align-items:center;">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center;" id="quit-parcela" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+    </div>
+  </div>
+
+  <!-- PRÓXIMO VENCIMENTO + PARCELAS A VENCER -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+    <div class="field-card" style="text-align:center;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PRÓXIMO VENCIMENTO</div>
+      <input type="text" inputmode="numeric" id="quit-dataProx" placeholder="DD/MM/AAAA" maxlength="10"
+        onclick="this.select()" onblur="autoCompleteDate(this)"
+        style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+    </div>
+    <div class="field-card" style="text-align:center;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARCELAS A VENCER</div>
+      <input class="input-big" style="text-align:center;font-size:26px;" id="quit-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()">
+    </div>
+  </div>
+
+  <!-- TAXA DESCONTO -->
+  <div class="field-card" style="margin-bottom:4px;text-align:center;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">TAXA DE DESCONTO</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
+      <input class="input-big" style="text-align:right;font-size:28px;width:80px;" id="quit-taxa" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+      <span style="font-size:13px;color:#aaa;font-weight:500;">% a.m.</span>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="quit-result" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+      <div class="field-card" style="text-align:center;">
+        <div style="font-size:8px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:6px;">VALOR QUITAÇÃO</div>
+        <div style="font-size:9px;color:#aaa;">R$</div>
+        <div style="font-size:20px;font-weight:700;color:#111;" id="quit-valor">---</div>
+      </div>
+      <div class="field-card" style="text-align:center;background:#f0fff4;border-color:#c8f0d8;">
+        <div style="font-size:8px;letter-spacing:2px;color:#30a060;font-weight:500;margin-bottom:6px;">DESCONTO OBTIDO</div>
+        <div style="font-size:9px;color:#30a060;">R$</div>
+        <div style="font-size:20px;font-weight:700;color:#30a060;" id="quit-desconto">---</div>
+      </div>
+    </div>
+
+    <!-- CAMPO COPIAR WHATSAPP -->
+    <div class="field-card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+      <span id="quit-msgWpp" data-copyraw="true" style="font-size:13px;font-weight:600;color:#111;flex:1;line-height:1.4;">---</span>
+      <button class="copy-btn" style="opacity:0.4;flex-shrink:0;" onclick="copyValue('quit-msgWpp',this)" title="Copiar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- LIMPAR -->
+  <button onclick="QUIT_limpar()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:2px;">LIMPAR</button>
+
+</div>
+</div>
+
 <div id="screen-ant" class="vb-screen">
 <div class="card">
   <!-- TOPO -->
@@ -666,7 +751,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <script>
 function showScreen(name){
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven'].forEach(function(s){
+  ['fin','ant','pag','ven','quit'].forEach(function(s){
     document.getElementById('screen-'+s).style.display=s===name?'block':'none';
   });
   window.scrollTo(0,0);
@@ -736,6 +821,7 @@ function FIN_solveRate(PV, PMT, n){
 
 var parcelaManual = false;
 var taxaAutoFilled = false;
+var valorAutoFilled = false;
 
 function FIN_updateTotal(){
   var pmt = FIN_parseBR(document.getElementById('fin-parcela').value);
@@ -761,8 +847,17 @@ function FIN_update(){
     var iOk   = !isNaN(i)   && i>0;
     if(pvOk && pmtOk) erro.style.display='none';
 
-    if(pvOk && pmtOk && nOk && (!iOk || taxaAutoFilled)){
-      // Valor + parcela + prazo → resolve taxa (inclusive quando taxa foi auto-preenchida)
+    if(!pvOk && pmtOk && nOk && iOk){
+      // Parcela + prazo + taxa → resolve valor financiado (PV)
+      var pvCalc = pmt * (1 - Math.pow(1+i,-n)) / i;
+      if(pvCalc > 0){
+        document.getElementById('fin-valor').value = FIN_formatBR(pvCalc);
+        PV = pvCalc; pvOk = true;
+        valorAutoFilled = true;
+        erro.style.display='none';
+      }
+    } else if(pvOk && pmtOk && nOk && (!iOk || taxaAutoFilled)){
+      // Valor + parcela + prazo → resolve taxa
       var rate = FIN_solveRate(PV, pmt, n);
       if(!isNaN(rate) && rate>0){
         var taxaFmt = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -952,7 +1047,7 @@ function FIN_fecharOverlay(){
 }
 
 function FIN_limpar(){
-  FIN_parcelaManual=false; taxaAutoFilled=false;
+  FIN_parcelaManual=false; taxaAutoFilled=false; valorAutoFilled=false;
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -968,7 +1063,7 @@ function FIN_limpar(){
 }
 
 document.getElementById('fin-valor').addEventListener('input',function(){
-  parcelaManual=false; taxaAutoFilled=false;
+  parcelaManual=false; taxaAutoFilled=false; valorAutoFilled=false;
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
@@ -1033,6 +1128,17 @@ function VEN_update(){
 }
 
 VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_update(); });
+(function(){
+  var vtd=document.getElementById('ven-tabelaData');
+  if(vtd) vtd.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,'');
+    var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+  });
+})();
 VEN_maskVal(document.getElementById('ven-parcela'), function(){ VEN_parcelaManual=true; VEN_update(); });
 document.getElementById('ven-qtd').addEventListener('input', function(){
   this.value = this.value.replace(/\D/g,'');
@@ -1051,8 +1157,8 @@ function VEN_limpar(){
 function VEN_initTabela(){
   var hoje = new Date();
   var prox = new Date(hoje.getFullYear(), hoje.getMonth()+1, hoje.getDate());
-  var y=prox.getFullYear(), m=String(prox.getMonth()+1).padStart(2,'0'), d=String(prox.getDate()).padStart(2,'0');
-  document.getElementById('ven-tabelaData').value = y+'-'+m+'-'+d;
+  var dd=String(prox.getDate()).padStart(2,'0'), mm=String(prox.getMonth()+1).padStart(2,'0'), yyyy=prox.getFullYear();
+  document.getElementById('ven-tabelaData').value = dd+'/'+mm+'/'+yyyy;
 }
 
 // ── PERSONALIZAR ─────────────────────────────────────────────────────────────
@@ -1187,8 +1293,7 @@ function VEN_gerarTabela(){
     var n       = parseInt(document.getElementById('ven-qtd').value||'0');
     var dataStr = document.getElementById('ven-tabelaData').value;
     if(!pmt||!n||!dataStr){ alert('Preencha os dados antes de gerar a tabela.'); return; }
-    var parts = dataStr.split('-');
-    var base  = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    var dp2=dataStr.split('/'); var base=new Date(parseInt(dp2[2]),parseInt(dp2[1])-1,parseInt(dp2[0]));
     for(var i=0; i<n; i++){
       var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
       linhas.push({
@@ -1905,10 +2010,10 @@ function PAG_render(){
       '<input type="text" placeholder="Descrição" data-pid="'+p.id+'" data-field="desc"'+
       ' style="min-width:0;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;color:#111;padding:3px 0;font-family:-apple-system,sans-serif;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
-      '<div style="display:flex;align-items:baseline;gap:1px;width:90px;flex-shrink:0;border-bottom:0.5px solid #ddd;">'+
+      '<div style="display:flex;align-items:baseline;gap:1px;width:110px;flex-shrink:0;border-bottom:0.5px solid #ddd;">'+
         '<span style="font-size:10px;color:#aaa;">R$</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" data-pid="'+p.id+'" data-field="valor"'+
-        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:70px;text-align:right;font-family:-apple-system,sans-serif;"'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:88px;text-align:rightt;font-family:-apple-system,sans-serif;"'+
         (p.valor?' value="'+p.valor+'"':'')+'>'+
       '</div>'+
       '<button onclick="PAG_removeLinha('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;width:20px;flex-shrink:0;text-align:center;">×</button>';
@@ -1958,13 +2063,13 @@ function PAG_compartilhar(){
   ctx.fillText('VB',pad,y+22); y+=secLogo;
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
-  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('VALOR TOTAL',W/2,y+12); y+=secTotalH;
+  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('VALOR TOTAL',W/2,y+14); y+=secTotalH;
   ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
   ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
-  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('PAGAMENTOS',pad,y+12); y+=secPagHdr;
+  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('PAGAMENTOS',pad,y+14); y+=secPagHdr;
   if(rows.length===0){
     ctx.fillStyle='#ccc'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText('—',W/2,y+12); y+=secRow;
@@ -2033,7 +2138,9 @@ function fecharChangelog(){
 function copyValue(sourceId, btn) {
   var el = document.getElementById(sourceId);
   var val = '';
-  if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+  if(el.dataset && el.dataset.copyraw==='true'){
+    val = el.textContent.trim();
+  } else if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
     val = el.value.replace(/[^0-9,.]/g,'').trim();
   } else {
     val = el.textContent.replace(/[^0-9,.]/g,'').trim();
@@ -2056,7 +2163,7 @@ function copyValue(sourceId, btn) {
 
 /* === PIN JS === */
 var PIN_buffer = '', PIN_target = '', PIN_mode = '', PIN_setupStep = 1, PIN_first = '';
-var PIN_PROTECTED = ['ant','pag','ven'];
+var PIN_PROTECTED = ['ant','pag','ven','quit'];
 
 function PIN_hasSaved(){ return !!localStorage.getItem('vb_pin'); }
 function PIN_getSaved(){ return localStorage.getItem('vb_pin')||''; }
@@ -2128,6 +2235,142 @@ function PIN_resetHint(){
   }
 }
 
+
+// Fechar teclado ao tocar fora de campos
+document.addEventListener('touchstart', function(e){
+  var tag = e.target.tagName;
+  if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){
+    if(document.activeElement && document.activeElement.blur){
+      document.activeElement.blur();
+    }
+  }
+}, { passive: true });
+
+
+/* === QUITAÇÃO JS === */
+function QUIT_parseBR(s){ return parseFloat((s||'').replace(/[.]/g,'').replace(',','.')); }
+function QUIT_formatBR(n){ return isNaN(n)||n==null?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function QUIT_fmtDate(iso){
+  if(!iso||iso.length<10) return '';
+  var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
+}
+function QUIT_parseDD(s){
+  if(!s) return null;
+  var p=s.split('/');
+  if(p.length<3) return null;
+  var yr=parseInt(p[2]);
+  if(yr<100) yr+=2000; // handle 2-digit year
+  var d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]),12,0,0);
+  return isNaN(d.getTime())?null:d;
+}
+function QUIT_autoDateShort(el){
+  var v=el.value.trim();
+  if(!v) return;
+  var parts=v.split('/');
+  if(parts.length<2) return;
+  var d=parts[0].replace(/\D/g,'');
+  var m=parts[1].replace(/\D/g,'');
+  if(!d||!m) return;
+  d=d.padStart(2,'0').slice(0,2);
+  m=m.padStart(2,'0').slice(0,2);
+  var yy=parts[2]?parts[2].replace(/\D/g,''):String(new Date().getFullYear()).slice(2);
+  yy=yy.slice(0,2);
+  el.value=d+'/'+m+'/'+yy;
+  QUIT_update();
+}
+function QUIT_update(){
+  var pmt   = QUIT_parseBR(document.getElementById('quit-parcela').value);
+  var n     = parseInt(document.getElementById('quit-qtd').value||'0');
+  var taxa  = QUIT_parseBR(document.getElementById('quit-taxa').value);
+  var dpTxt = document.getElementById('quit-dataProx').value;
+  var dqTxt = document.getElementById('quit-dataQuit').value;
+
+  var dateProx = QUIT_parseDD(dpTxt);
+  var dateQuit = QUIT_parseDD(dqTxt);
+
+  if(!pmt||!n||isNaN(taxa)||taxa<=0||!dateProx||!dateQuit){ 
+    document.getElementById('quit-result').style.display='none'; return; 
+  }
+
+  var i=taxa/100;
+  var i_daily=Math.pow(1+i,1/30)-1;
+  var quit=0;
+  for(var k=0;k<n;k++){
+    var dInst=new Date(dateProx.getFullYear(),dateProx.getMonth()+k,dateProx.getDate(),12,0,0);
+    var dias=Math.round((dInst-dateQuit)/(1000*60*60*24));
+    quit+=dias<=0?pmt:pmt/Math.pow(1+i_daily,dias);
+  }
+  var total=n*pmt;
+  var desc=total-quit;
+
+  document.getElementById('quit-valor').textContent='R$ '+QUIT_formatBR(quit);
+  document.getElementById('quit-desconto').textContent='R$ '+QUIT_formatBR(desc);
+
+  // Convert DD/MM/AAAA or DD/MM/AA to display string DD/MM/AAAA
+  var dqDisp = '';
+  if(dateQuit){ 
+    dqDisp=(''+dateQuit.getDate()).padStart(2,'0')+'/'+(''+(dateQuit.getMonth()+1)).padStart(2,'0')+'/'+dateQuit.getFullYear();
+  }
+  var msg = 'Valor para quitação: R$ '+QUIT_formatBR(quit)+' em '+dqDisp+'.';
+  document.getElementById('quit-msgWpp').textContent=msg;
+  document.getElementById('quit-result').style.display='block';
+}
+
+// Masks and listeners
+(function(){
+  var maskMoney=function(el){
+    if(!el) return;
+    el.addEventListener('input',function(){ 
+      var raw=this.value.replace(/[^0-9]/g,'');
+      this.value=raw?QUIT_formatBR(parseInt(raw)/100):'';
+      QUIT_update();
+    });
+  };
+  maskMoney(document.getElementById('quit-parcela'));
+  maskMoney(document.getElementById('quit-taxa'));
+  var qtd=document.getElementById('quit-qtd');
+  if(qtd) qtd.addEventListener('input',function(){ this.value=this.value.replace(/[^0-9]/g,''); QUIT_update(); });
+  var dp=document.getElementById('quit-dataProx');
+  if(dp) dp.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,'');
+    var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+    QUIT_update();
+  });
+  if(dp) dp.addEventListener('blur',function(){ autoCompleteDate(this); QUIT_update(); });
+  var dq=document.getElementById('quit-dataQuit');
+  if(dq) dq.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,'');
+    var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+    QUIT_update();
+  });
+  if(dq) dq.addEventListener('blur',function(){ autoCompleteDate(this); QUIT_update(); });
+
+  // Default: data quitação = hoje
+  var hoje=new Date();
+  var iso=function(d){ 
+    return (''+d.getDate()).padStart(2,'0')+'/'+(''+(d.getMonth()+1)).padStart(2,'0')+'/'+d.getFullYear(); 
+  };
+  if(dq&&!dq.value) dq.value=iso(hoje);
+})();
+
+function QUIT_limpar(){
+  ['quit-parcela','quit-qtd','quit-taxa','quit-dataProx'].forEach(function(id){ 
+    var el=document.getElementById(id); if(el) el.value=''; 
+  });
+  var hoje=new Date();
+  var dq=document.getElementById('quit-dataQuit');
+  if(dq) dq.value=(''+hoje.getDate()).padStart(2,'0')+'/'+(''+(hoje.getMonth()+1)).padStart(2,'0')+'/'+hoje.getFullYear();
+  document.getElementById('quit-result').style.display='none';
+}
+
 </script>
 
 <style>
@@ -2154,6 +2397,55 @@ function PIN_resetHint(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.48</span><span class="cl-ver-date">09/06/2026 14:45</span></div>
+      <div class="cl-item">Pagamentos: campo valor ajustado — proporcional, comporta até R$999.999,99</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.47</span><span class="cl-ver-date">09/06/2026 14:30</span></div>
+      <div class="cl-item">Pagamentos: campo de valor dos itens ampliado para R$999.999,99</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.46</span><span class="cl-ver-date">09/06/2026 11:15</span></div>
+      <div class="cl-item">Tela inicial: Quitação Antecipada</div>
+      <div class="cl-item">Quitação: cálculo por dias exatos com taxa diária equivalente; % a.m. inline; próximo vencimento DD/MM/AAAA</div>
+      <div class="cl-item">Pagamentos: canvas com títulos maiores</div>
+      <div class="cl-item">Vendas: primeiro vencimento campo texto com máscara DD/MM/AAAA</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.45</span><span class="cl-ver-date">09/06/2026 10:40</span></div>
+      <div class="cl-item">Quitação: próximo vencimento com máscara DD/MM/AA ao digitar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.44</span><span class="cl-ver-date">09/06/2026 10:30</span></div>
+      <div class="cl-item">Quitação: data quitação com máscara DD/MM/AAAA igual às outras datas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.43</span><span class="cl-ver-date">09/06/2026 10:15</span></div>
+      <div class="cl-item">Quitação: data quitação dentro dos campos, próximo vencimento DD/MM/AA, mensagem WhatsApp corrigida</div>
+      <div class="cl-item">Financiamentos: bidirecional completo — Parcela + Prazo + Taxa agora calcula Valor Financiado</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.42</span><span class="cl-ver-date">08/06/2026 18:00</span></div>
+      <div class="cl-item">Quitação: redesign completo — data no topo, cálculo automático sem botão, campo de cópia para WhatsApp</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.41</span><span class="cl-ver-date">08/06/2026 17:30</span></div>
+      <div class="cl-item">Novo módulo QUITAÇÃO ANTECIPADA — independente, protegido por PIN</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.39</span><span class="cl-ver-date">08/06/2026 16:10</span></div>
+      <div class="cl-item">Teclado fecha automaticamente ao tocar fora de um campo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.38</span><span class="cl-ver-date">08/06/2026 15:50</span></div>
