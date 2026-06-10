@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.63</title>
+<title>VB - v1.0.66</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.63<br>10/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.66<br>10/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -239,7 +239,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <div style="width:36px;height:36px;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">☰</div>
         <div>
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">PRAZO</div>
-          <input class="input-mid" style="text-align:left;width:44px;font-size:20px;font-weight:700;color:#111;" id="fin-prazo" type="text" inputmode="numeric" pattern="[0-9]*" value="" placeholder="0" min="1" max="360">
+          <input class="input-mid" style="text-align:left;width:44px;font-size:20px;font-weight:700;color:#111;" id="fin-prazo" onclick="this.select()" type="text" inputmode="numeric" pattern="[0-9]*" value="" placeholder="0" min="1" max="360">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-top:1px;">MESES</div>
         </div>
       </div>
@@ -248,7 +248,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <div>
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">TAXA DE JUROS</div>
           <div style="display:flex;align-items:baseline;gap:2px;">
-            <input class="input-mid" style="text-align:left;width:52px;font-size:20px;font-weight:700;color:#111;" id="fin-taxa" type="text" inputmode="numeric" value="" placeholder="0,00">
+            <input class="input-mid" style="text-align:left;width:52px;font-size:20px;font-weight:700;color:#111;" id="fin-taxa" onclick="this.select()" type="text" inputmode="numeric" value="" placeholder="0,00">
             <span style="font-size:11px;color:#aaa;font-weight:500;">% a.m.</span>
           </div>
         </div>
@@ -261,7 +261,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="result-accent"></div>
     <div style="display:flex;align-items:baseline;justify-content:center;gap:1px;">
       <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
-      <input id="fin-parcela" type="text" inputmode="numeric" value="" placeholder="0,00" style="border:none;background:transparent;outline:none;font-size:46px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;width:220px;text-align:center;padding:0;">
+      <input id="fin-parcela" onclick="this.select()" type="text" inputmode="numeric" value="" placeholder="0,00" style="border:none;background:transparent;outline:none;font-size:46px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;width:220px;text-align:center;padding:0;">
     </div>
   </div>
 
@@ -831,41 +831,69 @@ function FIN_updateTotal(){
   }
 }
 
+var FIN_lastEdited = '';
+
 function FIN_update(){
-  var valEl=document.getElementById('fin-valor');
-  var pmtEl=document.getElementById('fin-parcela');
-  var nEl=document.getElementById('fin-prazo');
-  var iEl=document.getElementById('fin-taxa');
-  var erro=document.getElementById('fin-erro');
-  var active=document.activeElement;
-  var PV=FIN_parseBR(valEl.value);
-  var pmt=FIN_parseBR(pmtEl.value);
-  var n=parseInt(nEl.value||'0');
-  var i=FIN_parseBR(iEl.value)/100;
-  var pvOk=!isNaN(PV)&&PV>0;
-  var pmtOk=!isNaN(pmt)&&pmt>0;
-  var nOk=!isNaN(n)&&n>0;
-  var iOk=!isNaN(i)&&i>0;
-  erro.style.display='none';
-  if(active===pmtEl){
-    if(!pvOk&&pmtOk&&nOk&&iOk){
-      var pvC=pmt*(1-Math.pow(1+i,-n))/i; if(pvC>0) valEl.value=FIN_formatBR(pvC);
-    } else if(pvOk&&pmtOk&&!nOk&&iOk){
-      var r=PV*i/pmt; if(r>0&&r<1){ var nC=Math.round(-Math.log(1-r)/Math.log(1+i)); if(nC>0&&nC<600) nEl.value=String(nC); }
-    } else if(pvOk&&pmtOk&&nOk&&!iOk){
-      var rate=FIN_solveRate(PV,pmt,n); if(!isNaN(rate)&&rate>0) iEl.value=(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    }
-  } else {
-    if(pvOk&&nOk&&iOk){
-      pmtEl.value=FIN_formatBR(Math.round(FIN_calcPrice(PV,i,n)*100)/100);
-    } else if(!pvOk&&pmtOk&&nOk&&iOk){
-      var pvC2=pmt*(1-Math.pow(1+i,-n))/i; if(pvC2>0) valEl.value=FIN_formatBR(pvC2);
-    }
+  var valEl = document.getElementById('fin-valor');
+  var pmtEl = document.getElementById('fin-parcela');
+  var nEl   = document.getElementById('fin-prazo');
+  var iEl   = document.getElementById('fin-taxa');
+  var erro  = document.getElementById('fin-erro');
+
+  var PV  = FIN_parseBR(valEl.value);
+  var pmt = FIN_parseBR(pmtEl.value);
+  var n   = parseInt(nEl.value || '0');
+  var i   = FIN_parseBR(iEl.value) / 100;
+
+  var pvOk  = !isNaN(PV)  && PV  > 0;
+  var pmtOk = !isNaN(pmt) && pmt > 0;
+  var nOk   = !isNaN(n)   && n   > 0 && n < 600;
+  var iOk   = !isNaN(i)   && i   > 0;
+
+  var count = [pvOk, pmtOk, nOk, iOk].filter(Boolean).length;
+  erro.style.display = 'none';
+
+  if(count < 3){ FIN_updateTotal(); return; }
+
+  // Determina o campo a calcular
+  var solve = null;
+  if(!pvOk)       solve = 'valor';
+  else if(!pmtOk) solve = 'parcela';
+  else if(!nOk)   solve = 'prazo';
+  else if(!iOk)   solve = 'taxa';
+  else {
+    // Todos preenchidos: recalcula o complemento do último editado
+    solve = (FIN_lastEdited === 'parcela') ? 'valor' : 'parcela';
   }
+
+  // Executa cálculo — se falhar, limpa o campo
+  if(solve === 'parcela'){
+    var r = Math.round(FIN_calcPrice(PV, i, n) * 100) / 100;
+    pmtEl.value = (r > 0) ? FIN_formatBR(r) : '';
+  } else if(solve === 'valor'){
+    var v = pmt * (1 - Math.pow(1+i, -n)) / i;
+    valEl.value = (v > 0) ? FIN_formatBR(v) : '';
+  } else if(solve === 'prazo'){
+    var ratio = PV * i / pmt;
+    if(ratio > 0 && ratio < 1){
+      var nc = Math.round(-Math.log(1-ratio) / Math.log(1+i));
+      nEl.value = (nc > 0 && nc < 600) ? String(nc) : '';
+    } else { nEl.value = ''; }
+  } else if(solve === 'taxa'){
+    var rate = FIN_solveRate(PV, pmt, n);
+    if(!isNaN(rate) && rate > 0){
+      iEl.value = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    } else { iEl.value = ''; }
+  }
+
   FIN_updateTotal();
-  var pmtV=FIN_parseBR(pmtEl.value),nV=parseInt(nEl.value||'0'),pvV=FIN_parseBR(valEl.value);
-  if(pmtV>0&&nV>0&&pvV>0) document.getElementById('fin-totalJuros').textContent=FIN_formatBR(pmtV*nV-pvV);
+  var pmtV = FIN_parseBR(pmtEl.value);
+  var nV   = parseInt(nEl.value||'0');
+  var pvV  = FIN_parseBR(valEl.value);
+  if(pmtV>0 && nV>0 && pvV>0)
+    document.getElementById('fin-totalJuros').textContent = FIN_formatBR(pmtV*nV - pvV);
 }
+
 
 
 function FIN_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
@@ -1018,6 +1046,7 @@ function FIN_fecharOverlay(){
 }
 
 function FIN_limpar(){
+  FIN_lastEdited='';
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -1033,23 +1062,26 @@ function FIN_limpar(){
 }
 
 document.getElementById('fin-valor').addEventListener('input',function(){
+  FIN_lastEdited='valor';
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
   FIN_update();
 });
 document.getElementById('fin-taxa').addEventListener('input',function(){
+  FIN_lastEdited='taxa';
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
   FIN_update();
 });
 document.getElementById('fin-prazo').addEventListener('input',function(){
+  FIN_lastEdited='prazo';
   this.value=this.value.replace(/\D/g,'');
   FIN_update();
 });
 document.getElementById('fin-parcela').addEventListener('input',function(){
-  parcelaManual=true;
+  FIN_lastEdited='parcela';
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value='';FIN_update();return;}
   this.value=FIN_formatBR(parseInt(raw)/100);
@@ -2457,6 +2489,21 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.66</span><span class="cl-ver-date">10/06/2026 11:45</span></div>
+      <div class="cl-item">Financiamentos: lógica completamente reescrita — 3 campos preenchidos calculam o 4º; erro limpa o campo em vez de mostrar resultado errado</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.65</span><span class="cl-ver-date">10/06/2026 11:15</span></div>
+      <div class="cl-item">Financiamentos: cálculo bidirecional corrigido para iOS Safari com variável lastEdited</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.64</span><span class="cl-ver-date">10/06/2026 10:55</span></div>
+      <div class="cl-item">Financiamentos: toque em qualquer campo seleciona o valor inteiro para substituição rápida</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.63</span><span class="cl-ver-date">10/06/2026 10:45</span></div>
