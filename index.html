@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.54</title>
+<title>VB - v1.0.58</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.54<br>09/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.58<br>09/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -296,7 +296,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
     <div style="margin-bottom:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
-      <input id="fin-tabelaData" type="date" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+      <input id="fin-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
     </div>
 
     <button onclick="FIN_compartilharTabela()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
@@ -397,10 +397,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div id="ven-secPersonalizado" style="display:none;margin-bottom:6px;">
     <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:14px 16px;">
       <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:8px;text-align:center;">PARCELAS INDIVIDUAIS</div>
-      <div style="display:grid;grid-template-columns:20px 1fr 1fr 20px;gap:6px;margin-bottom:6px;">
+      <div style="display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;margin-bottom:6px;">
         <span></span>
         <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VALOR</span>
         <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VENCIMENTO</span>
+        <span></span>
         <span></span>
       </div>
       <div id="ven-listaParcelas"></div>
@@ -523,7 +524,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-ant" class="vb-screen">
 <div class="card">
   <!-- TOPO -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
@@ -873,7 +874,7 @@ function FIN_initTabela(){
   var hoje = new Date();
   var prox = new Date(hoje.getFullYear(), hoje.getMonth()+1, hoje.getDate());
   var y=prox.getFullYear(), m=String(prox.getMonth()+1).padStart(2,'0'), d=String(prox.getDate()).padStart(2,'0');
-  document.getElementById('fin-tabelaData').value = y+'-'+m+'-'+d;
+  document.getElementById('fin-tabelaData').value = d+'/'+m+'/'+y;
 }
 
 
@@ -1124,6 +1125,15 @@ function VEN_initTabela(){
 }
 
 // ── PERSONALIZAR ─────────────────────────────────────────────────────────────
+function VEN_toggleObs(id, btn){
+  var row = document.getElementById('ven-obs-row-'+id);
+  if(!row) return;
+  var open = row.style.display==='none'||row.style.display==='';
+  row.style.display = open ? 'block' : 'none';
+  btn.style.color = open ? '#c9a84c' : '#bbb';
+  if(open){ var inp=row.querySelector('input'); if(inp) inp.focus(); }
+}
+
 function VEN_syncFromParcelas(){
   var count = VEN_parcelas.length;
   var soma  = VEN_parcelas.reduce(function(a,p){ return a + (VEN_parseBR(p.valor)||0); }, 0);
@@ -1163,7 +1173,14 @@ function VEN_popularParcelas(){
   var parcela = VEN_parseBR(document.getElementById('ven-parcela').value)||0;
   var dataStr = document.getElementById('ven-tabelaData').value;
   var base    = null;
-  if(dataStr){ var p=dataStr.split('-'); base=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); }
+  if(dataStr){
+    // Handle DD/MM/AAAA format
+    var p = dataStr.indexOf('/')!==-1 ? dataStr.split('/') : dataStr.split('-');
+    if(p.length===3){
+      if(dataStr.indexOf('/')!==-1){ base=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); }
+      else { base=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); }
+    }
+  }
   if(!base || isNaN(base.getTime())){ base=new Date(); base=new Date(base.getFullYear(),base.getMonth()+1,base.getDate()); }
 
   VEN_parcelas = [];
@@ -1172,7 +1189,7 @@ function VEN_popularParcelas(){
     VEN_parcelaCounter++;
     var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
     var ds = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-    VEN_parcelas.push({ id: VEN_parcelaCounter, valor: parcela>0 ? VEN_formatBR(parcela) : '', data: ds });
+    VEN_parcelas.push({ id: VEN_parcelaCounter, valor: parcela>0 ? VEN_formatBR(parcela) : '', data: ds, obs: '' });
   }
   VEN_renderParcelas();
 }
@@ -1182,7 +1199,8 @@ function VEN_renderParcelas(){
   lista.innerHTML = '';
   VEN_parcelas.forEach(function(p){
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px;gap:6px;margin-bottom:8px;align-items:center;';
+    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;margin-bottom:4px;align-items:center;';
+    var obsOpen = p.obs ? 'block' : 'none';
     row.innerHTML =
       '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;">'+String(p.id).padStart(2,'0')+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;">'+
@@ -1194,8 +1212,15 @@ function VEN_renderParcelas(){
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
       ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;">'+
+      '<button onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="Comentário">ⓘ</button>'+
       '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;">×</button>';
+    // Obs row
+    var obsRow = document.createElement('div');
+    obsRow.style.cssText='display:'+obsOpen+';grid-column:1/-1;padding:1px 0 4px 28px;';
+    obsRow.id='ven-obs-row-'+p.id;
+    obsRow.innerHTML='<input type="text" data-pid="'+p.id+'" data-field="obs" placeholder="COMENTÁRIO..." value="'+(p.obs||'')+'" style="width:100%;border:none;border-bottom:0.5px solid #f0f0f0;background:transparent;outline:none;font-size:11px;color:#888;text-transform:uppercase;font-family:-apple-system,sans-serif;">';
     lista.appendChild(row);
+    lista.appendChild(obsRow);
   });
 
   // Mask valor
@@ -1205,6 +1230,15 @@ function VEN_renderParcelas(){
       this.value = raw ? VEN_formatBR(parseInt(raw)/100) : '';
       var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p){ p.valor = this.value; VEN_syncFromParcelas(); }
+    });
+  });
+
+  // Obs field listener
+  lista.querySelectorAll('[data-field="obs"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      this.value=this.value.toUpperCase();
+      var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
+      if(p) p.obs=this.value;
     });
   });
 
@@ -1248,7 +1282,7 @@ function VEN_gerarTabela(){
     var rows = VEN_parcelas.filter(function(p){ return p.valor && p.data && p.data.length===10; });
     if(rows.length===0){ alert('Preencha valor e data de todas as parcelas.'); return; }
     rows.forEach(function(p, i){
-      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data });
+      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: p.obs||'' });
     });
   } else {
     var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
@@ -1261,7 +1295,8 @@ function VEN_gerarTabela(){
       linhas.push({
         parc : String(i+1).padStart(2,'0'),
         valor: 'R$ '+VEN_formatBR(pmt),
-        data : String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
+        data : String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(),
+        obs  : ''
       });
     }
   }
@@ -1308,10 +1343,12 @@ function VEN_gerarTabela(){
 
   // Linhas
   for(var i=0;i<n;i++){
+    var hasObs = linhas[i].obs && linhas[i].obs.trim();
+    var rowH = hasObs ? altRow+10 : altRow;
     ctx.fillStyle = i%2===0?'#fff':'#f7f7f7';
-    ctx.fillRect(padH,y,W-padH*2,altRow);
+    ctx.fillRect(padH,y,W-padH*2,rowH);
     ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
-    ctx.beginPath(); ctx.moveTo(padH,y+altRow); ctx.lineTo(W-padH,y+altRow); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padH,y+rowH); ctx.lineTo(W-padH,y+rowH); ctx.stroke();
     var cy = y+altRow*0.66;
     ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText(linhas[i].parc, c1, cy);
@@ -1319,7 +1356,11 @@ function VEN_gerarTabela(){
     ctx.fillText(linhas[i].valor, c2, cy);
     ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
     ctx.fillText(linhas[i].data, c3, cy);
-    y+=altRow;
+    if(hasObs){
+      ctx.fillStyle='#aaa'; ctx.font='italic '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+      ctx.fillText((linhas[i].obs||'').toUpperCase(), W/2, y+altRow+8);
+    }
+    y+=rowH;
   }
 
   // Total
@@ -1967,10 +2008,10 @@ function PAG_render(){
   lista.innerHTML='';
   PAG_pagamentos.forEach(function(p){
     var row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
+    row.style.cssText='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
     row.innerHTML=
       '<input type="text" placeholder="Descrição" data-pid="'+p.id+'" data-field="desc"'+
-      ' style="min-width:0;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;color:#111;padding:3px 0;font-family:-apple-system,sans-serif;"'+
+      ' style="min-width:0;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;color:#111;padding:0;font-family:-apple-system,sans-serif;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
       '<div style="display:flex;align-items:baseline;gap:1px;width:110px;flex-shrink:0;border-bottom:0.5px solid #ddd;">'+
         '<span style="font-size:10px;color:#aaa;">R$</span>'+
@@ -2022,7 +2063,9 @@ function PAG_compartilhar(){
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
   var y=16;
   ctx.fillStyle='#111'; ctx.font='400 26px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
-  ctx.fillText('VB',pad,y+22); y+=secLogo;
+  ctx.fillText('VB',pad,y+22);
+  ctx.fillStyle='#999'; ctx.font='500 8px Helvetica,Arial,sans-serif';
+  ctx.fillText('PAGAMENTOS',pad,y+34); y+=secLogo;
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
@@ -2030,8 +2073,8 @@ function PAG_compartilhar(){
   ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
   ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
-  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('PAGAMENTOS',pad,y+14); y+=secPagHdr;
+  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PAGAMENTOS',W/2,y+14); y+=secPagHdr;
   if(rows.length===0){
     ctx.fillStyle='#ccc'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText('—',W/2,y+12); y+=secRow;
@@ -2055,10 +2098,10 @@ function PAG_compartilhar(){
   ctx.fillText('R$ '+PAG_formatBR(soma),W-pad,y+14); y+=secTotLine;
   ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('SALDO',pad,y+12); y+=secSaldoH;
+  ctx.fillText('SALDO',pad,y+secSaldoH*0.7);
   ctx.fillStyle=saldo<0?'#cc0000':'#111';
-  ctx.font='bold 22px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-  ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+24);
+  ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
   VB_drawWatermark(ctx,W,H);
   var img=document.getElementById('pag-tabelaImagem');
   img.src=cv.toDataURL('image/png');
@@ -2365,6 +2408,28 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.58</span><span class="cl-ver-date">09/06/2026 17:45</span></div>
+      <div class="cl-item">Vendas: botão × ao lado direito da data; comentário sempre em maiúsculas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.57</span><span class="cl-ver-date">09/06/2026 17:30</span></div>
+      <div class="cl-item">Vendas: personalizado usa data do primeiro vencimento preenchido</div>
+      <div class="cl-item">Vendas: botão ⓘ por parcela para adicionar comentário — aparece na tabela gerada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.56</span><span class="cl-ver-date">09/06/2026 17:15</span></div>
+      <div class="cl-item">Pagamentos: linhas de item alinhadas na baseline — descrição e valor na mesma altura</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.55</span><span class="cl-ver-date">09/06/2026 17:10</span></div>
+      <div class="cl-item">Financiamentos: data primeiro vencimento centralizada</div>
+      <div class="cl-item">Pagamentos: itens alinhados; canvas subtítulo, PAGAMENTOS centralizado, SALDO em linha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.54</span><span class="cl-ver-date">09/06/2026 16:30</span></div>
