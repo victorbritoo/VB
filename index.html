@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.58</title>
+<title>VB - v1.0.59</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.58<br>09/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.59<br>09/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -902,8 +902,13 @@ function FIN_compartilharTabela(){
   if(!pmt||!n||!dataStr){ alert('Preencha os dados antes de compartilhar.'); return; }
 
   var titulo = desc || 'TABELA DE PARCELAS';
-  var parts  = dataStr.split('-');
-  var base   = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  // Parse DD/MM/AAAA or YYYY-MM-DD
+  var base;
+  if(dataStr.indexOf('/')!==-1){
+    var dp=dataStr.split('/'); base=new Date(parseInt(dp[2]),parseInt(dp[1])-1,parseInt(dp[0]));
+  } else {
+    var dp=dataStr.split('-'); base=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]));
+  }
   var linhas = []; var total = 0;
   for(var i=0;i<n;i++){
     var d = new Date(base.getFullYear(), base.getMonth()+i, base.getDate());
@@ -1052,6 +1057,17 @@ document.getElementById('fin-parcela').addEventListener('input',function(){
 });
 
 FIN_initTabela();
+(function(){
+  var ftd=document.getElementById('fin-tabelaData');
+  if(ftd) ftd.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,'');
+    var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+  });
+})();
 
 /* === VENDAS JS === */
 
@@ -2408,6 +2424,11 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.59</span><span class="cl-ver-date">09/06/2026 18:00</span></div>
+      <div class="cl-item">Financiamentos: data do vencimento em DD/MM/AAAA — tabela gerada corretamente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.58</span><span class="cl-ver-date">09/06/2026 17:45</span></div>
