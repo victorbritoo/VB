@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.59</title>
+<title>VB - v1.0.63</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.59<br>09/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.63<br>10/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1144,10 +1144,39 @@ function VEN_initTabela(){
 function VEN_toggleObs(id, btn){
   var row = document.getElementById('ven-obs-row-'+id);
   if(!row) return;
-  var open = row.style.display==='none'||row.style.display==='';
-  row.style.display = open ? 'block' : 'none';
-  btn.style.color = open ? '#c9a84c' : '#bbb';
-  if(open){ var inp=row.querySelector('input'); if(inp) inp.focus(); }
+  var inp = row.querySelector('input');
+  var hasText = inp && inp.value.trim().length > 0;
+  var isOpen  = row.style.display==='block';
+
+  // Se tem texto: nunca fecha — só garante aberto e foca
+  if(hasText){
+    row.style.display='block';
+    btn.style.color='#c9a84c';
+    if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); }
+    return;
+  }
+
+  // Sem texto: toggle normal
+  if(isOpen){
+    row.style.display='none';
+    btn.style.color='#bbb';
+  } else {
+    // Fecha outros campos vazios antes de abrir
+    document.querySelectorAll('[id^="ven-obs-row-"]').forEach(function(r){
+      if(r.id!=='ven-obs-row-'+id){
+        var ri=r.querySelector('input');
+        if(ri && ri.value.trim()==='' && r.style.display==='block'){
+          r.style.display='none';
+          var pid=r.id.replace('ven-obs-row-','');
+          var b=document.querySelector('[onclick*="VEN_toggleObs('+pid+',"]');
+          if(b) b.style.color='#bbb';
+        }
+      }
+    });
+    row.style.display='block';
+    btn.style.color='#c9a84c';
+    if(inp){ inp.focus(); inp.setSelectionRange(0,0); }
+  }
 }
 
 function VEN_syncFromParcelas(){
@@ -1320,12 +1349,14 @@ function VEN_gerarTabela(){
   var n = linhas.length;
   var total = linhas.reduce(function(a,l){ return a + VEN_parseBR(l.valor.replace('R$ ','')); }, 0);
 
-  // Canvas
+  // Canvas — calcula altura dinâmica incluindo linhas de obs
   var W=390, esc=3, padH=18, padV=12;
-  var altVB=28, altTit=28, altHead=22, altTot=22;
-  var altRow = Math.min(26, Math.max(13, Math.floor((844-padV*2-altVB-altTit-altHead-altTot)/n)));
-  var fs = Math.min(12, Math.max(7, Math.floor(altRow*0.52)));
-  var H = padV*2 + altVB + altTit + altHead + altRow*n + altTot;
+  var altVB=28, altTit=28, altHead=22, altTot=22, altObs=14;
+  var altRow = Math.min(26, Math.max(16, Math.floor((700-padV*2-altVB-altTit-altHead-altTot)/n)));
+  var fs = Math.min(12, Math.max(8, Math.floor(altRow*0.52)));
+  // Pre-calc total row height with obs
+  var totalRowH = linhas.reduce(function(a,l){ return a+(l.obs&&l.obs.trim()?altRow+altObs:altRow); },0);
+  var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
   var c1 = padH + (W/3-padH)/2;
   var c2 = W/2;
   var c3 = W - padH - (W/3-padH)/2;
@@ -1343,38 +1374,38 @@ function VEN_gerarTabela(){
   ctx.fillText('VB', padH, y+altVB*0.75); y+=altVB;
 
   // Título
-  ctx.font='bold '+(fs+3)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle='#111'; ctx.font='bold '+(fs+3)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText(titulo, W/2, y+altTit*0.65);
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(padH,y+altTit-3); ctx.lineTo(W-padH,y+altTit-3); ctx.stroke();
   y+=altTit;
 
-  // Header
+  // Header — sans-serif explícito
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altHead);
-  ctx.fillStyle='#666'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Parcela', c1, y+altHead*0.68);
-  ctx.fillText('Valor',   c2, y+altHead*0.68);
-  ctx.fillText('Data',    c3, y+altHead*0.68);
+  ctx.fillStyle='#555'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PARCELA', c1, y+altHead*0.68);
+  ctx.fillText('VALOR',   c2, y+altHead*0.68);
+  ctx.fillText('DATA',    c3, y+altHead*0.68);
   y+=altHead;
 
   // Linhas
   for(var i=0;i<n;i++){
     var hasObs = linhas[i].obs && linhas[i].obs.trim();
-    var rowH = hasObs ? altRow+10 : altRow;
+    var rowH = hasObs ? altRow+altObs : altRow;
     ctx.fillStyle = i%2===0?'#fff':'#f7f7f7';
     ctx.fillRect(padH,y,W-padH*2,rowH);
     ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
     ctx.beginPath(); ctx.moveTo(padH,y+rowH); ctx.lineTo(W-padH,y+rowH); ctx.stroke();
     var cy = y+altRow*0.66;
-    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText(linhas[i].parc, c1, cy);
     ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif';
     ctx.fillText(linhas[i].valor, c2, cy);
-    ctx.fillStyle='#666'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
     ctx.fillText(linhas[i].data, c3, cy);
     if(hasObs){
-      ctx.fillStyle='#aaa'; ctx.font='italic '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-      ctx.fillText((linhas[i].obs||'').toUpperCase(), W/2, y+altRow+8);
+      ctx.fillStyle='#aaa'; ctx.font='500 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+      ctx.fillText((linhas[i].obs||'').toUpperCase(), W/2, y+altRow+altObs*0.75);
     }
     y+=rowH;
   }
@@ -2257,10 +2288,12 @@ function PIN_resetHint(){
 }
 
 
-// Fechar teclado ao tocar fora de campos
+// Fechar teclado ao tocar fora de campos (exceto na tela de Vendas)
 document.addEventListener('touchstart', function(e){
   var tag = e.target.tagName;
   if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){
+    var venScreen = document.getElementById('screen-ven');
+    if(venScreen && venScreen.style.display !== 'none' && venScreen.classList.contains('show')) return;
     if(document.activeElement && document.activeElement.blur){
       document.activeElement.blur();
     }
@@ -2424,6 +2457,26 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.63</span><span class="cl-ver-date">10/06/2026 10:45</span></div>
+      <div class="cl-item">Vendas: teclado não fecha ao tocar fora — compatível com campos de comentário</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.62</span><span class="cl-ver-date">10/06/2026 10:30</span></div>
+      <div class="cl-item">Vendas: campo com texto nunca fecha; campo vazio fecha ao abrir outro</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.61</span><span class="cl-ver-date">10/06/2026 10:15</span></div>
+      <div class="cl-item">Vendas: clicar em ⓘ de outra parcela fecha o anterior e abre o novo com teclado automático</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.60</span><span class="cl-ver-date">10/06/2026 10:00</span></div>
+      <div class="cl-item">Vendas tabela: altura dinâmica com obs — não corta mais; cabeçalho sans-serif; obs sem itálico</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.59</span><span class="cl-ver-date">09/06/2026 18:00</span></div>
