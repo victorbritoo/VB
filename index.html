@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.72</title>
+<title>VB - v1.0.83</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.72<br>13/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.83<br>14/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -219,7 +219,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div id="fin-captureZone" style="background:#f5f5f3;padding:24px 0 20px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
-
+    <button class="no-print" onclick="PIN_request('inv')" style="border:0.5px solid #ddd;border-radius:10px;background:#fff;padding:7px 14px;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:2px;color:#888;font-weight:600;cursor:pointer;">PERSONALIZAR</button>
   </div>
   <div class="simulacao-label">SIMULAÇÃO</div>
   <hr class="divider">
@@ -284,6 +284,16 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
       <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
       <span style="font-size:32px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;" id="fin-totalJuros">---</span>
+    </div>
+  </div>
+
+  <div class="field-card no-print" style="margin-top:4px;padding:12px 16px;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:8px;text-align:center;">ARREDONDAR PARCELA</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+      <button id="fin-deg-centavo" onclick="FIN_setDegrau('centavo')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTAVO</button>
+      <button id="fin-deg-real" onclick="FIN_setDegrau('real')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">REAL</button>
+      <button id="fin-deg-dezena" onclick="FIN_setDegrau('dezena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">DEZENA</button>
+      <button id="fin-deg-centena" onclick="FIN_setDegrau('centena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTENA</button>
     </div>
   </div>
 
@@ -352,6 +362,157 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="ov-hint">↑ TIRE O PRINT E ENVIE ↑</div>
   </div>
   <button class="ov-close" onclick="FIN_fecharOverlay()">FECHAR</button>
+</div>
+</div>
+
+<!-- ===== TELA INVESTIDOR ===== -->
+<div id="screen-inv" class="vb-screen">
+<div class="card">
+  <div id="inv-captureZone" style="background:#f5f5f3;padding:24px 0 20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div class="logo" onclick="showScreen('fin')" style="cursor:pointer;">VB</div>
+    <button class="no-print" onclick="showScreen('fin')" style="border:0.5px solid #ddd;border-radius:10px;background:#fff;padding:7px 14px;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:2px;color:#888;font-weight:600;cursor:pointer;">SIMULAÇÃO</button>
+  </div>
+  <div class="simulacao-label">INVESTIDOR</div>
+  <hr class="divider">
+
+  <!-- Valor da operação -->
+  <div class="field-card">
+    <div class="field-label" style="text-align:center;">VALOR DA OPERAÇÃO</div>
+    <div class="valor-row" style="justify-content:center;align-items:center;">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center" id="inv-valor" type="text" inputmode="numeric" value="" placeholder="0,00" onclick="this.select()">
+      <button class="copy-btn" onclick="copyValue('inv-valor',this)" title="Copiar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+    </div>
+  </div>
+
+  <div class="field-card" style="padding: 14px 20px; margin-bottom: 6px;">
+    <div class="two-col">
+      <div style="display:flex; align-items:center; gap:12px; padding-right:16px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">☰</div>
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">PRAZO</div>
+          <input class="input-mid" style="text-align:left;width:44px;font-size:20px;font-weight:700;color:#111;" id="inv-prazo" onclick="this.select()" type="text" inputmode="numeric" pattern="[0-9]*" value="" placeholder="0" min="1" max="360">
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-top:1px;">MESES</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding-left:16px; border-left:0.5px solid #e0e0e0;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#555;flex-shrink:0;">%</div>
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:1px;">TAXA CLIENTE</div>
+          <div style="display:flex;align-items:baseline;gap:2px;">
+            <input class="input-mid" style="text-align:left;width:52px;font-size:20px;font-weight:700;color:#111;" id="inv-taxa" onclick="this.select()" type="text" inputmode="numeric" value="" placeholder="0,00">
+            <span style="font-size:11px;color:#aaa;font-weight:500;">% a.m.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parcela cliente (editável, bidirecional) -->
+  <div class="result-card" style="margin-bottom:6px;">
+    <div class="result-label">PARCELA CLIENTE</div>
+    <div class="result-accent"></div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:1px;">
+      <span style="font-size:18px;font-weight:500;color:#aaa;">R$</span>
+      <input id="inv-parcela" onclick="this.select()" type="text" inputmode="numeric" value="" placeholder="0,00" style="border:none;background:transparent;outline:none;font-size:46px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;width:220px;text-align:center;padding:0;">
+    </div>
+  </div>
+
+  <div class="error" id="inv-erro">Preencha todos os campos corretamente.</div>
+
+  <!-- Total de juros (cliente) -->
+  <div class="field-card" style="margin-bottom:6px;text-align:center;">
+    <div class="field-label">TOTAL DE JUROS</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
+      <span style="font-size:16px;font-weight:500;color:#aaa;">R$</span>
+      <span style="font-size:28px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;letter-spacing:-1px;" id="inv-totJuros">---</span>
+    </div>
+  </div>
+
+  <!-- % investidor + % VB -->
+  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;">
+    <div class="two-col">
+      <div style="padding-right:14px;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">% INVESTIDOR</div>
+        <div style="display:flex;align-items:baseline;gap:2px;">
+          <input id="inv-pctInv" type="text" inputmode="numeric" value="1,80" onclick="this.select()" style="border:none;background:transparent;outline:none;width:62px;font-size:18px;font-weight:700;color:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+          <span style="font-size:11px;color:#aaa;font-weight:500;">% a.m.</span>
+        </div>
+      </div>
+      <div style="padding-left:14px;border-left:0.5px solid #e0e0e0;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">% VB</div>
+        <div style="display:flex;align-items:baseline;gap:2px;">
+          <span id="inv-pctVB" style="font-size:18px;font-weight:700;color:#111;">1,20</span>
+          <span style="font-size:11px;color:#aaa;font-weight:500;">% a.m.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Degrau de arredondamento da parcela do investidor -->
+  <div class="field-card" style="padding:12px 16px;margin-bottom:6px;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:8px;text-align:center;">ARREDONDAR PARCELA INVESTIDOR (PRA CIMA)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+      <button id="inv-deg-centavo" onclick="INV_setDegrau('centavo')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTAVO</button>
+      <button id="inv-deg-real" onclick="INV_setDegrau('real')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">REAL</button>
+      <button id="inv-deg-dezena" onclick="INV_setDegrau('dezena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">DEZENA</button>
+      <button id="inv-deg-centena" onclick="INV_setDegrau('centena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTENA</button>
+    </div>
+  </div>
+
+  <!-- Investidor / VB: parcela + lucro -->
+  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;">
+    <div class="two-col">
+      <div style="padding-right:14px;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARC. INVESTIDOR</div>
+        <div style="font-size:18px;font-weight:700;color:#111;" id="inv-parcInv">R$ ---</div>
+        <div style="font-size:9px;letter-spacing:1.5px;color:#bbb;margin-top:5px;">LUCRO</div>
+        <div style="font-size:13px;font-weight:700;color:#888;" id="inv-lucroInv">R$ ---</div>
+        <div style="font-size:9px;letter-spacing:1.5px;color:#bbb;margin-top:5px;">ROI</div>
+        <div style="font-size:13px;font-weight:700;color:#888;" id="inv-roiInv">---</div>
+      </div>
+      <div style="padding-left:14px;border-left:0.5px solid #e0e0e0;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARCELA VB</div>
+        <div style="font-size:18px;font-weight:700;color:#111;" id="inv-parcVB">R$ ---</div>
+        <div style="font-size:9px;letter-spacing:1.5px;color:#bbb;margin-top:5px;">LUCRO</div>
+        <div style="font-size:13px;font-weight:700;color:#111;" id="inv-lucroVB">R$ ---</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="total-row" style="margin-bottom:0;">
+    <span class="total-label">TOTAL RECEBIDO</span>
+    <span class="total-value" id="inv-totRecebido">R$ ---</span>
+  </div>
+
+  </div><!-- fim inv-captureZone -->
+
+  <div class="field-card no-print" style="margin-top:4px;">
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DESCRIÇÃO</div>
+      <input id="inv-tabelaDesc" type="text" placeholder="TOYOTA SW4 2026 FKX5J04" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
+      <input id="inv-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <button onclick="INV_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
+      <button onclick="INV_gerarTabela()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- OVERLAY TABELA INV -->
+<div id="inv-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
+  <img id="inv-tabelaImagem" style="display:none;width:100%;max-width:440px;margin:0 auto;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
+  <div id="inv-tabelaImagemDica" style="display:none;max-width:440px;margin:14px auto 0;text-align:center;">
+    <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
+    <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
+    <button onclick="INV_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+  </div>
 </div>
 </div>
 
@@ -752,7 +913,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <script>
 function showScreen(name){
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','quit'].forEach(function(s){
+  ['fin','ant','pag','ven','quit','inv'].forEach(function(s){
     document.getElementById('screen-'+s).style.display=s===name?'block':'none';
   });
   window.scrollTo(0,0);
@@ -804,6 +965,26 @@ function autoCompleteDate(el){
 function FIN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
 function FIN_formatBR(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function FIN_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
+
+var FIN_degrau = 'centavo';
+function FIN_ceilStep(x, degrau){
+  if(degrau==='centavo') return Math.round(x*100)/100; // centavo mais próximo (comportamento original)
+  if(degrau==='dezena')  return Math.ceil(x/10)*10;
+  if(degrau==='centena') return Math.ceil(x/100)*100;
+  return Math.ceil(x); // real (padrão), pra cima
+}
+function FIN_applyDegrauUI(){
+  ['centavo','real','dezena','centena'].forEach(function(d){
+    var b=document.getElementById('fin-deg-'+d); if(!b) return;
+    if(d===FIN_degrau){ b.style.background='#111'; b.style.color='#fff'; b.style.borderColor='#111'; }
+    else { b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
+  });
+}
+function FIN_setDegrau(d){
+  FIN_degrau=d;
+  FIN_applyDegrauUI();
+  FIN_update();
+}
 
 function FIN_solveRate(PV, PMT, n){
   if(PMT*n <= PV) return NaN;
@@ -874,7 +1055,7 @@ function FIN_update(){
 
   // Executa cálculo — se falhar, limpa o campo
   if(solve === 'parcela'){
-    var r = Math.round(FIN_calcPrice(PV, i, n) * 100) / 100;
+    var r = FIN_ceilStep(FIN_calcPrice(PV, i, n), FIN_degrau);
     pmtEl.value = (r > 0) ? FIN_formatBR(r) : '';
   } else if(solve === 'valor'){
     var v = pmt * (1 - Math.pow(1+i, -n)) / i;
@@ -1054,6 +1235,7 @@ function FIN_fecharOverlay(){
 function FIN_limpar(){
   FIN_lastEdited='';
   FIN_lastSolved='';
+  FIN_degrau='centavo';
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -1061,6 +1243,7 @@ function FIN_limpar(){
   document.getElementById('fin-total').textContent='';
   document.getElementById('fin-totalJuros').textContent='---';
   document.getElementById('fin-erro').style.display='none';
+  FIN_applyDegrauUI();
   // Reset tabelaData to today + 1 month
   var hoje=new Date();
   var prox=new Date(hoje.getFullYear(),hoje.getMonth()+1,hoje.getDate());
@@ -1097,6 +1280,7 @@ document.getElementById('fin-parcela').addEventListener('input',function(){
 });
 
 FIN_initTabela();
+FIN_applyDegrauUI();
 (function(){
   var ftd=document.getElementById('fin-tabelaData');
   if(ftd) ftd.addEventListener('input',function(){
@@ -1297,7 +1481,7 @@ function VEN_renderParcelas(){
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
       ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;">'+
-      '<button onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="Comentário">ⓘ</button>'+
+      '<button onpointerdown="event.preventDefault();VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="Comentário">ⓘ</button>'+
       '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
@@ -1391,7 +1575,7 @@ function VEN_gerarTabela(){
 
   // Canvas — calcula altura dinâmica incluindo linhas de obs
   var W=390, esc=3, padH=18, padV=12;
-  var altVB=28, altTit=28, altHead=22, altTot=22, altObs=14;
+  var altVB=28, altTit=28, altHead=22, altTot=22, altObs=7;
   var altRow = Math.min(26, Math.max(16, Math.floor((700-padV*2-altVB-altTit-altHead-altTot)/n)));
   var fs = Math.min(12, Math.max(8, Math.floor(altRow*0.52)));
   // Pre-calc total row height with obs
@@ -1436,17 +1620,17 @@ function VEN_gerarTabela(){
     ctx.fillRect(padH,y,W-padH*2,rowH);
     ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
     ctx.beginPath(); ctx.moveTo(padH,y+rowH); ctx.lineTo(W-padH,y+rowH); ctx.stroke();
-    var cy = y+altRow*0.66;
+    var cy = hasObs ? y+altRow*0.38 : y+altRow*0.66;
     ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(linhas[i].parc, c1, cy);
+    ctx.fillText(linhas[i].parc, c1, hasObs ? y+altRow*0.66 : cy);
     ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif';
     ctx.fillText(linhas[i].valor, c2, cy);
-    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
-    ctx.fillText(linhas[i].data, c3, cy);
     if(hasObs){
       ctx.fillStyle='#aaa'; ctx.font='500 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-      ctx.fillText((linhas[i].obs||'').toUpperCase(), W/2, y+altRow+altObs*0.75);
+      ctx.fillText('('+(linhas[i].obs||'').toUpperCase()+')', c2, y+altRow*0.38+fs+3);
     }
+    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif';
+    ctx.fillText(linhas[i].data, c3, hasObs ? y+altRow*0.66 : cy);
     y+=rowH;
   }
 
@@ -2255,7 +2439,7 @@ function copyValue(sourceId, btn) {
 
 /* === PIN JS === */
 var PIN_buffer = '', PIN_target = '', PIN_mode = '', PIN_setupStep = 1, PIN_first = '';
-var PIN_PROTECTED = ['ant','pag','ven','quit'];
+var PIN_PROTECTED = ['ant','pag','ven','quit','inv'];
 
 function PIN_hasSaved(){ return !!localStorage.getItem('vb_pin'); }
 function PIN_getSaved(){ return localStorage.getItem('vb_pin')||''; }
@@ -2478,6 +2662,342 @@ function QUIT_limpar(){
   document.getElementById('quit-result').style.display='none';
 }
 
+/* === INVESTIDOR JS === */
+function INV_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function INV_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function INV_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
+function INV_round2(x){ return Math.round(x*100)/100; }
+function INV_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
+
+var INV_degrau = 'centavo';
+function INV_ceilStep(x, degrau){
+  if(degrau==='centavo') return Math.ceil(x*100)/100;
+  if(degrau==='dezena')  return Math.ceil(x/10)*10;
+  if(degrau==='centena') return Math.ceil(x/100)*100;
+  return Math.ceil(x); // real (padrão)
+}
+function INV_applyDegrauUI(){
+  ['centavo','real','dezena','centena'].forEach(function(d){
+    var b=document.getElementById('inv-deg-'+d); if(!b) return;
+    if(d===INV_degrau){ b.style.background='#111'; b.style.color='#fff'; b.style.borderColor='#111'; }
+    else { b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
+  });
+}
+function INV_setDegrau(d){
+  INV_degrau=d;
+  INV_applyDegrauUI();
+  INV_updateInvestidor();
+}
+
+function INV_solveRate(PV, PMT, n){
+  if(PMT*n <= PV) return NaN;
+  var i = 0.01;
+  for(var k=0; k<200; k++){
+    var f = INV_calcPrice(PV,i,n) - PMT;
+    var ip = i*1.0001;
+    var df = (INV_calcPrice(PV,ip,n) - INV_calcPrice(PV,i,n))/(i*0.0001);
+    var di = f/df;
+    i -= di;
+    if(i<=0) i=0.0001;
+    if(Math.abs(di)<1e-10) break;
+  }
+  return i;
+}
+
+var INV_lastEdited = '';
+var INV_lastSolved = '';
+
+// Dados do split a partir dos campos atuais (parcela cliente = valor exibido)
+function INV_getDados(){
+  var valorOP = INV_parseBR(document.getElementById('inv-valor').value);
+  var n       = parseInt(document.getElementById('inv-prazo').value||'0');
+  var pctInv  = INV_parseBR(document.getElementById('inv-pctInv').value)/100;
+  var pc      = INV_parseBR(document.getElementById('inv-parcela').value);
+  if(isNaN(valorOP)||valorOP<=0||!(n>0)||isNaN(pctInv)||pctInv<=0||isNaN(pc)||pc<=0) return null;
+  var pi = INV_ceilStep(INV_calcPrice(valorOP,pctInv,n), INV_degrau); // arredonda pra cima conforme degrau
+  var pv = INV_round2(pc-pi);
+  var totC = INV_round2(pc*n);
+  var totI = INV_round2(pi*n);
+  var totV = INV_round2(pv*n);
+  var lucroInv = INV_round2(totI-valorOP);
+  var lucroVB  = totV;
+  var roiInv = valorOP>0 ? (lucroInv/valorOP*100) : 0;
+  return {valorOP:valorOP,n:n,pc:pc,pi:pi,pv:pv,totC:totC,totI:totI,totV:totV,lucroInv:lucroInv,lucroVB:lucroVB,roiInv:roiInv};
+}
+
+function INV_resetInvestidor(){
+  document.getElementById('inv-parcInv').textContent='R$ ---';
+  document.getElementById('inv-parcVB').textContent='R$ ---';
+  document.getElementById('inv-lucroInv').textContent='R$ ---';
+  document.getElementById('inv-lucroVB').textContent='R$ ---';
+  document.getElementById('inv-roiInv').textContent='---';
+  document.getElementById('inv-totRecebido').textContent='R$ ---';
+}
+
+function INV_updateInvestidor(){
+  var valorOP = INV_parseBR(document.getElementById('inv-valor').value);
+  var n       = parseInt(document.getElementById('inv-prazo').value||'0');
+  var pc      = INV_parseBR(document.getElementById('inv-parcela').value);
+  var taxa   = INV_parseBR(document.getElementById('inv-taxa').value)/100;
+  var pctInv = INV_parseBR(document.getElementById('inv-pctInv').value)/100;
+  var pctVB = (!isNaN(taxa)&&!isNaN(pctInv)) ? (taxa-pctInv)*100 : NaN;
+  document.getElementById('inv-pctVB').textContent = (!isNaN(pctVB)) ? INV_formatBR(pctVB) : '---';
+
+  // Total de juros do cliente (independe do investidor)
+  if(!isNaN(valorOP)&&valorOP>0&&n>0&&!isNaN(pc)&&pc>0){
+    document.getElementById('inv-totJuros').textContent = INV_formatBR(INV_round2(pc*n - valorOP));
+  } else {
+    document.getElementById('inv-totJuros').textContent = '---';
+  }
+
+  var r = INV_getDados();
+  if(!r){ INV_resetInvestidor(); return; }
+  document.getElementById('inv-parcInv').textContent = 'R$ '+INV_formatBR(r.pi);
+  document.getElementById('inv-parcVB').textContent  = 'R$ '+INV_formatBR(r.pv);
+  document.getElementById('inv-lucroInv').textContent= 'R$ '+INV_formatBR(r.lucroInv);
+  document.getElementById('inv-lucroVB').textContent = 'R$ '+INV_formatBR(r.lucroVB);
+  document.getElementById('inv-roiInv').textContent  = INV_formatBR(r.roiInv)+'%';
+  document.getElementById('inv-totRecebido').textContent = 'R$ '+INV_formatBR(r.totC);
+}
+
+// Solver bidirecional do cliente — mesmo comportamento do Financiamentos
+function INV_update(){
+  var valEl = document.getElementById('inv-valor');
+  var pmtEl = document.getElementById('inv-parcela');
+  var nEl   = document.getElementById('inv-prazo');
+  var iEl   = document.getElementById('inv-taxa');
+  var erro  = document.getElementById('inv-erro');
+
+  var PV  = INV_parseBR(valEl.value);
+  var pmt = INV_parseBR(pmtEl.value);
+  var n   = parseInt(nEl.value || '0');
+  var i   = INV_parseBR(iEl.value) / 100;
+
+  var pvOk  = !isNaN(PV)  && PV  > 0;
+  var pmtOk = !isNaN(pmt) && pmt > 0;
+  var nOk   = !isNaN(n)   && n   > 0 && n < 600;
+  var iOk   = !isNaN(i)   && i   > 0;
+
+  var count = [pvOk, pmtOk, nOk, iOk].filter(Boolean).length;
+  erro.style.display = 'none';
+
+  if(count < 3){ INV_updateInvestidor(); return; }
+
+  var solve = null;
+  if(!pvOk)       { solve = 'valor';   INV_lastSolved = 'valor'; }
+  else if(!pmtOk) { solve = 'parcela'; INV_lastSolved = 'parcela'; }
+  else if(!nOk)   { solve = 'prazo';   INV_lastSolved = 'prazo'; }
+  else if(!iOk)   { solve = 'taxa';    INV_lastSolved = 'taxa'; }
+  else {
+    if(INV_lastSolved && INV_lastSolved !== INV_lastEdited){ solve = INV_lastSolved; }
+    else { solve = (INV_lastEdited === 'parcela') ? 'valor' : 'parcela'; }
+  }
+
+  if(solve === 'parcela'){
+    var r = Math.round(INV_calcPrice(PV, i, n) * 100) / 100;
+    pmtEl.value = (r > 0) ? INV_formatBR(r) : '';
+  } else if(solve === 'valor'){
+    var v = pmt * (1 - Math.pow(1+i, -n)) / i;
+    valEl.value = (v > 0) ? INV_formatBR(v) : '';
+  } else if(solve === 'prazo'){
+    var ratio = PV * i / pmt;
+    if(ratio > 0 && ratio < 1){
+      var nc = Math.round(-Math.log(1-ratio) / Math.log(1+i));
+      nEl.value = (nc > 0 && nc < 600) ? String(nc) : '';
+    } else { nEl.value = ''; }
+  } else if(solve === 'taxa'){
+    var rate = INV_solveRate(PV, pmt, n);
+    if(!isNaN(rate) && rate > 0){
+      iEl.value = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    } else { iEl.value = ''; }
+  }
+
+  INV_updateInvestidor();
+}
+
+function INV_initData(){
+  var hoje=new Date();
+  var prox=new Date(hoje.getFullYear(),hoje.getMonth()+1,hoje.getDate());
+  var y=prox.getFullYear(), m=String(prox.getMonth()+1).padStart(2,'0'), d=String(prox.getDate()).padStart(2,'0');
+  document.getElementById('inv-tabelaData').value=d+'/'+m+'/'+y;
+}
+
+function INV_limpar(){
+  INV_lastEdited=''; INV_lastSolved=''; INV_degrau='centavo';
+  ['inv-valor','inv-prazo','inv-taxa','inv-parcela','inv-tabelaDesc'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('inv-pctInv').value='1,80';
+  document.getElementById('inv-pctVB').textContent='---';
+  document.getElementById('inv-totJuros').textContent='---';
+  document.getElementById('inv-erro').style.display='none';
+  INV_applyDegrauUI();
+  INV_resetInvestidor();
+  INV_initData();
+}
+
+function INV_fecharTabela(){
+  var ot=document.getElementById('inv-overlayTabela'); if(ot) ot.style.display='none';
+  var img=document.getElementById('inv-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
+  var dica=document.getElementById('inv-tabelaImagemDica'); if(dica) dica.style.display='none';
+}
+
+function INV_gerarTabela(){
+  var r = INV_getDados();
+  if(!r){ alert('Preencha valor da operação, prazo, taxa cliente (ou parcela) e % investidor.'); return; }
+  var dataStr = document.getElementById('inv-tabelaData').value;
+  if(!dataStr){ alert('Preencha o primeiro vencimento.'); return; }
+  var desc = (document.getElementById('inv-tabelaDesc').value||'').trim().toUpperCase();
+  var titulo = desc || 'TABELA INVESTIDOR';
+
+  var base;
+  if(dataStr.indexOf('/')!==-1){ var dp=dataStr.split('/'); base=new Date(parseInt(dp[2]),parseInt(dp[1])-1,parseInt(dp[0])); }
+  else { var dp=dataStr.split('-'); base=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2])); }
+
+  var n=r.n, linhas=[];
+  for(var i=0;i<n;i++){
+    var d=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());
+    linhas.push({
+      parc:String(i+1).padStart(2,'0'),
+      cli:'R$ '+INV_formatBR(r.pc),
+      inv:'R$ '+INV_formatBR(r.pi),
+      vb:'R$ '+INV_formatBR(r.pv),
+      data:String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
+    });
+  }
+
+  var W=460, esc=3, pad=14, padV=12;
+  var altVB=28, altTit=26, altSub=18, altHead=22, altTot=22;
+  var altRows=820 - padV*2 - altVB - altTit - altSub - altHead - altTot;
+  var altRow=Math.min(24, Math.max(13, Math.floor(altRows/n)));
+  var fs=Math.min(11, Math.max(7, Math.floor(altRow*0.5)));
+  var H=padV*2 + altVB + altTit + altSub + altHead + (altRow*n) + altTot;
+
+  var wParc=40, wData=74;
+  var wMoney=(W - pad*2 - wParc - wData)/3;
+  var x0=pad;
+  var cParc=x0 + wParc/2;
+  var cCli =x0 + wParc + wMoney*0.5;
+  var cInv =x0 + wParc + wMoney*1.5;
+  var cVB  =x0 + wParc + wMoney*2.5;
+  var cData=x0 + wParc + wMoney*3 + wData/2;
+
+  var cv=document.createElement('canvas');
+  cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=padV;
+
+  // Logo
+  ctx.fillStyle='#111'; ctx.font='400 24px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
+  ctx.fillText('VB', pad, y+altVB*0.75); y+=altVB;
+
+  // Título
+  ctx.fillStyle='#111'; ctx.font='bold '+(fs+3)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(titulo, W/2, y+altTit*0.62);
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,y+altTit-2); ctx.lineTo(W-pad,y+altTit-2); ctx.stroke();
+  y+=altTit;
+
+  // Subtítulo (valor OP / ROI investidor)
+  ctx.fillStyle='#999'; ctx.font='500 '+(fs)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Valor da OP R$ '+INV_formatBR(r.valorOP)+'   ·   ROI Inv '+INV_formatBR(r.roiInv)+'%', W/2, y+altSub*0.62);
+  y+=altSub;
+
+  // Header
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad,y,W-pad*2,altHead);
+  ctx.fillStyle='#666'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PARC.',      cParc, y+altHead*0.68);
+  ctx.fillText('CLIENTE',    cCli,  y+altHead*0.68);
+  ctx.fillText('INVESTIDOR', cInv,  y+altHead*0.68);
+  ctx.fillText('VB',         cVB,   y+altHead*0.68);
+  ctx.fillText('DATA',       cData, y+altHead*0.68);
+  y+=altHead;
+
+  // Linhas
+  for(var i=0;i<n;i++){
+    ctx.fillStyle=i%2===0?'#fff':'#f7f7f7'; ctx.fillRect(pad,y,W-pad*2,altRow);
+    ctx.strokeStyle='#eee'; ctx.lineWidth=0.3;
+    ctx.beginPath(); ctx.moveTo(pad,y+altRow); ctx.lineTo(W-pad,y+altRow); ctx.stroke();
+    var cy=y+altRow*0.66;
+    ctx.textAlign='center';
+    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].parc, cParc, cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].cli, cCli, cy);
+    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].inv, cInv, cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].vb, cVB, cy);
+    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].data, cData, cy);
+    y+=altRow;
+  }
+
+  // Total
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad,y,W-pad*2,altTot);
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Total', cParc, y+altTot*0.68);
+  ctx.fillText('R$ '+INV_formatBR(r.totC), cCli, y+altTot*0.68);
+  ctx.fillText('R$ '+INV_formatBR(r.totI), cInv, y+altTot*0.68);
+  ctx.fillText('R$ '+INV_formatBR(r.totV), cVB,  y+altTot*0.68);
+
+  VB_drawWatermark(ctx, W, H);
+  var img=document.getElementById('inv-tabelaImagem');
+  img.src=cv.toDataURL('image/png');
+  img.style.display='block';
+  document.getElementById('inv-tabelaImagemDica').style.display='block';
+  document.getElementById('inv-overlayTabela').style.display='block';
+  document.getElementById('inv-overlayTabela').scrollTop=0;
+}
+
+(function(){
+  var elV=document.getElementById('inv-valor');
+  if(elV) elV.addEventListener('input',function(){
+    INV_lastEdited='valor';
+    var raw=this.value.replace(/\D/g,'');
+    if(!raw){this.value='';return;}
+    this.value=INV_formatBR(parseInt(raw)/100);
+    INV_update();
+  });
+  var elT=document.getElementById('inv-taxa');
+  if(elT) elT.addEventListener('input',function(){
+    INV_lastEdited='taxa';
+    var raw=this.value.replace(/\D/g,'');
+    if(!raw){this.value='';return;}
+    this.value=INV_formatBR(parseInt(raw)/100);
+    INV_update();
+  });
+  var elN=document.getElementById('inv-prazo');
+  if(elN) elN.addEventListener('input',function(){
+    INV_lastEdited='prazo';
+    this.value=this.value.replace(/\D/g,'');
+    if(!this.value) return;
+    INV_update();
+  });
+  var elP=document.getElementById('inv-parcela');
+  if(elP) elP.addEventListener('input',function(){
+    INV_lastEdited='parcela';
+    var raw=this.value.replace(/\D/g,'');
+    if(!raw){this.value='';return;}
+    this.value=INV_formatBR(parseInt(raw)/100);
+    INV_update();
+  });
+  var elPct=document.getElementById('inv-pctInv');
+  if(elPct) elPct.addEventListener('input',function(){
+    var raw=this.value.replace(/\D/g,'');
+    this.value=raw?INV_formatBR(parseInt(raw)/100):'';
+    INV_updateInvestidor();
+  });
+  var dt=document.getElementById('inv-tabelaData');
+  if(dt) dt.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,''); var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+  });
+  INV_applyDegrauUI();
+  INV_initData();
+})();
+
 </script>
 
 <style>
@@ -2504,6 +3024,66 @@ function QUIT_limpar(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.83</span><span class="cl-ver-date">14/06/2026 13:33</span></div>
+      <div class="cl-item">Arredondamento de parcela passa a iniciar em Centavo (parcela cheia, com centavos) tanto no Financiamentos quanto no Investidor. O arredondamento pra cima (Real/Dezena/Centena) só ocorre se selecionado manualmente</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.82</span><span class="cl-ver-date">14/06/2026 13:11</span></div>
+      <div class="cl-item">Financiamentos: seletor ARREDONDAR PARCELA — Centavo (mais próximo, como antes), Real (padrão), Dezena ou Centena (pra cima). Atua só quando a parcela é o campo calculado; parcela digitada manualmente é respeitada. Total e total de juros refletem a parcela arredondada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.81</span><span class="cl-ver-date">14/06/2026 13:11</span></div>
+      <div class="cl-item">Investidor: seletor de arredondamento da parcela do investidor — Centavo, Real (padrão), Dezena ou Centena, sempre pra cima. A parcela do VB absorve a diferença; parcela, lucros, totais e tabela recalculam na hora.</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.80</span><span class="cl-ver-date">14/06/2026 11:08</span></div>
+      <div class="cl-item">Investidor: card TOTAL DE JUROS (do cliente) inserido antes do bloco do investidor. Parcela do investidor agora arredonda pra cima até real inteiro (sem centavos) — a parcela do VB absorve a diferença e fica com os centavos. Botão PERSONALIZAR passa a exigir senha (3113), igual aos demais módulos</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.79</span><span class="cl-ver-date">14/06/2026 10:54</span></div>
+      <div class="cl-item">Investidor: topo idêntico ao Financiamentos, com parcela do cliente editável e cálculo bidirecional (preenche 3 dos 4 campos — valor, prazo, taxa, parcela — e calcula o quarto, inclusive resolvendo a taxa). Bloco do investidor embaixo: parcela e lucro do investidor com ROI do investidor (lucro ÷ valor da OP); parcela e lucro do VB ao lado. Removido o ROI VB (capital VB é zero)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.78</span><span class="cl-ver-date">13/06/2026 15:34</span></div>
+      <div class="cl-item">Investidor: removida entrada e capital exposto — base agora é o Valor da Operação (campo único). Lucro do investidor (total investidor − valor da OP) exibido ao lado da parcela do investidor; lucro VB ao lado da parcela VB. ROI VB em linha própria</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.77</span><span class="cl-ver-date">13/06/2026 15:18</span></div>
+      <div class="cl-item">Financiamentos: novo botão PERSONALIZAR no canto superior direito abre o módulo Investidor — capital exposto (financiado − entrada), parcela Price do cliente, split investidor/VB (% padrão 1,80 / 1,20 automático), parcela e total de cada lado, lucro VB e ROI%. Tabela canvas PARCELA · CLIENTE · INVESTIDOR · VB · DATA com totais</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.75</span><span class="cl-ver-date">13/06/2026 14:12</span></div>
+      <div class="cl-item">Vendas: botão ⓘ usa onpointerdown+preventDefault — evita que blur do input atual desloque o layout antes do toque registrar, permitindo navegar entre descrições normalmente</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.76</span><span class="cl-ver-date">13/06/2026 14:18</span></div>
+      <div class="cl-item">Vendas: descrição da parcela exibida entre parênteses na tabela gerada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.75</span><span class="cl-ver-date">13/06/2026</span></div>
+      <div class="cl-item">Vendas: botão ⓘ usa onpointerdown com preventDefault — impede o teclado de fechar e o layout de mudar antes do toque registrar, permitindo trocar de obs sem travar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.74</span><span class="cl-ver-date">13/06/2026 14:08</span></div>
+      <div class="cl-item">Vendas: reduzido espaçamento vertical nas linhas com descrição (altObs 14→7)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.73</span><span class="cl-ver-date">13/06/2026 14:05</span></div>
+      <div class="cl-item">Vendas: obs da parcela personalizada agora aparece empilhada abaixo do valor na mesma célula — valor em negrito acima, obs em cinza abaixo; parcela e data centralizadas verticalmente na linha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.72</span><span class="cl-ver-date">13/06/2026 09:01</span></div>
