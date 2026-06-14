@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.83</title>
+<title>VB - v1.0.86</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -192,7 +192,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.83<br>14/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.86<br>14/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -256,7 +256,13 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
   </div>
 
-  <div class="result-card" style="margin-bottom:6px;">
+  <div class="result-card" style="margin-bottom:6px;position:relative;">
+    <select id="fin-degrau-sel" onchange="FIN_setDegrau(this.value)" class="no-print" style="position:absolute;top:10px;right:10px;border:0.5px solid #ddd;border-radius:8px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:0.3px;color:#888;font-weight:600;padding:3px 4px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;">
+      <option value="centavo">Centavo</option>
+      <option value="real">Real</option>
+      <option value="dezena">Dezena</option>
+      <option value="centena">Centena</option>
+    </select>
     <div class="result-label">VALOR DA PRESTAÇÃO</div>
     <div class="result-accent"></div>
     <div style="display:flex;align-items:baseline;justify-content:center;gap:1px;">
@@ -287,15 +293,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
   </div>
 
-  <div class="field-card no-print" style="margin-top:4px;padding:12px 16px;">
-    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:8px;text-align:center;">ARREDONDAR PARCELA</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
-      <button id="fin-deg-centavo" onclick="FIN_setDegrau('centavo')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTAVO</button>
-      <button id="fin-deg-real" onclick="FIN_setDegrau('real')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">REAL</button>
-      <button id="fin-deg-dezena" onclick="FIN_setDegrau('dezena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">DEZENA</button>
-      <button id="fin-deg-centena" onclick="FIN_setDegrau('centena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTENA</button>
-    </div>
-  </div>
 
   <div class="field-card no-print" style="margin-top:4px;">
 
@@ -410,7 +407,13 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 
   <!-- Parcela cliente (editável, bidirecional) -->
-  <div class="result-card" style="margin-bottom:6px;">
+  <div class="result-card" style="margin-bottom:6px;position:relative;">
+    <select id="inv-degrauCli-sel" onchange="INV_setDegrauCli(this.value)" style="position:absolute;top:10px;right:10px;border:0.5px solid #ddd;border-radius:8px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:0.3px;color:#888;font-weight:600;padding:3px 4px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;" title="Arredondar parcela do cliente">
+      <option value="centavo">Centavo</option>
+      <option value="real">Real</option>
+      <option value="dezena">Dezena</option>
+      <option value="centena">Centena</option>
+    </select>
     <div class="result-label">PARCELA CLIENTE</div>
     <div class="result-accent"></div>
     <div style="display:flex;align-items:baseline;justify-content:center;gap:1px;">
@@ -450,22 +453,19 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
   </div>
 
-  <!-- Degrau de arredondamento da parcela do investidor -->
-  <div class="field-card" style="padding:12px 16px;margin-bottom:6px;">
-    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:8px;text-align:center;">ARREDONDAR PARCELA INVESTIDOR (PRA CIMA)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
-      <button id="inv-deg-centavo" onclick="INV_setDegrau('centavo')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTAVO</button>
-      <button id="inv-deg-real" onclick="INV_setDegrau('real')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">REAL</button>
-      <button id="inv-deg-dezena" onclick="INV_setDegrau('dezena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">DEZENA</button>
-      <button id="inv-deg-centena" onclick="INV_setDegrau('centena')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">CENTENA</button>
-    </div>
-  </div>
-
   <!-- Investidor / VB: parcela + lucro -->
   <div class="field-card" style="padding:14px 20px;margin-bottom:6px;">
     <div class="two-col">
       <div style="padding-right:14px;text-align:center;">
-        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARC. INVESTIDOR</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px;">
+          <span style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;">PARC. INVESTIDOR</span>
+          <select id="inv-degrau-sel" onchange="INV_setDegrau(this.value)" style="border:0.5px solid #ddd;border-radius:6px;background:#fff;font-family:-apple-system,sans-serif;font-size:9px;letter-spacing:0.2px;color:#888;font-weight:600;padding:2px 3px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;" title="Arredondar parcela do investidor (pra cima)">
+            <option value="centavo">Centavo</option>
+            <option value="real">Real</option>
+            <option value="dezena">Dezena</option>
+            <option value="centena">Centena</option>
+          </select>
+        </div>
         <div style="font-size:18px;font-weight:700;color:#111;" id="inv-parcInv">R$ ---</div>
         <div style="font-size:9px;letter-spacing:1.5px;color:#bbb;margin-top:5px;">LUCRO</div>
         <div style="font-size:13px;font-weight:700;color:#888;" id="inv-lucroInv">R$ ---</div>
@@ -974,11 +974,8 @@ function FIN_ceilStep(x, degrau){
   return Math.ceil(x); // real (padrão), pra cima
 }
 function FIN_applyDegrauUI(){
-  ['centavo','real','dezena','centena'].forEach(function(d){
-    var b=document.getElementById('fin-deg-'+d); if(!b) return;
-    if(d===FIN_degrau){ b.style.background='#111'; b.style.color='#fff'; b.style.borderColor='#111'; }
-    else { b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
-  });
+  var sel=document.getElementById('fin-degrau-sel');
+  if(sel) sel.value=FIN_degrau;
 }
 function FIN_setDegrau(d){
   FIN_degrau=d;
@@ -2670,23 +2667,34 @@ function INV_round2(x){ return Math.round(x*100)/100; }
 function INV_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
 
 var INV_degrau = 'centavo';
+var INV_degrauCli = 'centavo';
 function INV_ceilStep(x, degrau){
   if(degrau==='centavo') return Math.ceil(x*100)/100;
   if(degrau==='dezena')  return Math.ceil(x/10)*10;
   if(degrau==='centena') return Math.ceil(x/100)*100;
   return Math.ceil(x); // real (padrão)
 }
+function INV_ceilStepCli(x, degrau){
+  if(degrau==='centavo') return Math.round(x*100)/100; // centavo mais próximo (igual Financiamentos)
+  if(degrau==='dezena')  return Math.ceil(x/10)*10;
+  if(degrau==='centena') return Math.ceil(x/100)*100;
+  return Math.ceil(x); // real, pra cima
+}
 function INV_applyDegrauUI(){
-  ['centavo','real','dezena','centena'].forEach(function(d){
-    var b=document.getElementById('inv-deg-'+d); if(!b) return;
-    if(d===INV_degrau){ b.style.background='#111'; b.style.color='#fff'; b.style.borderColor='#111'; }
-    else { b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
-  });
+  var sel=document.getElementById('inv-degrau-sel');
+  if(sel) sel.value=INV_degrau;
+  var selc=document.getElementById('inv-degrauCli-sel');
+  if(selc) selc.value=INV_degrauCli;
 }
 function INV_setDegrau(d){
   INV_degrau=d;
   INV_applyDegrauUI();
   INV_updateInvestidor();
+}
+function INV_setDegrauCli(d){
+  INV_degrauCli=d;
+  INV_applyDegrauUI();
+  INV_update();
 }
 
 function INV_solveRate(PV, PMT, n){
@@ -2794,7 +2802,7 @@ function INV_update(){
   }
 
   if(solve === 'parcela'){
-    var r = Math.round(INV_calcPrice(PV, i, n) * 100) / 100;
+    var r = INV_ceilStepCli(INV_calcPrice(PV, i, n), INV_degrauCli);
     pmtEl.value = (r > 0) ? INV_formatBR(r) : '';
   } else if(solve === 'valor'){
     var v = pmt * (1 - Math.pow(1+i, -n)) / i;
@@ -2823,7 +2831,7 @@ function INV_initData(){
 }
 
 function INV_limpar(){
-  INV_lastEdited=''; INV_lastSolved=''; INV_degrau='centavo';
+  INV_lastEdited=''; INV_lastSolved=''; INV_degrau='centavo'; INV_degrauCli='centavo';
   ['inv-valor','inv-prazo','inv-taxa','inv-parcela','inv-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
@@ -3024,6 +3032,21 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.86</span><span class="cl-ver-date">14/06/2026 13:59</span></div>
+      <div class="cl-item">Investidor: agora a parcela do cliente também tem seletor de arredondamento próprio (no card da parcela cliente), independente do seletor do investidor. Centavo = mais próximo (igual Financiamentos); Real/Dezena/Centena pra cima. Arredondar a parcela do cliente sobe total, total de juros e a parcela do VB</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.85</span><span class="cl-ver-date">14/06/2026 13:56</span></div>
+      <div class="cl-item">Investidor: seletor de arredondamento movido para o lado do nome PARC. INVESTIDOR</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.84</span><span class="cl-ver-date">14/06/2026 13:33</span></div>
+      <div class="cl-item">Arredondamento de parcela vira um seletor pequeno (dropdown) ao lado da parcela — no Financiamentos no card da prestação, no Investidor no card do investidor/VB. Removida a fileira de 4 botões. Não aparece na imagem compartilhada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.83</span><span class="cl-ver-date">14/06/2026 13:33</span></div>
