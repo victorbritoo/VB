@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.86</title>
+<title>VB - v1.0.92</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -71,6 +71,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     width: 100%;
     max-width: 390px;
   }
+  #inv-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:#f5f5f3; z-index:9999; flex-direction:column; align-items:center; justify-content:flex-start; padding:40px 36px; overflow-y:auto; }
+  #inv-overlay.show { display:flex; }
+  #inv-overlayCard { background:#f5f5f3; width:100%; max-width:390px; }
   .ov-logo { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: #111; margin-bottom: 6px; margin-left: 4px; margin-top: 32px; }
   .ov-sub { font-size: 11px; letter-spacing: 5px; color: #888; font-weight: 500; margin-bottom: 6px; margin-left: 4px; }
   .ov-divider { border: none; border-top: 0.5px solid #ccc; margin-bottom: 18px; }
@@ -192,7 +195,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.86<br>14/06/2026</div>
+    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.92<br>14/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -481,14 +484,20 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
   </div>
 
-  <div class="total-row" style="margin-bottom:0;">
+  <div class="total-row" style="margin-bottom:6px;">
     <span class="total-label">TOTAL RECEBIDO</span>
     <span class="total-value" id="inv-totRecebido">R$ ---</span>
   </div>
 
+  <button class="no-print" onclick="INV_abrirOverlay()" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
+
   </div><!-- fim inv-captureZone -->
 
   <div class="field-card no-print" style="margin-top:4px;">
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">INVESTIDOR</div>
+      <input id="inv-nome" type="text" placeholder="ADRIANO" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
     <div style="margin-bottom:10px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DESCRIÇÃO</div>
       <input id="inv-tabelaDesc" type="text" placeholder="TOYOTA SW4 2026 FKX5J04" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
@@ -496,6 +505,13 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="margin-bottom:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
       <input id="inv-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:6px;text-align:center;">TABELA PARA</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <button id="inv-modo-vb" onclick="INV_setTabelaModo('vb')" style="padding:8px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">VB (COMPLETA)</button>
+        <button id="inv-modo-inv" onclick="INV_setTabelaModo('investidor')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">INVESTIDOR</button>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
       <button onclick="INV_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
@@ -513,6 +529,61 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
     <button onclick="INV_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
   </div>
+</div>
+
+<!-- OVERLAY APROVAÇÃO INVESTIDOR -->
+<div id="inv-overlay">
+  <div style="width:100%;max-width:390px;margin-bottom:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <button id="inv-ov-modo-op" onclick="INV_setOvModo('operacao')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">OPERAÇÃO</button>
+      <button id="inv-ov-modo-inv" onclick="INV_setOvModo('investidor')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">INVESTIDOR</button>
+    </div>
+  </div>
+  <div id="inv-overlayCard">
+    <div class="ov-logo">VB</div>
+    <div class="ov-sub" id="inv-ov-sub">OPERAÇÃO</div>
+    <div class="ov-sub" id="inv-ov-desc" style="display:none;letter-spacing:1px;color:#111;font-weight:600;"></div>
+    <hr class="ov-divider">
+    <div class="ov-card" style="text-align:center;">
+      <div class="ov-label" id="inv-ov-l1">VALOR DA OPERAÇÃO</div>
+      <div class="ov-row"><span class="ov-prefix">R$</span><span class="ov-big" id="inv-ov-aporte"></span></div>
+    </div>
+    <div class="ov-card" style="text-align:center;">
+      <div class="ov-label" id="inv-ov-l2">PARCELA DO CLIENTE</div>
+      <div class="ov-accent"></div>
+      <div class="ov-row"><span class="ov-prefix">R$</span><span class="ov-prestacao-big" id="inv-ov-parcela"></span></div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-two">
+        <div class="ov-half">
+          <div class="ov-hlabel">PRAZO</div>
+          <div class="ov-hval" id="inv-ov-prazo"></div>
+          <div class="ov-hsub">MESES</div>
+        </div>
+        <div class="ov-half">
+          <div class="ov-hlabel" id="inv-ov-l3">TAXA CLIENTE</div>
+          <div style="display:flex;align-items:baseline;gap:2px;">
+            <span class="ov-hval" id="inv-ov-pct"></span>
+            <span class="ov-hsub">% a.m.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ov-total">
+      <span class="ov-tlabel" id="inv-ov-tl1">TOTAL RECEBIDO</span>
+      <span class="ov-tval" id="inv-ov-total"></span>
+    </div>
+    <div class="ov-total" id="inv-ov-row2">
+      <span class="ov-tlabel" id="inv-ov-tl2">TOTAL DE JUROS</span>
+      <span class="ov-tval" id="inv-ov-juros"></span>
+    </div>
+    <div class="ov-total" id="inv-ov-row3" style="display:none;">
+      <span class="ov-tlabel" id="inv-ov-tl3">ROI</span>
+      <span class="ov-tval" id="inv-ov-roi"></span>
+    </div>
+    <div class="ov-hint">↑ TIRE O PRINT E ENVIE ↑</div>
+  </div>
+  <button class="ov-close" onclick="INV_fecharOverlay()">FECHAR</button>
 </div>
 </div>
 
@@ -2668,6 +2739,15 @@ function INV_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){re
 
 var INV_degrau = 'centavo';
 var INV_degrauCli = 'centavo';
+var INV_tabelaModo = 'vb';
+function INV_applyTabelaModoUI(){
+  var bv=document.getElementById('inv-modo-vb'), bi=document.getElementById('inv-modo-inv');
+  if(bv&&bi){
+    if(INV_tabelaModo==='vb'){ bv.style.background='#111'; bv.style.color='#fff'; bv.style.borderColor='#111'; bi.style.background='#fff'; bi.style.color='#888'; bi.style.borderColor='#ddd'; }
+    else { bi.style.background='#111'; bi.style.color='#fff'; bi.style.borderColor='#111'; bv.style.background='#fff'; bv.style.color='#888'; bv.style.borderColor='#ddd'; }
+  }
+}
+function INV_setTabelaModo(m){ INV_tabelaModo=m; INV_applyTabelaModoUI(); }
 function INV_ceilStep(x, degrau){
   if(degrau==='centavo') return Math.ceil(x*100)/100;
   if(degrau==='dezena')  return Math.ceil(x/10)*10;
@@ -2831,8 +2911,8 @@ function INV_initData(){
 }
 
 function INV_limpar(){
-  INV_lastEdited=''; INV_lastSolved=''; INV_degrau='centavo'; INV_degrauCli='centavo';
-  ['inv-valor','inv-prazo','inv-taxa','inv-parcela','inv-tabelaDesc'].forEach(function(id){
+  INV_lastEdited=''; INV_lastSolved=''; INV_degrau='centavo'; INV_degrauCli='centavo'; INV_tabelaModo='vb'; INV_ovModo='operacao';
+  ['inv-valor','inv-prazo','inv-taxa','inv-parcela','inv-tabelaDesc','inv-nome'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('inv-pctInv').value='1,80';
@@ -2840,6 +2920,7 @@ function INV_limpar(){
   document.getElementById('inv-totJuros').textContent='---';
   document.getElementById('inv-erro').style.display='none';
   INV_applyDegrauUI();
+  INV_applyTabelaModoUI();
   INV_resetInvestidor();
   INV_initData();
 }
@@ -2850,6 +2931,54 @@ function INV_fecharTabela(){
   var dica=document.getElementById('inv-tabelaImagemDica'); if(dica) dica.style.display='none';
 }
 
+var INV_ovModo='operacao';
+var INV_ovData=null;
+function INV_applyOvModoUI(){
+  var bo=document.getElementById('inv-ov-modo-op'), bi=document.getElementById('inv-ov-modo-inv');
+  if(!bo||!bi) return;
+  if(INV_ovModo==='operacao'){ bo.style.background='#111';bo.style.color='#fff';bo.style.borderColor='#111'; bi.style.background='#fff';bi.style.color='#888';bi.style.borderColor='#ddd'; }
+  else { bi.style.background='#111';bi.style.color='#fff';bi.style.borderColor='#111'; bo.style.background='#fff';bo.style.color='#888';bo.style.borderColor='#ddd'; }
+}
+function INV_renderOverlay(){
+  var d=INV_ovData; if(!d) return;
+  var op=(INV_ovModo==='operacao');
+  document.getElementById('inv-ov-sub').textContent   = op?'SIMULAÇÃO':'INVESTIDOR';
+  document.getElementById('inv-ov-l1').textContent    = op?'VALOR FINANCIADO':'APORTE';
+  document.getElementById('inv-ov-aporte').textContent= INV_formatBR(d.valorOP);
+  document.getElementById('inv-ov-l2').textContent    = op?'VALOR DA PRESTAÇÃO':'PARCELA DO INVESTIDOR';
+  document.getElementById('inv-ov-parcela').textContent= INV_formatBR(op?d.pc:d.pi);
+  document.getElementById('inv-ov-prazo').textContent = d.n;
+  document.getElementById('inv-ov-l3').textContent    = op?'TAXA DE JUROS':'% INVESTIDOR';
+  document.getElementById('inv-ov-pct').textContent   = op?d.taxaCli:d.pctInv;
+  document.getElementById('inv-ov-tl1').textContent   = op?'TOTAL FINANCIADO':'TOTAL A RECEBER';
+  document.getElementById('inv-ov-total').textContent = 'R$ '+INV_formatBR(op?d.totC:d.totI);
+  document.getElementById('inv-ov-juros').textContent = 'R$ '+INV_formatBR(d.jurosInv);
+  document.getElementById('inv-ov-roi').textContent   = INV_formatBR(d.roiInv)+'%';
+  document.getElementById('inv-ov-row2').style.display = op?'none':'flex';
+  document.getElementById('inv-ov-row3').style.display = op?'none':'flex';
+}
+function INV_setOvModo(m){ INV_ovModo=m; INV_applyOvModoUI(); INV_renderOverlay(); }
+function INV_abrirOverlay(){
+  var r=INV_getDados();
+  if(!r){ alert('Preencha valor da operação, prazo, taxa cliente (ou parcela) e % investidor.'); return; }
+  var desc=(document.getElementById('inv-tabelaDesc').value||'').trim().toUpperCase();
+  var od=document.getElementById('inv-ov-desc');
+  if(desc){ od.textContent=desc; od.style.display='block'; } else { od.style.display='none'; }
+  INV_ovData={
+    valorOP:r.valorOP, pc:r.pc, pi:r.pi, n:r.n,
+    taxaCli:(document.getElementById('inv-taxa').value||'---'),
+    pctInv:(document.getElementById('inv-pctInv').value||'---'),
+    totC:r.totC, totI:r.totI,
+    jurosCli:INV_round2(r.totC-r.valorOP), jurosInv:r.lucroInv, roiInv:r.roiInv
+  };
+  INV_applyOvModoUI();
+  INV_renderOverlay();
+  document.getElementById('inv-overlay').classList.add('show');
+}
+function INV_fecharOverlay(){
+  document.getElementById('inv-overlay').classList.remove('show');
+}
+
 function INV_gerarTabela(){
   var r = INV_getDados();
   if(!r){ alert('Preencha valor da operação, prazo, taxa cliente (ou parcela) e % investidor.'); return; }
@@ -2857,6 +2986,8 @@ function INV_gerarTabela(){
   if(!dataStr){ alert('Preencha o primeiro vencimento.'); return; }
   var desc = (document.getElementById('inv-tabelaDesc').value||'').trim().toUpperCase();
   var titulo = desc || 'TABELA INVESTIDOR';
+  var hInv = (document.getElementById('inv-nome').value||'').trim().toUpperCase() || 'INVESTIDOR';
+  var modo = INV_tabelaModo; // 'vb' (completa) ou 'investidor'
 
   var base;
   if(dataStr.indexOf('/')!==-1){ var dp=dataStr.split('/'); base=new Date(parseInt(dp[2]),parseInt(dp[1])-1,parseInt(dp[0])); }
@@ -2874,6 +3005,24 @@ function INV_gerarTabela(){
     });
   }
 
+  // Definição das colunas conforme o modo
+  var cols;
+  if(modo==='investidor'){
+    cols=[
+      {header:'PARC.', w:52,  key:'parc', total:'Total',                       bold:false, color:'#888', fit:false},
+      {header:hInv,    w:200, key:'inv',  total:'R$ '+INV_formatBR(r.totI),     bold:true,  color:'#111', fit:true },
+      {header:'DATA',  w:128, key:'data', total:'',                            bold:false, color:'#888', fit:false}
+    ];
+  } else {
+    cols=[
+      {header:'PARC.',    w:40,  key:'parc', total:'Total',                    bold:false, color:'#888', fit:false},
+      {header:'CLIENTE',  w:99,  key:'cli',  total:'R$ '+INV_formatBR(r.totC),  bold:true,  color:'#111', fit:false},
+      {header:hInv,       w:99,  key:'inv',  total:'R$ '+INV_formatBR(r.totI),  bold:false, color:'#555', fit:true },
+      {header:'VB',       w:100, key:'vb',   total:'R$ '+INV_formatBR(r.totV),  bold:true,  color:'#111', fit:false},
+      {header:'DATA',     w:74,  key:'data', total:'',                         bold:false, color:'#888', fit:false}
+    ];
+  }
+
   var W=460, esc=3, pad=14, padV=12;
   var altVB=28, altTit=26, altSub=18, altHead=22, altTot=22;
   var altRows=820 - padV*2 - altVB - altTit - altSub - altHead - altTot;
@@ -2881,14 +3030,10 @@ function INV_gerarTabela(){
   var fs=Math.min(11, Math.max(7, Math.floor(altRow*0.5)));
   var H=padV*2 + altVB + altTit + altSub + altHead + (altRow*n) + altTot;
 
-  var wParc=40, wData=74;
-  var wMoney=(W - pad*2 - wParc - wData)/3;
-  var x0=pad;
-  var cParc=x0 + wParc/2;
-  var cCli =x0 + wParc + wMoney*0.5;
-  var cInv =x0 + wParc + wMoney*1.5;
-  var cVB  =x0 + wParc + wMoney*2.5;
-  var cData=x0 + wParc + wMoney*3 + wData/2;
+  // Ajusta larguras pra preencher exatamente a área útil
+  var AW=W-pad*2, somaW=cols.reduce(function(a,c){return a+c.w;},0);
+  var fator=AW/somaW, accLeft=pad;
+  cols.forEach(function(c){ c.w=c.w*fator; c.cx=accLeft+c.w/2; accLeft+=c.w; });
 
   var cv=document.createElement('canvas');
   cv.width=W*esc; cv.height=H*esc;
@@ -2914,12 +3059,13 @@ function INV_gerarTabela(){
 
   // Header
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad,y,W-pad*2,altHead);
-  ctx.fillStyle='#666'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('PARC.',      cParc, y+altHead*0.68);
-  ctx.fillText('CLIENTE',    cCli,  y+altHead*0.68);
-  ctx.fillText('INVESTIDOR', cInv,  y+altHead*0.68);
-  ctx.fillText('VB',         cVB,   y+altHead*0.68);
-  ctx.fillText('DATA',       cData, y+altHead*0.68);
+  ctx.fillStyle='#666'; ctx.textAlign='center';
+  cols.forEach(function(c){
+    var fsh=fs-1;
+    if(c.fit){ var maxW=c.w-6; while(fsh>5){ ctx.font='600 '+fsh+'px Helvetica,Arial,sans-serif'; if(ctx.measureText(c.header).width<=maxW) break; fsh--; } }
+    else { ctx.font='600 '+fsh+'px Helvetica,Arial,sans-serif'; }
+    ctx.fillText(c.header, c.cx, y+altHead*0.68);
+  });
   y+=altHead;
 
   // Linhas
@@ -2929,11 +3075,11 @@ function INV_gerarTabela(){
     ctx.beginPath(); ctx.moveTo(pad,y+altRow); ctx.lineTo(W-pad,y+altRow); ctx.stroke();
     var cy=y+altRow*0.66;
     ctx.textAlign='center';
-    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].parc, cParc, cy);
-    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].cli, cCli, cy);
-    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].inv, cInv, cy);
-    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].vb, cVB, cy);
-    ctx.fillStyle='#888'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.fillText(linhas[i].data, cData, cy);
+    cols.forEach(function(c){
+      ctx.fillStyle=c.color;
+      ctx.font=(c.bold?'600 ':'')+fs+'px Helvetica,Arial,sans-serif';
+      ctx.fillText(linhas[i][c.key], c.cx, cy);
+    });
     y+=altRow;
   }
 
@@ -2942,10 +3088,7 @@ function INV_gerarTabela(){
   ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
   ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Total', cParc, y+altTot*0.68);
-  ctx.fillText('R$ '+INV_formatBR(r.totC), cCli, y+altTot*0.68);
-  ctx.fillText('R$ '+INV_formatBR(r.totI), cInv, y+altTot*0.68);
-  ctx.fillText('R$ '+INV_formatBR(r.totV), cVB,  y+altTot*0.68);
+  cols.forEach(function(c){ if(c.total) ctx.fillText(c.total, c.cx, y+altTot*0.68); });
 
   VB_drawWatermark(ctx, W, H);
   var img=document.getElementById('inv-tabelaImagem');
@@ -3003,6 +3146,7 @@ function INV_gerarTabela(){
     this.value=v;
   });
   INV_applyDegrauUI();
+  INV_applyTabelaModoUI();
   INV_initData();
 })();
 
@@ -3032,6 +3176,36 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.92</span><span class="cl-ver-date">14/06/2026 18:10</span></div>
+      <div class="cl-item">Compartilhar do Financiamentos revertido ao original (sem total de juros). Investidor: a visão OPERAÇÃO ficou idêntica ao card do Financiamentos — VALOR FINANCIADO, VALOR DA PRESTAÇÃO, PRAZO, TAXA DE JUROS e TOTAL FINANCIADO (total único, sem juros). A visão INVESTIDOR mantém Total a receber, Total de juros e ROI</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.91</span><span class="cl-ver-date">14/06/2026 18:05</span></div>
+      <div class="cl-item">Financiamentos: card de compartilhar agora mostra TOTAL DE JUROS. Investidor: na visão INVESTIDOR foi incluído TOTAL DE JUROS (juros que o parceiro recebe = total a receber − aporte) entre Total a receber e ROI; botão COMPARTILHAR colado ao Total recebido</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.90</span><span class="cl-ver-date">14/06/2026 17:54</span></div>
+      <div class="cl-item">Investidor: card COMPARTILHAR agora tem toggle OPERAÇÃO / INVESTIDOR. OPERAÇÃO (padrão) mostra valor da operação, parcela do cliente, prazo, taxa cliente, total recebido e total de juros; INVESTIDOR mostra aporte, parcela do investidor, prazo, % investidor, total a receber e ROI. Toggle fica fora do card para o print sair limpo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.89</span><span class="cl-ver-date">14/06/2026 13:59</span></div>
+      <div class="cl-item">Investidor: botão COMPARTILHAR (abaixo do total recebido) abre card de resumo para aprovação do parceiro — Aporte, Parcela do investidor, Prazo, % investidor, Total a devolver e ROI. Sem nome e sem cliente/VB; descrição aparece se preenchida</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.88</span><span class="cl-ver-date">14/06/2026 13:59</span></div>
+      <div class="cl-item">Investidor: toggle TABELA PARA — VB (completa) gera PARCELA · CLIENTE · [NOME] · VB · DATA com todos os totais; Investidor gera PARCELA · [NOME] · DATA + total do investidor (sem cliente e sem VB), para enviar ao parceiro sem expor o spread. Subtítulo mantém Valor da OP e ROI do investidor</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.87</span><span class="cl-ver-date">14/06/2026 13:59</span></div>
+      <div class="cl-item">Investidor: novo campo INVESTIDOR (nome). Na tabela, o cabeçalho da coluna do investidor passa a exibir o nome digitado (em maiúsculas, encaixando na largura); vazio mantém INVESTIDOR</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.86</span><span class="cl-ver-date">14/06/2026 13:59</span></div>
