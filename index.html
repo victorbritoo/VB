@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.104</title>
+<title>VB - v1.0.106</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -195,24 +195,24 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="abrirChangelog()" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.104<br>15/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.106<br>15/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
-    <button onclick="showScreen('fin')" style="display:block;width:100%;padding:14px 18px;border:none;border-radius:14px;background:#111;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+    <button onclick="showScreen('fin')" style="display:block;width:100%;padding:14px 18px;border:none;border-radius:14px;background:#111;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#fff;">Financiamentos</div>
     </button>
-    <button onclick="PIN_request('ant')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+    <button onclick="PIN_request('quit')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Quitação Antecipada</div>
+    </button>
+    <button onclick="PIN_request('ant')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Antecipação</div>
     </button>
-    <button onclick="PIN_request('pag')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;font-family:-apple-system,sans-serif;">
+    <button onclick="PIN_request('pag')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Pagamentos</div>
     </button>
-    <button onclick="PIN_request('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
+    <button onclick="PIN_request('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Vendas</div>
-    </button>
-    <button onclick="PIN_request('quit')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
-      <div style="font-size:18px;font-weight:700;color:#111;">Quitação Antecipada</div>
     </button>
   </div>
 </div>
@@ -2321,13 +2321,18 @@ function PAG_render(){
   });
 }
 
-function PAG_limpar(){
+function PAG_setLinhasIniciais(){
   PAG_pagamentos=[]; PAG_counter=0;
+  for(var i=0;i<4;i++){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:'',valor:''}); }
+}
+function PAG_limpar(){
   document.getElementById('pag-total').value='';
   document.getElementById('pag-saldo').textContent='R$ ---';
   document.getElementById('pag-soma').textContent='---';
+  PAG_setLinhasIniciais();
   PAG_render();
 }
+(function(){ PAG_setLinhasIniciais(); PAG_render(); })();
 
 function PAG_compartilhar(){
   var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
@@ -2452,7 +2457,7 @@ function copyValue(sourceId, btn) {
 /* === PIN JS === */
 var PIN_CODE = '3113'; // senha única do app — só muda aqui
 var PIN_buffer = '', PIN_target = '';
-var PIN_PROTECTED = ['ant','pag','ven','quit','fin-inv'];
+var PIN_PROTECTED = ['ant','pag','ven','quit','fin-inv','log'];
 
 function PIN_request(target){
   if(PIN_PROTECTED.indexOf(target)===-1){ showScreen(target); return; }
@@ -2486,6 +2491,7 @@ function PIN_close(){
   document.getElementById('pin-overlay').classList.remove('show');
   document.getElementById('pin-error').textContent='';
   if(PIN_target==='fin-inv'){ FIN_enableInvestidor(); return; }
+  if(PIN_target==='log'){ abrirChangelog(); return; }
   showScreen(PIN_target);
 }
 function PIN_cancel(){
@@ -2951,6 +2957,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.106</span><span class="cl-ver-date">15/06/2026 11:55</span></div>
+      <div class="cl-item">Pagamentos já abre com 4 linhas vazias; o LIMPAR também volta com 4. Continua dá pra adicionar mais (+ ADICIONAR) e remover livremente (×)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.105</span><span class="cl-ver-date">15/06/2026 11:40</span></div>
+      <div class="cl-item">Histórico de versões agora pede senha (3113). Tela inicial reordenada: Financiamentos, Quitação Antecipada, Antecipação, Pagamentos, Vendas. Textos dos botões centralizados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.104</span><span class="cl-ver-date">15/06/2026 11:20</span></div>
