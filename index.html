@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.111</title>
+<title>VB - v1.0.114</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -195,7 +195,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.111<br>15/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.114<br>16/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -506,7 +506,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <hr class="divider">
 
   <!-- VALOR TOTAL DA VENDA -->
-  <div class="field-card">
+  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;min-height:96px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
     <div class="field-label" style="text-align:center;">VALOR TOTAL DA VENDA</div>
     <div class="valor-row" style="justify-content:center">
       <span class="valor-prefix">R$</span>
@@ -515,14 +515,14 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 
   <!-- PARCELAS -->
-  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;text-align:center;">
+  <div class="field-card" style="padding:14px 20px;margin-bottom:6px;text-align:center;min-height:96px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;">PARCELAS</div>
     <input class="input-big" style="text-align:center;width:80px;font-size:28px;font-weight:700;color:#111;" id="ven-qtd" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" onclick="this.select()">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-top:3px;">VEZES</div>
   </div>
 
   <!-- VALOR DA PARCELA -->
-  <div id="ven-cardParcela" class="field-card" style="margin-bottom:6px;">
+  <div id="ven-cardParcela" class="field-card" style="padding:14px 20px;margin-bottom:6px;min-height:96px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
     <div class="field-label" style="text-align:center;">VALOR DA PARCELA</div>
     <div class="valor-row" style="justify-content:center;">
       <span class="valor-prefix">R$</span>
@@ -1479,12 +1479,15 @@ function VEN_renderParcelas(){
   var lista = document.getElementById('ven-listaParcelas');
   lista.innerHTML = '';
   VEN_parcelas.forEach(function(p){
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:4px;';
+
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;margin-bottom:4px;align-items:center;';
+    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;align-items:end;';
     var obsOpen = p.obs ? 'block' : 'none';
     row.innerHTML =
-      '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;">'+String(p.id).padStart(2,'0')+'</span>'+
-      '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;">'+
+      '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;align-self:center;">'+String(p.id).padStart(2,'0')+'</span>'+
+      '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;padding-bottom:2px;">'+
         '<span style="font-size:10px;color:#aaa;">R$</span>'+
         '<input type="text" inputmode="numeric" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
         ' placeholder="0,00" value="'+(p.valor||'')+'"'+
@@ -1492,16 +1495,17 @@ function VEN_renderParcelas(){
       '</div>'+
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
       ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
-      ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;">'+
-      '<button onpointerdown="event.preventDefault();VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="Comentário">ⓘ</button>'+
-      '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;">×</button>';
+      ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;padding-bottom:2px;">'+
+      '<button onpointerdown="event.preventDefault();VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
+      '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
-    obsRow.style.cssText='display:'+obsOpen+';grid-column:1/-1;padding:1px 0 4px 28px;';
+    obsRow.style.cssText='display:'+obsOpen+';padding:2px 28px 0 28px;';
     obsRow.id='ven-obs-row-'+p.id;
-    obsRow.innerHTML='<input type="text" data-pid="'+p.id+'" data-field="obs" placeholder="COMENTÁRIO..." onclick="this.select()" value="'+(p.obs||'')+'" style="width:100%;border:none;border-bottom:0.5px solid #f0f0f0;background:transparent;outline:none;font-size:11px;color:#888;text-transform:uppercase;font-family:-apple-system,sans-serif;">';
-    lista.appendChild(row);
-    lista.appendChild(obsRow);
+    obsRow.innerHTML='<input type="text" data-pid="'+p.id+'" data-field="obs" placeholder="COMENTÁRIO..." onclick="this.select()" value="'+(p.obs||'')+'" style="width:100%;border:none;border-bottom:0.5px solid #f0f0f0;background:transparent;outline:none;font-size:11px;color:#888;text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
+    wrap.appendChild(row);
+    wrap.appendChild(obsRow);
+    lista.appendChild(wrap);
   });
 
   // Mask valor
@@ -2964,6 +2968,21 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.114</span><span class="cl-ver-date">16/06/2026 21:42</span></div>
+      <div class="cl-item">Vendas (personalizado): comentário cola na parcela (sem o vão grande acima) e os sublinhados de VALOR e VENCIMENTO ficam alinhados na mesma base. Espaçamento entre parcelas mantido uniforme</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.113</span><span class="cl-ver-date">16/06/2026 21:38</span></div>
+      <div class="cl-item">Vendas (personalizado): o campo de comentário de cada parcela agora fica centralizado, com recuo simétrico nos dois lados</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.112</span><span class="cl-ver-date">15/06/2026 13:55</span></div>
+      <div class="cl-item">Vendas: os 3 cards (Valor Total, Parcelas, Valor da Parcela) agora têm a mesma altura, com conteúdo centralizado verticalmente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.111</span><span class="cl-ver-date">15/06/2026 13:35</span></div>
