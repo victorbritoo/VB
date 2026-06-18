@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.115</title>
+<title>VB - v1.0.119</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -195,7 +195,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.115<br>18/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.119<br>18/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -870,10 +870,31 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <span id="pag-saldo" style="font-size:18px;font-weight:700;color:#111;">R$ ---</span><button class="copy-btn" onclick="copyValue('pag-saldo',this)" title="Copiar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
   </div>
 
+  <!-- Botões COPIAR/FOTO/CARREGAR -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;">
+    <button onclick="PAG_salvar(this)" style="padding:11px 4px;border:0.5px solid #c9a84c;border-radius:14px;background:#fff;font-size:10px;letter-spacing:1px;color:#b8983f;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">COPIAR</button>
+    <button onclick="PAG_salvarFoto()" style="padding:11px 4px;border:0.5px solid #c9a84c;border-radius:14px;background:#fff;font-size:10px;letter-spacing:1px;color:#b8983f;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FOTO</button>
+    <button onclick="PAG_carregar()" style="padding:11px 4px;border:0.5px solid #c9a84c;border-radius:14px;background:#fff;font-size:10px;letter-spacing:1px;color:#b8983f;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CARREGAR</button>
+  </div>
+
   <!-- Botões -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
     <button onclick="PAG_limpar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">LIMPAR</button>
     <button onclick="PAG_compartilhar()" style="padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">COMPARTILHAR</button>
+  </div>
+</div>
+
+<!-- Overlay código SALVAR/CARREGAR -->
+<div id="pag-overlayCodigo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10001;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;padding:20px;font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+    <div id="pag-cod-titulo" style="font-size:13px;letter-spacing:2px;color:#111;font-weight:700;text-align:center;margin-bottom:4px;">CÓDIGO</div>
+    <div id="pag-cod-sub" style="font-size:11px;color:#999;text-align:center;margin-bottom:12px;line-height:1.4;">&nbsp;</div>
+    <textarea id="pag-cod-texto" placeholder="Cole o código aqui" style="width:100%;height:96px;border:0.5px solid #ddd;border-radius:10px;padding:10px;font-size:12px;font-family:-apple-system,sans-serif;color:#111;resize:none;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;"></textarea>
+    <div id="pag-cod-msg" style="font-size:11px;text-align:center;margin-top:8px;min-height:14px;color:#888;">&nbsp;</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <button onclick="PAG_codFechar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+      <button id="pag-cod-acao" onclick="PAG_codAcao()" style="padding:12px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OK</button>
+    </div>
   </div>
 </div>
 
@@ -2337,6 +2358,86 @@ function PAG_limpar(){
   PAG_setLinhasIniciais();
   PAG_render();
 }
+var PAG_codModo='';
+
+function PAG_codMsg(txt,cor){
+  var m=document.getElementById('pag-cod-msg');
+  if(m){ m.textContent=txt||'\u00A0'; m.style.color=cor||'#888'; }
+}
+function PAG_codFechar(){
+  var o=document.getElementById('pag-overlayCodigo'); if(o) o.style.display='none';
+}
+function PAG_codAcao(){ PAG_codAplicar(); }
+
+function _pagCopyFallback(code){
+  var ta=document.createElement('textarea'); ta.value=code;
+  ta.style.position='fixed'; ta.style.top='0'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+function PAG_salvar(btn){
+  var total=(document.getElementById('pag-total').value||'').trim();
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||'')}; });
+  var code;
+  try{
+    code='VBPAG1:'+btoa(unescape(encodeURIComponent(JSON.stringify({t:total,p:itens}))));
+  }catch(e){ return; }
+  function feedback(){
+    if(!btn) return;
+    if(!btn.dataset.orig) btn.dataset.orig=btn.textContent;
+    btn.textContent='✓ COPIADO';
+    btn.style.color='#2a8a3e'; btn.style.borderColor='#2a8a3e';
+    setTimeout(function(){
+      btn.textContent=btn.dataset.orig;
+      btn.style.color='#b8983f'; btn.style.borderColor='#c9a84c';
+    }, 1500);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(feedback).catch(function(){ _pagCopyFallback(code); feedback(); });
+  } else { _pagCopyFallback(code); feedback(); }
+}
+
+function PAG_carregar(){
+  document.getElementById('pag-cod-titulo').textContent='CARREGAR';
+  document.getElementById('pag-cod-sub').textContent='Cole o código salvo e toque em CARREGAR';
+  var ta=document.getElementById('pag-cod-texto');
+  ta.value=''; ta.readOnly=false;
+  document.getElementById('pag-cod-acao').textContent='CARREGAR';
+  PAG_codMsg('');
+  document.getElementById('pag-overlayCodigo').style.display='flex';
+  setTimeout(function(){ ta.focus(); }, 50);
+}
+
+function PAG_codAplicar(){
+  var ta=document.getElementById('pag-cod-texto');
+  var code=(ta.value||'').trim();
+  if(!code){ PAG_codMsg('Cole o código primeiro.', '#c00'); return; }
+  var obj=null;
+  try{
+    if(code.indexOf('VBPAG1:')>=0){
+      // formato copiado (base64)
+      var b64=code.slice(code.indexOf('VBPAG1:')+7).replace(/\s/g,'');
+      obj=JSON.parse(decodeURIComponent(escape(atob(b64))));
+    } else {
+      // formato da foto (base32, à prova de OCR)
+      var up=code.toUpperCase(); var m=up.indexOf('VBPAG2');
+      var body=m>=0?up.slice(m+6):up;
+      obj=JSON.parse(_b32dec(body));
+    }
+  }catch(e){ obj=null; }
+  if(!obj || !Array.isArray(obj.p)){ PAG_codMsg('Não consegui ler o código. Selecione o bloco completo e tente de novo.', '#c00'); return; }
+  document.getElementById('pag-total').value=obj.t||'';
+  PAG_pagamentos=[]; PAG_counter=0;
+  obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||'')}); });
+  if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
+  PAG_render();
+  PAG_update();
+  PAG_codMsg('✅ Carregado: '+obj.p.length+' linha(s).', '#2a8a3e');
+  setTimeout(PAG_codFechar, 700);
+}
+
 (function(){ PAG_setLinhasIniciais(); PAG_render(); })();
 
 function PAG_compartilhar(){
@@ -2403,6 +2504,119 @@ function PAG_compartilhar(){
   document.getElementById('pag-overlayTabela').style.display='block';
   document.getElementById('pag-overlayTabela').scrollTop=0;
 }
+function _b32enc(str){
+  var utf8=unescape(encodeURIComponent(str)), bytes=[];
+  for(var i=0;i<utf8.length;i++) bytes.push(utf8.charCodeAt(i));
+  var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', out='', bits=0, val=0;
+  for(var i=0;i<bytes.length;i++){ val=(val<<8)|bytes[i]; bits+=8; while(bits>=5){ out+=A[(val>>>(bits-5))&31]; bits-=5; } }
+  if(bits>0) out+=A[(val<<(5-bits))&31];
+  return out;
+}
+function _b32dec(s){
+  var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  s=(s||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
+  var bits=0,val=0,out=[];
+  for(var i=0;i<s.length;i++){ var idx=A.indexOf(s[i]); if(idx<0) continue; val=(val<<5)|idx; bits+=5; if(bits>=8){ out.push((val>>>(bits-8))&255); bits-=8; } }
+  var bin=''; for(var i=0;i<out.length;i++) bin+=String.fromCharCode(out[i]);
+  return decodeURIComponent(escape(bin));
+}
+
+function PAG_salvarFoto(){
+  var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
+  var soma=0; PAG_pagamentos.forEach(function(p){ soma+=PAG_parseBR(p.valor||'0')||0; });
+  var saldo=total-soma;
+  var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
+
+  // código base32 (à prova de OCR)
+  var totalStr=(document.getElementById('pag-total').value||'').trim();
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
+  var payload=_b32enc(JSON.stringify({t:totalStr,p:itens}));
+  var grouped='VBPAG2 '+payload.replace(/(.{4})/g,'$1 ').trim();
+
+  var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
+  var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
+  var secRow=lineH,secTotLine=22,secSaldoH=20,secBottom=16;
+
+  // quebra do código (mede com canvas temporário)
+  var codeFont='12px Menlo,Consolas,"Courier New",monospace';
+  var tmp=document.createElement('canvas').getContext('2d'); tmp.font=codeFont;
+  var usable=W-pad*2, tokens=grouped.split(' '), lines=[], cur='';
+  for(var i=0;i<tokens.length;i++){
+    var test=cur?cur+' '+tokens[i]:tokens[i];
+    if(tmp.measureText(test).width>usable && cur){ lines.push(cur); cur=tokens[i]; } else cur=test;
+  }
+  if(cur) lines.push(cur);
+  var codeHdrH=26, codeLineH=16, codeBlockH=codeHdrH+lines.length*codeLineH+12;
+
+  var H=16+secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
+
+  var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=16;
+  ctx.fillStyle='#111'; ctx.font='400 26px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
+  ctx.fillText('VB',pad,y+22);
+  ctx.fillStyle='#999'; ctx.font='500 8px Helvetica,Arial,sans-serif';
+  ctx.fillText('PAGAMENTOS',pad,y+34); y+=secLogo;
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('VALOR TOTAL',W/2,y+14); y+=secTotalH;
+  ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
+  ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PAGAMENTOS',W/2,y+14); y+=secPagHdr;
+  if(rows.length===0){
+    ctx.fillStyle='#ccc'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('—',W/2,y+12); y+=secRow;
+  } else {
+    rows.forEach(function(p){
+      ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.4;
+      ctx.beginPath(); ctx.moveTo(pad,y+lineH-1); ctx.lineTo(W-pad,y+lineH-1); ctx.stroke();
+      ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
+      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+      ctx.fillText('R$ '+(p.valor||'0,00'),W-pad,y+13);
+      y+=secRow;
+    });
+  }
+  y+=4;
+  ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('TOTAL PAGO',pad,y+14);
+  ctx.fillStyle='#111'; ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('R$ '+PAG_formatBR(soma),W-pad,y+14); y+=secTotLine;
+  ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
+  ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('SALDO',pad,y+secSaldoH*0.7);
+  ctx.fillStyle=saldo<0?'#cc0000':'#111';
+  ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
+
+  // marca d'água ANTES do código
+  VB_drawWatermark(ctx,W,H);
+
+  // bloco do código sobre fundo branco limpo (OCR)
+  var yCode=y+secSep;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,yCode-4,W,H-(yCode-4));
+  ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad,yCode); ctx.lineTo(W-pad,yCode); ctx.stroke();
+  var yy=yCode+14;
+  ctx.fillStyle='#bbb'; ctx.font='600 8px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('CÓDIGO PARA CARREGAR — SELECIONE E COPIE',W/2,yy); yy+=12;
+  ctx.fillStyle='#1a1a1a'; ctx.font=codeFont; ctx.textAlign='center';
+  lines.forEach(function(ln){ ctx.fillText(ln,W/2,yy+11); yy+=codeLineH; });
+
+  var img=document.getElementById('pag-tabelaImagem');
+  img.src=cv.toDataURL('image/png');
+  img.style.display='block';
+  document.getElementById('pag-tabelaImagemDica').style.display='block';
+  document.getElementById('pag-overlayTabela').style.display='block';
+  document.getElementById('pag-overlayTabela').scrollTop=0;
+}
+
 function PAG_fecharTabela(){
   var ot=document.getElementById('pag-overlayTabela'); if(ot) ot.style.display='none';
   var img=document.getElementById('pag-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
@@ -2969,6 +3183,28 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.119</span><span class="cl-ver-date">18/06/2026 12:10</span></div>
+      <div class="cl-item">Pagamentos: novo botão FOTO. Gera a imagem da tabela com o código de recuperação embaixo, em letras maiúsculas e blocos (à prova de leitura de texto do iPhone). Salve no rolo da câmera; depois abra a foto, selecione o código e cole no CARREGAR pra recuperar tudo</div>
+      <div class="cl-item">Pagamentos: COMPARTILHAR continua limpo, sem código — é a imagem do cliente. O código fica só na FOTO</div>
+      <div class="cl-item">Pagamentos: botão SALVAR renomeado para COPIAR (copia o código pro clipboard); CARREGAR agora lê tanto o código copiado quanto o da foto</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.118</span><span class="cl-ver-date">18/06/2026 11:45</span></div>
+      <div class="cl-item">Pagamentos: SALVAR agora só copia e mostra "✓ COPIADO" no próprio botão, igual aos botões de copiar das outras telas (sem abrir caixa). CARREGAR continua abrindo a caixa pra colar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.117</span><span class="cl-ver-date">18/06/2026 11:25</span></div>
+      <div class="cl-item">Pagamentos: SALVAR e CARREGAR agora usam uma caixa dentro do próprio app (corrige o CARREGAR que não respondia quando o app era aberto pela tela de início no iPhone). SALVAR mostra o código e já copia; CARREGAR tem campo pra colar e aplicar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.116</span><span class="cl-ver-date">18/06/2026 11:10</span></div>
+      <div class="cl-item">Pagamentos: botões SALVAR e CARREGAR. SALVAR gera um código e copia pro clipboard (cole no WhatsApp/Notas); CARREGAR cola o código e preenche tudo sozinho. Permite começar no computador e continuar no celular sem perder nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.115</span><span class="cl-ver-date">18/06/2026 10:55</span></div>
