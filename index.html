@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.123</title>
+<title>VB - v1.0.124</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -195,7 +195,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.123<br>18/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.124<br>18/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -2400,22 +2400,25 @@ function PAG_salvar(btn){
 }
 
 function PAG_carregar(btn){
-  function feedback(n){
+  function flash(txt,err){
     if(!btn) return;
     if(!btn.dataset.orig) btn.dataset.orig=btn.textContent;
-    btn.textContent='✓ CARREGADO';
-    setTimeout(function(){ btn.textContent=btn.dataset.orig; }, 1500);
+    btn.textContent=txt;
+    if(err){ btn.style.color='#c00'; btn.style.borderColor='#c00'; }
+    setTimeout(function(){
+      btn.textContent=btn.dataset.orig;
+      btn.style.color='#b8983f'; btn.style.borderColor='#c9a84c';
+    }, 1500);
   }
   if(navigator.clipboard && navigator.clipboard.readText){
     navigator.clipboard.readText().then(function(txt){
       txt=(txt||'').trim();
       var n = txt ? PAG_tentarCarregar(txt) : false;
-      if(n!==false){ feedback(n); }
-      else if(txt){ PAG_abrirCaixaCarregar(true); }   // tinha algo copiado, mas não é compatível
-      else { PAG_abrirCaixaCarregar(false); }          // nada copiado
-    }).catch(function(){ PAG_abrirCaixaCarregar(false); });   // iPhone bloqueou a leitura
+      if(n!==false){ flash('✓ CARREGADO',false); }
+      else { flash('✗ INVÁLIDO',true); }
+    }).catch(function(){ flash('✗ INVÁLIDO',true); });
   } else {
-    PAG_abrirCaixaCarregar(false);
+    flash('✗ INVÁLIDO',true);
   }
 }
 
@@ -3217,6 +3220,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.124</span><span class="cl-ver-date">18/06/2026 13:40</span></div>
+      <div class="cl-item">Pagamentos: CARREGAR não abre mais nenhuma tela. Ao tocar (e confirmar o "Colar" do iPhone), o próprio botão sinaliza: "✓ CARREGADO" se o código for válido, ou "✗ INVÁLIDO" (em vermelho) se não der</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.123</span><span class="cl-ver-date">18/06/2026 13:20</span></div>
