@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.128</title>
+<title>VB - v1.0.129</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -195,7 +195,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.128<br>18/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.129<br>19/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -861,7 +861,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
       <span id="pag-soma" style="color:#111;font-weight:700;">---</span>
     </div>
     <div id="pag-lista" style="overflow:hidden;"></div>
-    <button onclick="PAG_addLinha()" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">+ ADICIONAR</button>
+    <button id="pag-add-btn" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">+ ADICIONAR</button>
   </div>
 
   <!-- Saldo -->
@@ -900,9 +900,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="pag-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
   <img id="pag-tabelaImagem" style="display:none;width:100%;max-width:390px;margin:0 auto;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
   <div id="pag-tabelaImagemDica" style="display:none;max-width:390px;margin:14px auto 0;text-align:center;">
-    <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
-    <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Salvar nas Fotos → compartilhar no WhatsApp</div>
-    <div id="pag-foto-status" style="display:none;font-size:11px;color:#555;font-weight:600;margin-bottom:8px;">Código copiado — cole no CARREGAR em outro aparelho</div>
+    <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:10px;font-weight:500;">↑ SEGURE A IMAGEM ↑</div>
     <button onclick="PAG_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
   </div>
 </div>
@@ -4603,6 +4601,10 @@ function PAG_addLinha(){
   var id=PAG_counter;
   PAG_pagamentos.push({id:id,desc:'',valor:''});
   PAG_render();
+  // foca a descrição da nova linha (mantém o teclado aberto no fluxo de digitação)
+  var campos=document.querySelectorAll('#pag-lista [data-field="desc"]');
+  var ultimo=campos[campos.length-1];
+  if(ultimo){ try{ ultimo.focus(); }catch(e){} }
 }
 
 function PAG_removeLinha(id){
@@ -4769,6 +4771,14 @@ function PAG_codAplicar(){
 
 (function(){ PAG_setLinhasIniciais(); PAG_render(); })();
 
+// Botão ADICIONAR: dispara no toque (touchend) pra não ser engolido pelo fechamento do teclado no iPhone
+(function(){
+  var b=document.getElementById('pag-add-btn');
+  if(!b) return;
+  b.addEventListener('touchend',function(e){ e.preventDefault(); PAG_addLinha(); }, {passive:false});
+  b.addEventListener('click',function(){ PAG_addLinha(); });
+})();
+
 function PAG_compartilhar(){
   var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
   var soma=0;
@@ -4788,7 +4798,7 @@ function PAG_compartilhar(){
   var mA=3;                       // px reais por módulo (mínimo pra ler sempre)
   var qpx=(qn+8)*mA;              // largura do QR em px reais (já com quiet zone)
   var qrCss=qpx/esc;
-  var codeBlockH=24+qrCss+10;
+  var codeBlockH=10+qrCss+8;
 
   var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
   var cv=document.createElement('canvas');
@@ -4844,9 +4854,7 @@ function PAG_compartilhar(){
   ctx.fillStyle='#fff'; ctx.fillRect(0,yCode-4,W,H-(yCode-4));
   ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,yCode); ctx.lineTo(W-pad,yCode); ctx.stroke();
-  var yy=yCode+14;
-  ctx.fillStyle='#bbb'; ctx.font='600 8px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('QR PARA CARREGAR',W/2,yy); yy+=10;
+  var yy=yCode+10;
   ctx.save(); ctx.setTransform(1,0,0,1,0,0);
   var qX=Math.round((W*esc - qpx)/2), qY=Math.round(yy*esc);
   ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
@@ -5558,6 +5566,13 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.129</span><span class="cl-ver-date">19/06/2026 07:18</span></div>
+      <div class="cl-item">Pagamentos: corrigido o "+ ADICIONAR" que não respondia com o teclado aberto. Agora adiciona no primeiro toque e já posiciona o cursor na descrição da nova linha (o teclado fica aberto pra continuar digitando)</div>
+      <div class="cl-item">Pagamentos: na imagem do COMPARTILHAR, removido o rótulo "QR PARA CARREGAR" e o QR subiu, mais próximo da linha</div>
+      <div class="cl-item">Pagamentos: na tela após compartilhar, ficou só "SEGURE A IMAGEM" — removidos os textos "Código copiado…" e "Salvar nas Fotos → compartilhar no WhatsApp"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.128</span><span class="cl-ver-date">18/06/2026 19:05</span></div>
