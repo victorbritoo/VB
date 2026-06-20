@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.135</title>
+<title>VB - v1.0.136</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -194,7 +194,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.135<br>20/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.136<br>20/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3866,7 +3866,7 @@ function VEN_renderParcelas(){
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
       ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;width:100%;font-family:-apple-system,sans-serif;text-align:center;padding-bottom:2px;">'+
-      '<button onpointerdown="event.preventDefault();VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
+      '<button data-obsbtn="'+p.id+'" onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:#bbb;cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
       '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
@@ -3909,6 +3909,13 @@ function VEN_renderParcelas(){
       var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p) p.data = this.value;
     });
+  });
+  // Botão "i" (observação): dispara no toque pra abrir o teclado no iPhone
+  lista.querySelectorAll('[data-obsbtn]').forEach(function(b){
+    b.addEventListener('touchend', function(e){
+      e.preventDefault();
+      VEN_toggleObs(parseInt(b.dataset.obsbtn), b);
+    }, {passive:false});
   });
 }
 
@@ -5930,6 +5937,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.136</span><span class="cl-ver-date">20/06/2026 10:05</span></div>
+      <div class="cl-item">Vendas: ao tocar no "i" da parcela (modo personalizar), o campo de comentário abre já com o teclado ativo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.135</span><span class="cl-ver-date">20/06/2026 09:40</span></div>
