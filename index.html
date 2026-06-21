@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.138</title>
+<title>VB - v1.0.142</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -268,7 +268,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.138<br>21/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.142<br>21/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -841,7 +841,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <span></span>
       </div>
       <div id="ant-listaTitulos" style="width:100%;"></div>
-      <button onclick="ANT_adicionarTitulo()" style="width:100%;padding:9px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ TÍTULO</button>
+      <button id="ant-add-titulo-btn" style="width:100%;padding:9px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ TÍTULO</button>
     </div>
   </div>
 
@@ -4705,14 +4705,12 @@ function ANT_gerarResumoFoto(){
   var taxaStr=(taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
   var qtdStr=n+' títulos';
 
-  var W=390, esc=3, cardMargin=16, cardL=cardMargin, cardW=W-cardMargin*2, cardR=W-cardMargin;
-  var pad=24, topY=18, logoH=38, divGap=14, ipad=20, cardGap=10, bottomPad=18;
-  var card1H = 112;
-  var card2H = 132;
+  var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
+  var card1H=100, card2H=135, cardGap=8, headerH=80, bottomPad=18;
   var temTit = !!(ANT_modoPersonalizado && res && res.rows.length>0);
   var titRows = temTit ? res.rows : [];
-  var titCardH = temTit ? (ipad*2 + 22 + titRows.length*20) : 0;
-  var H = topY + logoH + divGap + card1H + cardGap + card2H + (temTit?cardGap+titCardH:0) + bottomPad;
+  var titCardH = temTit ? (42 + titRows.length*24) : 0;
+  var H = headerH + card1H + cardGap + (temTit?titCardH+cardGap:0) + card2H + bottomPad;
 
   var cv=document.createElement('canvas');
   cv.width=W*esc; cv.height=H*esc;
@@ -4721,75 +4719,65 @@ function ANT_gerarResumoFoto(){
   ctx.fillStyle='#f5f5f3'; ctx.fillRect(0,0,W,H);
   VB_drawWatermark(ctx,W,H);
 
-  var y=topY;
-  // logo
-  ctx.fillStyle='#111'; ctx.font='400 26px Georgia,"Times New Roman",serif'; ctx.textAlign='left';
-  ctx.fillText('VB',pad,y+22);
-  ctx.fillStyle='#999'; ctx.font='500 8px Helvetica,Arial,sans-serif';
-  ctx.fillText('ANTECIPAÇÃO',pad,y+34);
-  y+=logoH;
+  function setLS(v){ try{ ctx.letterSpacing=v; }catch(e){} }
+  function olk(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px'); ctx.fillText(t,x,by); setLS('0px'); }
+  function ov(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#111'; ctx.font='700 14px Helvetica,Arial,sans-serif'; ctx.fillText(t,x,by); }
+  function card(yy,hh){ ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.fill(); ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.stroke(); }
+
+  // HEADER (igual ao resumo HTML)
+  ctx.textAlign='left';
+  ctx.fillStyle='#111'; ctx.font='400 32px Georgia,"Times New Roman",serif';
+  ctx.fillText('VB', headLeft, 46);
+  ctx.fillStyle='#888'; ctx.font='500 11px Helvetica,Arial,sans-serif'; setLS('5px');
+  ctx.fillText('ANTECIPAÇÃO', headLeft, 60); setLS('0px');
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
-  y+=divGap;
+  ctx.beginPath(); ctx.moveTo(sideM,68); ctx.lineTo(W-sideM,68); ctx.stroke();
 
-  function pairCell(label,value,cx,baseY,align){
-    ctx.textAlign=align;
-    ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif';
-    ctx.fillText(label,cx,baseY);
-    ctx.fillStyle='#111'; ctx.font='700 15px Helvetica,Arial,sans-serif';
-    ctx.fillText(value,cx,baseY+20);
-  }
+  var y=headerH;
 
-  // CARD 1 (data/prazo/taxa/qtd)
-  ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,y,cardW,card1H,16); ctx.fill();
-  ctx.strokeStyle='#ececec'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,y,cardW,card1H,16); ctx.stroke();
-  var r1=y+28, r2=r1+46;
-  pairCell('DATA DA OPERAÇÃO',dataStr,cardL+ipad,r1,'left');
-  pairCell('PRAZO MÉDIO',prazoStr,cardR-ipad,r1,'right');
-  pairCell('TAXA',taxaStr,cardL+ipad,r2,'left');
-  pairCell('QUANTIDADE',qtdStr,cardR-ipad,r2,'right');
+  // CARD 1 (data/prazo/taxa/qtd) — label sobre valor, dois por linha
+  card(y,card1H);
+  var iy=y+14;
+  olk('DATA DA OPERAÇÃO',cardL+18,iy+12,'left');  ov(dataStr,cardL+18,iy+30,'left');
+  olk('PRAZO MÉDIO',cardR-18,iy+12,'right');       ov(prazoStr,cardR-18,iy+30,'right');
+  var iy2=iy+36;
+  olk('TAXA',cardL+18,iy2+12,'left');               ov(taxaStr,cardL+18,iy2+30,'left');
+  olk('QUANTIDADE',cardR-18,iy2+12,'right');        ov(qtdStr,cardR-18,iy2+30,'right');
   y+=card1H+cardGap;
 
-  // CARD 2 (valores)
-  ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,y,cardW,card2H,16); ctx.fill();
-  ctx.strokeStyle='#ececec'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,y,cardW,card2H,16); ctx.stroke();
-  var vy=y+30;
-  function valRow(label,value,bold){
-    ctx.textAlign='left';
-    ctx.fillStyle=bold?'#111':'#aaa'; ctx.font=(bold?'700 ':'500 ')+'11px Helvetica,Arial,sans-serif';
-    ctx.fillText(label,cardL+ipad,vy);
-    ctx.textAlign='right';
-    ctx.fillStyle='#111'; ctx.font='700 '+(bold?16:15)+'px Helvetica,Arial,sans-serif';
-    ctx.fillText(value,cardR-ipad,vy);
-  }
-  valRow('VALOR BRUTO','R$ '+ANT_formatBR(VB),false); vy+=26;
-  valRow('JUROS','R$ '+ANT_formatBR(tj),false); vy+=26;
-  valRow('TARIFA','R$ '+ANT_formatBR(tar),false); vy+=26;
-  ctx.strokeStyle='#eee'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(cardL+ipad,vy-9); ctx.lineTo(cardR-ipad,vy-9); ctx.stroke();
-  vy+=4;
-  valRow('VALOR LÍQUIDO','R$ '+ANT_formatBR(tl),true);
-  y+=card2H;
-
-  // TÍTULOS (modo personalizado)
+  // CARD TÍTULOS (modo personalizado) — entre os dois cards
   if(temTit){
-    y+=cardGap;
-    ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,y,cardW,titCardH,16); ctx.fill();
-    ctx.strokeStyle='#ececec'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,y,cardW,titCardH,16); ctx.stroke();
-    var ty=y+ipad;
-    ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif';
-    ctx.fillText('TÍTULOS',cardL+ipad,ty+8); ty+=22;
-    titRows.forEach(function(rw){
-      ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='500 10px Helvetica,Arial,sans-serif';
-      ctx.fillText(rw.nro,cardL+ipad,ty+12);
-      ctx.textAlign='center'; ctx.fillStyle='#111'; ctx.font='700 12px Helvetica,Arial,sans-serif';
-      ctx.fillText('R$ '+ANT_formatBR(rw.vb),W/2,ty+12);
-      ctx.textAlign='right'; ctx.fillStyle='#555'; ctx.font='500 11px Helvetica,Arial,sans-serif';
-      ctx.fillText(rw.venc,cardR-ipad,ty+12);
-      ty+=20;
+    card(y,titCardH);
+    ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
+    ctx.fillText('TÍTULOS',cardL+16,y+20); setLS('0px');
+    var rt=y+30;
+    titRows.forEach(function(rw,k){
+      var by=rt+k*24+16;
+      ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='400 11px Helvetica,Arial,sans-serif';
+      ctx.fillText(rw.nro,cardL+16,by);
+      ctx.textAlign='right'; ctx.fillStyle='#111'; ctx.font='700 13px Helvetica,Arial,sans-serif';
+      ctx.fillText('R$ '+ANT_formatBR(rw.vb),cardL+166,by);
+      ctx.textAlign='right'; ctx.fillStyle='#555'; ctx.font='400 12px Helvetica,Arial,sans-serif';
+      ctx.fillText(rw.venc+' ('+Math.round(rw.prazo)+'d)',cardR-16,by);
+      if(k<titRows.length-1){ ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(cardL+16,rt+k*24+24); ctx.lineTo(cardR-16,rt+k*24+24); ctx.stroke(); }
     });
-    y+=titCardH;
+    y+=titCardH+cardGap;
   }
+
+  // CARD 2 (valores) — label e valor na mesma linha
+  card(y,card2H);
+  var vy=y+14;
+  function line(lbl,val,by){ olk(lbl,cardL+18,by,'left'); ov(val,cardR-18,by,'right'); }
+  line('VALOR BRUTO','R$ '+ANT_formatBR(VB), vy+17);
+  line('JUROS','R$ '+ANT_formatBR(tj), vy+25+17);
+  line('TARIFA','R$ '+ANT_formatBR(tar), vy+50+17);
+  var lqTop=vy+75+3;
+  ctx.strokeStyle='#eee'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(cardL+18,lqTop); ctx.lineTo(cardR-18,lqTop); ctx.stroke();
+  var lqBy=lqTop+8+14;
+  ctx.textAlign='left'; ctx.fillStyle='#111'; ctx.font='700 9px Helvetica,Arial,sans-serif'; setLS('2px');
+  ctx.fillText('VALOR LÍQUIDO',cardL+18,lqBy); setLS('0px');
+  ov('R$ '+ANT_formatBR(tl),cardR-18,lqBy,'right');
+  y+=card2H;
 
   var img=document.getElementById('ant-tabelaImagem');
   img.src=cv.toDataURL('image/png'); img.style.display='block';
@@ -4852,12 +4840,25 @@ function ANT_toggleModo(){
   }
 }
 
-function ANT_adicionarTitulo(){
+function ANT_adicionarTitulo(focus){
   ANT_tituloCounter++;
   ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:''});
   ANT_renderTitulos();
   ANT_recalcPersonalizado();
+  if(focus){
+    var campos=document.querySelectorAll('#ant-listaTitulos [data-field="valor"]');
+    var ultimo=campos[campos.length-1];
+    if(ultimo){ try{ ultimo.focus(); }catch(e){} }
+  }
 }
+
+// Botão + TÍTULO: dispara no toque (touchend) pra funcionar com teclado aberto e já focar o novo valor
+(function(){
+  var b=document.getElementById('ant-add-titulo-btn');
+  if(!b) return;
+  b.addEventListener('touchend',function(e){ e.preventDefault(); ANT_adicionarTitulo(true); }, {passive:false});
+  b.addEventListener('click',function(){ ANT_adicionarTitulo(true); });
+})();
 
 function ANT_removerTitulo(id){
   ANT_titulos=ANT_titulos.filter(function(t){return t.id!==id;});
@@ -6011,6 +6012,26 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.142</span><span class="cl-ver-date">21/06/2026 18:30</span></div>
+      <div class="cl-item">Antecipação (foto, personalizar): valores dos títulos agora alinhados à direita numa coluna (bordas batendo), em vez de centralizados. Datas continuam à direita. Ficou mais limpo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.141</span><span class="cl-ver-date">21/06/2026 15:00</span></div>
+      <div class="cl-item">Antecipação (foto do resumo, personalizar): ao lado do vencimento de cada título agora aparece o prazo em dias, ex.: "31/12/2026 (200d)"</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.140</span><span class="cl-ver-date">21/06/2026 14:35</span></div>
+      <div class="cl-item">Antecipação (personalizar): o "+ TÍTULO" agora responde no primeiro toque mesmo com o teclado aberto e já posiciona o cursor no valor da nova linha (teclado segue aberto) — mesmo comportamento do "+ ADICIONAR" do Pagamentos</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.139</span><span class="cl-ver-date">21/06/2026 14:10</span></div>
+      <div class="cl-item">Antecipação: foto do resumo refeita para bater exatamente com o resumo em HTML — VB 32px Georgia, subtítulo com letter-spacing, labels 9px espaçados, valores 14px e paddings corretos. Espaçamentos equilibrados (VALOR LÍQUIDO com respiro certo) e card de TÍTULOS bem montado no modo personalizar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.138</span><span class="cl-ver-date">21/06/2026 13:20</span></div>
