@@ -1,4 +1,78 @@
 <!DOCTYPE html>
+<!--
+================================================================
+ VB APP — REGRAS DO PROJETO (LER ANTES DE EDITAR)
+ Documento vivo. Qualquer conversa que abrir este arquivo deve
+ seguir tudo abaixo. Atualize esta seção se uma regra mudar.
+================================================================
+
+[1] VERSIONAMENTO (semver: MAIOR.MENOR.CORRECAO)
+  - 1.0.x  -> correção/ajuste pequeno (bug, espaçamento, texto,
+              tweak de UI, documentação). Sobe o 3º número.
+  - 1.x.0  -> recurso novo de verdade (módulo/função nova, ex.:
+              QR/Carregar, foto nova). Sobe o 2º e zera o 3º.
+  - 2.0.0  -> reescrita/redesenho grande que muda a estrutura.
+  - Desempate: entrega com recurso novo + correções juntos conta
+    como recurso (sobe o 2º). No aviso, explicar o porquê do salto.
+
+[2] ONDE FICA A VERSÃO (manter SEMPRE os dois sincronizados)
+  - <title>VB - vX.Y.Z</title>
+  - Tela inicial: "V: X.Y.Z<br>DD/MM/AAAA"
+  - E adicionar SEMPRE nova entrada no topo do "HISTÓRICO DE
+    MELHORIAS" descrevendo o que mudou.
+
+[3] ARQUITETURA / BUILD
+  - Arquivo único HTML (PWA), sem build/sem dependências externas.
+  - Editar o JS por marcadores/âncoras internas; cuidado com o
+    problema conhecido do </script> duplo ao editar.
+  - 5 módulos: Financiamentos, Quitação, Antecipação, Pagamentos,
+    Vendas (+ Investidor dentro do Financiamento). Home + Changelog.
+
+[4] PERSISTÊNCIA
+  - Sem localStorage por padrão. Exceções (auto-save da sessão no
+    mesmo aparelho): Pagamentos e Financiamentos.
+  - Transferência entre aparelhos é via CÓDIGO/QR (não localStorage).
+
+[5] SEGURANÇA / PIN
+  - PIN único 3113, ofuscado por btoa (não é cofre, é conveniência).
+    Para trocar: PIN_HASH = btoa('nova_senha').
+  - Telas protegidas: Antecipação, Pagamentos, Vendas, Quitação,
+    Investidor e Changelog. Financiamentos é livre.
+  - Após acerto, janela de ~10 min sem repedir o PIN.
+
+[6] UX / iOS (PWA standalone)
+  - NÃO usar prompt()/alert() como padrão; dar feedback no próprio
+    botão (texto que muda por alguns segundos).
+  - Botão que precisa funcionar com teclado aberto / abrir teclado:
+    disparar no 'touchend' (com preventDefault). NÃO usar
+    'pointerdown'+preventDefault (bloqueia o teclado no iPhone).
+  - clipboard.readText() é bloqueado no PWA standalone -> sempre ter
+    caixa de colar (fallback) no CARREGAR.
+  - Campos de DESCRIÇÃO: selecionar tudo só quando vazios
+    (onclick="if(!this.value)this.select()") para permitir
+    complementar/colar. Campos numéricos podem manter this.select().
+
+[7] FOTOS / COMPARTILHAR
+  - Geradas via canvas (sem html2canvas). Marca d'água VB ao fundo.
+  - Cabeçalho padrão: "VB" (Georgia) + nome do módulo em cinza ~8px
+    no canto superior esquerdo.
+  - Rodapé da tela após gerar: só "↑ SEGURE A IMAGEM PARA SALVAR"
+    e botão FECHAR.
+  - QR/transferência: Pagamentos e Vendas. Encode: base32 via
+    _b32enc/_b32dec para o QR (à prova de OCR) com prefixo VBxxx2;
+    base64 (VBxxx1) para o código de clipboard. O CARREGAR aceita
+    os dois formatos. O código é copiado ao gerar a foto.
+
+[8] WORKFLOW COM O VICTOR
+  - "Explicar e confirmar antes de executar" em mudanças não triviais.
+  - Toda entrega: subir versão + entrada no changelog + validar a
+    sintaxe do JS antes de enviar.
+  - Ele testa em iPhone (PWA standalone) e Mac.
+  - Respostas: texto puro, objetivas e diretas, com emojis leves e
+    listas com hífen; sem tabelas/markdown pesado; sem elogios vazios.
+    Dizer o que está certo, errado e o que fazer.
+================================================================
+-->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -7,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.0.136</title>
+<title>VB - v1.0.138</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -194,7 +268,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.136<br>20/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.0.138<br>21/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -5937,6 +6011,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.138</span><span class="cl-ver-date">21/06/2026 13:20</span></div>
+      <div class="cl-item">Interno: documentadas no topo do arquivo TODAS as regras do projeto (versionamento, arquitetura, persistência, PIN, UX/iOS, fotos/QR e workflow), para qualquer conversa seguir o mesmo padrão. Sem mudança de comportamento</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.137</span><span class="cl-ver-date">20/06/2026 10:20</span></div>
+      <div class="cl-item">Interno: anotada no topo do arquivo a regra de versionamento (semver) e notas técnicas, para qualquer conversa que abrir o HTML saber como numerar e editar. Sem mudança de comportamento — por isso subiu só o 3º número</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.0.136</span><span class="cl-ver-date">20/06/2026 10:05</span></div>
