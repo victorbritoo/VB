@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.1.2</title>
+<title>VB - v1.2.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -268,7 +268,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.1.2<br>21/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.0<br>22/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3312,7 +3312,20 @@ function VB_compartilharImg(imgId, prefix, descId){
     if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Gere a imagem primeiro.'); return; }
     var desc='';
     if(descId){ var d=document.getElementById(descId); if(d) desc=(d.value||'').trim(); }
-    var nome='VB - '+(prefix||'') + (desc?(' - '+desc):'');
+    var sufixo = desc ? (' - '+desc) : '';
+    if(!desc && prefix==='ANT'){
+      var dop=document.getElementById('ant-dataOperacao');
+      var dt;
+      if(dop && dop.value && dop.value.length>=8){
+        var pp=dop.value.split('/'); var yy=(pp[2]||''); if(yy.length===2) yy='20'+yy;
+        dt=pp[0]+'-'+pp[1]+'-'+yy;
+      } else {
+        var nd=new Date();
+        dt=String(nd.getDate()).padStart(2,'0')+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+nd.getFullYear();
+      }
+      sufixo=' - '+dt;
+    }
+    var nome='VB - '+(prefix||'') + sufixo;
     // remove caracteres inválidos para nome de arquivo e limita tamanho
     nome=nome.replace(/[\/\\:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
     if(!nome) nome='VB';
@@ -3384,6 +3397,7 @@ function autoCompleteDate(el){
   m = m.padStart(2,'0').slice(0,2);
   var y = parts[2] ? parts[2].replace(/\D/g,'') : '';
   if(!y) y = String(new Date().getFullYear());
+  else if(y.length<=2) y = '20'+('0'+y).slice(-2);
   var novo = d+'/'+m+'/'+y;
   if(el.value !== novo){
     el.value = novo;
@@ -4323,12 +4337,16 @@ function ANT_getHoje(){
   var d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate());
 }
 function ANT_diasEntre(d1,d2){return Math.round((d2-d1)/(1000*60*60*24))}
+function ANT_prazoDe(hoje,venc){var dd=ANT_diasEntre(hoje,venc);return dd<0?dd:dd+4;}
 
 function ANT_parseDate(s){
-  if(!s||s.length<10)return null;
+  if(!s||s.length<8)return null;
   var p=s.split('/');
-  if(p.length!==3||p[2].length<4)return null;
-  var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  if(p.length!==3)return null;
+  var yr=p[2];
+  if(yr.length===2) yr='20'+yr;
+  else if(yr.length!==4) return null;
+  var d=new Date(parseInt(yr),parseInt(p[1])-1,parseInt(p[0]));
   return isNaN(d.getTime())?null:d;
 }
 function ANT_dateStr(d){
@@ -4342,7 +4360,7 @@ function ANT_maskDate(el,cb){
     if(raw.length>2) v+='/'+raw.substring(2,4);
     if(raw.length>4) v+='/'+raw.substring(4,8);
     this.value=v;
-    if(cb&&raw.length>=8)cb();
+    if(cb&&(raw.length===6||raw.length>=8))cb();
   });
 }
 
@@ -4355,7 +4373,7 @@ function ANT_calcPrazos(){
   var hoje=ANT_getHoje(); var prazos=[];
   for(var i=0;i<n;i++){
     var v=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());
-    prazos.push(ANT_diasEntre(hoje,v)+4);
+    prazos.push(ANT_prazoDe(hoje,v));
   }
   return prazos;
 }
@@ -4861,15 +4879,15 @@ function ANT_toggleModo(){
     var slf=document.getElementById('ant-secLiquidoFull'); if(slf) slf.style.display='none';
     secTD.style.display='none';
     vliq.style.color='#111'; vliq.readOnly=true;
-    // Zera tudo menos taxa e data
-    ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('ant-prazoMedio').textContent='---';
-    document.getElementById('ant-totJuros').textContent='---';
-    document.getElementById('ant-totDesc').textContent='---';
     try{document.getElementById('ant-secGerarLabel').style.display='none';}catch(e){}
-    ANT_titulos=[]; ANT_tituloCounter=0;
-    document.getElementById('ant-listaTitulos').innerHTML='';
-    ANT_adicionarTitulo();
+    if(!ANT_titulos || ANT_titulos.length===0){
+      ANT_titulos=[]; ANT_tituloCounter=0;
+      document.getElementById('ant-listaTitulos').innerHTML='';
+      ANT_adicionarTitulo();
+    } else {
+      ANT_renderTitulos();
+      ANT_recalcPersonalizado();
+    }
   } else {
     btn.textContent='PERSONALIZAR'; btn.style.color='#c9a84c'; btn.style.borderColor='#c9a84c';
     sec.style.display='none';
@@ -4879,13 +4897,8 @@ function ANT_toggleModo(){
     var slf=document.getElementById('ant-secLiquidoFull'); if(slf) slf.style.display='block';
     secTD.style.display='block';
     vliq.style.color='#111'; vliq.readOnly=false;
-    // Zera tudo menos taxa
-    ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('ant-prazoMedio').textContent='---';
-    document.getElementById('ant-totJuros').textContent='---';
-    document.getElementById('ant-totDesc').textContent='---';
     try{document.getElementById('ant-secGerarLabel').style.display='block';}catch(e){}
-    ANT_userFields.clear(); ANT_recalc();
+    ANT_recalc();
   }
 }
 
@@ -4964,7 +4977,7 @@ function ANT_recalcPersonalizado(){
     if(t.data&&!isNaN(taxa)&&taxa>0){
       var venc=ANT_parseDate(t.data);
       if(!venc) return;
-      var pr=ANT_diasEntre(hoje,venc)+4;
+      var pr=ANT_prazoDe(hoje,venc);
       totalJuros+=v*taxa*(pr/30);
       prazos.push({prazo:pr,valor:v});
     }
@@ -4992,7 +5005,7 @@ function ANT_getTitulosPersonalizados(){
     var v=ANT_parseBR(t.valor||'0');
     if(isNaN(v)||v<=0||!t.data) return;
     var venc=ANT_parseDate(t.data); if(!venc) return;
-    var pr=ANT_diasEntre(hoje,venc)+4; var j=v*taxa*(pr/30),vl=v-j; tj+=j; tl+=vl;
+    var pr=ANT_prazoDe(hoje,venc); var j=v*taxa*(pr/30),vl=v-j; tj+=j; tl+=vl;
     var vd=String(venc.getDate()).padStart(2,'0'),vm2=String(venc.getMonth()+1).padStart(2,'0'),va=venc.getFullYear();
     rows.push({nro:String(idx+1).padStart(2,'0'),vb:v,venc:vd+'/'+vm2+'/'+va,prazo:pr,juros:j,vliq:vl});
   });
@@ -6061,6 +6074,14 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.0</span><span class="cl-ver-date">22/06/2026 13:57</span></div>
+      <div class="cl-item">Atalho de data em todos os campos: ano de 2 dígitos vira 20XX automaticamente (ex.: 15/10/25 → 15/10/2025)</div>
+      <div class="cl-item">Antecipação — título atrasado: vencimento no futuro mantém o D+4; vencimento no passado usa os dias reais (negativos), sem o +4. Resultado: numa operação só de atrasados o prazo médio fica negativo e o líquido fica maior que o bruto (quanto deve hoje)</div>
+      <div class="cl-item">Antecipação — trocar entre PERSONALIZAR e SIMPLIFICAR não apaga mais os dados (taxa, tarifa, data e títulos são preservados ao alternar)</div>
+      <div class="cl-item">Compartilhar (Antecipação): com cliente o nome do arquivo é "VB - ANT - Cliente"; sem cliente vira "VB - ANT - DD-MM-AAAA" (data da operação)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.1.2</span><span class="cl-ver-date">21/06/2026 20:10</span></div>
