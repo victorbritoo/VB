@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.2.1</title>
+<title>VB - v1.2.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -268,7 +268,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.1<br>22/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.2<br>22/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4513,7 +4513,16 @@ function ANT_recalc(){
   }
   // CASO 2: Usuário preencheu Bruto → calcular Parcela e Líquido
   else if(hasBruto && vbOk){
-    if(nOk){ var vptR2=ANT_ceilStep(VB/n, ANT_degrau); document.getElementById('ant-valorParcela').value=ANT_formatBR(vptR2); VP=vptR2; vpOk=true; }
+    if(nOk){
+      var vptR2=ANT_ceilStep(VB/n, ANT_degrau);
+      document.getElementById('ant-valorParcela').value=ANT_formatBR(vptR2); VP=vptR2; vpOk=true;
+      // Só reescreve o Bruto se o usuário não estiver digitando nele agora (evita brigar com o cursor)
+      var ativo=document.activeElement?document.activeElement.id:'';
+      if(ativo!=='ant-valorBruto'){
+        VB=vptR2*n;
+        document.getElementById('ant-valorBruto').value=ANT_formatBR(VB);
+      }
+    }
     if(tOk&&pmOk){ var nl=ANT_calcVL(VB,taxa,pm,tar); document.getElementById('ant-valorLiquido').value=ANT_formatBR(nl>0?nl:0); VL=nl; vlOk=true; }
   }
   // CASO 3: Usuário preencheu Parcela → calcular Bruto e Líquido
@@ -4774,8 +4783,8 @@ function ANT_gerarTabela(){
   var codeStr=ANT_codeStr();
   var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
   try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrCss=qpx/esc; qrOk=true; }catch(e){ qrOk=false; }
-  var secQrTop=10, secQrLabel=12, secQr=qrOk?qrCss:14, secQrBottom=10;
-  var secQrBlock=secQrTop+secQrLabel+secQr+secQrBottom;
+  var secQrTop=10, secQr=qrOk?qrCss:14, secQrBottom=10;
+  var secQrBlock=secQrTop+secQr+secQrBottom;
 
   // Calcular altura exata do conteúdo
   var secVB=6, secLogo=20, secLine1=2;
@@ -4903,8 +4912,6 @@ function ANT_gerarTabela(){
   y+=secQrTop;
   ctx.fillStyle='#fff'; ctx.fillRect(0,y-4,W,H-(y-4));
   if(qrOk){
-    ctx.font='600 8px Helvetica,Arial,sans-serif'; ctx.fillStyle='#999'; ctx.textAlign='center';
-    ctx.fillText('LEIA O QR PARA CARREGAR',W/2,y+9); y+=secQrLabel;
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
     var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
     ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
@@ -4971,7 +4978,8 @@ function ANT_gerarResumoFoto(){
   var qtdStr=n+' títulos';
 
   var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
-  var card1H=100, card2H=135, cardGap=8, headerH=80, bottomPad=18;
+  var card1H = ANT_modoPersonalizado ? 100 : 132;
+  var card2H=135, cardGap=8, headerH=80, bottomPad=18;
   var temTit = !!(ANT_modoPersonalizado && res && res.rows.length>0);
   var titRows = temTit ? res.rows : [];
   var titCardH = temTit ? (42 + titRows.length*24) : 0;
@@ -4980,7 +4988,7 @@ function ANT_gerarResumoFoto(){
   var codeStr=ANT_codeStr();
   var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
   try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrCss=qpx/esc; qrOk=true; }catch(e){ qrOk=false; }
-  var qrCardH=qrOk?(42+qrCss):54;
+  var qrCardH=qrOk?(24+qrCss):40;
 
   var H = headerH + card1H + cardGap + (temTit?titCardH+cardGap:0) + card2H + cardGap + qrCardH + bottomPad;
 
@@ -5015,6 +5023,10 @@ function ANT_gerarResumoFoto(){
   var iy2=iy+36;
   olk('TAXA',cardL+18,iy2+12,'left');               ov(taxaStr,cardL+18,iy2+30,'left');
   olk('QUANTIDADE',cardR-18,iy2+12,'right');        ov(qtdStr,cardR-18,iy2+30,'right');
+  if(!ANT_modoPersonalizado){
+    var iy3=iy2+32;
+    olk('VALOR DO TÍTULO',cardL+18,iy3+12,'left'); ov('R$ '+ANT_formatBR(vpt),cardL+18,iy3+30,'left');
+  }
   y+=card1H+cardGap;
 
   // CARD TÍTULOS (modo personalizado) — entre os dois cards
@@ -5053,18 +5065,17 @@ function ANT_gerarResumoFoto(){
 
   // CARD QR (carregar)
   card(y,qrCardH);
-  ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
   if(qrOk){
-    ctx.fillText('LEIA O QR PARA CARREGAR',W/2,y+20); setLS('0px');
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+28)*esc);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+12)*esc);
     ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
     ctx.fillStyle='#000';
     for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
     ctx.restore();
   } else {
-    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO',W/2,y+22);
-    ctx.fillText('COLE NO CARREGAR',W/2,y+36); setLS('0px');
+    ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
+    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO',W/2,y+18);
+    ctx.fillText('COLE NO CARREGAR',W/2,y+32); setLS('0px');
   }
   y+=qrCardH;
 
@@ -6072,9 +6083,10 @@ function QUIT_compartilhar(){
 
   var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
   var qrCss=qpx/esc;
-  var headerH=80, card1H=100, card2H=90, card3H=90, cardGap=8, bottomPad=18;
-  var qrCardH=qrOk?(42+qrCss):54;
-  var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + qrCardH + bottomPad;
+  var headerH=68, card1H=88, card2H=76, card3H=78, cardGap=5, bottomPad=12;
+  var qrTopPad=10, qrBottomPad=8;
+  var qrBlockH = qrOk ? (qrTopPad+qrCss+qrBottomPad) : 26;
+  var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + qrBlockH + bottomPad;
 
   var cv=document.createElement('canvas');
   cv.width=W*esc; cv.height=H*esc;
@@ -6091,20 +6103,20 @@ function QUIT_compartilhar(){
   // HEADER
   ctx.textAlign='left';
   ctx.fillStyle='#111'; ctx.font='400 32px Georgia,"Times New Roman",serif';
-  ctx.fillText('VB', headLeft, 46);
+  ctx.fillText('VB', headLeft, 40);
   ctx.fillStyle='#888'; ctx.font='500 11px Helvetica,Arial,sans-serif'; setLS('5px');
-  ctx.fillText('QUITAÇÃO ANTECIPADA', headLeft, 60); setLS('0px');
+  ctx.fillText('QUITAÇÃO ANTECIPADA', headLeft, 54); setLS('0px');
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(sideM,68); ctx.lineTo(W-sideM,68); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sideM,62); ctx.lineTo(W-sideM,62); ctx.stroke();
 
   var y=headerH;
 
   // CARD 1 — Data Quitação / Próximo Vencimento / Parcelas a Vencer / Taxa de Desconto
   card(y,card1H);
-  var iy=y+14;
+  var iy=y+12;
   olk('DATA QUITAÇÃO',cardL+18,iy+12,'left');       ov(dqStr,cardL+18,iy+30,'left');
   olk('PRÓXIMO VENCIMENTO',cardR-18,iy+12,'right'); ov(dpStr,cardR-18,iy+30,'right');
-  var iy2=iy+36;
+  var iy2=iy+32;
   olk('PARCELAS A VENCER',cardL+18,iy2+12,'left');  ov(String(r.n),cardL+18,iy2+30,'left');
   olk('TAXA DE DESCONTO',cardR-18,iy2+12,'right');  ov(taxaStr,cardR-18,iy2+30,'right');
   y+=card1H+cardGap;
@@ -6112,31 +6124,30 @@ function QUIT_compartilhar(){
   // CARD 2 — Valor da Parcela
   card(y,card2H);
   ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
-  ctx.fillText('VALOR DA PARCELA',W/2,y+22); setLS('0px');
+  ctx.fillText('VALOR DA PARCELA',W/2,y+20); setLS('0px');
   ctx.fillStyle='#111'; ctx.font='700 26px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('R$ '+QUIT_formatBR(r.pmt),W/2,y+58);
+  ctx.fillText('R$ '+QUIT_formatBR(r.pmt),W/2,y+54);
   y+=card2H+cardGap;
 
   // CARD 3 — Valor Quitação / Desconto Obtido
   card(y,card3H);
-  var vy=y+14;
+  var vy=y+12;
   olk('VALOR QUITAÇÃO',cardL+18,vy+12,'left');   ov('R$ '+QUIT_formatBR(r.quit),cardL+18,vy+30,'left');
   olk('DESCONTO OBTIDO',cardR-18,vy+12,'right'); ov('R$ '+QUIT_formatBR(r.desc),cardR-18,vy+30,'right');
   y+=card3H+cardGap;
 
-  // CARD QR (carregar)
-  card(y,qrCardH);
-  ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
+  // QR solto no rodapé, sem card e sem legenda
   if(qrOk){
-    ctx.fillText('LEIA O QR PARA CARREGAR',W/2,y+20); setLS('0px');
+    y+=qrTopPad;
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+28)*esc);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
     ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
     ctx.fillStyle='#000';
     for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
     ctx.restore();
   } else {
-    ctx.fillText('CÓDIGO COPIADO — COLE NO CARREGAR',W/2,y+26); setLS('0px');
+    ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
+    ctx.fillText('CÓDIGO COPIADO — COLE NO CARREGAR',W/2,y+16); setLS('0px');
   }
 
   var img=document.getElementById('quit-tabelaImagem');
@@ -6467,6 +6478,14 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.2</span><span class="cl-ver-date">22/06/2026 19:33</span></div>
+      <div class="cl-item">Antecipação: arredondar agora também atualiza o VALOR BRUTO TOTAL (antes só mudava o valor por título). Só não reescreve o campo se você estiver digitando nele naquele momento</div>
+      <div class="cl-item">Antecipação (modo simples): a foto do COMPARTILHAR agora mostra o VALOR DO TÍTULO — antes só aparecia bruto/juros/líquido, sem dizer o valor de cada título</div>
+      <div class="cl-item">Tirada a frase acima do QR ("leia o qr...") em Antecipação e Quitação Antecipada — fica só o código, sem legenda</div>
+      <div class="cl-item">Quitação Antecipada: espaços reduzidos no COMPARTILHAR; o QR agora fica solto no rodapé, sem card e sem legenda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.1</span><span class="cl-ver-date">22/06/2026 19:11</span></div>
