@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.4.0</title>
+<title>VB - v1.5.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -292,7 +292,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.4.0<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.5.0<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3578,6 +3578,8 @@ function HIST_buildRow(tab, idx, titulo, valor, linhas){
   h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;">'+HIST_esc(titulo)+'</div>';
   h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
   h += '<div style="font-size:14px;font-weight:700;color:#111;white-space:nowrap;">'+valor+'</div>';
+  h += '<button data-shr-tab="'+tab+'" data-shr-idx="'+idx+'" onclick="HIST_clickShare(this,event)" ';
+  h += 'style="border:0.5px solid #ddd;background:#fff;color:#111;border-radius:8px;width:26px;height:26px;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;">⤴</button>';
   if(tab!=='pag'){
     h += '<button data-ren-tab="'+tab+'" data-ren-idx="'+idx+'" onclick="HIST_clickRename(this,event)" ';
     h += 'style="border:0.5px solid #ddd;background:#fff;color:#111;border-radius:8px;width:26px;height:26px;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1;">✎</button>';
@@ -3633,6 +3635,83 @@ function HIST_clickRename(el, event){
     },
     onSkip:null
   });
+}
+
+// ===== Compartilhar do histórico: gera a imagem em silêncio e abre a folha do iPhone =====
+function _histSetVal(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
+function _histGetVal(id){ var e=document.getElementById(id); return e?e.value:''; }
+function _histShareImg(imgId, prefix, descId){
+  var img=document.getElementById(imgId);
+  if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Sem dados suficientes pra gerar a imagem.'); return; }
+  VB_compartilharImg(imgId, prefix, descId);
+}
+function HIST_clickShare(el, event){
+  event.stopPropagation();
+  var tab=el.getAttribute('data-shr-tab');
+  var idx=parseInt(el.getAttribute('data-shr-idx'));
+  var r=HIST_rowsCache[idx]; if(!r) return;
+  try{
+    if(tab==='ant') HIST_shareAnt(r);
+    else if(tab==='fin') HIST_shareFin(r);
+    else if(tab==='ven') HIST_shareVen(r);
+    else HIST_sharePag(r);
+  }catch(e){ VB_silentGen=false; VB_toast('Não consegui gerar a imagem.'); }
+}
+function HIST_shareFin(r){
+  var snap={ d:_histGetVal('fin-tabelaDesc'), v:_histGetVal('fin-valor'), p:_histGetVal('fin-prazo'), pa:_histGetVal('fin-parcela'), dt:_histGetVal('fin-tabelaData') };
+  _histSetVal('fin-tabelaDesc', r.descricao||'');
+  _histSetVal('fin-valor', r.valor_financiado?FIN_formatBR(Number(r.valor_financiado)):'');
+  _histSetVal('fin-prazo', r.qtd_parcelas?String(r.qtd_parcelas):'');
+  _histSetVal('fin-parcela', r.valor_parcela?FIN_formatBR(Number(r.valor_parcela)):'');
+  _histSetVal('fin-tabelaData', r.data_inicio?HIST_fmtData(r.data_inicio):'');
+  var img=document.getElementById('fin-tabelaImagem'); if(img) img.src='';
+  VB_silentGen=true; try{ FIN_compartilharTabela(); } finally { VB_silentGen=false; }
+  _histShareImg('fin-tabelaImagem','FIN','fin-tabelaDesc');
+  _histSetVal('fin-tabelaDesc',snap.d); _histSetVal('fin-valor',snap.v); _histSetVal('fin-prazo',snap.p); _histSetVal('fin-parcela',snap.pa); _histSetVal('fin-tabelaData',snap.dt);
+}
+function HIST_shareVen(r){
+  var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
+  _histSetVal('ven-tabelaDesc', r.descricao||'');
+  if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
+    VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
+    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
+  } else {
+    VEN_modoPersonalizado=false;
+    _histSetVal('ven-qtd', r.quantidade_parcelas?String(r.quantidade_parcelas):'');
+    _histSetVal('ven-parcela', r.valor_parcela?VEN_formatBR(Number(r.valor_parcela)):'');
+    _histSetVal('ven-tabelaData', r.data_primeira_parcela?HIST_fmtData(r.data_primeira_parcela):'');
+  }
+  var img=document.getElementById('ven-tabelaImagem'); if(img) img.src='';
+  VB_silentGen=true; try{ VEN_gerarTabela(); } finally { VB_silentGen=false; }
+  _histShareImg('ven-tabelaImagem','VEN','ven-tabelaDesc');
+  VEN_modoPersonalizado=snap.mp; VEN_parcelas=snap.arr; VEN_parcelaCounter=snap.cnt;
+  _histSetVal('ven-tabelaDesc',snap.d); _histSetVal('ven-parcela',snap.pa); _histSetVal('ven-qtd',snap.q); _histSetVal('ven-tabelaData',snap.dt); _histSetVal('ven-total',snap.t);
+}
+function HIST_shareAnt(r){
+  var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
+  _histSetVal('ant-tabelaCliente', r.cliente||'');
+  _histSetVal('ant-taxa', r.taxa?ANT_formatBR(Number(r.taxa)):'');
+  _histSetVal('ant-tarifa', r.tarifa?ANT_formatBR(Number(r.tarifa)):'');
+  // sempre usa os títulos salvos (valor+data) -> planilha de títulos
+  ANT_modoPersonalizado=true; ANT_titulos=[]; ANT_tituloCounter=0;
+  (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
+  var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
+  VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
+  _histShareImg('ant-tabelaImagem','ANT','ant-tabelaCliente');
+  ANT_modoPersonalizado=snap.mp; ANT_titulos=snap.arr; ANT_tituloCounter=snap.cnt;
+  _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt);
+}
+function HIST_sharePag(r){
+  var snap={ t:_histGetVal('pag-total'), arr:PAG_pagamentos, cnt:PAG_counter, opId:PAG_currentOperationId };
+  _histSetVal('pag-total', (r.valor_total!=null)?PAG_formatBR(Number(r.valor_total)):'');
+  PAG_pagamentos=[]; PAG_counter=0;
+  (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||'')}); });
+  PAG_currentOperationId=r.id||null;
+  var img=document.getElementById('pag-tabelaImagem'); if(img) img.src='';
+  VB_silentGen=true; try{ PAG_compartilhar(); } finally { VB_silentGen=false; }
+  _histShareImg('pag-tabelaImagem','PAG',null);
+  PAG_pagamentos=snap.arr; PAG_counter=snap.cnt; PAG_currentOperationId=snap.opId;
+  _histSetVal('pag-total',snap.t);
 }
 var HIST_searchTerm='';
 var HIST_searchTimer=null;
@@ -3739,6 +3818,8 @@ function _dataURLtoBlob(durl){
 
 // Compartilhamento nativo (folha do iOS) da imagem já gerada. Chamado no clique (gesto do usuário).
 // nome do arquivo: "VB - PREFIXO - Descrição" (descrição vem do campo descId, se houver)
+// Quando true, os geradores de imagem montam o canvas mas NÃO abrem o overlay (usado no compartilhar do histórico)
+var VB_silentGen=false;
 function VB_compartilharImg(imgId, prefix, descId){
   try{
     var img=document.getElementById(imgId);
@@ -4157,9 +4238,11 @@ function FIN_compartilharTabela(){
   var img = document.getElementById('fin-tabelaImagem');
   img.src = dataURL;
   img.style.display = 'block';
-  document.getElementById('fin-tabelaImagemDica').style.display = 'block';
-  document.getElementById('fin-overlayTabela').style.display = 'block';
-  document.getElementById('fin-overlayTabela').scrollTop = 0;
+  if(!VB_silentGen){
+    document.getElementById('fin-tabelaImagemDica').style.display = 'block';
+    document.getElementById('fin-overlayTabela').style.display = 'block';
+    document.getElementById('fin-overlayTabela').scrollTop = 0;
+  }
 }
 
 function FIN_abrirOverlay(){
@@ -4754,9 +4837,11 @@ function VEN_gerarTabela(){
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ven_codeStr).catch(function(){ _pagCopyFallback(ven_codeStr); }); }
     else { _pagCopyFallback(ven_codeStr); }
   }catch(e){}
-  document.getElementById('ven-tabelaImagemDica').style.display = 'block';
-  document.getElementById('ven-overlayTabela').style.display = 'block';
-  document.getElementById('ven-overlayTabela').scrollTop = 0;
+  if(!VB_silentGen){
+    document.getElementById('ven-tabelaImagemDica').style.display = 'block';
+    document.getElementById('ven-overlayTabela').style.display = 'block';
+    document.getElementById('ven-overlayTabela').scrollTop = 0;
+  }
 }
 
 VEN_initTabela();
@@ -5532,9 +5617,11 @@ function ANT_gerarTabela(){
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
   }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
-  var ot=document.getElementById('ant-overlayTabela');
-  ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
-  ot.scrollTop=0;
+  if(!VB_silentGen){
+    var ot=document.getElementById('ant-overlayTabela');
+    ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
+    ot.scrollTop=0;
+  }
 }
 
 // Helper: retângulo arredondado (compatível com Safari antigo)
@@ -5766,9 +5853,11 @@ function ANT_gerarResumoFoto(){
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
   }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
-  var ot=document.getElementById('ant-overlayTabela');
-  ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
-  ot.scrollTop=0;
+  if(!VB_silentGen){
+    var ot=document.getElementById('ant-overlayTabela');
+    ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
+    ot.scrollTop=0;
+  }
 }
 
 // ===== MODO PERSONALIZADO =====
@@ -6338,10 +6427,12 @@ function PAG_compartilhar(){
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){ _pagCopyFallback(codeStr); }); }
     else { _pagCopyFallback(codeStr); }
   }catch(e){}
-  var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
-  document.getElementById('pag-tabelaImagemDica').style.display='block';
-  document.getElementById('pag-overlayTabela').style.display='block';
-  document.getElementById('pag-overlayTabela').scrollTop=0;
+  if(!VB_silentGen){
+    var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
+    document.getElementById('pag-tabelaImagemDica').style.display='block';
+    document.getElementById('pag-overlayTabela').style.display='block';
+    document.getElementById('pag-overlayTabela').scrollTop=0;
+  }
 }
 function _b32enc(str){
   var utf8=unescape(encodeURIComponent(str)), bytes=[];
@@ -6462,10 +6553,12 @@ function PAG_salvarFoto(){
       navigator.clipboard.writeText(clip).catch(function(){ _pagCopyFallback(clip); });
     } else { _pagCopyFallback(clip); }
   }catch(e){}
-  var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
-  document.getElementById('pag-tabelaImagemDica').style.display='block';
-  document.getElementById('pag-overlayTabela').style.display='block';
-  document.getElementById('pag-overlayTabela').scrollTop=0;
+  if(!VB_silentGen){
+    var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
+    document.getElementById('pag-tabelaImagemDica').style.display='block';
+    document.getElementById('pag-overlayTabela').style.display='block';
+    document.getElementById('pag-overlayTabela').scrollTop=0;
+  }
 }
 
 function PAG_fecharTabela(){
@@ -7201,6 +7294,13 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.5.0</span><span class="cl-ver-date">23/06/2026 13:30</span></div>
+      <div class="cl-item">Histórico: botão de compartilhar ⤴ em cada item, ao lado do lápis. Toca e abre direto a folha de compartilhar do iPhone com a imagem da operação — sem precisar abrir a tela do módulo</div>
+      <div class="cl-item">Compartilha a planilha de parcelas (Financiamento), a planilha de títulos (Antecipação), a tabela (Vendas) e a foto (Pagamentos)</div>
+      <div class="cl-item">A imagem é gerada com os dados salvos daquela operação e a tela que você está usando não é alterada (os campos são restaurados depois)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.4.0</span><span class="cl-ver-date">23/06/2026 12:40</span></div>
