@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.3.5</title>
+<title>VB - v1.3.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -280,7 +280,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.5<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.6<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -310,7 +310,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div class="card">
   <div id="fin-captureZone" style="background:#f5f5f3;padding:10px 0 8px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-    <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+    <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <button id="fin-inv-toggle" class="no-print" onclick="FIN_toggleInvestidor()" title="Operação com investidor" style="width:46px;height:26px;border:0.5px solid #ddd;border-radius:13px;background:#fff;padding:0;cursor:pointer;"></button>
   </div>
   <div class="simulacao-label">SIMULAÇÃO</div>
@@ -589,7 +589,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <!-- HEADER -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-    <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+    <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <button id="ven-btnPersonalizar" onclick="VEN_togglePersonalizar()" style="border:0.5px solid #c9a84c;border-radius:8px;background:#fff;font-size:8px;letter-spacing:0.5px;color:#c9a84c;font-weight:700;cursor:pointer;margin-top:12px;padding:5px 8px;white-space:nowrap;">PERSONALIZAR</button>
   </div>
   <div class="simulacao-label">VENDAS</div>
@@ -690,7 +690,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <!-- TOPO -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div>
-      <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+      <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
       <div class="simulacao-label">QUITAÇÃO ANTECIPADA</div>
     </div>
   </div>
@@ -806,7 +806,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+        <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     
       </div>
       <div class="sub" style="margin-bottom:0;">ANTECIPAÇÃO</div>
@@ -995,7 +995,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div class="card">
   <!-- Cabeçalho -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div onclick="showScreen('home')" style="font-family:Georgia,serif;font-size:32px;font-weight:400;color:#111;cursor:pointer;">VB</div>
+    <div onclick="VB_voltarDeTela()" style="font-family:Georgia,serif;font-size:32px;font-weight:400;color:#111;cursor:pointer;">VB</div>
 
   </div>
   <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">PAGAMENTOS</div>
@@ -1068,7 +1068,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div>
-      <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+      <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
       <div class="simulacao-label">HISTÓRICO</div>
     </div>
   </div>
@@ -3484,39 +3484,48 @@ function HIST_esc(s){
 
 function HIST_carregarFin(r){
   FIN_currentOperationId = r.id;
+  // Set all fields before triggering recalc
   if(r.descricao) document.getElementById('fin-tabelaDesc').value = r.descricao;
-  if(r.valor_financiado){ document.getElementById('fin-valor').value = String(r.valor_financiado).replace('.',','); }
+  if(r.valor_financiado){ document.getElementById('fin-valor').value = FIN_formatBR(Number(r.valor_financiado)); }
   if(r.qtd_parcelas){ document.getElementById('fin-prazo').value = String(r.qtd_parcelas); }
-  if(r.taxa){ document.getElementById('fin-taxa').value = String(r.taxa).replace('.',','); }
+  if(r.taxa){ document.getElementById('fin-taxa').value = FIN_formatBR(Number(r.taxa)); }
+  if(r.valor_parcela){ document.getElementById('fin-parcela').value = FIN_formatBR(Number(r.valor_parcela)); }
   if(r.data_inicio){ var pp=r.data_inicio.split('-'); document.getElementById('fin-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
-  FIN_lastEdited='valor'; FIN_update();
+  FIN_lastEdited='valor'; FIN_lastSolved='parcela'; FIN_update();
   FIN_updateConfirmarBtnLabel();
+  VB_telaAnterior = 'hist';
   showScreen('fin');
 }
 function HIST_carregarAnt(r){
   ANT_currentOperationId = r.id;
+  // Fill all fields first, then recalc once at the end
   if(r.cliente) document.getElementById('ant-tabelaCliente').value = r.cliente;
-  if(r.taxa) document.getElementById('ant-taxa').value = String(r.taxa).replace('.',',');
-  if(r.tarifa) document.getElementById('ant-tarifa').value = String(r.tarifa).replace('.',',');
   if(r.data_operacao){ var p=r.data_operacao.split('-'); document.getElementById('ant-dataOperacao').value=p[2]+'/'+p[1]+'/'+p[0]; }
-  if(r.modo==='personalizado' && r.titulos){
+  if(r.taxa) document.getElementById('ant-taxa').value = ANT_formatBR(Number(r.taxa));
+  if(r.tarifa) document.getElementById('ant-tarifa').value = ANT_formatBR(Number(r.tarifa));
+
+  if(r.modo==='personalizado' && r.titulos && r.titulos.length>0){
     ANT_titulos=[]; ANT_tituloCounter=0;
     (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
     if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:'',data:''}); }
     if(!ANT_modoPersonalizado){ ANT_toggleModo(); } else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   } else {
-    if(r.valor_bruto){ document.getElementById('ant-valorBruto').value=ANT_formatBR(Number(r.valor_bruto)); }
-    if(r.quantidade_titulos){ document.getElementById('ant-qtd').value=String(r.quantidade_titulos); }
-    ANT_userFields.add('bruto'); ANT_recalc();
+    // Modo simples: preenche bruto e qtd, depois recalc (taxa e tarifa já preenchidas acima)
+    if(r.valor_bruto){ document.getElementById('ant-valorBruto').value = ANT_formatBR(Number(r.valor_bruto)); }
+    if(r.quantidade_titulos){ document.getElementById('ant-qtd').value = String(r.quantidade_titulos); }
+    ANT_userFields.clear();
+    ANT_userFields.add('bruto');
     if(ANT_modoPersonalizado) ANT_toggleModo();
+    ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
+  VB_telaAnterior = 'hist';
   showScreen('ant');
 }
 function HIST_carregarVen(r){
   VEN_currentOperationId = r.id;
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
-  if(r.valor_total){ document.getElementById('ven-total').value=String(r.valor_total).replace('.',','); }
+  if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_parcelas=[]; VEN_parcelaCounter=0;
     r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
@@ -3524,21 +3533,24 @@ function HIST_carregarVen(r){
     VEN_syncFromParcelas();
   } else {
     if(r.quantidade_parcelas) document.getElementById('ven-qtd').value=String(r.quantidade_parcelas);
+    if(r.valor_parcela){ document.getElementById('ven-parcela').value=VEN_formatBR(Number(r.valor_parcela)); }
     if(r.data_primeira_parcela){ var pp=r.data_primeira_parcela.split('-'); document.getElementById('ven-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
     if(VEN_modoPersonalizado) VEN_togglePersonalizar();
     VEN_update && VEN_update();
   }
   VEN_updateConfirmarBtnLabel();
+  VB_telaAnterior = 'hist';
   showScreen('ven');
 }
 function HIST_carregarPag(r){
   PAG_currentOperationId = r.id;
-  if(r.valor_total) document.getElementById('pag-total').value=String(r.valor_total).replace('.',',');
+  if(r.valor_total) document.getElementById('pag-total').value = PAG_formatBR(Number(r.valor_total));
   PAG_pagamentos=[]; PAG_counter=0;
   (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||'')}); });
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
   PAG_render(); PAG_update(); PAG_saveSession();
   PAG_updateConfirmarBtnLabel();
+  VB_telaAnterior = 'hist';
   showScreen('pag');
 }
 function HIST_buildRow(tab, idx, titulo, valor, linhas){
@@ -3692,13 +3704,21 @@ function VB_toast(msg){
   }catch(e){}
 }
 
+var VB_telaAnterior = 'home';
 function showScreen(name){
+  var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
+  // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
   ['fin','ant','pag','ven','quit','hist'].forEach(function(s){
-    document.getElementById('screen-'+s).style.display=s===name?'block':'none';
+    var el = document.getElementById('screen-'+s);
+    if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='hist'){ HIST_loadTab(HIST_tabAtual||'ant'); }
   window.scrollTo(0,0);
+}
+function VB_voltarDeTela(){
+  // Chamado pelo logo VB em cada módulo
+  showScreen(VB_telaAnterior||'home');
 }
 
 
@@ -7049,6 +7069,13 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.6</span><span class="cl-ver-date">23/06/2026 11:30</span></div>
+      <div class="cl-item">Restaurar do Histórico: valores numéricos agora usam a formatação correta brasileira (100.000,00 em vez de 100000). Corrigido em Financiamento, Antecipação, Vendas e Pagamentos</div>
+      <div class="cl-item">Restaurar Antecipação: taxa e tarifa são preenchidas antes do recalc — o valor líquido e a quantidade de títulos não somem mais ao carregar do histórico</div>
+      <div class="cl-item">Botão VB: quando você vem do Histórico, o VB volta pro Histórico (não pra Home). Se abriu o módulo direto da Home, continua voltando pra Home</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.5</span><span class="cl-ver-date">23/06/2026 11:00</span></div>
