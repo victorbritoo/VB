@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.3.6</title>
+<title>VB - v1.3.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -280,7 +280,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.6<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.7<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3513,6 +3513,8 @@ function HIST_carregarAnt(r){
     // Modo simples: preenche bruto e qtd, depois recalc (taxa e tarifa já preenchidas acima)
     if(r.valor_bruto){ document.getElementById('ant-valorBruto').value = ANT_formatBR(Number(r.valor_bruto)); }
     if(r.quantidade_titulos){ document.getElementById('ant-qtd').value = String(r.quantidade_titulos); }
+    // Primeiro/próximo vencimento: vem da data do 1º título salvo (expandido no confirmar)
+    if(r.titulos && r.titulos.length && r.titulos[0].d){ document.getElementById('ant-tabelaData').value = r.titulos[0].d; }
     ANT_userFields.clear();
     ANT_userFields.add('bruto');
     if(ANT_modoPersonalizado) ANT_toggleModo();
@@ -3605,6 +3607,7 @@ function HIST_loadTab(tab){
       if(tab==='ant'){
         titulo=r.cliente||'(sem nome)';
         linhas.push(HIST_fmtData(r.data_operacao));
+        if(r.modo) linhas.push(r.modo==='personalizado'?'Personalizada':'Simples');
         if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
         if(r.tarifa) linhas.push('Tarifa '+HIST_fmtMoeda(r.tarifa));
         if(r.quantidade_titulos) linhas.push(r.quantidade_titulos+' título'+(r.quantidade_titulos>1?'s':''));
@@ -3713,7 +3716,7 @@ function showScreen(name){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
-  if(name==='hist'){ HIST_loadTab(HIST_tabAtual||'ant'); }
+  if(name==='hist'){ VB_telaAnterior='home'; HIST_loadTab(HIST_tabAtual||'ant'); }
   window.scrollTo(0,0);
 }
 function VB_voltarDeTela(){
@@ -5438,7 +5441,8 @@ function ANT_confirmarOperacao(btn){
   var tarifaVal=ANT_parseBR(document.getElementById('ant-tarifa').value);
   var n=parseInt(document.getElementById('ant-qtd').value||'0');
   var pm=ANT_parseBR(document.getElementById('ant-prazoMedio').textContent);
-  var titulosPayload = ANT_modoPersonalizado ? ANT_payloadTitulos() : null;
+  // Sempre grava os títulos expandidos (com datas) — no simples isso preserva o primeiro/próximo vencimento
+  var titulosPayload = ANT_payloadTitulos();
 
   if(!(VB>0) || !(n>0)){ VB_toast('Preencha a operação antes de confirmar.'); return; }
 
@@ -7069,6 +7073,13 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.7</span><span class="cl-ver-date">23/06/2026 11:45</span></div>
+      <div class="cl-item">Restaurar Antecipação (modo simples): o primeiro/próximo vencimento agora é salvo e restaurado corretamente. Antes o simples gravava sem data e voltava em branco — agora os títulos expandidos (com datas) são salvos também no simples, igual ao QR. Vale para operações novas; as antigas já salvas sem data continuam sem o vencimento</div>
+      <div class="cl-item">Histórico: o botão VOLTAR (VB) da tela de Histórico agora volta para a tela inicial. Antes, depois de abrir uma operação e voltar, ele ficava preso no próprio Histórico</div>
+      <div class="cl-item">Histórico (Antecipação): cada operação agora mostra se é "Simples" ou "Personalizada", igual já aparece na aba Vendas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.6</span><span class="cl-ver-date">23/06/2026 11:30</span></div>
