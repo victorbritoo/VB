@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.3.1</title>
+<title>VB - v1.3.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -280,7 +280,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.1<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.3<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -298,6 +298,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </button>
     <button onclick="PIN_request('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Vendas</div>
+    </button>
+    <button onclick="PIN_request('hist')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Histórico</div>
     </button>
     <div onclick="VB_logout()" style="text-align:center;margin-top:14px;font-size:10px;color:#ccc;letter-spacing:1px;cursor:pointer;font-family:-apple-system,sans-serif;">SAIR</div>
   </div>
@@ -365,6 +368,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button onclick="FIN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
     <button onclick="FIN_abrirOverlay()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
   </div>
+  <button id="pag-btnConfirmar" onclick="PAG_confirmarOperacao(this)" style="width:100%;padding:12px;border:0.5px solid #111;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#111;font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
 
   </div><!-- fim captureZone -->
 
@@ -648,6 +652,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
       <button onclick="VEN_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
       <button onclick="VEN_gerarTabela()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
     </div>
+    <button id="ven-btnConfirmar" onclick="VEN_confirmarOperacao(this)" style="width:100%;padding:12px;border:0.5px solid #111;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#111;font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
   </div>
 
 </div>
@@ -1054,6 +1059,28 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:12px;letter-spacing:1px;color:#888;margin-bottom:10px;font-weight:500;">↑ SEGURE A IMAGEM PARA SALVAR</div>
     <button onclick="VB_compartilharImg('pag-tabelaImagem','PAG',null)" style="width:100%;padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;margin-bottom:8px;">COMPARTILHAR</button>
     <button onclick="PAG_fecharTabela()" style="width:100%;padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">FECHAR</button>
+  </div>
+</div>
+</div>
+
+<div id="screen-hist" class="vb-screen">
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div>
+      <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
+      <div class="simulacao-label">HISTÓRICO</div>
+    </div>
+  </div>
+  <hr class="divider">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+    <button id="hist-tab-ant" onclick="HIST_loadTab('ant')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ANTECIPAÇÃO</button>
+    <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
+    <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
+  </div>
+
+  <div id="hist-lista" style="min-height:200px;">
+    <div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Carregando...</div>
   </div>
 </div>
 </div>
@@ -3399,6 +3426,66 @@ sb.auth.onAuthStateChange(function(event, session){
   if(!session){ VB_showLogin(); }
 });
 
+// ===== HISTÓRICO =====
+var HIST_tabAtual='ant';
+function HIST_setTabStyle(tab){
+  ['ant','ven','pag'].forEach(function(t){
+    var b=document.getElementById('hist-tab-'+t);
+    if(!b) return;
+    if(t===tab){ b.style.background='#111'; b.style.color='#fff'; }
+    else { b.style.background='#fff'; b.style.color='#aaa'; }
+  });
+}
+function HIST_fmtData(iso){
+  if(!iso) return '--';
+  var p=iso.split('-'); if(p.length!==3) return iso;
+  return p[2]+'/'+p[1]+'/'+p[0];
+}
+function HIST_fmtMoeda(v){
+  if(v===null||v===undefined) return '--';
+  return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function HIST_esc(s){
+  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function HIST_row(titulo, sub, valor){
+  return '<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:12px 16px;margin-bottom:6px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'+
+      '<div style="font-size:14px;font-weight:700;color:#111;">'+HIST_esc(titulo)+'</div>'+
+      '<div style="font-size:14px;font-weight:700;color:#111;white-space:nowrap;">'+valor+'</div>'+
+    '</div>'+
+    '<div style="font-size:11px;color:#aaa;margin-top:2px;">'+HIST_esc(sub)+'</div>'+
+  '</div>';
+}
+function HIST_loadTab(tab){
+  HIST_tabAtual=tab;
+  HIST_setTabStyle(tab);
+  var listaEl=document.getElementById('hist-lista');
+  listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Carregando...</div>';
+
+  var tabela = tab==='ant'?'antecipacoes':tab==='ven'?'vendas':'pagamentos';
+  sb.from(tabela).select('*').order('created_at',{ascending:false}).limit(30).then(function(res){
+    if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; console.log(res.error); return; }
+    var rows=res.data||[];
+    if(rows.length===0){ listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Nada confirmado ainda.</div>'; return; }
+    var html='';
+    rows.forEach(function(r){
+      if(tab==='ant'){
+        html+=HIST_row(r.cliente||'(sem nome)', HIST_fmtData(r.data_operacao)+' · '+(r.quantidade_titulos||'-')+' títulos · '+(r.modo||''), HIST_fmtMoeda(r.valor_bruto));
+      } else if(tab==='ven'){
+        html+=HIST_row(r.descricao||'(sem descrição)', HIST_fmtData(r.data_primeira_parcela)+' · '+(r.quantidade_parcelas||'-')+' parcelas', HIST_fmtMoeda(r.valor_total));
+      } else if(tab==='pag'){
+        var qtd=(r.pagamentos||[]).length;
+        html+=HIST_row('Divisão de pagamento', qtd+' lançamentos', HIST_fmtMoeda(r.valor_total));
+      }
+    });
+    listaEl.innerHTML=html;
+  }).catch(function(e){
+    listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Sem conexão.</div>';
+    console.log(e);
+  });
+}
+
 function _dataURLtoBlob(durl){
   var arr=durl.split(','), mime=(arr[0].match(/:(.*?);/)||[])[1]||'image/png';
   var bstr=atob(arr[1]), n=bstr.length, u8=new Uint8Array(n);
@@ -3459,9 +3546,10 @@ function VB_toast(msg){
 
 function showScreen(name){
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','quit'].forEach(function(s){
+  ['fin','ant','pag','ven','quit','hist'].forEach(function(s){
     document.getElementById('screen-'+s).style.display=s===name?'block':'none';
   });
+  if(name==='hist'){ HIST_loadTab(HIST_tabAtual||'ant'); }
   window.scrollTo(0,0);
 }
 
@@ -3976,6 +4064,8 @@ function VEN_limpar(){
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
+  VEN_currentOperationId = null;
+  VEN_updateConfirmarBtnLabel();
   VEN_initTabela();
 }
 
@@ -4323,8 +4413,69 @@ function VEN_gerarTabela(){
 VEN_initTabela();
 
 /* === VENDAS: SALVAR/CARREGAR via código + QR === */
+var VEN_currentOperationId = null;
+function VEN_updateConfirmarBtnLabel(){
+  var b=document.getElementById('ven-btnConfirmar');
+  if(!b) return;
+  b.textContent = VEN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+}
+function VEN_confirmarOperacao(btn){
+  var desc=(document.getElementById('ven-tabelaDesc').value||'').trim();
+  var dataStr=(document.getElementById('ven-tabelaData').value||'');
+  var modo = VEN_modoPersonalizado ? 'personalizado' : 'simples';
+  var total=VEN_parseBR(document.getElementById('ven-total').value);
+  var qtd=parseInt(document.getElementById('ven-qtd').value||'0');
+  var parcela=VEN_parseBR(document.getElementById('ven-parcela').value);
+  var parcelasPayload = VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||'')}; }) : null;
+
+  if(!(total>0)){ VB_toast('Preencha a venda antes de confirmar.'); return; }
+
+  function toISO(str){
+    var p=(str||'').split('/');
+    if(p.length!==3) return null;
+    var y=p[2]; if(y.length===2) y='20'+y;
+    var d=('0'+p[0]).slice(-2), m=('0'+p[1]).slice(-2);
+    return y+'-'+m+'-'+d;
+  }
+
+  var row={
+    descricao: desc||null,
+    data_primeira_parcela: toISO(dataStr),
+    modo: modo,
+    valor_total: (!isNaN(total)&&total>0)?total:null,
+    quantidade_parcelas: qtd>0?qtd:null,
+    valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
+    parcelas: parcelasPayload
+  };
+
+  var ehAtualizacao = !!VEN_currentOperationId;
+  if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
+
+  var query = ehAtualizacao
+    ? sb.from('vendas').update(row).eq('id', VEN_currentOperationId).select()
+    : sb.from('vendas').insert(row).select();
+
+  query.then(function(res){
+    if(btn) btn.disabled=false;
+    if(res.error){
+      console.log('Supabase save error:', res.error);
+      VEN_updateConfirmarBtnLabel();
+      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      return;
+    }
+    if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
+    VEN_updateConfirmarBtnLabel();
+    VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
+  }).catch(function(e){
+    if(btn) btn.disabled=false;
+    VEN_updateConfirmarBtnLabel();
+    console.log('Supabase save exception:', e);
+    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+  });
+}
+
 function VEN_serializar(){
-  return {
+  var o = {
     tot:(document.getElementById('ven-total').value||''),
     qtd:(document.getElementById('ven-qtd').value||''),
     parc:(document.getElementById('ven-parcela').value||''),
@@ -4333,12 +4484,16 @@ function VEN_serializar(){
     perso:!!VEN_modoPersonalizado,
     parcelas: VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||'')}; }) : []
   };
+  if(VEN_currentOperationId) o.id = VEN_currentOperationId;
+  return o;
 }
 function VEN_codeB32(){ return 'VBVEN2:'+_b32enc(JSON.stringify(VEN_serializar())); }
 
 function VEN_aplicar(obj){
   if(!obj) return false;
   var perso=!!obj.perso;
+  VEN_currentOperationId = obj.id || null;
+  VEN_updateConfirmarBtnLabel();
   if(perso && !VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
   else if(!perso && VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
   document.getElementById('ven-total').value   = obj.tot||'';
@@ -4643,6 +4798,8 @@ function ANT_limpar(){
   document.getElementById('ant-totDesc').textContent='---';
   ANT_titulos=[]; ANT_tituloCounter=0;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
+  ANT_currentOperationId = null;
+  ANT_updateConfirmarBtnLabel();
   ANT_autoFitLiquido();
   ANT_initData();
 }
@@ -4751,6 +4908,7 @@ function ANT_codeStr(){
     tf:(document.getElementById('ant-tarifa').value||''),
     t:ANT_payloadTitulos()
   };
+  if(ANT_currentOperationId) payload.id=ANT_currentOperationId;
   return 'VBANT2:'+_b32enc(JSON.stringify(payload));
 }
 function ANT_aplicar(obj){
@@ -4759,6 +4917,8 @@ function ANT_aplicar(obj){
   if(obj.do) document.getElementById('ant-dataOperacao').value = obj.do;
   if(obj.tx) document.getElementById('ant-taxa').value = obj.tx;
   if(obj.tf) document.getElementById('ant-tarifa').value = obj.tf;
+  ANT_currentOperationId = obj.id || null;
+  ANT_updateConfirmarBtnLabel();
   ANT_titulos=[]; ANT_tituloCounter=0;
   (obj.t||[]).forEach(function(it){
     ANT_tituloCounter++;
@@ -5032,6 +5192,13 @@ function VB_roundRect(ctx,x,y,w,h,r){
 }
 
 // COMPARTILHAR da Antecipação -> foto do RESUMO (estilo card, igual ao print)
+var ANT_currentOperationId = null;
+function ANT_updateConfirmarBtnLabel(){
+  var b=document.getElementById('ant-btnConfirmar');
+  if(!b) return;
+  b.textContent = ANT_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+}
+
 function ANT_confirmarOperacao(btn){
   var cliente=(document.getElementById('ant-tabelaCliente').value||'').trim();
   var dataOpStr=(document.getElementById('ant-dataOperacao').value||'');
@@ -5067,15 +5234,29 @@ function ANT_confirmarOperacao(btn){
     titulos: titulosPayload
   };
 
-  if(btn){ btn.textContent='CONFIRMANDO...'; btn.disabled=true; }
-  sb.from('antecipacoes').insert(row).then(function(res){
-    if(btn){ btn.textContent='✓ CONFIRMAR OPERAÇÃO'; btn.disabled=false; }
-    if(res.error){ console.log('Supabase insert error:', res.error); VB_toast('Não confirmou (sem conexão?). Tente de novo.'); }
-    else { VB_toast('Operação confirmada e registrada.'); }
+  var ehAtualizacao = !!ANT_currentOperationId;
+  if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
+
+  var query = ehAtualizacao
+    ? sb.from('antecipacoes').update(row).eq('id', ANT_currentOperationId).select()
+    : sb.from('antecipacoes').insert(row).select();
+
+  query.then(function(res){
+    if(btn) btn.disabled=false;
+    if(res.error){
+      console.log('Supabase save error:', res.error);
+      ANT_updateConfirmarBtnLabel();
+      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      return;
+    }
+    if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
+    ANT_updateConfirmarBtnLabel();
+    VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
-    if(btn){ btn.textContent='✓ CONFIRMAR OPERAÇÃO'; btn.disabled=false; }
-    console.log('Supabase insert exception:', e);
-    VB_toast('Não confirmou (sem conexão?). Tente de novo.');
+    if(btn) btn.disabled=false;
+    ANT_updateConfirmarBtnLabel();
+    console.log('Supabase save exception:', e);
+    VB_toast('Não salvou (sem conexão?). Tente de novo.');
   });
 }
 
@@ -5526,10 +5707,52 @@ function PAG_setLinhasIniciais(){
   PAG_pagamentos=[]; PAG_counter=0;
   for(var i=0;i<4;i++){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:'',valor:''}); }
 }
+var PAG_currentOperationId = null;
+function PAG_updateConfirmarBtnLabel(){
+  var b=document.getElementById('pag-btnConfirmar');
+  if(!b) return;
+  b.textContent = PAG_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+}
+function PAG_confirmarOperacao(btn){
+  var total=PAG_parseBR(document.getElementById('pag-total').value);
+  var itens=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; }).map(function(p){ return {desc:(p.desc||''), valor:(p.valor||'')}; });
+
+  if(!(total>0)){ VB_toast('Preencha o total antes de confirmar.'); return; }
+
+  var row={ valor_total: total, pagamentos: itens };
+
+  var ehAtualizacao = !!PAG_currentOperationId;
+  if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
+
+  var query = ehAtualizacao
+    ? sb.from('pagamentos').update(row).eq('id', PAG_currentOperationId).select()
+    : sb.from('pagamentos').insert(row).select();
+
+  query.then(function(res){
+    if(btn) btn.disabled=false;
+    if(res.error){
+      console.log('Supabase save error:', res.error);
+      PAG_updateConfirmarBtnLabel();
+      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      return;
+    }
+    if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
+    PAG_updateConfirmarBtnLabel();
+    VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
+  }).catch(function(e){
+    if(btn) btn.disabled=false;
+    PAG_updateConfirmarBtnLabel();
+    console.log('Supabase save exception:', e);
+    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+  });
+}
+
 function PAG_limpar(){
   document.getElementById('pag-total').value='';
   document.getElementById('pag-saldo').textContent='R$ ---';
   document.getElementById('pag-soma').textContent='---';
+  PAG_currentOperationId = null;
+  PAG_updateConfirmarBtnLabel();
   PAG_setLinhasIniciais();
   PAG_render();
   PAG_saveSession();
@@ -5626,6 +5849,8 @@ function PAG_tentarCarregar(code){
   }catch(e){ obj=null; }
   if(!obj || !Array.isArray(obj.p)) return false;
   document.getElementById('pag-total').value=obj.t||'';
+  PAG_currentOperationId = obj.id || null;
+  PAG_updateConfirmarBtnLabel();
   PAG_pagamentos=[]; PAG_counter=0;
   obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||'')}); });
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
@@ -5666,7 +5891,9 @@ function PAG_compartilhar(){
   // código + QR (canto superior direito, espelhando o logo)
   var totalStr=(document.getElementById('pag-total').value||'').trim();
   var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
-  var payload=_b32enc(JSON.stringify({t:totalStr,p:itens}));
+  var payloadObj={t:totalStr,p:itens};
+  if(PAG_currentOperationId) payloadObj.id=PAG_currentOperationId;
+  var payload=_b32enc(JSON.stringify(payloadObj));
   var codeStr='VBPAG2:'+payload;
   var qr=qrcode(0,'M'); qr.addData(codeStr); qr.make();
   var qn=qr.getModuleCount();
@@ -5935,7 +6162,7 @@ function copyValue(sourceId, btn) {
 var PIN_HASH = 'MzExMw=='; // PIN ofuscado (conveniência, não é segurança real) — p/ mudar: btoa('nova_senha')
 function PIN_matches(buf){ try{ return btoa(buf)===PIN_HASH; }catch(e){ return false; } }
 var PIN_buffer = '', PIN_target = '';
-var PIN_PROTECTED = ['ant','pag','ven','quit','fin-inv','log'];
+var PIN_PROTECTED = ['ant','pag','ven','quit','fin-inv','log','hist'];
 var PIN_GRACE_MS = 10*60*1000; // 10 minutos
 var PIN_unlockedUntil = 0;
 function PIN_grant(target){
@@ -6613,6 +6840,18 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.3</span><span class="cl-ver-date">23/06/2026 10:15</span></div>
+      <div class="cl-item">Pagamentos: botão ✓ CONFIRMAR OPERAÇÃO adicionado, mesmo padrão dos outros módulos (cria ou atualiza por cima quando carregado de novo)</div>
+      <div class="cl-item">Nova tela HISTÓRICO (menu da Home, protegida por PIN) — abas Antecipação / Vendas / Pagamentos, mostrando as últimas 30 operações confirmadas de cada uma, vindas direto do Supabase</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.2</span><span class="cl-ver-date">23/06/2026 09:45</span></div>
+      <div class="cl-item">Antecipação: o código/QR que você carrega agora também guarda o ID da operação já confirmada. Carregou, mudou algo, CONFIRMAR de novo → atualiza a mesma linha no banco em vez de duplicar. Botão muda de "CONFIRMAR" pra "ATUALIZAR" quando detecta que é uma edição</div>
+      <div class="cl-item">Vendas: mesmo botão ✓ CONFIRMAR OPERAÇÃO adicionado, com a mesma lógica de atualizar por cima quando a venda muda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.1</span><span class="cl-ver-date">23/06/2026 09:25</span></div>
