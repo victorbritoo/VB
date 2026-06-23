@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.2.9</title>
+<title>VB - v1.3.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -268,19 +268,19 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <body>
 
 <div id="login-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;">
-  <div style="width:100%;max-width:340px;text-align:center;">
+  <form id="login-form" onsubmit="return VB_login(event)" style="width:100%;max-width:340px;text-align:center;">
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:48px;font-weight:400;color:#111;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:4px;color:#888;font-weight:500;margin-bottom:36px;">ENTRAR</div>
-    <input id="login-email" type="email" placeholder="E-mail" autocomplete="username" autocapitalize="none" onkeydown="if(event.key==='Enter')document.getElementById('login-senha').focus()" style="width:100%;height:48px;border:0.5px solid #ddd;border-radius:12px;padding:0 16px;font-size:15px;font-weight:400;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;color:#111;outline:none;margin-bottom:10px;background:#fff;">
-    <input id="login-senha" type="password" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')VB_login()" style="width:100%;height:48px;border:0.5px solid #ddd;border-radius:12px;padding:0 16px;font-size:15px;font-weight:400;font-family:-apple-system,sans-serif;color:#111;outline:none;margin-bottom:6px;background:#fff;">
+    <input id="login-email" name="email" type="email" placeholder="E-mail" autocomplete="username" autocapitalize="none" style="width:100%;height:48px;border:0.5px solid #ddd;border-radius:12px;padding:0 16px;font-size:15px;font-weight:400;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;color:#111;outline:none;margin-bottom:10px;background:#fff;">
+    <input id="login-senha" name="password" type="password" placeholder="Senha" autocomplete="current-password" style="width:100%;height:48px;border:0.5px solid #ddd;border-radius:12px;padding:0 16px;font-size:15px;font-weight:400;font-family:-apple-system,sans-serif;color:#111;outline:none;margin-bottom:6px;background:#fff;">
     <div id="login-erro" style="font-size:11px;color:#e05252;letter-spacing:0.5px;min-height:16px;margin-bottom:10px;font-family:-apple-system,sans-serif;">&nbsp;</div>
-    <button id="login-btn" onclick="VB_login()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#111;color:#fff;font-size:13px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ENTRAR</button>
-  </div>
+    <button id="login-btn" type="submit" style="width:100%;padding:14px;border:none;border-radius:14px;background:#111;color:#fff;font-size:13px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ENTRAR</button>
+  </form>
 </div>
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.9<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.0<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3371,13 +3371,14 @@ function VB_showLogin(msg){
   if(erroEl) erroEl.textContent=msg||'\u00A0';
   var btn=document.getElementById('login-btn'); if(btn){ btn.textContent='ENTRAR'; btn.disabled=false; }
 }
-function VB_login(){
+function VB_login(ev){
+  if(ev && ev.preventDefault) ev.preventDefault();
   var email=(document.getElementById('login-email').value||'').trim();
   var senha=document.getElementById('login-senha').value||'';
   var btn=document.getElementById('login-btn');
   var erroEl=document.getElementById('login-erro');
   erroEl.textContent='\u00A0';
-  if(!email||!senha){ erroEl.textContent='Preencha e-mail e senha.'; return; }
+  if(!email||!senha){ erroEl.textContent='Preencha e-mail e senha.'; return false; }
   btn.textContent='ENTRANDO...'; btn.disabled=true;
   sb.auth.signInWithPassword({email:email, password:senha}).then(function(res){
     if(res.error){ btn.textContent='ENTRAR'; btn.disabled=false; erroEl.textContent='E-mail ou senha incorretos.'; return; }
@@ -3385,6 +3386,7 @@ function VB_login(){
   }).catch(function(){
     btn.textContent='ENTRAR'; btn.disabled=false; erroEl.textContent='Sem conexão. Tente de novo.';
   });
+  return false;
 }
 function VB_logout(){
   sb.auth.signOut().then(function(){ showScreen('home'); VB_showLogin(); });
@@ -5029,7 +5031,50 @@ function VB_roundRect(ctx,x,y,w,h,r){
 }
 
 // COMPARTILHAR da Antecipação -> foto do RESUMO (estilo card, igual ao print)
+function ANT_salvarSupabase(){
+  var cliente=(document.getElementById('ant-tabelaCliente').value||'').trim();
+  var dataOpStr=(document.getElementById('ant-dataOperacao').value||'');
+  var modo = ANT_modoPersonalizado ? 'personalizado' : 'simples';
+  var VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
+  var VL=ANT_parseBR(document.getElementById('ant-valorLiquido').value);
+  var taxaVal=ANT_parseBR(document.getElementById('ant-taxa').value);
+  var tarifaVal=ANT_parseBR(document.getElementById('ant-tarifa').value);
+  var n=parseInt(document.getElementById('ant-qtd').value||'0');
+  var pm=ANT_parseBR(document.getElementById('ant-prazoMedio').textContent);
+  var titulosPayload = ANT_modoPersonalizado ? ANT_payloadTitulos() : null;
+
+  function toISO(str){
+    var p=(str||'').split('/');
+    if(p.length!==3) return null;
+    var y=p[2]; if(y.length===2) y='20'+y;
+    var d=('0'+p[0]).slice(-2), m=('0'+p[1]).slice(-2);
+    return y+'-'+m+'-'+d;
+  }
+
+  var row={
+    cliente: cliente||null,
+    data_operacao: toISO(dataOpStr),
+    modo: modo,
+    valor_bruto: (!isNaN(VB)&&VB>0)?VB:null,
+    valor_liquido: (!isNaN(VL)&&VL>0)?VL:null,
+    taxa: (!isNaN(taxaVal)&&taxaVal>0)?taxaVal:null,
+    tarifa: (!isNaN(tarifaVal)&&tarifaVal>0)?tarifaVal:null,
+    quantidade_titulos: n>0?n:null,
+    prazo_medio: isNaN(pm)?null:pm,
+    titulos: titulosPayload
+  };
+
+  sb.from('antecipacoes').insert(row).then(function(res){
+    if(res.error){ console.log('Supabase insert error:', res.error); VB_toast('Não salvou no histórico (offline?).'); }
+    else { VB_toast('Salvo no histórico.'); }
+  }).catch(function(e){
+    console.log('Supabase insert exception:', e);
+    VB_toast('Não salvou no histórico (offline?).');
+  });
+}
+
 function ANT_gerarResumoFoto(){
+  ANT_salvarSupabase();
   var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
   var hoje=ANT_getHoje();
@@ -6563,6 +6608,12 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.0</span><span class="cl-ver-date">23/06/2026 09:10</span></div>
+      <div class="cl-item">Login: campos agora dentro de um formulário de verdade — o Safari já oferece salvar a senha e preenche sozinho nas próximas vezes</div>
+      <div class="cl-item">Antecipação: o COMPARTILHAR agora salva a operação de verdade no Supabase (cliente, data, valores, taxa, tarifa, títulos quando personalizado) — primeira tela conectada ao histórico permanente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.9</span><span class="cl-ver-date">23/06/2026 08:52</span></div>
