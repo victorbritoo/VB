@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.2.2</title>
+<title>VB - v1.2.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -268,7 +268,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.2<br>22/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.2.4<br>22/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -696,12 +696,14 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
     <div class="field-card" style="padding:7px 14px;text-align:center;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:3px;">PARCELAS A VENCER</div>
-      <input class="input-big" style="text-align:center;font-size:22px;" id="quit-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()">
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;">
+        <input class="input-big" style="text-align:center;font-size:22px;" id="quit-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()">
+      </div>
     </div>
     <div class="field-card" style="padding:7px 14px;text-align:center;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:3px;">TAXA DE DESCONTO</div>
-      <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
-        <input class="input-big" style="text-align:right;font-size:22px;width:64px;" id="quit-taxa" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;gap:4px;">
+        <input class="input-big" style="text-align:center;font-size:22px;width:64px;" id="quit-taxa" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
         <span style="font-size:12px;color:#aaa;font-weight:500;">% a.m.</span>
       </div>
     </div>
@@ -4460,7 +4462,16 @@ function ANT_cycleDegrau(){
 function ANT_setDegrau(d){
   ANT_degrau=d;
   ANT_applyDegrauUI();
-  ANT_modoPersonalizado ? ANT_recalcPersonalizado() : ANT_recalc();
+  if(ANT_modoPersonalizado){ ANT_recalcPersonalizado(); return; }
+  // Ação explícita: arredonda o valor por título agora e recalcula o bruto total a partir dele
+  var VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
+  var n=parseInt(document.getElementById('ant-qtd').value||'0');
+  if(VB>0 && n>0){
+    var vptR=ANT_ceilStep(VB/n, ANT_degrau);
+    document.getElementById('ant-valorParcela').value=ANT_formatBR(vptR);
+    document.getElementById('ant-valorBruto').value=ANT_formatBR(vptR*n);
+  }
+  ANT_recalc();
 }
 
 // Rastreia qual campo foi modificado por último
@@ -4978,17 +4989,26 @@ function ANT_gerarResumoFoto(){
   var qtdStr=n+' títulos';
 
   var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
-  var card1H = ANT_modoPersonalizado ? 100 : 132;
-  var card2H=135, cardGap=8, headerH=80, bottomPad=18;
+  var card1H = 92;
+  var cardGap=6, headerH=70, bottomPad=12;
   var temTit = !!(ANT_modoPersonalizado && res && res.rows.length>0);
   var titRows = temTit ? res.rows : [];
-  var titCardH = temTit ? (42 + titRows.length*24) : 0;
+  var titCardH = temTit ? (36 + titRows.length*22) : 0;
+
+  // Linhas do card de valores — mesma altura entre elas; "valor do título" primeiro, só no modo simples
+  var rowH=22;
+  var valRows = [];
+  var valVals = [];
+  if(!ANT_modoPersonalizado){ valRows.push('VALOR DO TÍTULO'); valVals.push('R$ '+ANT_formatBR(vpt)); }
+  valRows.push('VALOR BRUTO','JUROS','TARIFA');
+  valVals.push('R$ '+ANT_formatBR(VB), 'R$ '+ANT_formatBR(tj), 'R$ '+ANT_formatBR(tar));
+  var card2H = 12 + valRows.length*rowH + 2 + rowH + 6;
 
   // Código + QR (cartão final) — com fallback se a operação for grande demais pro QR
   var codeStr=ANT_codeStr();
   var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
   try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrCss=qpx/esc; qrOk=true; }catch(e){ qrOk=false; }
-  var qrCardH=qrOk?(24+qrCss):40;
+  var qrCardH=qrOk?(18+qrCss):32;
 
   var H = headerH + card1H + cardGap + (temTit?titCardH+cardGap:0) + card2H + cardGap + qrCardH + bottomPad;
 
@@ -5007,75 +5027,69 @@ function ANT_gerarResumoFoto(){
   // HEADER (igual ao resumo HTML)
   ctx.textAlign='left';
   ctx.fillStyle='#111'; ctx.font='400 32px Georgia,"Times New Roman",serif';
-  ctx.fillText('VB', headLeft, 46);
+  ctx.fillText('VB', headLeft, 40);
   ctx.fillStyle='#888'; ctx.font='500 11px Helvetica,Arial,sans-serif'; setLS('5px');
-  ctx.fillText('ANTECIPAÇÃO', headLeft, 60); setLS('0px');
+  ctx.fillText('ANTECIPAÇÃO', headLeft, 54); setLS('0px');
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(sideM,68); ctx.lineTo(W-sideM,68); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sideM,62); ctx.lineTo(W-sideM,62); ctx.stroke();
 
   var y=headerH;
 
   // CARD 1 (data/prazo/taxa/qtd) — label sobre valor, dois por linha
   card(y,card1H);
-  var iy=y+14;
+  var iy=y+12;
   olk('DATA DA OPERAÇÃO',cardL+18,iy+12,'left');  ov(dataStr,cardL+18,iy+30,'left');
   olk('PRAZO MÉDIO',cardR-18,iy+12,'right');       ov(prazoStr,cardR-18,iy+30,'right');
-  var iy2=iy+36;
+  var iy2=iy+32;
   olk('TAXA',cardL+18,iy2+12,'left');               ov(taxaStr,cardL+18,iy2+30,'left');
   olk('QUANTIDADE',cardR-18,iy2+12,'right');        ov(qtdStr,cardR-18,iy2+30,'right');
-  if(!ANT_modoPersonalizado){
-    var iy3=iy2+32;
-    olk('VALOR DO TÍTULO',cardL+18,iy3+12,'left'); ov('R$ '+ANT_formatBR(vpt),cardL+18,iy3+30,'left');
-  }
   y+=card1H+cardGap;
 
   // CARD TÍTULOS (modo personalizado) — entre os dois cards
   if(temTit){
     card(y,titCardH);
     ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
-    ctx.fillText('TÍTULOS',cardL+16,y+20); setLS('0px');
-    var rt=y+30;
+    ctx.fillText('TÍTULOS',cardL+16,y+18); setLS('0px');
+    var rt=y+27;
     titRows.forEach(function(rw,k){
-      var by=rt+k*24+16;
+      var by=rt+k*22+15;
       ctx.textAlign='left'; ctx.fillStyle='#aaa'; ctx.font='400 11px Helvetica,Arial,sans-serif';
       ctx.fillText(rw.nro,cardL+16,by);
       ctx.textAlign='right'; ctx.fillStyle='#111'; ctx.font='700 13px Helvetica,Arial,sans-serif';
       ctx.fillText('R$ '+ANT_formatBR(rw.vb),cardL+166,by);
       ctx.textAlign='right'; ctx.fillStyle='#555'; ctx.font='400 12px Helvetica,Arial,sans-serif';
       ctx.fillText(rw.venc+' ('+Math.round(rw.prazo)+'d)',cardR-16,by);
-      if(k<titRows.length-1){ ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(cardL+16,rt+k*24+24); ctx.lineTo(cardR-16,rt+k*24+24); ctx.stroke(); }
+      if(k<titRows.length-1){ ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(cardL+16,rt+k*22+22); ctx.lineTo(cardR-16,rt+k*22+22); ctx.stroke(); }
     });
     y+=titCardH+cardGap;
   }
 
-  // CARD 2 (valores) — label e valor na mesma linha
+  // CARD 2 (valores) — [valor do título] / bruto / juros / tarifa, depois líquido — tudo com a mesma fonte e tamanho
   card(y,card2H);
-  var vy=y+14;
-  function line(lbl,val,by){ olk(lbl,cardL+18,by,'left'); ov(val,cardR-18,by,'right'); }
-  line('VALOR BRUTO','R$ '+ANT_formatBR(VB), vy+17);
-  line('JUROS','R$ '+ANT_formatBR(tj), vy+25+17);
-  line('TARIFA','R$ '+ANT_formatBR(tar), vy+50+17);
-  var lqTop=vy+75+3;
+  var vy=y+12;
+  valRows.forEach(function(lbl,idx){
+    var by=vy+15+idx*rowH;
+    olk(lbl,cardL+18,by,'left'); ov(valVals[idx],cardR-18,by,'right');
+  });
+  var lqTop=vy+valRows.length*rowH+2;
   ctx.strokeStyle='#eee'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(cardL+18,lqTop); ctx.lineTo(cardR-18,lqTop); ctx.stroke();
-  var lqBy=lqTop+8+14;
-  ctx.textAlign='left'; ctx.fillStyle='#111'; ctx.font='700 9px Helvetica,Arial,sans-serif'; setLS('2px');
-  ctx.fillText('VALOR LÍQUIDO',cardL+18,lqBy); setLS('0px');
-  ov('R$ '+ANT_formatBR(tl),cardR-18,lqBy,'right');
+  var lqBy=lqTop+(rowH-7);
+  olk('VALOR LÍQUIDO',cardL+18,lqBy,'left'); ov('R$ '+ANT_formatBR(tl),cardR-18,lqBy,'right');
   y+=card2H+cardGap;
 
   // CARD QR (carregar)
   card(y,qrCardH);
   if(qrOk){
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+12)*esc);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+9)*esc);
     ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
     ctx.fillStyle='#000';
     for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
     ctx.restore();
   } else {
     ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
-    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO',W/2,y+18);
-    ctx.fillText('COLE NO CARREGAR',W/2,y+32); setLS('0px');
+    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO',W/2,y+14);
+    ctx.fillText('COLE NO CARREGAR',W/2,y+27); setLS('0px');
   }
   y+=qrCardH;
 
@@ -6478,6 +6492,21 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.4</span><span class="cl-ver-date">22/06/2026 20:50</span></div>
+      <div class="cl-item">Quitação Antecipada: corrigido o alinhamento vertical entre Parcelas a Vencer e Taxa de Desconto (eram estruturas diferentes por dentro; agora os dois campos centralizam na mesma altura)</div>
+      <div class="cl-item">Antecipação (compartilhar): Valor do Título agora é o primeiro item do card de valores (antes vinha depois do Valor Bruto)</div>
+      <div class="cl-item">Antecipação (compartilhar): Valor Líquido agora usa a mesma fonte e tamanho dos outros itens do card (antes tinha um destaque em preto diferente)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.3</span><span class="cl-ver-date">22/06/2026 19:55</span></div>
+      <div class="cl-item">Quitação Antecipada: taxa de desconto agora fica centralizada igual aos outros campos (estava alinhada à direita)</div>
+      <div class="cl-item">Antecipação: corrigido de vez o arredondar não mudar o Valor Bruto Total — agora o botão sempre arredonda o valor por título e recalcula o bruto a partir dele, não importa qual campo você editou por último</div>
+      <div class="cl-item">Antecipação (compartilhar): VALOR DO TÍTULO movido pro card de valores, na mesma altura de linha que Valor Bruto, Juros e Tarifa</div>
+      <div class="cl-item">Antecipação (compartilhar): todos os cards mais finos e mais próximos entre si, nos dois modos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.2.2</span><span class="cl-ver-date">22/06/2026 19:33</span></div>
