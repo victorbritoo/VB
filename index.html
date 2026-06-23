@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.5.4</title>
+<title>VB - v1.6.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -292,7 +292,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.5.4<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.6.0<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1095,13 +1095,27 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
   </div>
 
-  <div id="hist-search-wrap" style="margin-bottom:8px;">
-    <input id="hist-search" type="text" placeholder="Buscar por nome" oninput="HIST_onSearchInput(this)" onclick="if(!this.value)this.select()" style="width:100%;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 14px;font-size:14px;font-weight:400;color:#111;outline:none;background:#fff;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;">
+  <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;">
+    <input id="hist-search" type="text" placeholder="Buscar por nome ou valor" oninput="HIST_onSearchInput(this)" onclick="if(!this.value)this.select()" style="width:100%;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 38px 0 14px;font-size:14px;font-weight:400;color:#111;outline:none;background:#fff;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;">
+    <button id="hist-search-clear" onclick="HIST_clearSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:#eee;color:#777;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;">×</button>
   </div>
+
+  <div id="hist-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+    <div style="display:flex;gap:5px;">
+      <button id="hist-sort-recentes" onclick="HIST_setSort('recentes')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Recentes</button>
+      <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
+      <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
+    </div>
+    <button id="hist-export" onclick="HIST_exportar()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Exportar</button>
+  </div>
+
+  <div id="hist-count" style="font-size:11px;color:#aaa;margin-bottom:6px;min-height:14px;"></div>
 
   <div id="hist-lista" style="min-height:200px;">
     <div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Carregando...</div>
   </div>
+
+  <div id="hist-total" style="display:none;margin-top:4px;padding:12px 16px;background:#111;border-radius:12px;color:#fff;justify-content:space-between;align-items:center;"></div>
 </div>
 </div>
 
@@ -3449,7 +3463,7 @@ sb.auth.onAuthStateChange(function(event, session){
 // ===== HISTÓRICO =====
 var HIST_tabAtual='ant';
 function HIST_setTabStyle(tab){
-  ['ant','ven','pag'].forEach(function(t){
+  ['ant','fin','ven','pag'].forEach(function(t){
     var b=document.getElementById('hist-tab-'+t);
     if(!b) return;
     if(t===tab){ b.style.background='#111'; b.style.color='#fff'; }
@@ -3571,12 +3585,15 @@ function HIST_carregarPag(r){
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
-function HIST_buildRow(tab, idx, titulo, valor, linhas){
+function HIST_buildRow(tab, idx, titulo, valor, dataStr, linhas){
   var cls = 'background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:12px 16px;margin-bottom:6px;cursor:pointer;';
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
   h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
   h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;">'+HIST_esc(titulo)+'</div>';
   h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
+  h += '<button data-dup-tab="'+tab+'" data-dup-idx="'+idx+'" onclick="HIST_clickDuplicate(this,event)" ';
+  h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
+  h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
   h += '<button data-shr-tab="'+tab+'" data-shr-idx="'+idx+'" onclick="HIST_clickShare(this,event)" ';
   h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
   h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M7 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg></button>';
@@ -3590,10 +3607,11 @@ function HIST_buildRow(tab, idx, titulo, valor, linhas){
   h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   h += '</div></div>';
   var valLabel = tab==='ant'?'Bruto ':tab==='fin'?'Financiado ':tab==='ven'?'Total ':'';
-  var detalhe='';
-  if(valor){ detalhe += '<span style="color:#111;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'; }
-  if(linhas.length){ detalhe += (valor?'<span style="color:#ccc;"> · </span>':'') + HIST_esc(linhas.join(' · ')); }
-  if(detalhe) h += '<div style="font-size:11px;color:#aaa;margin-top:6px;line-height:1.7;">'+detalhe+'</div>';
+  var parts=[];
+  if(valor){ parts.push('<span style="color:#111;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
+  if(dataStr && dataStr!=='--'){ parts.push('<span style="color:#555;font-weight:600;">'+HIST_esc(dataStr)+'</span>'); }
+  if(linhas.length){ parts.push('<span style="color:#aaa;">'+HIST_esc(linhas.join(' · '))+'</span>'); }
+  if(parts.length) h += '<div style="font-size:11px;margin-top:6px;line-height:1.7;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
   h += '</div>';
   return h;
 }
@@ -3643,6 +3661,59 @@ function HIST_clickRename(el, event){
   });
 }
 
+// ===== Duplicar: carrega a operação no módulo, mas como NOVA (zera o id -> confirmar insere) =====
+function HIST_clickDuplicate(el, event){
+  event.stopPropagation();
+  var tab=el.getAttribute('data-dup-tab');
+  var idx=parseInt(el.getAttribute('data-dup-idx'));
+  var r=HIST_rowsCache[idx]; if(!r) return;
+  if(tab==='ant'){ HIST_carregarAnt(r); ANT_currentOperationId=null; ANT_updateConfirmarBtnLabel && ANT_updateConfirmarBtnLabel(); }
+  else if(tab==='fin'){ HIST_carregarFin(r); FIN_currentOperationId=null; FIN_updateConfirmarBtnLabel && FIN_updateConfirmarBtnLabel(); }
+  else if(tab==='ven'){ HIST_carregarVen(r); VEN_currentOperationId=null; VEN_updateConfirmarBtnLabel && VEN_updateConfirmarBtnLabel(); }
+  else { HIST_carregarPag(r); PAG_currentOperationId=null; PAG_updateConfirmarBtnLabel && PAG_updateConfirmarBtnLabel(); }
+  VB_toast('Cópia carregada. Ajuste e confirme para criar uma nova.');
+}
+
+// ===== Exportar CSV da aba atual (respeita busca e ordenação) e abre a folha do iPhone =====
+function _csvCell(v){ return '"'+(''+(v==null?'':v)).replace(/"/g,'""')+'"'; }
+function HIST_csv(tab, rows){
+  var head, lin=[];
+  if(tab==='ant'){
+    head=['Nome','Data','Modo','Taxa (% a.m.)','Tarifa','Qtd títulos','Prazo médio (d)','Bruto','Líquido'];
+    rows.forEach(function(r){ lin.push([r.cliente||'', HIST_fmtData(r.data_operacao), (r.modo==='personalizado'?'Personalizada':'Simples'), r.taxa||'', HIST_fmtMoeda(r.tarifa), r.quantidade_titulos||'', (r.prazo_medio!=null?Number(r.prazo_medio).toFixed(1):''), HIST_fmtMoeda(r.valor_bruto), HIST_fmtMoeda(r.valor_liquido)]); });
+  } else if(tab==='fin'){
+    head=['Descrição','Data início','Parcelas','Valor parcela','Taxa (% a.m.)','Financiado','Total'];
+    rows.forEach(function(r){ lin.push([r.descricao||'', HIST_fmtData(r.data_inicio), r.qtd_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.taxa||'', HIST_fmtMoeda(r.valor_financiado), HIST_fmtMoeda(r.valor_total)]); });
+  } else if(tab==='ven'){
+    head=['Descrição','1ª parcela','Qtd parcelas','Valor parcela','Modo','Total'];
+    rows.forEach(function(r){ lin.push([r.descricao||'', HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.modo||'', HIST_fmtMoeda(r.valor_total)]); });
+  } else {
+    head=['Data','Qtd lançamentos','Total'];
+    rows.forEach(function(r){ var d=r.created_at?r.created_at.split('T')[0]:null; lin.push([HIST_fmtData(d), (r.pagamentos||[]).length, HIST_fmtMoeda(r.valor_total)]); });
+  }
+  var out=[head.map(_csvCell).join(';')];
+  lin.forEach(function(row){ out.push(row.map(_csvCell).join(';')); });
+  return out.join('\r\n');
+}
+function HIST_exportar(){
+  var tab=HIST_tabAtual;
+  var rows=HIST_rowsCache||[];
+  if(!rows.length){ VB_toast('Nada para exportar.'); return; }
+  try{
+    var csv=HIST_csv(tab, rows);
+    var blob=new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+    var hoje=new Date(); var dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+    var fname='VB - '+HIST_tabLabel(tab)+' '+dd+'-'+mm+'-'+hoje.getFullYear()+'.csv';
+    var file=new File([blob], fname, {type:'text/csv'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:fname}).catch(function(){});
+    } else {
+      var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=fname;
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+    }
+  }catch(e){ VB_toast('Não consegui exportar.'); }
+}
+
 // ===== Compartilhar do histórico: gera a imagem em silêncio e abre a folha do iPhone =====
 function _histSetVal(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
 function _histGetVal(id){ var e=document.getElementById(id); return e?e.value:''; }
@@ -3656,6 +3727,7 @@ function HIST_clickShare(el, event){
   var tab=el.getAttribute('data-shr-tab');
   var idx=parseInt(el.getAttribute('data-shr-idx'));
   var r=HIST_rowsCache[idx]; if(!r) return;
+  VB_toast('Gerando…');
   try{
     if(tab==='ant') HIST_shareAnt(r);
     else if(tab==='fin') HIST_shareFin(r);
@@ -3721,16 +3793,42 @@ function HIST_sharePag(r){
 }
 var HIST_searchTerm='';
 var HIST_searchTimer=null;
+var HIST_sortMode='recentes';
 // Coluna de nome por aba (Pagamentos não tem -> null)
 function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
 function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
+function HIST_valCol(tab){ return tab==='ant'?'valor_bruto':tab==='fin'?'valor_financiado':'valor_total'; }
+function HIST_dateCol(tab){ return tab==='ant'?'data_operacao':tab==='fin'?'data_inicio':tab==='ven'?'data_primeira_parcela':'created_at'; }
+function HIST_tabLabel(tab){ return tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'; }
+function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
+function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
+// Converte "12.500,00" / "R$ 1.234" / "125" em número (ou null se não tiver dígito)
+function HIST_parseNum(s){
+  if(!s) return null;
+  var t=(''+s).replace(/[^0-9.,]/g,'');
+  if(!/[0-9]/.test(t)) return null;
+  t=t.replace(/\./g,'').replace(',', '.');
+  var n=parseFloat(t);
+  return isNaN(n)?null:n;
+}
+
+function HIST_styleSortChips(){
+  ['recentes','valor','data'].forEach(function(m){
+    var b=document.getElementById('hist-sort-'+m); if(!b) return;
+    if(m===HIST_sortMode){ b.style.background='#111'; b.style.color='#fff'; }
+    else { b.style.background='#fff'; b.style.color='#aaa'; }
+  });
+}
 
 function HIST_loadTab(tab){
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
   HIST_searchTerm='';
+  HIST_sortMode='recentes';
+  HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
-  if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+(tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'); }
+  if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
   var wrap=document.getElementById('hist-search-wrap');
   if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
   HIST_fetch('');
@@ -3739,18 +3837,46 @@ function HIST_loadTab(tab){
 function HIST_onSearchInput(el){
   var term=(el.value||'').trim();
   HIST_searchTerm=term;
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = term ? 'inline-flex' : 'none';
   clearTimeout(HIST_searchTimer);
   HIST_searchTimer=setTimeout(function(){ HIST_fetch(term); }, 300);
+}
+function HIST_clearSearch(){
+  var sEl=document.getElementById('hist-search'); if(sEl) sEl.value='';
+  HIST_searchTerm='';
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
+  HIST_fetch('');
+}
+function HIST_setSort(mode){
+  HIST_sortMode=mode;
+  HIST_styleSortChips();
+  HIST_fetch(HIST_searchTerm);
 }
 
 function HIST_fetch(term){
   var tab=HIST_tabAtual;
   var listaEl=document.getElementById('hist-lista');
+  var countEl=document.getElementById('hist-count');
+  var totalEl=document.getElementById('hist-total');
+  if(totalEl) totalEl.style.display='none';
+  if(countEl) countEl.textContent='';
   listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Carregando...</div>';
   var q=sb.from(HIST_tabela(tab)).select('*');
-  var col=HIST_nameCol(tab);
-  if(term && col){ q=q.ilike(col, '%'+term+'%'); }
-  q.order('created_at',{ascending:false}).limit(30).then(function(res){
+  var col=HIST_nameCol(tab), valCol=HIST_valCol(tab);
+  if(term){
+    var safe=term.replace(/[,*()]/g,' ');
+    var ors=[];
+    if(col) ors.push(col+'.ilike.%'+safe+'%');
+    var num=HIST_parseNum(term);
+    if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
+    if(ors.length>1) q=q.or(ors.join(','));
+    else if(ors.length===1 && col) q=q.ilike(col,'%'+safe+'%');
+    else if(num!=null && valCol) q=q.eq(valCol,num);
+  }
+  if(HIST_sortMode==='valor') q=q.order(valCol,{ascending:false});
+  else if(HIST_sortMode==='data') q=q.order(HIST_dateCol(tab),{ascending:false});
+  else q=q.order('created_at',{ascending:false});
+  q.limit(500).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
     if(rows.length===0){
@@ -3759,6 +3885,18 @@ function HIST_fetch(term){
       HIST_rowsCache=[]; HIST_tabCache=tab; return;
     }
     HIST_renderRows(tab, rows);
+    // contador
+    if(countEl){
+      var n=rows.length, capped=(n>=500?'500+':n);
+      countEl.textContent = (term?'Encontrado: ':'')+capped+' '+(n===1?'operação':'operações');
+    }
+    // total
+    if(totalEl){
+      var soma=rows.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
+      totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+')</span>'+
+        '<span style="font-size:15px;font-weight:700;">'+HIST_fmtMoeda(soma)+'</span>';
+      totalEl.style.display='flex';
+    }
   }).catch(function(e){
     listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Sem conexão.</div>';
   });
@@ -3766,17 +3904,16 @@ function HIST_fetch(term){
 
 // Recarrega a lista respeitando uma busca ativa (usado após renomear/excluir)
 function HIST_reload(tab){
-  if(HIST_searchTerm) HIST_fetch(HIST_searchTerm); else HIST_loadTab(tab);
+  HIST_fetch(HIST_searchTerm);
 }
 
 function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
   rows.forEach(function(r,idx){
-    var titulo,linhas=[],valor;
+    var titulo,linhas=[],valor,dataStr=HIST_fmtData(HIST_dataOp(tab,r));
     if(tab==='ant'){
       titulo=r.cliente||'(sem nome)';
-      linhas.push(HIST_fmtData(r.data_operacao));
       if(r.modo) linhas.push(r.modo==='personalizado'?'Personalizada':'Simples');
       if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
       if(r.tarifa) linhas.push('Tarifa '+HIST_fmtMoeda(r.tarifa));
@@ -3786,7 +3923,6 @@ function HIST_renderRows(tab, rows){
       valor=HIST_fmtMoeda(r.valor_bruto);
     } else if(tab==='fin'){
       titulo=r.descricao||'(sem descrição)';
-      linhas.push(HIST_fmtData(r.data_inicio));
       if(r.qtd_parcelas) linhas.push(r.qtd_parcelas+'x');
       if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
       if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
@@ -3794,20 +3930,17 @@ function HIST_renderRows(tab, rows){
       valor=HIST_fmtMoeda(r.valor_financiado);
     } else if(tab==='ven'){
       titulo=r.descricao||'(sem descrição)';
-      linhas.push(HIST_fmtData(r.data_primeira_parcela));
       if(r.quantidade_parcelas) linhas.push(r.quantidade_parcelas+'x');
       if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
       if(r.modo) linhas.push(r.modo);
       valor=HIST_fmtMoeda(r.valor_total);
     } else {
-      // Pagamentos não tem nome -> título = valor + data
       var qtd=(r.pagamentos||[]).length;
-      var dataPag=HIST_fmtData(r.created_at?r.created_at.split('T')[0]:null);
-      titulo=HIST_fmtMoeda(r.valor_total)+' · '+dataPag;
+      titulo='Divisão · '+HIST_fmtMoeda(r.valor_total);
       linhas.push(qtd+' lançamento'+(qtd!==1?'s':''));
       valor='';
     }
-    html+=HIST_buildRow(tab, idx, titulo, valor, linhas);
+    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, linhas);
   });
   listaEl.innerHTML=html;
   HIST_rowsCache=rows; HIST_tabCache=tab;
@@ -7301,6 +7434,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.6.0</span><span class="cl-ver-date">23/06/2026 16:00</span></div>
+      <div class="cl-item">Histórico: botão Duplicar (ícone de cópia) em cada item — carrega a operação no módulo já preenchida, mas como nova, pra você ajustar e confirmar sem alterar a original</div>
+      <div class="cl-item">Histórico: ordenar por Recentes, Valor ou Data (botões no topo)</div>
+      <div class="cl-item">Histórico: total da aba somado no rodapé (Bruto/Financiado/Total) e contador de resultados</div>
+      <div class="cl-item">Histórico: busca agora acha por nome ou por valor; botão × pra limpar a busca rápido</div>
+      <div class="cl-item">Histórico: data da operação em destaque na linha; botão Exportar gera um CSV da aba (abre na folha do iPhone, abre no Numbers/Excel)</div>
+      <div class="cl-item">Histórico: ao compartilhar, aparece um aviso "Gerando…"; e a aba Financiamento agora destaca certo quando selecionada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.5.4</span><span class="cl-ver-date">23/06/2026 15:00</span></div>
