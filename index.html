@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.3.8</title>
+<title>VB - v1.4.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -278,9 +278,21 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </form>
 </div>
 
+<!-- Overlay NOMEAR / RENOMEAR operação -->
+<div id="vb-name-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100002;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
+    <div id="vb-name-title" style="font-size:12px;letter-spacing:2px;color:#888;font-weight:600;margin-bottom:14px;text-align:center;font-family:-apple-system,sans-serif;">NOMEAR OPERAÇÃO</div>
+    <input id="vb-name-input" type="text" placeholder="Nome da operação" onclick="if(!this.value)this.select()" style="width:100%;height:46px;border:0.5px solid #ddd;border-radius:12px;padding:0 14px;font-size:15px;font-weight:400;color:#111;outline:none;background:#fff;text-align:center;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button id="vb-name-skip" type="button" ontouchend="event.preventDefault();VB_nameSkip()" onclick="VB_nameSkip()" style="padding:13px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PULAR</button>
+      <button id="vb-name-ok" type="button" ontouchend="event.preventDefault();VB_nameOk()" onclick="VB_nameOk()" style="padding:13px;border:none;border-radius:12px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">SALVAR</button>
+    </div>
+  </div>
+</div>
+
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.3.8<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.4.0<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -299,8 +311,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button onclick="PIN_request('ven')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Vendas</div>
     </button>
-    <button onclick="PIN_request('hist')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
-      <div style="font-size:18px;font-weight:700;color:#111;">Histórico</div>
+    <button onclick="PIN_request('hist')" style="display:block;width:100%;padding:14px 18px;border:none;border-radius:14px;background:#111;text-align:center;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#fff;">Histórico</div>
     </button>
     <div onclick="VB_logout()" style="text-align:center;margin-top:14px;font-size:10px;color:#ccc;letter-spacing:1px;cursor:pointer;font-family:-apple-system,sans-serif;">SAIR</div>
   </div>
@@ -1081,6 +1093,10 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
     <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
+  </div>
+
+  <div id="hist-search-wrap" style="margin-bottom:8px;">
+    <input id="hist-search" type="text" placeholder="Buscar por nome" oninput="HIST_onSearchInput(this)" onclick="if(!this.value)this.select()" style="width:100%;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 14px;font-size:14px;font-weight:400;color:#111;outline:none;background:#fff;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;">
   </div>
 
   <div id="hist-lista" style="min-height:200px;">
@@ -3562,6 +3578,10 @@ function HIST_buildRow(tab, idx, titulo, valor, linhas){
   h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;">'+HIST_esc(titulo)+'</div>';
   h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
   h += '<div style="font-size:14px;font-weight:700;color:#111;white-space:nowrap;">'+valor+'</div>';
+  if(tab!=='pag'){
+    h += '<button data-ren-tab="'+tab+'" data-ren-idx="'+idx+'" onclick="HIST_clickRename(this,event)" ';
+    h += 'style="border:0.5px solid #ddd;background:#fff;color:#111;border-radius:8px;width:26px;height:26px;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1;">✎</button>';
+  }
   h += '<button data-del-tab="'+tab+'" data-del-idx="'+idx+'" onclick="HIST_clickDelete(this,event)" ';
   h += 'style="border:none;background:#111;color:#fff;border-radius:8px;width:26px;height:26px;font-size:15px;cursor:pointer;flex-shrink:0;line-height:1;">×</button>';
   h += '</div></div>';
@@ -3588,62 +3608,123 @@ function HIST_clickDelete(el, event){
   sb.from(tabela).delete().eq('id',r.id).then(function(res){
     if(res.error){ VB_toast('Não conseguiu excluir.'); return; }
     VB_toast('Excluído.');
-    HIST_loadTab(tab);
+    HIST_reload(tab);
   });
 }
+// Renomear: edita só o campo de nome (cliente/descrição). Não toca em valores, taxa, títulos.
+function HIST_clickRename(el, event){
+  event.stopPropagation();
+  var tab=el.getAttribute('data-ren-tab');
+  var idx=parseInt(el.getAttribute('data-ren-idx'));
+  var r=HIST_rowsCache[idx]; if(!r) return;
+  var col=HIST_nameCol(tab); if(!col) return;
+  VB_promptNome({
+    titulo:'RENOMEAR',
+    valor:(r[col]||''),
+    labelEsq:'CANCELAR',
+    labelDir:'SALVAR',
+    onConfirm:function(nome){
+      var upd={}; upd[col]=nome||null;
+      sb.from(HIST_tabela(tab)).update(upd).eq('id',r.id).then(function(res){
+        if(res.error){ VB_toast('Não consegui renomear.'); return; }
+        VB_toast('Renomeado.');
+        HIST_reload(tab);
+      });
+    },
+    onSkip:null
+  });
+}
+var HIST_searchTerm='';
+var HIST_searchTimer=null;
+// Coluna de nome por aba (Pagamentos não tem -> null)
+function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
+function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
+
 function HIST_loadTab(tab){
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
+  HIST_searchTerm='';
+  var sEl=document.getElementById('hist-search'); if(sEl) sEl.value='';
+  var wrap=document.getElementById('hist-search-wrap');
+  if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
+  HIST_fetch('');
+}
+
+function HIST_onSearchInput(el){
+  var term=(el.value||'').trim();
+  HIST_searchTerm=term;
+  clearTimeout(HIST_searchTimer);
+  HIST_searchTimer=setTimeout(function(){ HIST_fetch(term); }, 300);
+}
+
+function HIST_fetch(term){
+  var tab=HIST_tabAtual;
   var listaEl=document.getElementById('hist-lista');
   listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Carregando...</div>';
-  var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos';
-  sb.from(tabela).select('*').order('created_at',{ascending:false}).limit(30).then(function(res){
+  var q=sb.from(HIST_tabela(tab)).select('*');
+  var col=HIST_nameCol(tab);
+  if(term && col){ q=q.ilike(col, '%'+term+'%'); }
+  q.order('created_at',{ascending:false}).limit(30).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
-    if(rows.length===0){ listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Nada confirmado ainda.</div>'; return; }
-    var html='';
-    rows.forEach(function(r,idx){
-      var titulo,linhas=[],valor;
-      if(tab==='ant'){
-        titulo=r.cliente||'(sem nome)';
-        linhas.push(HIST_fmtData(r.data_operacao));
-        if(r.modo) linhas.push(r.modo==='personalizado'?'Personalizada':'Simples');
-        if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
-        if(r.tarifa) linhas.push('Tarifa '+HIST_fmtMoeda(r.tarifa));
-        if(r.quantidade_titulos) linhas.push(r.quantidade_titulos+' título'+(r.quantidade_titulos>1?'s':''));
-        if(r.prazo_medio) linhas.push('PM '+Number(r.prazo_medio).toFixed(1)+'d');
-        if(r.valor_liquido) linhas.push('Líq. '+HIST_fmtMoeda(r.valor_liquido));
-        valor=HIST_fmtMoeda(r.valor_bruto);
-      } else if(tab==='fin'){
-        titulo=r.descricao||'(sem descrição)';
-        linhas.push(HIST_fmtData(r.data_inicio));
-        if(r.qtd_parcelas) linhas.push(r.qtd_parcelas+'x');
-        if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
-        if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
-        if(r.valor_total) linhas.push('Total '+HIST_fmtMoeda(r.valor_total));
-        valor=HIST_fmtMoeda(r.valor_financiado);
-      } else if(tab==='ven'){
-        titulo=r.descricao||'(sem descrição)';
-        linhas.push(HIST_fmtData(r.data_primeira_parcela));
-        if(r.quantidade_parcelas) linhas.push(r.quantidade_parcelas+'x');
-        if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
-        if(r.modo) linhas.push(r.modo);
-        valor=HIST_fmtMoeda(r.valor_total);
-      } else {
-        titulo='Divisão de pagamento';
-        var qtd=(r.pagamentos||[]).length;
-        linhas.push(HIST_fmtData(r.created_at?r.created_at.split('T')[0]:null));
-        linhas.push(qtd+' lançamento'+(qtd!==1?'s':''));
-        valor=HIST_fmtMoeda(r.valor_total);
-      }
-      html+=HIST_buildRow(tab, idx, titulo, valor, linhas);
-
-    });
-    listaEl.innerHTML=html;
-    HIST_rowsCache=rows; HIST_tabCache=tab;
+    if(rows.length===0){
+      var msg = term ? 'Nada encontrado.' : 'Nada confirmado ainda.';
+      listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">'+msg+'</div>';
+      HIST_rowsCache=[]; HIST_tabCache=tab; return;
+    }
+    HIST_renderRows(tab, rows);
   }).catch(function(e){
     listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Sem conexão.</div>';
   });
+}
+
+// Recarrega a lista respeitando uma busca ativa (usado após renomear/excluir)
+function HIST_reload(tab){
+  if(HIST_searchTerm) HIST_fetch(HIST_searchTerm); else HIST_loadTab(tab);
+}
+
+function HIST_renderRows(tab, rows){
+  var listaEl=document.getElementById('hist-lista');
+  var html='';
+  rows.forEach(function(r,idx){
+    var titulo,linhas=[],valor;
+    if(tab==='ant'){
+      titulo=r.cliente||'(sem nome)';
+      linhas.push(HIST_fmtData(r.data_operacao));
+      if(r.modo) linhas.push(r.modo==='personalizado'?'Personalizada':'Simples');
+      if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
+      if(r.tarifa) linhas.push('Tarifa '+HIST_fmtMoeda(r.tarifa));
+      if(r.quantidade_titulos) linhas.push(r.quantidade_titulos+' título'+(r.quantidade_titulos>1?'s':''));
+      if(r.prazo_medio) linhas.push('PM '+Number(r.prazo_medio).toFixed(1)+'d');
+      if(r.valor_liquido) linhas.push('Líq. '+HIST_fmtMoeda(r.valor_liquido));
+      valor=HIST_fmtMoeda(r.valor_bruto);
+    } else if(tab==='fin'){
+      titulo=r.descricao||'(sem descrição)';
+      linhas.push(HIST_fmtData(r.data_inicio));
+      if(r.qtd_parcelas) linhas.push(r.qtd_parcelas+'x');
+      if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
+      if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
+      if(r.valor_total) linhas.push('Total '+HIST_fmtMoeda(r.valor_total));
+      valor=HIST_fmtMoeda(r.valor_financiado);
+    } else if(tab==='ven'){
+      titulo=r.descricao||'(sem descrição)';
+      linhas.push(HIST_fmtData(r.data_primeira_parcela));
+      if(r.quantidade_parcelas) linhas.push(r.quantidade_parcelas+'x');
+      if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
+      if(r.modo) linhas.push(r.modo);
+      valor=HIST_fmtMoeda(r.valor_total);
+    } else {
+      // Pagamentos não tem nome -> título = valor + data
+      var qtd=(r.pagamentos||[]).length;
+      var dataPag=HIST_fmtData(r.created_at?r.created_at.split('T')[0]:null);
+      titulo=HIST_fmtMoeda(r.valor_total)+' · '+dataPag;
+      linhas.push(qtd+' lançamento'+(qtd!==1?'s':''));
+      valor='';
+    }
+    html+=HIST_buildRow(tab, idx, titulo, valor, linhas);
+  });
+  listaEl.innerHTML=html;
+  HIST_rowsCache=rows; HIST_tabCache=tab;
 }
 var HIST_rowsCache=[];
 var HIST_tabCache='';
@@ -3705,6 +3786,34 @@ function VB_toast(msg){
     clearTimeout(t._vbT);
     t._vbT=setTimeout(function(){ t.style.opacity='0'; }, 2200);
   }catch(e){}
+}
+
+// ===== Telinha de NOMEAR / RENOMEAR (overlay no app, sem prompt do sistema) =====
+var VB_nameCb=null, VB_nameSkipCb=null;
+function VB_promptNome(opts){
+  opts=opts||{};
+  var ov=document.getElementById('vb-name-overlay');
+  document.getElementById('vb-name-title').textContent=opts.titulo||'NOMEAR OPERAÇÃO';
+  var inp=document.getElementById('vb-name-input');
+  inp.value=opts.valor||'';
+  document.getElementById('vb-name-skip').textContent=opts.labelEsq||'PULAR';
+  document.getElementById('vb-name-ok').textContent=opts.labelDir||'SALVAR';
+  VB_nameCb=opts.onConfirm||null;
+  VB_nameSkipCb=(typeof opts.onSkip!=='undefined')?opts.onSkip:null;
+  ov.style.display='flex';
+  setTimeout(function(){ try{ inp.focus(); if(inp.value) inp.select(); }catch(e){} }, 60);
+}
+function VB_nameClose(){ var ov=document.getElementById('vb-name-overlay'); if(ov) ov.style.display='none'; }
+function VB_nameOk(){
+  var n=(document.getElementById('vb-name-input').value||'').trim();
+  var cb=VB_nameCb; VB_nameCb=null; VB_nameSkipCb=null;
+  VB_nameClose();
+  if(cb) cb(n);
+}
+function VB_nameSkip(){
+  var cb=VB_nameSkipCb; VB_nameCb=null; VB_nameSkipCb=null;
+  VB_nameClose();
+  if(cb) cb();
 }
 
 var VB_telaAnterior = 'home';
@@ -4102,7 +4211,15 @@ function FIN_updateConfirmarBtnLabel(){
   if(!b) return;
   b.textContent = FIN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
 }
+var FIN_nomeChecked=false;
 function FIN_confirmarOperacao(btn){
+  var _nomeEl=document.getElementById('fin-tabelaDesc');
+  if(!(_nomeEl.value||'').trim() && !FIN_nomeChecked){
+    VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
+      onConfirm:function(nome){ if(nome) _nomeEl.value=nome; FIN_nomeChecked=true; FIN_confirmarOperacao(btn); FIN_nomeChecked=false; },
+      onSkip:function(){ FIN_nomeChecked=true; FIN_confirmarOperacao(btn); FIN_nomeChecked=false; } });
+    return;
+  }
   var desc=(document.getElementById('fin-tabelaDesc').value||'').trim();
   var dataStr=(document.getElementById('fin-tabelaData').value||'');
   var valor=FIN_parseBR(document.getElementById('fin-valor').value);
@@ -4651,7 +4768,15 @@ function VEN_updateConfirmarBtnLabel(){
   if(!b) return;
   b.textContent = VEN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
 }
+var VEN_nomeChecked=false;
 function VEN_confirmarOperacao(btn){
+  var _nomeEl=document.getElementById('ven-tabelaDesc');
+  if(!(_nomeEl.value||'').trim() && !VEN_nomeChecked){
+    VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
+      onConfirm:function(nome){ if(nome) _nomeEl.value=nome; VEN_nomeChecked=true; VEN_confirmarOperacao(btn); VEN_nomeChecked=false; },
+      onSkip:function(){ VEN_nomeChecked=true; VEN_confirmarOperacao(btn); VEN_nomeChecked=false; } });
+    return;
+  }
   var desc=(document.getElementById('ven-tabelaDesc').value||'').trim();
   var dataStr=(document.getElementById('ven-tabelaData').value||'');
   var modo = VEN_modoPersonalizado ? 'personalizado' : 'simples';
@@ -5431,7 +5556,15 @@ function ANT_updateConfirmarBtnLabel(){
   b.textContent = ANT_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
 }
 
+var ANT_nomeChecked=false;
 function ANT_confirmarOperacao(btn){
+  var _nomeEl=document.getElementById('ant-tabelaCliente');
+  if(!(_nomeEl.value||'').trim() && !ANT_nomeChecked){
+    VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
+      onConfirm:function(nome){ if(nome) _nomeEl.value=nome; ANT_nomeChecked=true; ANT_confirmarOperacao(btn); ANT_nomeChecked=false; },
+      onSkip:function(){ ANT_nomeChecked=true; ANT_confirmarOperacao(btn); ANT_nomeChecked=false; } });
+    return;
+  }
   var cliente=(document.getElementById('ant-tabelaCliente').value||'').trim();
   var dataOpStr=(document.getElementById('ant-dataOperacao').value||'');
   var modo = ANT_modoPersonalizado ? 'personalizado' : 'simples';
@@ -7068,6 +7201,15 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.4.0</span><span class="cl-ver-date">23/06/2026 12:40</span></div>
+      <div class="cl-item">Histórico: busca por nome no topo de cada aba (Antecipação, Financiamento e Vendas) — consulta o banco inteiro, não só os últimos 30. Pagamentos não tem busca por nome</div>
+      <div class="cl-item">Histórico: lápis ✎ em cada item para renomear. Edita só o nome (cliente/descrição) — não mexe em valores, taxa, títulos ou datas</div>
+      <div class="cl-item">Ao confirmar uma operação sem nome (Antecipação, Financiamento, Vendas) abre uma telinha para nomear, com botão PULAR (salva sem nome)</div>
+      <div class="cl-item">Histórico (Pagamentos): como não tem campo de nome, o título passou a ser o valor + a data, em vez do fixo "Divisão de pagamento"</div>
+      <div class="cl-item">Tela inicial: botão Histórico agora é preto com letra branca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.3.8</span><span class="cl-ver-date">23/06/2026 12:05</span></div>
