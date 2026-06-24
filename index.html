@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.15.0</title>
+<title>VB - v1.15.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.15.0<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.15.2<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1140,12 +1140,12 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <hr class="divider">
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
-    <button id="hist-tab-ant" onclick="HIST_loadTab('ant')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ANTECIPAÇÃO</button>
     <button id="hist-tab-fin" onclick="HIST_loadTab('fin')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FINANCIAMENTO</button>
+    <button id="hist-tab-ant" onclick="HIST_loadTab('ant')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ANTECIPAÇÃO</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
-    <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
+    <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
   </div>
 
   <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;display:none;">
@@ -4029,6 +4029,7 @@ function _histShareImg(imgId, prefix, descId, nomeArquivo){
   VB_compartilharImg(imgId, prefix, descId, nomeArquivo);
 }
 var HIST_voltaParaHist=false;
+var VB_shareNomeOverride=null; // ao compartilhar do Histórico, força o nome do arquivo = apelido do Histórico
 // Compartilhar individual: carrega a operação no módulo e abre a tela da tabela (overlay com COMPARTILHAR/FECHAR).
 // O FECHAR volta pro Histórico (mesma aba, busca/ordenação preservadas).
 function HIST_clickShare(el, event){
@@ -4037,6 +4038,8 @@ function HIST_clickShare(el, event){
   var idx=parseInt(el.getAttribute('data-shr-idx'));
   var r=HIST_rowsCache[idx]; if(!r) return;
   HIST_voltaParaHist=true;
+  var _hn=(tab==='ant')?(r.nome||r.cliente||''):(tab==='fin'||tab==='ven')?(r.nome||r.descricao||''):(r.nome||'');
+  VB_shareNomeOverride=(_hn&&_hn.trim())?_hn.trim():null;
   try{
     if(tab==='ant'){ HIST_carregarAnt(r); ANT_gerarTabela(); }
     else if(tab==='fin'){ HIST_carregarFin(r); FIN_compartilharTabela(); }
@@ -4451,6 +4454,7 @@ function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
     if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Gere a imagem primeiro.'); return; }
     var desc='';
     if(typeof nomeArquivo==='string' && nomeArquivo.trim()){ desc=nomeArquivo.trim(); }
+    else if(VB_shareNomeOverride && VB_shareNomeOverride.trim()){ desc=VB_shareNomeOverride.trim(); }
     else if(descId){ var d=document.getElementById(descId); if(d) desc=(d.value||'').trim(); }
     var sufixo = desc ? (' - '+desc) : '';
     if(!desc && prefix==='ANT'){
@@ -4808,6 +4812,7 @@ function FIN_fecharTabela(){
   var dica=document.getElementById('fin-tabelaImagemDica'); if(dica) dica.style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
+  VB_shareNomeOverride=null;
 }
 function FIN_compartilharTabela(){
   var pmt    = FIN_parseBR(document.getElementById('fin-parcela').value);
@@ -5391,6 +5396,7 @@ function VEN_fecharTabela(){
   var dica = document.getElementById('ven-tabelaImagemDica'); if(dica) dica.style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
+  VB_shareNomeOverride=null;
 }
 
 function VEN_gerarTabela(){
@@ -6023,6 +6029,7 @@ function ANT_fecharTabela(){
   document.getElementById('ant-tabelaDica').style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
+  VB_shareNomeOverride=null;
 }
 
 // ===== Pinça/zoom — somente na tela de tabela da Antecipação =====
@@ -7371,6 +7378,7 @@ function PAG_fecharTabela(){
   var dica=document.getElementById('pag-tabelaImagemDica'); if(dica) dica.style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
+  VB_shareNomeOverride=null;
 }
 
 PAG_maskVal(document.getElementById('pag-total'), function(){ PAG_update(); PAG_saveSession(); });
@@ -8100,6 +8108,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.15.2</span><span class="cl-ver-date">24/06/2026 20:05</span></div>
+      <div class="cl-item">Ao compartilhar pelo botão de um item do Histórico, o nome do arquivo agora é o apelido que aparece no Histórico (mesmo que você tenha renomeado pelo lápis). O conteúdo da tabela continua mostrando o cliente/descrição real. Compartilhar gerando direto no módulo segue como antes</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.15.1</span><span class="cl-ver-date">24/06/2026 19:50</span></div>
+      <div class="cl-item">Histórico: abas reordenadas para Financiamento | Antecipação (em cima) e Pagamentos | Vendas (embaixo)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.15.0</span><span class="cl-ver-date">24/06/2026 19:35</span></div>
