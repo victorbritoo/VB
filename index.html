@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.7.4</title>
+<title>VB - v1.8.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -292,7 +292,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.7.4<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.8.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3680,7 +3680,8 @@ function HIST_clickDelete(el, event){
     HIST_reload(tab);
   });
 }
-// Renomear: edita só o campo de nome (cliente/descrição). Não toca em valores, taxa, títulos.
+// Renomear: grava SÓ no apelido do histórico (coluna nome). Nunca toca em cliente/descrição
+// nem em valores, taxa, títulos. Apagar e salvar vazio volta a exibir o cliente/descrição.
 function HIST_clickRename(el, event){
   event.stopPropagation();
   var tab=el.getAttribute('data-ren-tab');
@@ -3689,11 +3690,11 @@ function HIST_clickRename(el, event){
   var col=HIST_nameCol(tab); if(!col) return;
   VB_promptNome({
     titulo:'RENOMEAR',
-    valor:(r[col]||''),
+    valor:(r.nome||r[col]||''),
     labelEsq:'CANCELAR',
     labelDir:'SALVAR',
     onConfirm:function(nome){
-      var upd={}; upd[col]=nome||null;
+      var upd={ nome:(nome||null) };
       sb.from(HIST_tabela(tab)).update(upd).eq('id',r.id).then(function(res){
         if(res.error){ VB_toast('Não consegui renomear.'); return; }
         VB_toast('Renomeado.');
@@ -3710,13 +3711,13 @@ function HIST_csv(tab, rows){
   var head, lin=[];
   if(tab==='ant'){
     head=['Nome','Data','Modo','Taxa (% a.m.)','Tarifa','Qtd títulos','Prazo médio (d)','Bruto','Líquido'];
-    rows.forEach(function(r){ lin.push([r.cliente||'', HIST_fmtData(r.data_operacao), (r.modo==='personalizado'?'Personalizada':'Simples'), r.taxa||'', HIST_fmtMoeda(r.tarifa), r.quantidade_titulos||'', (r.prazo_medio!=null?Number(r.prazo_medio).toFixed(1):''), HIST_fmtMoeda(r.valor_bruto), HIST_fmtMoeda(r.valor_liquido)]); });
+    rows.forEach(function(r){ lin.push([(r.nome||r.cliente||''), HIST_fmtData(r.data_operacao), (r.modo==='personalizado'?'Personalizada':'Simples'), r.taxa||'', HIST_fmtMoeda(r.tarifa), r.quantidade_titulos||'', (r.prazo_medio!=null?Number(r.prazo_medio).toFixed(1):''), HIST_fmtMoeda(r.valor_bruto), HIST_fmtMoeda(r.valor_liquido)]); });
   } else if(tab==='fin'){
     head=['Descrição','Data início','Parcelas','Valor parcela','Taxa (% a.m.)','Financiado','Total'];
-    rows.forEach(function(r){ lin.push([r.descricao||'', HIST_fmtData(r.data_inicio), r.qtd_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.taxa||'', HIST_fmtMoeda(r.valor_financiado), HIST_fmtMoeda(r.valor_total)]); });
+    rows.forEach(function(r){ lin.push([(r.nome||r.descricao||''), HIST_fmtData(r.data_inicio), r.qtd_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.taxa||'', HIST_fmtMoeda(r.valor_financiado), HIST_fmtMoeda(r.valor_total)]); });
   } else if(tab==='ven'){
     head=['Descrição','1ª parcela','Qtd parcelas','Valor parcela','Modo','Total'];
-    rows.forEach(function(r){ lin.push([r.descricao||'', HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.modo||'', HIST_fmtMoeda(r.valor_total)]); });
+    rows.forEach(function(r){ lin.push([(r.nome||r.descricao||''), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.modo||'', HIST_fmtMoeda(r.valor_total)]); });
   } else {
     head=['Data','Qtd lançamentos','Total'];
     rows.forEach(function(r){ var d=r.created_at?r.created_at.split('T')[0]:null; lin.push([HIST_fmtData(d), (r.pagamentos||[]).length, HIST_fmtMoeda(r.valor_total)]); });
@@ -3769,7 +3770,7 @@ function HIST_clickShare(el, event){
 }
 function HIST_shareFin(r){
   var snap={ d:_histGetVal('fin-tabelaDesc'), v:_histGetVal('fin-valor'), p:_histGetVal('fin-prazo'), pa:_histGetVal('fin-parcela'), dt:_histGetVal('fin-tabelaData') };
-  _histSetVal('fin-tabelaDesc', r.descricao||'');
+  _histSetVal('fin-tabelaDesc', (r.nome||r.descricao||''));
   _histSetVal('fin-valor', r.valor_financiado?FIN_formatBR(Number(r.valor_financiado)):'');
   _histSetVal('fin-prazo', r.qtd_parcelas?String(r.qtd_parcelas):'');
   _histSetVal('fin-parcela', r.valor_parcela?FIN_formatBR(Number(r.valor_parcela)):'');
@@ -3781,7 +3782,7 @@ function HIST_shareFin(r){
 }
 function HIST_shareVen(r){
   var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
-  _histSetVal('ven-tabelaDesc', r.descricao||'');
+  _histSetVal('ven-tabelaDesc', (r.nome||r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
     r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
@@ -3799,7 +3800,7 @@ function HIST_shareVen(r){
 }
 function HIST_shareAnt(r){
   var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
-  _histSetVal('ant-tabelaCliente', r.cliente||'');
+  _histSetVal('ant-tabelaCliente', (r.nome||r.cliente||''));
   _histSetVal('ant-taxa', r.taxa?ANT_formatBR(Number(r.taxa)):'');
   _histSetVal('ant-tarifa', r.tarifa?ANT_formatBR(Number(r.tarifa)):'');
   // sempre usa os títulos salvos (valor+data) -> planilha de títulos
@@ -3913,12 +3914,10 @@ function HIST_fetch(term){
   if(term){
     var safe=term.replace(/[,*()]/g,' ');
     var ors=[];
-    if(col) ors.push(col+'.ilike.%'+safe+'%');
+    if(col){ ors.push('nome.ilike.%'+safe+'%'); ors.push(col+'.ilike.%'+safe+'%'); }
     var num=HIST_parseNum(term);
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
-    if(ors.length>1) q=q.or(ors.join(','));
-    else if(ors.length===1 && col) q=q.ilike(col,'%'+safe+'%');
-    else if(num!=null && valCol) q=q.eq(valCol,num);
+    if(ors.length) q=q.or(ors.join(','));
   }
   var asc = (HIST_sortDir==='asc');
   if(HIST_sortCol==='valor') q=q.order(valCol,{ascending:asc}).order('created_at',{ascending:asc});
@@ -3960,7 +3959,7 @@ function HIST_renderRows(tab, rows){
   rows.forEach(function(r,idx){
     var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], dataOp=HIST_fmtData(HIST_dataOp(tab,r));
     if(tab==='ant'){
-      titulo=r.cliente||'(sem nome)';
+      titulo=r.nome||r.cliente||'(sem nome)';
       valor=HIST_fmtMoeda(r.valor_bruto);
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
@@ -3970,7 +3969,7 @@ function HIST_renderRows(tab, rows){
       if(r.prazo_medio!=null) campos.push({l:'Prazo médio', v:Number(r.prazo_medio).toFixed(1)+' d'});
       if(r.valor_liquido) campos.push({l:'Líquido', v:HIST_fmtMoeda(r.valor_liquido)});
     } else if(tab==='fin'){
-      titulo=r.descricao||'(sem descrição)';
+      titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
       if(dataOp && dataOp!=='--') campos.push({l:'Data início', v:dataOp});
       if(r.qtd_parcelas) campos.push({l:'Parcelas', v:r.qtd_parcelas+'x'});
@@ -3978,7 +3977,7 @@ function HIST_renderRows(tab, rows){
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
     } else if(tab==='ven'){
-      titulo=r.descricao||'(sem descrição)';
+      titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_total);
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
       if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
@@ -7489,6 +7488,15 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.8.0</span><span class="cl-ver-date">24/06/2026 10:30</span></div>
+      <div class="cl-item">Histórico: o nome de cada operação agora é um apelido próprio do Histórico. Ele nasce do cliente (Antecipação) ou da descrição (Financiamento/Vendas), mas ao renomear pelo lápis ✎ você muda SÓ o apelido — não altera mais o cliente/descrição de dentro da operação</div>
+      <div class="cl-item">Correção: antes, renomear no Histórico vazava e mudava o cliente/descrição da operação. Agora os dois ficam independentes</div>
+      <div class="cl-item">Renomear com o campo vazio volta a exibir o cliente/descrição original (vira um “resetar apelido”)</div>
+      <div class="cl-item">Compartilhar e Exportar (CSV) pelo Histórico passam a usar o apelido salvo (com o cliente/descrição como reserva quando não há apelido)</div>
+      <div class="cl-item">Busca do Histórico agora acha também pelo apelido, além do cliente/descrição e do valor</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.4</span><span class="cl-ver-date">23/06/2026 18:00</span></div>
