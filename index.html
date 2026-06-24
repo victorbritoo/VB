@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.9.2</title>
+<title>VB - v1.11.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -290,6 +290,18 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="vb-sair-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100002;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
+    <div style="font-size:12px;letter-spacing:2px;color:#888;font-weight:600;margin-bottom:8px;text-align:center;font-family:-apple-system,sans-serif;">ALTERAÇÕES NÃO SALVAS</div>
+    <div style="font-size:13px;color:#555;font-weight:400;margin-bottom:16px;text-align:center;line-height:1.4;font-family:-apple-system,sans-serif;">Você mudou esta operação. O que deseja fazer?</div>
+    <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+      <button id="vb-sair-salvar" type="button" ontouchend="event.preventDefault();VB_sairSalvar()" onclick="VB_sairSalvar()" style="padding:13px;border:none;border-radius:12px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">SALVAR</button>
+      <button id="vb-sair-descartar" type="button" ontouchend="event.preventDefault();VB_sairDescartar()" onclick="VB_sairDescartar()" style="padding:13px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:12px;letter-spacing:2px;color:#c0392b;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">NÃO SALVAR</button>
+      <button id="vb-sair-cancelar" type="button" ontouchend="event.preventDefault();VB_sairCancelar()" onclick="VB_sairCancelar()" style="padding:13px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
 <!-- Overlay FILTRAR histórico -->
 <div id="hist-filter-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100002;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)HIST_closeFilter()">
   <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:340px;box-shadow:0 14px 44px rgba(0,0,0,0.28);max-height:86vh;overflow-y:auto;">
@@ -329,7 +341,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.9.2<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1130,6 +1142,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
     <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:8px 12px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;">
+    <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupExport(this)" onclick="VB_backupExport(this)" style="padding:7px 14px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;flex-shrink:0;">⤓ BACKUP</button>
+    <span id="hist-backup-status" style="font-size:11px;color:#aaa;text-align:right;min-width:0;">Último backup: —</span>
   </div>
 
   <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;">
@@ -3564,6 +3581,7 @@ function HIST_carregarFin(r){
   if(r.data_inicio){ var pp=r.data_inicio.split('-'); document.getElementById('fin-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
   FIN_lastEdited='valor'; FIN_lastSolved='parcela'; FIN_update();
   FIN_updateConfirmarBtnLabel();
+  FIN_snapshot = FIN_assinatura();
   VB_telaAnterior = 'hist';
   showScreen('fin');
 }
@@ -3592,6 +3610,7 @@ function HIST_carregarAnt(r){
     ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
+  ANT_snapshot = ANT_assinatura();
   VB_telaAnterior = 'hist';
   showScreen('ant');
 }
@@ -3612,6 +3631,7 @@ function HIST_carregarVen(r){
     VEN_update && VEN_update();
   }
   VEN_updateConfirmarBtnLabel();
+  VEN_snapshot = VEN_assinatura();
   VB_telaAnterior = 'hist';
   showScreen('ven');
 }
@@ -3623,6 +3643,7 @@ function HIST_carregarPag(r){
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
   PAG_render(); PAG_update(); PAG_saveSession();
   PAG_updateConfirmarBtnLabel();
+  PAG_snapshot = PAG_assinatura();
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
@@ -3789,13 +3810,58 @@ function HIST_exportar(){
   }catch(e){ VB_toast('Não consegui exportar.'); }
 }
 
+// ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
+var VB_BACKUP_LS='vb_last_backup';
+function VB_fmtBackupRel(iso){
+  if(!iso) return '—';
+  var d=new Date(iso); if(isNaN(d.getTime())) return '—';
+  var hh=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  var dias=Math.floor((Date.now()-d.getTime())/86400000);
+  if(dias<=0) return 'hoje ('+hh+')';
+  if(dias===1) return 'ontem ('+hh+')';
+  return 'há '+dias+' dias ('+hh+')';
+}
+function VB_updateBackupStatus(){
+  var el=document.getElementById('hist-backup-status'); if(!el) return;
+  var iso=null; try{ iso=localStorage.getItem(VB_BACKUP_LS); }catch(e){}
+  el.textContent='Último backup: '+VB_fmtBackupRel(iso);
+  var dias = iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : 999;
+  el.style.color = (dias>=7) ? '#c0392b' : '#aaa';
+}
+function VB_backupExport(btn){
+  var _t = btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='GERANDO...'; }
+  function done(){ if(btn){ btn.disabled=false; btn.textContent=_t; } }
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
+  Promise.all(tabelas.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
+  .then(function(res){
+    if(res.some(function(x){ return x.rows===null; })){ done(); VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); return; }
+    var dados={}, total=0;
+    res.forEach(function(x){ dados[x.t]=x.rows||[]; total+=(x.rows||[]).length; });
+    var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
+    var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+    var fname='VB - Backup - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.json';
+    var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    var file=new File([blob], fname, {type:'application/json'});
+    try{ localStorage.setItem(VB_BACKUP_LS, payload.gerado_em); }catch(e){}
+    VB_updateBackupStatus();
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).then(done).catch(done);
+    } else {
+      var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); done();
+    }
+    VB_toast(total+' operações no backup. Salve na pasta OPs.');
+  }).catch(function(e){ done(); VB_toast('Não consegui gerar o backup.'); });
+}
+
 // ===== Compartilhar do histórico: gera a imagem em silêncio e abre a folha do iPhone =====
 function _histSetVal(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
 function _histGetVal(id){ var e=document.getElementById(id); return e?e.value:''; }
-function _histShareImg(imgId, prefix, descId){
+function _histShareImg(imgId, prefix, descId, nomeArquivo){
   var img=document.getElementById(imgId);
   if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Sem dados suficientes pra gerar a imagem.'); return; }
-  VB_compartilharImg(imgId, prefix, descId);
+  VB_compartilharImg(imgId, prefix, descId, nomeArquivo);
 }
 function HIST_clickShare(el, event){
   event.stopPropagation();
@@ -3812,19 +3878,19 @@ function HIST_clickShare(el, event){
 }
 function HIST_shareFin(r){
   var snap={ d:_histGetVal('fin-tabelaDesc'), v:_histGetVal('fin-valor'), p:_histGetVal('fin-prazo'), pa:_histGetVal('fin-parcela'), dt:_histGetVal('fin-tabelaData') };
-  _histSetVal('fin-tabelaDesc', (r.nome||r.descricao||''));
+  _histSetVal('fin-tabelaDesc', (r.descricao||''));
   _histSetVal('fin-valor', r.valor_financiado?FIN_formatBR(Number(r.valor_financiado)):'');
   _histSetVal('fin-prazo', r.qtd_parcelas?String(r.qtd_parcelas):'');
   _histSetVal('fin-parcela', r.valor_parcela?FIN_formatBR(Number(r.valor_parcela)):'');
   _histSetVal('fin-tabelaData', r.data_inicio?HIST_fmtData(r.data_inicio):'');
   var img=document.getElementById('fin-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ FIN_compartilharTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('fin-tabelaImagem','FIN','fin-tabelaDesc');
+  _histShareImg('fin-tabelaImagem','FIN','fin-tabelaDesc', (r.nome||r.descricao||''));
   _histSetVal('fin-tabelaDesc',snap.d); _histSetVal('fin-valor',snap.v); _histSetVal('fin-prazo',snap.p); _histSetVal('fin-parcela',snap.pa); _histSetVal('fin-tabelaData',snap.dt);
 }
 function HIST_shareVen(r){
   var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
-  _histSetVal('ven-tabelaDesc', (r.nome||r.descricao||''));
+  _histSetVal('ven-tabelaDesc', (r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
     r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
@@ -3836,13 +3902,13 @@ function HIST_shareVen(r){
   }
   var img=document.getElementById('ven-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ VEN_gerarTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('ven-tabelaImagem','VEN','ven-tabelaDesc');
+  _histShareImg('ven-tabelaImagem','VEN','ven-tabelaDesc', (r.nome||r.descricao||''));
   VEN_modoPersonalizado=snap.mp; VEN_parcelas=snap.arr; VEN_parcelaCounter=snap.cnt;
   _histSetVal('ven-tabelaDesc',snap.d); _histSetVal('ven-parcela',snap.pa); _histSetVal('ven-qtd',snap.q); _histSetVal('ven-tabelaData',snap.dt); _histSetVal('ven-total',snap.t);
 }
 function HIST_shareAnt(r){
   var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
-  _histSetVal('ant-tabelaCliente', (r.nome||r.cliente||''));
+  _histSetVal('ant-tabelaCliente', (r.cliente||''));
   _histSetVal('ant-taxa', r.taxa?ANT_formatBR(Number(r.taxa)):'');
   _histSetVal('ant-tarifa', r.tarifa?ANT_formatBR(Number(r.tarifa)):'');
   // sempre usa os títulos salvos (valor+data) -> planilha de títulos
@@ -3850,7 +3916,7 @@ function HIST_shareAnt(r){
   (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
   var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('ant-tabelaImagem','ANT','ant-tabelaCliente');
+  _histShareImg('ant-tabelaImagem','ANT','ant-tabelaCliente', (r.nome||r.cliente||''));
   ANT_modoPersonalizado=snap.mp; ANT_titulos=snap.arr; ANT_tituloCounter=snap.cnt;
   _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt);
 }
@@ -4012,6 +4078,7 @@ function HIST_loadTab(tab){
   var wrap=document.getElementById('hist-search-wrap');
   if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
   HIST_updateFilterUIState();
+  VB_updateBackupStatus();
   HIST_fetch('');
 }
 
@@ -4025,6 +4092,7 @@ function HIST_refresh(){
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = HIST_searchTerm ? 'inline-flex' : 'none';
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block';
   HIST_updateFilterUIState();
+  VB_updateBackupStatus();
   HIST_fetch(HIST_searchTerm);
 }
 
@@ -4162,12 +4230,13 @@ function _dataURLtoBlob(durl){
 // nome do arquivo: "VB - PREFIXO - Descrição" (descrição vem do campo descId, se houver)
 // Quando true, os geradores de imagem montam o canvas mas NÃO abrem o overlay (usado no compartilhar do histórico)
 var VB_silentGen=false;
-function VB_compartilharImg(imgId, prefix, descId){
+function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
   try{
     var img=document.getElementById(imgId);
     if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Gere a imagem primeiro.'); return; }
     var desc='';
-    if(descId){ var d=document.getElementById(descId); if(d) desc=(d.value||'').trim(); }
+    if(typeof nomeArquivo==='string' && nomeArquivo.trim()){ desc=nomeArquivo.trim(); }
+    else if(descId){ var d=document.getElementById(descId); if(d) desc=(d.value||'').trim(); }
     var sufixo = desc ? (' - '+desc) : '';
     if(!desc && prefix==='ANT'){
       var dop=document.getElementById('ant-dataOperacao');
@@ -4239,7 +4308,54 @@ function VB_nameSkip(){
   if(cb) cb();
 }
 
+/* === GUARDA DE ALTERAÇÕES NÃO SALVAS (apenas op carregada do Histórico) ===
+   Foto dos campos é tirada DEPOIS do recálculo automático no carregar, então
+   só dispara quando o Victor mexe de verdade. Não vale pra op nova. */
+var FIN_snapshot=null, ANT_snapshot=null, VEN_snapshot=null, PAG_snapshot=null;
+function VB_val(id){ var e=document.getElementById(id); return e?(e.value||''):''; }
+function FIN_assinatura(){
+  return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-valor'),VB_val('fin-prazo'),
+    VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData')]);
+}
+function ANT_assinatura(){
+  return JSON.stringify([VB_val('ant-tabelaCliente'),VB_val('ant-dataOperacao'),VB_val('ant-taxa'),
+    VB_val('ant-tarifa'),VB_val('ant-valorBruto'),VB_val('ant-qtd'),VB_val('ant-tabelaData'),
+    (typeof ANT_modoPersonalizado!=='undefined'?!!ANT_modoPersonalizado:false),
+    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data];}):[])]);
+}
+function VEN_assinatura(){
+  return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-total'),VB_val('ven-qtd'),
+    VB_val('ven-parcela'),VB_val('ven-tabelaData'),
+    (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
+    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs];}):[])]);
+}
+function PAG_assinatura(){
+  return JSON.stringify([VB_val('pag-total'),
+    (typeof PAG_pagamentos!=='undefined'?PAG_pagamentos.map(function(p){return [p.desc,p.valor];}):[])]);
+}
+var VB_guardCfg={
+  fin:{ getId:function(){return FIN_currentOperationId;}, getSnap:function(){return FIN_snapshot;}, sig:FIN_assinatura, salvar:function(){FIN_confirmarOperacao(document.getElementById('fin-btnConfirmar'));} },
+  ant:{ getId:function(){return ANT_currentOperationId;}, getSnap:function(){return ANT_snapshot;}, sig:ANT_assinatura, salvar:function(){ANT_confirmarOperacao(document.getElementById('ant-btnConfirmar'));} },
+  ven:{ getId:function(){return VEN_currentOperationId;}, getSnap:function(){return VEN_snapshot;}, sig:VEN_assinatura, salvar:function(){VEN_confirmarOperacao(document.getElementById('ven-btnConfirmar'));} },
+  pag:{ getId:function(){return PAG_currentOperationId;}, getSnap:function(){return PAG_snapshot;}, sig:PAG_assinatura, salvar:function(){PAG_confirmarOperacao(document.getElementById('pag-btnConfirmar'));} }
+};
+function VB_temAlteracaoManual(tela){
+  var c=VB_guardCfg[tela]; if(!c) return false;
+  if(!c.getId()) return false;          // só op carregada do Histórico
+  if(c.getSnap()===null) return false;  // sem foto de referência
+  return c.sig() !== c.getSnap();
+}
+var VB_sairCfg=null;
+function VB_sairCancelar(){ var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='none'; VB_sairCfg=null; }
+function VB_sairDescartar(){ var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='none'; VB_sairCfg=null; showScreen(VB_telaAnterior||'home'); }
+function VB_sairSalvar(){
+  var c=VB_sairCfg; var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='none'; VB_sairCfg=null;
+  if(c&&c.salvar) c.salvar();           // dispara o ATUALIZAR (Supabase, assíncrono) + toast
+  showScreen(VB_telaAnterior||'home');  // salva e volta
+}
+
 var VB_telaAnterior = 'home';
+var VB_telaAtual = 'home';
 function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
@@ -4249,10 +4365,16 @@ function showScreen(name){
     if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='hist'){ VB_telaAnterior='home'; HIST_refresh(); }
+  VB_telaAtual = name;
   window.scrollTo(0,0);
 }
 function VB_voltarDeTela(){
   // Chamado pelo logo VB em cada módulo
+  if(VB_temAlteracaoManual(VB_telaAtual)){
+    VB_sairCfg = VB_guardCfg[VB_telaAtual];
+    var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='flex';
+    return;
+  }
   showScreen(VB_telaAnterior||'home');
 }
 
@@ -4690,6 +4812,7 @@ function FIN_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ FIN_currentOperationId = res.data[0].id; }
     FIN_updateConfirmarBtnLabel();
+    FIN_snapshot = FIN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -4699,6 +4822,7 @@ function FIN_confirmarOperacao(btn){
 }
 
 function FIN_limpar(){
+  FIN_snapshot = null;
   FIN_currentOperationId = null;
   FIN_updateConfirmarBtnLabel();
   FIN_lastEdited='';
@@ -4834,6 +4958,7 @@ document.getElementById('ven-qtd').addEventListener('input', function(){
 });
 
 function VEN_limpar(){
+  VEN_snapshot = null;
   VEN_parcelaManual = false;
   if(VEN_modoPersonalizado) VEN_togglePersonalizar();
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc'].forEach(function(id){
@@ -5251,6 +5376,7 @@ function VEN_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
     VEN_updateConfirmarBtnLabel();
+    VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -5573,6 +5699,7 @@ function ANT_recalc(){
 }
 
 function ANT_limpar(){
+  ANT_snapshot = null;
   if(ANT_modoPersonalizado){ ANT_toggleModo(); }
   ANT_userFields.clear();
   ANT_degrau='centavo'; ANT_applyDegrauUI();
@@ -6049,6 +6176,7 @@ function ANT_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
     ANT_updateConfirmarBtnLabel();
+    ANT_snapshot = ANT_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -6539,6 +6667,7 @@ function PAG_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
     PAG_updateConfirmarBtnLabel();
+    PAG_snapshot = PAG_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -6549,6 +6678,7 @@ function PAG_confirmarOperacao(btn){
 }
 
 function PAG_limpar(){
+  PAG_snapshot = null;
   document.getElementById('pag-total').value='';
   document.getElementById('pag-saldo').textContent='R$ ---';
   document.getElementById('pag-soma').textContent='---';
@@ -7640,6 +7770,24 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.0</span><span class="cl-ver-date">24/06/2026 14:50</span></div>
+      <div class="cl-item">Aviso de alterações não salvas: ao voltar de uma operação que você carregou do Histórico e mexeu na mão, aparece uma telinha com Salvar / Não Salvar / Cancelar. Salvar atualiza e volta; Não Salvar sai sem gravar; Cancelar continua na tela. Vale para Antecipação, Financiamento, Vendas e Pagamentos</div>
+      <div class="cl-item">Só dispara quando VOCÊ altera algum campo — o recálculo automático que o app faz ao carregar a operação não conta, então acabou o falso alarme. Operação nova (não carregada) também não pergunta nada ao sair</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.10.1</span><span class="cl-ver-date">24/06/2026 13:15</span></div>
+      <div class="cl-item">Compartilhar do Histórico: a imagem agora imprime o cliente/descrição real da operação (o que está dentro dela), e não mais o apelido que você deu na lista. O apelido continua sendo usado só no nome do arquivo. Vale para Antecipação, Financiamento e Vendas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.10.0</span><span class="cl-ver-date">24/06/2026 12:50</span></div>
+      <div class="cl-item">Backup completo: novo botão no topo do Histórico gera um único arquivo "VB - Backup - DD-MM-AAAA.json" com TODAS as operações (Antecipação, Financiamento, Vendas e Pagamentos), com todos os campos — títulos, parcelas e lançamentos inclusos. Abre a folha do iPhone pra você salvar na pasta OPs do iCloud</div>
+      <div class="cl-item">Aviso "Último backup: há X dias" ao lado do botão, que fica vermelho quando passa de 7 dias, pra você manter o hábito</div>
+      <div class="cl-item">O backup é uma cópia sua, independente da Supabase — guardada no seu iCloud. Próximo passo será o Restaurar (reconstruir tudo a partir do arquivo)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.9.2</span><span class="cl-ver-date">24/06/2026 12:25</span></div>
