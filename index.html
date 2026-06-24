@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.11.1</title>
+<title>VB - v1.11.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -341,7 +341,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.1<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.2<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1149,7 +1149,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <span id="hist-backup-status" style="font-size:11px;color:#aaa;text-align:right;min-width:0;">Último backup: —</span>
   </div>
 
-  <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;">
+  <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;display:none;">
     <input id="hist-search" type="text" placeholder="Buscar por nome ou valor" oninput="HIST_onSearchInput(this)" onclick="if(!this.value)this.select()" style="width:100%;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 38px 0 14px;font-size:14px;font-weight:400;color:#111;outline:none;background:#fff;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;">
     <button id="hist-search-clear" onclick="HIST_clearSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:#eee;color:#777;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;">×</button>
   </div>
@@ -1158,6 +1158,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="display:flex;gap:5px;">
       <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
       <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
+      <button id="hist-search-toggle" onclick="HIST_toggleSearch()" style="margin-left:4px;padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button>
     </div>
     <div style="display:flex;gap:5px;">
       <button id="hist-filter-btn" onclick="HIST_openFilter()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Filtrar</button>
@@ -3933,6 +3934,7 @@ function HIST_sharePag(r){
   _histSetVal('pag-total',snap.t);
 }
 var HIST_searchTerm='';
+var HIST_searchOpen=false;
 var HIST_searchTimer=null;
 var HIST_sortCol='data';
 var HIST_sortDir='desc';
@@ -4075,8 +4077,9 @@ function HIST_loadTab(tab){
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
-  var wrap=document.getElementById('hist-search-wrap');
-  if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
+  HIST_searchOpen=false;
+  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
+  HIST_updateLupa();
   HIST_updateFilterUIState();
   VB_updateBackupStatus();
   HIST_fetch('');
@@ -4090,7 +4093,9 @@ function HIST_refresh(){
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=HIST_searchTerm||''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = HIST_searchTerm ? 'inline-flex' : 'none';
-  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block';
+  HIST_searchOpen=false;
+  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
+  HIST_updateLupa();
   HIST_updateFilterUIState();
   VB_updateBackupStatus();
   HIST_fetch(HIST_searchTerm);
@@ -4100,6 +4105,7 @@ function HIST_onSearchInput(el){
   var term=(el.value||'').trim();
   HIST_searchTerm=term;
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = term ? 'inline-flex' : 'none';
+  HIST_updateLupa();
   clearTimeout(HIST_searchTimer);
   HIST_searchTimer=setTimeout(function(){ HIST_fetch(term); }, 300);
 }
@@ -4107,7 +4113,32 @@ function HIST_clearSearch(){
   var sEl=document.getElementById('hist-search'); if(sEl) sEl.value='';
   HIST_searchTerm='';
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
+  HIST_updateLupa();
   HIST_fetch('');
+}
+function HIST_updateLupa(){
+  var btn=document.getElementById('hist-search-toggle'); if(!btn) return;
+  btn.style.display = (HIST_tabAtual==='pag') ? 'none' : 'inline-flex';
+  var lit = !!HIST_searchTerm;
+  btn.style.background = lit ? '#111' : '#fff';
+  btn.style.color = lit ? '#fff' : '#111';
+}
+function HIST_openSearch(){
+  if(HIST_tabAtual==='pag') return;
+  HIST_searchOpen=true;
+  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='block';
+  var sEl=document.getElementById('hist-search');
+  if(sEl){ try{ sEl.focus(); if(!sEl.value) sEl.select(); }catch(e){} }
+  HIST_updateLupa();
+}
+function HIST_collapseSearch(){
+  HIST_searchOpen=false;
+  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
+  var sEl=document.getElementById('hist-search'); if(sEl){ try{ sEl.blur(); }catch(e){} }
+  HIST_updateLupa();
+}
+function HIST_toggleSearch(){
+  if(HIST_searchOpen) HIST_collapseSearch(); else HIST_openSearch();
 }
 function HIST_setSort(col){
   if(col===HIST_sortCol){ HIST_sortDir = (HIST_sortDir==='desc'?'asc':'desc'); }
@@ -7770,6 +7801,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.2</span><span class="cl-ver-date">24/06/2026 16:05</span></div>
+      <div class="cl-item">Busca do Histórico recolhida atrás de uma lupa: o campo de busca não ocupa mais uma linha fixa na tela. Toque na lupa (ao lado de Data/Valor) para abrir o campo já com o teclado; toque de novo para recolher. A lupa fica acesa enquanto houver uma busca ativa, mesmo recolhida. Não aparece na aba Pagamentos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.1</span><span class="cl-ver-date">24/06/2026 15:20</span></div>
