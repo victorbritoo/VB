@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.7.1</title>
+<title>VB - v1.7.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -292,7 +292,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.7.1<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.7.4<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3584,7 +3584,19 @@ function HIST_carregarPag(r){
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
-function HIST_buildRow(tab, idx, titulo, valor, dataStr, resumoExtra, campos){
+function HIST_fmtHora(iso){
+  if(!iso) return '';
+  var d=new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function HIST_fmtDataLocal(iso){
+  if(!iso) return '--';
+  var d=new Date(iso);
+  if(isNaN(d.getTime())) return '--';
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos){
   var cls = 'background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:12px 16px;margin-bottom:6px;cursor:pointer;';
   var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
@@ -3617,7 +3629,11 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, resumoExtra, campos){
   var valLabel = tab==='ant'?'Bruto ':tab==='fin'?'Financiado ':tab==='ven'?'Total ':'';
   var parts=[];
   if(valor){ parts.push('<span style="color:#111;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
-  if(dataStr && dataStr!=='--'){ parts.push('<span style="color:#555;font-weight:600;">'+HIST_esc(dataStr)+'</span>'); }
+  if(dataStr && dataStr!=='--'){
+    var dt='<span style="color:#555;font-weight:600;">'+HIST_esc(dataStr)+'</span>';
+    if(horaStr) dt+='<span style="color:#bbb;font-weight:400;font-size:10px;"> '+HIST_esc(horaStr)+'</span>';
+    parts.push(dt);
+  }
   if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
   if(parts.length) h += '<div style="font-size:11px;margin-top:6px;line-height:1.7;padding-left:23px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
   // detalhe expandível: grade 2 colunas (rótulo em cima, valor embaixo)
@@ -3816,7 +3832,7 @@ var HIST_exporting=false;
 function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
 function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
 function HIST_valCol(tab){ return tab==='ant'?'valor_bruto':tab==='fin'?'valor_financiado':'valor_total'; }
-function HIST_dateCol(tab){ return tab==='ant'?'data_operacao':tab==='fin'?'data_inicio':tab==='ven'?'data_primeira_parcela':'created_at'; }
+function HIST_dateCol(tab){ return 'created_at'; } // ordenar por Data = pelo carimbo de salvamento (mesmo exibido)
 function HIST_tabLabel(tab){ return tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'; }
 function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
 function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
@@ -3843,7 +3859,6 @@ function HIST_loadTab(tab){
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
   HIST_searchTerm='';
-  HIST_sortCol='data'; HIST_sortDir='desc';
   HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
@@ -3851,6 +3866,18 @@ function HIST_loadTab(tab){
   var wrap=document.getElementById('hist-search-wrap');
   if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
   HIST_fetch('');
+}
+
+// Reabre a tela de Histórico preservando aba, ordenação e busca atuais
+function HIST_refresh(){
+  var tab=HIST_tabAtual;
+  HIST_setTabStyle(tab);
+  HIST_styleSortChips();
+  var sEl=document.getElementById('hist-search');
+  if(sEl){ sEl.value=HIST_searchTerm||''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = HIST_searchTerm ? 'inline-flex' : 'none';
+  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block';
+  HIST_fetch(HIST_searchTerm);
 }
 
 function HIST_onSearchInput(el){
@@ -3931,10 +3958,11 @@ function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
   rows.forEach(function(r,idx){
-    var titulo, valor, dataStr=HIST_fmtData(HIST_dataOp(tab,r)), resumoExtra='', campos=[];
+    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], dataOp=HIST_fmtData(HIST_dataOp(tab,r));
     if(tab==='ant'){
       titulo=r.cliente||'(sem nome)';
       valor=HIST_fmtMoeda(r.valor_bruto);
+      if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.tarifa) campos.push({l:'Tarifa', v:HIST_fmtMoeda(r.tarifa)});
@@ -3944,6 +3972,7 @@ function HIST_renderRows(tab, rows){
     } else if(tab==='fin'){
       titulo=r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
+      if(dataOp && dataOp!=='--') campos.push({l:'Data início', v:dataOp});
       if(r.qtd_parcelas) campos.push({l:'Parcelas', v:r.qtd_parcelas+'x'});
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
@@ -3951,6 +3980,7 @@ function HIST_renderRows(tab, rows){
     } else if(tab==='ven'){
       titulo=r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_total);
+      if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
       if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       if(r.modo) campos.push({l:'Modo', v:r.modo});
@@ -3961,7 +3991,7 @@ function HIST_renderRows(tab, rows){
       resumoExtra=qtd+' lançamento'+(qtd!==1?'s':'');
       // Pagamentos sem detalhe extra -> sem setinha
     }
-    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, resumoExtra, campos);
+    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos);
   });
   listaEl.innerHTML=html;
   HIST_rowsCache=rows; HIST_tabCache=tab;
@@ -4067,7 +4097,7 @@ function showScreen(name){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
-  if(name==='hist'){ VB_telaAnterior='home'; HIST_loadTab(HIST_tabAtual||'ant'); }
+  if(name==='hist'){ VB_telaAnterior='home'; HIST_refresh(); }
   window.scrollTo(0,0);
 }
 function VB_voltarDeTela(){
@@ -4492,6 +4522,7 @@ function FIN_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!FIN_currentOperationId;
+  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -5052,6 +5083,7 @@ function VEN_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
+  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -5849,6 +5881,7 @@ function ANT_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!ANT_currentOperationId;
+  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -6338,6 +6371,7 @@ function PAG_confirmarOperacao(btn){
   var row={ valor_total: total, pagamentos: itens };
 
   var ehAtualizacao = !!PAG_currentOperationId;
+  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -7455,6 +7489,22 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.4</span><span class="cl-ver-date">23/06/2026 18:00</span></div>
+      <div class="cl-item">Histórico: a data e a hora mostradas agora refletem a última vez que a operação foi salva — atualizam toda vez que você edita e confirma. A data própria da operação não muda (fica visível ao expandir o item, e dentro da operação)</div>
+      <div class="cl-item">Ordenar por Data passou a usar esse mesmo carimbo de salvamento</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.3</span><span class="cl-ver-date">23/06/2026 17:45</span></div>
+      <div class="cl-item">Histórico: hora em que a operação foi salva aparece pequenininha ao lado da data</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.2</span><span class="cl-ver-date">23/06/2026 17:30</span></div>
+      <div class="cl-item">Histórico: a ordenação escolhida agora se mantém ao abrir uma operação e voltar (antes voltava sempre pro padrão). Também é mantida ao trocar de aba. A busca também é preservada ao voltar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.1</span><span class="cl-ver-date">23/06/2026 17:15</span></div>
