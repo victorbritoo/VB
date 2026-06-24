@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.11.2</title>
+<title>VB - v1.11.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -341,7 +341,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.2<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.3<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1144,11 +1144,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
   </div>
 
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:8px 12px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;">
-    <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupExport(this)" onclick="VB_backupExport(this)" style="padding:7px 14px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;flex-shrink:0;">⤓ BACKUP</button>
-    <span id="hist-backup-status" style="font-size:11px;color:#aaa;text-align:right;min-width:0;">Último backup: —</span>
-  </div>
-
   <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;display:none;">
     <input id="hist-search" type="text" placeholder="Buscar por nome ou valor" oninput="HIST_onSearchInput(this)" onclick="if(!this.value)this.select()" style="width:100%;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 38px 0 14px;font-size:14px;font-weight:400;color:#111;outline:none;background:#fff;text-transform:none;letter-spacing:normal;font-family:-apple-system,sans-serif;">
     <button id="hist-search-clear" onclick="HIST_clearSearch()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:#eee;color:#777;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;">×</button>
@@ -1175,6 +1170,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 
   <div id="hist-total" style="display:none;margin-top:4px;padding:12px 16px;background:#111;border-radius:12px;color:#fff;justify-content:space-between;align-items:center;"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding:8px 12px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;">
+    <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupExport(this)" onclick="VB_backupExport(this)" style="padding:7px 14px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;flex-shrink:0;">⤓ BACKUP</button>
+    <span id="hist-backup-status" style="display:none;font-size:11px;color:#c0392b;font-weight:600;text-align:right;min-width:0;"></span>
+  </div>
 </div>
 </div>
 
@@ -3825,9 +3825,18 @@ function VB_fmtBackupRel(iso){
 function VB_updateBackupStatus(){
   var el=document.getElementById('hist-backup-status'); if(!el) return;
   var iso=null; try{ iso=localStorage.getItem(VB_BACKUP_LS); }catch(e){}
-  el.textContent='Último backup: '+VB_fmtBackupRel(iso);
-  var dias = iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : 999;
-  el.style.color = (dias>=7) ? '#c0392b' : '#aaa';
+  if(!iso){
+    el.textContent='Você ainda não fez backup';
+    el.style.display='inline';
+    return;
+  }
+  var dias=Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+  if(dias>=7){
+    el.textContent='Sem backup há '+dias+' dias';
+    el.style.display='inline';
+  } else {
+    el.style.display='none';
+  }
 }
 function VB_backupExport(btn){
   var _t = btn?btn.textContent:'';
@@ -7801,6 +7810,12 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.3</span><span class="cl-ver-date">24/06/2026 16:30</span></div>
+      <div class="cl-item">Backup mudou de lugar: a caixa do BACKUP saiu do topo e foi para o rodapé do Histórico, logo abaixo do total bruto, enxugando a entrada da tela</div>
+      <div class="cl-item">Aviso de backup agora é silencioso: some quando está em dia e só aparece (em vermelho) quando passa de 7 dias — "Sem backup há X dias" — ou quando você ainda não fez nenhum backup. Fez o backup, o aviso some sozinho</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.2</span><span class="cl-ver-date">24/06/2026 16:05</span></div>
