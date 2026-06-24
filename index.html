@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.12.0</title>
+<title>VB - v1.13.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -208,7 +208,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   .ov{font-size:14px;font-weight:700;color:#111}
   #ant-overlayTabela{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#222;z-index:10000;overflow-y:auto;padding:20px 8px 40px;}
   #ant-overlayTabela{display:none}
-  #ant-tabelaImagem{display:none;width:100%;max-width:700px;border-radius:4px}
+  #ant-zoomWrap{display:none;width:100%;max-width:700px;margin:0 auto;overflow:hidden;position:relative;touch-action:none}
+  #ant-tabelaImagem{display:block;width:100%;max-width:none;border-radius:4px;transform-origin:0 0;will-change:transform}
   #ant-tabelaDica{display:none;max-width:500px;margin:12px auto 0;text-align:center}
 
 
@@ -341,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.12.0<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.13.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1027,7 +1028,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <!-- OVERLAY TABELA -->
 <div id="ant-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a1a;z-index:10000;overflow-y:auto;padding:16px 8px 40px;align-items:center;">
-  <img id="ant-tabelaImagem" style="display:none;width:100%;max-width:700px;margin:0 auto;border-radius:4px;display:block;">
+  <div id="ant-zoomWrap" style="display:none;width:100%;max-width:700px;margin:0 auto;overflow:hidden;position:relative;touch-action:none;">
+    <img id="ant-tabelaImagem" style="display:block;width:100%;max-width:none;border-radius:4px;transform-origin:0 0;will-change:transform;">
+  </div>
   <div id="ant-tabelaDica" style="display:none;max-width:500px;margin:12px auto 0;text-align:center;">
     <div style="font-size:12px;letter-spacing:1px;color:#aaa;margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM PARA SALVAR</div>
     <button onclick="VB_compartilharImg('ant-tabelaImagem','ANT','ant-tabelaCliente')" style="width:100%;max-width:500px;padding:12px;border:none;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#111;font-weight:600;cursor:pointer;margin-bottom:8px;">COMPARTILHAR</button>
@@ -5969,14 +5972,102 @@ function ANT_abrirOverlay(){
 function ANT_fecharOverlay(){document.getElementById('ant-overlay').classList.remove('show');}
 function ANT_fecharTabela(){
   document.getElementById('ant-overlayTabela').style.display='none';
+  var zw=document.getElementById('ant-zoomWrap'); if(zw) zw.style.display='none';
+  ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0;
   var img=document.getElementById('ant-tabelaImagem');
-  img.style.display='none'; img.src='';
+  img.style.transform=''; img.src='';
   document.getElementById('ant-tabelaDica').style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
 }
 
-function ANT_titleCase(s){return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();})}
+// ===== Pinça/zoom — somente na tela de tabela da Antecipação =====
+// Visor contido: arrastar navega a tabela, dois dedos ampliam (1x a 4x), duplo-toque volta ao normal.
+// Tudo via transform na imagem — não mexe no zoom da página (viewport segue travado).
+var ANT_zoom={s:1,tx:0,ty:0,bound:false,mode:null,startDist:0,startS:1,startTx:0,startTy:0,imgPx:0,imgPy:0,panX:0,panY:0,lastTap:0};
+function ANT_zoomEls(){ return {wrap:document.getElementById('ant-zoomWrap'), img:document.getElementById('ant-tabelaImagem')}; }
+function ANT_zoomApply(){ var e=ANT_zoomEls(); if(e.img) e.img.style.transform='translate('+ANT_zoom.tx+'px,'+ANT_zoom.ty+'px) scale('+ANT_zoom.s+')'; }
+function ANT_zoomDims(){
+  var e=ANT_zoomEls(); var wrapW=(e.wrap&&e.wrap.clientWidth)||1; var wrapH=(e.wrap&&e.wrap.clientHeight)||1;
+  var natW=e.img&&e.img.naturalWidth?e.img.naturalWidth:wrapW, natH=e.img&&e.img.naturalHeight?e.img.naturalHeight:wrapW;
+  var dispH=wrapW*(natH/natW);
+  return {wrapW:wrapW, wrapH:wrapH, dispH:dispH};
+}
+function ANT_zoomSizeWrap(){
+  var e=ANT_zoomEls(); if(!e.wrap||!e.img) return;
+  var d=ANT_zoomDims();
+  // janela do visor: no máximo ~72% da tela (botões ficam logo abaixo, sempre acessíveis)
+  var maxH=Math.round((window.innerHeight||700)*0.72);
+  var h=Math.min(d.dispH||maxH, maxH);
+  e.wrap.style.height = (h>0?h:maxH)+'px';
+}
+function ANT_canPanX(){ var d=ANT_zoomDims(); return d.wrapW*ANT_zoom.s > d.wrapW+0.5; }
+function ANT_canPanY(){ var d=ANT_zoomDims(); return d.dispH*ANT_zoom.s > d.wrapH+0.5; }
+function ANT_zoomClamp(){
+  var d=ANT_zoomDims(); var s=ANT_zoom.s;
+  var scaledW=d.wrapW*s, scaledH=d.dispH*s;
+  if(scaledW<=d.wrapW+0.5){ ANT_zoom.tx=0; }
+  else { var minX=d.wrapW-scaledW; if(ANT_zoom.tx>0)ANT_zoom.tx=0; if(ANT_zoom.tx<minX)ANT_zoom.tx=minX; }
+  if(scaledH<=d.wrapH+0.5){ ANT_zoom.ty=0; }
+  else { var minY=d.wrapH-scaledH; if(ANT_zoom.ty>0)ANT_zoom.ty=0; if(ANT_zoom.ty<minY)ANT_zoom.ty=minY; }
+}
+function ANT_zoomReset(){ ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomSizeWrap(); ANT_zoomClamp(); ANT_zoomApply(); }
+function _antDist(t){ var dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
+function _antMid(t,rect){ return { x:(t[0].clientX+t[1].clientX)/2-rect.left, y:(t[0].clientY+t[1].clientY)/2-rect.top }; }
+function ANT_zoomInit(){
+  var e=ANT_zoomEls(); if(!e.wrap||ANT_zoom.bound) return; ANT_zoom.bound=true;
+  e.wrap.addEventListener('touchstart',function(ev){
+    var t=ev.touches, rect=e.wrap.getBoundingClientRect();
+    if(t.length===2){
+      ANT_zoom.mode='pinch'; ANT_zoom.startDist=_antDist(t); ANT_zoom.startS=ANT_zoom.s;
+      var m=_antMid(t,rect);
+      ANT_zoom.imgPx=(m.x-ANT_zoom.tx)/ANT_zoom.s; ANT_zoom.imgPy=(m.y-ANT_zoom.ty)/ANT_zoom.s;
+    } else if(t.length===1 && (ANT_canPanX()||ANT_canPanY())){
+      ANT_zoom.mode='pan'; ANT_zoom.panX=t[0].clientX; ANT_zoom.panY=t[0].clientY;
+      ANT_zoom.startTx=ANT_zoom.tx; ANT_zoom.startTy=ANT_zoom.ty;
+    } else { ANT_zoom.mode=null; } // cabe na tela: deixa segurar p/ salvar
+  },{passive:false});
+  e.wrap.addEventListener('touchmove',function(ev){
+    var t=ev.touches, rect=e.wrap.getBoundingClientRect();
+    if(ANT_zoom.mode==='pinch' && t.length===2){
+      ev.preventDefault();
+      var f=_antDist(t)/(ANT_zoom.startDist||1); var ns=ANT_zoom.startS*f; if(ns<1)ns=1; if(ns>4)ns=4;
+      var m=_antMid(t,rect);
+      ANT_zoom.s=ns; ANT_zoom.tx=m.x-ANT_zoom.imgPx*ns; ANT_zoom.ty=m.y-ANT_zoom.imgPy*ns;
+      ANT_zoomClamp(); ANT_zoomApply();
+    } else if(ANT_zoom.mode==='pan' && t.length===1){
+      ev.preventDefault();
+      ANT_zoom.tx=ANT_zoom.startTx+(t[0].clientX-ANT_zoom.panX);
+      ANT_zoom.ty=ANT_zoom.startTy+(t[0].clientY-ANT_zoom.panY);
+      ANT_zoomClamp(); ANT_zoomApply();
+    }
+  },{passive:false});
+  e.wrap.addEventListener('touchend',function(ev){
+    if(ev.touches.length===0){
+      // duplo-toque -> volta ao normal
+      var now=Date.now();
+      if(ANT_zoom.mode!=='pinch' && (now-ANT_zoom.lastTap)<300){ ANT_zoomReset(); ANT_zoom.lastTap=0; }
+      else { ANT_zoom.lastTap=now; }
+    }
+    if(ANT_zoom.s<=1.001){ ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomClamp(); ANT_zoomApply(); }
+    if(ev.touches.length===0){ ANT_zoom.mode=null; }
+    else if(ev.touches.length===1 && (ANT_canPanX()||ANT_canPanY())){
+      ANT_zoom.mode='pan'; ANT_zoom.panX=ev.touches[0].clientX; ANT_zoom.panY=ev.touches[0].clientY;
+      ANT_zoom.startTx=ANT_zoom.tx; ANT_zoom.startTy=ANT_zoom.ty;
+    }
+  },{passive:false});
+  window.addEventListener('resize',function(){ var e2=ANT_zoomEls(); if(e2.wrap && e2.wrap.style.display!=='none'){ ANT_zoomSizeWrap(); ANT_zoomClamp(); ANT_zoomApply(); } });
+}
+function ANT_prepZoom(){
+  var e=ANT_zoomEls(); if(!e.wrap) return;
+  e.wrap.style.display='block';
+  ANT_zoomInit();
+  ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoom.lastTap=0;
+  e.img.onload=function(){ ANT_zoomReset(); };
+  if(e.img.complete && e.img.naturalWidth){ ANT_zoomReset(); }
+}
+
+
 
 // ===== QR / CARREGAR (Antecipação) =====
 // Lista canônica de títulos (valor+data) — expande o modo simples pra ficar igual ao personalizado
@@ -6276,7 +6367,8 @@ function ANT_gerarTabela(){
     var ot=document.getElementById('ant-overlayTabela');
     ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
     ot.scrollTop=0;
-  }
+    ANT_prepZoom();
+  } else { var zw=document.getElementById('ant-zoomWrap'); if(zw) zw.style.display='none'; }
 }
 
 // Helper: retângulo arredondado (compatível com Safari antigo)
@@ -6514,7 +6606,8 @@ function ANT_gerarResumoFoto(){
     var ot=document.getElementById('ant-overlayTabela');
     ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
     ot.scrollTop=0;
-  }
+    ANT_prepZoom();
+  } else { var zw=document.getElementById('ant-zoomWrap'); if(zw) zw.style.display='none'; }
 }
 
 // ===== MODO PERSONALIZADO =====
@@ -7956,6 +8049,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.13.0</span><span class="cl-ver-date">24/06/2026 18:40</span></div>
+      <div class="cl-item">Zoom na tela de tabela da Antecipação: pinça com dois dedos amplia (1x a 4x), arrastar navega a tabela, duplo-toque volta ao normal. Feito via transform na imagem, sem soltar o zoom da página. As outras telas de tabela seguem como estão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.12.0</span><span class="cl-ver-date">24/06/2026 18:10</span></div>
