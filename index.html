@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.8.1</title>
+<title>VB - v1.9.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -290,9 +290,46 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<!-- Overlay FILTRAR histórico -->
+<div id="hist-filter-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100002;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)HIST_closeFilter()">
+  <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:340px;box-shadow:0 14px 44px rgba(0,0,0,0.28);max-height:86vh;overflow-y:auto;">
+    <div style="font-size:12px;letter-spacing:2px;color:#888;font-weight:600;margin-bottom:16px;text-align:center;font-family:-apple-system,sans-serif;">FILTRAR</div>
+
+    <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Período</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;">
+      <button class="hist-fper" data-per="tudo"       onclick="HIST_setPeriodo('tudo')"       style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Tudo</button>
+      <button class="hist-fper" data-per="7d"         onclick="HIST_setPeriodo('7d')"         style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 7 dias</button>
+      <button class="hist-fper" data-per="30d"        onclick="HIST_setPeriodo('30d')"        style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 30 dias</button>
+      <button class="hist-fper" data-per="mes"        onclick="HIST_setPeriodo('mes')"        style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Este mês</button>
+      <button class="hist-fper" data-per="mespassado" onclick="HIST_setPeriodo('mespassado')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado</button>
+    </div>
+
+    <div id="hist-filter-modo-sec" style="margin-bottom:18px;">
+      <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Modo</div>
+      <div style="display:flex;gap:6px;">
+        <button class="hist-fmodo" data-modo="todos"         onclick="HIST_setModo('todos')"         style="flex:1;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Todos</button>
+        <button class="hist-fmodo" data-modo="simples"       onclick="HIST_setModo('simples')"       style="flex:1;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Simples</button>
+        <button class="hist-fmodo" data-modo="personalizado" onclick="HIST_setModo('personalizado')" style="flex:1;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Personalizada</button>
+      </div>
+    </div>
+
+    <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Faixa de valor</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;">
+      <input id="hist-fval-min" type="text" inputmode="numeric" placeholder="Mín" onclick="if(!this.value)this.select()" style="flex:1;height:42px;border:0.5px solid #ddd;border-radius:12px;padding:0 12px;font-size:14px;color:#111;outline:none;background:#fff;text-align:center;font-family:-apple-system,sans-serif;">
+      <span style="color:#bbb;font-size:13px;">até</span>
+      <input id="hist-fval-max" type="text" inputmode="numeric" placeholder="Máx" onclick="if(!this.value)this.select()" style="flex:1;height:42px;border:0.5px solid #ddd;border-radius:12px;padding:0 12px;font-size:14px;color:#111;outline:none;background:#fff;text-align:center;font-family:-apple-system,sans-serif;">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button type="button" ontouchend="event.preventDefault();HIST_clearFilters()" onclick="HIST_clearFilters()" style="padding:13px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">LIMPAR</button>
+      <button type="button" ontouchend="event.preventDefault();HIST_applyFilter()" onclick="HIST_applyFilter()" style="padding:13px;border:none;border-radius:12px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">APLICAR</button>
+    </div>
+  </div>
+</div>
+
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.8.1<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.9.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1105,8 +1142,13 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
       <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
       <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
     </div>
-    <button id="hist-export" onclick="HIST_exportar()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Exportar</button>
+    <div style="display:flex;gap:5px;">
+      <button id="hist-filter-btn" onclick="HIST_openFilter()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Filtrar</button>
+      <button id="hist-export" onclick="HIST_exportar()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Exportar</button>
+    </div>
   </div>
+
+  <div id="hist-filter-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
 
   <div id="hist-count" style="font-size:11px;color:#aaa;margin-bottom:6px;min-height:14px;"></div>
 
@@ -3847,6 +3889,108 @@ function HIST_parseNum(s){
   return isNaN(n)?null:n;
 }
 
+// ===== Filtro do Histórico (período + modo + faixa de valor) =====
+var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'' };
+function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!==''; }
+function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'' }; }
+function HIST_periodoRange(){
+  var f=HIST_filter, now=new Date();
+  var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  function eod(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999); }
+  if(f.periodo==='7d'){ var a=new Date(startToday); a.setDate(a.getDate()-7); return {ini:a,fim:eod(now)}; }
+  if(f.periodo==='30d'){ var b=new Date(startToday); b.setDate(b.getDate()-30); return {ini:b,fim:eod(now)}; }
+  if(f.periodo==='mes'){ return {ini:new Date(now.getFullYear(),now.getMonth(),1), fim:eod(new Date(now.getFullYear(),now.getMonth()+1,0))}; }
+  if(f.periodo==='mespassado'){ return {ini:new Date(now.getFullYear(),now.getMonth()-1,1), fim:eod(new Date(now.getFullYear(),now.getMonth(),0))}; }
+  return null;
+}
+function HIST_filterRows(tab, rows){
+  if(!HIST_hasActiveFilter()) return rows;
+  var f=HIST_filter, valCol=HIST_valCol(tab), range=HIST_periodoRange();
+  var vmin=HIST_parseNum(f.valMin), vmax=HIST_parseNum(f.valMax);
+  return rows.filter(function(r){
+    if(range){
+      var d=r.created_at?new Date(r.created_at):null;
+      if(!d||isNaN(d.getTime())) return false;
+      if(range.ini && d<range.ini) return false;
+      if(range.fim && d>range.fim) return false;
+    }
+    if(f.modo!=='todos' && (tab==='ant'||tab==='ven')){ if((r.modo||'')!==f.modo) return false; }
+    if(vmin!=null && !(Number(r[valCol])>=vmin)) return false;
+    if(vmax!=null && !(Number(r[valCol])<=vmax)) return false;
+    return true;
+  });
+}
+// Rótulo de seção pela data de salvamento (created_at)
+function HIST_bucketLabel(iso){
+  if(!iso) return 'Sem data';
+  var d=new Date(iso); if(isNaN(d.getTime())) return 'Sem data';
+  var now=new Date();
+  var diff=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000);
+  if(diff<=0) return 'Hoje';
+  if(diff<=7) return 'Últimos 7 dias';
+  if(diff<=30) return 'Últimos 30 dias';
+  var m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return m[d.getMonth()]+' '+d.getFullYear();
+}
+function HIST_sectionHeader(label, first){
+  return '<div style="font-size:11px;font-weight:700;letter-spacing:0.4px;color:#aaa;margin:'+(first?'2px':'16px')+' 2px 8px;">'+HIST_esc(label)+'</div>';
+}
+// Overlay de filtro
+function HIST_openFilter(){
+  var sec=document.getElementById('hist-filter-modo-sec');
+  if(sec) sec.style.display = (HIST_tabAtual==='ant'||HIST_tabAtual==='ven') ? 'block' : 'none';
+  var mn=document.getElementById('hist-fval-min'); if(mn) mn.value=HIST_filter.valMin||'';
+  var mx=document.getElementById('hist-fval-max'); if(mx) mx.value=HIST_filter.valMax||'';
+  HIST_styleFilterUI();
+  document.getElementById('hist-filter-overlay').style.display='flex';
+}
+function HIST_closeFilter(){ document.getElementById('hist-filter-overlay').style.display='none'; }
+function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_styleFilterUI(); }
+function HIST_setModo(m){ HIST_filter.modo=m; HIST_styleFilterUI(); }
+function HIST_styleFilterUI(){
+  document.querySelectorAll('.hist-fper').forEach(function(b){
+    var on=b.getAttribute('data-per')===HIST_filter.periodo;
+    b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
+  });
+  document.querySelectorAll('.hist-fmodo').forEach(function(b){
+    var on=b.getAttribute('data-modo')===HIST_filter.modo;
+    b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
+  });
+}
+function HIST_applyFilter(){
+  var mn=document.getElementById('hist-fval-min'), mx=document.getElementById('hist-fval-max');
+  HIST_filter.valMin=mn?(mn.value||'').trim():''; HIST_filter.valMax=mx?(mx.value||'').trim():'';
+  HIST_closeFilter(); HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
+}
+function HIST_clearFilters(){
+  HIST_resetFilter();
+  var mn=document.getElementById('hist-fval-min'); if(mn) mn.value='';
+  var mx=document.getElementById('hist-fval-max'); if(mx) mx.value='';
+  HIST_styleFilterUI(); HIST_closeFilter(); HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
+}
+function HIST_clearOne(dim){
+  if(dim==='periodo') HIST_filter.periodo='tudo';
+  else if(dim==='modo') HIST_filter.modo='todos';
+  else if(dim==='valor'){ HIST_filter.valMin=''; HIST_filter.valMax=''; }
+  HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
+}
+function HIST_perLabel(){
+  var p=HIST_filter.periodo;
+  return p==='7d'?'Últimos 7 dias':p==='30d'?'Últimos 30 dias':p==='mes'?'Este mês':p==='mespassado'?'Mês passado':'';
+}
+function HIST_updateFilterUIState(){
+  var btn=document.getElementById('hist-filter-btn');
+  if(btn){ var on=HIST_hasActiveFilter(); btn.style.background=on?'#111':'#fff'; btn.style.color=on?'#fff':'#111'; btn.style.borderColor=on?'#111':'#ddd'; btn.textContent=on?'Filtrar •':'Filtrar'; }
+  var wrap=document.getElementById('hist-filter-chips'); if(!wrap) return;
+  var chips=[];
+  function chip(dim,txt){ return '<span style="display:inline-flex;align-items:center;gap:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:10px;">'+HIST_esc(txt)+'<span onclick="HIST_clearOne(\''+dim+'\')" style="cursor:pointer;opacity:0.7;padding:0 2px;">×</span></span>'; }
+  if(HIST_filter.periodo!=='tudo') chips.push(chip('periodo', HIST_perLabel()));
+  if(HIST_filter.modo!=='todos' && (HIST_tabAtual==='ant'||HIST_tabAtual==='ven')) chips.push(chip('modo', HIST_filter.modo==='simples'?'Simples':'Personalizada'));
+  if(HIST_filter.valMin!=='' || HIST_filter.valMax!==''){ chips.push(chip('valor','R$ '+(HIST_filter.valMin||'0')+' – '+(HIST_filter.valMax||'∞'))); }
+  if(chips.length){ wrap.innerHTML=chips.join(''); wrap.style.display='flex'; }
+  else { wrap.innerHTML=''; wrap.style.display='none'; }
+}
+
 function HIST_styleSortChips(){
   ['data','valor'].forEach(function(c){
     var b=document.getElementById('hist-sort-'+c); if(!b) return;
@@ -3860,12 +4004,14 @@ function HIST_loadTab(tab){
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
   HIST_searchTerm='';
+  HIST_resetFilter();
   HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
   var wrap=document.getElementById('hist-search-wrap');
   if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block'; // Pagamentos não busca por nome
+  HIST_updateFilterUIState();
   HIST_fetch('');
 }
 
@@ -3878,6 +4024,7 @@ function HIST_refresh(){
   if(sEl){ sEl.value=HIST_searchTerm||''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = HIST_searchTerm ? 'inline-flex' : 'none';
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display = (tab==='pag') ? 'none' : 'block';
+  HIST_updateFilterUIState();
   HIST_fetch(HIST_searchTerm);
 }
 
@@ -3925,8 +4072,9 @@ function HIST_fetch(term){
   q.limit(500).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
+    rows=HIST_filterRows(tab, rows);
     if(rows.length===0){
-      var msg = term ? 'Nada encontrado.' : 'Nada confirmado ainda.';
+      var msg = (term||HIST_hasActiveFilter()) ? 'Nada encontrado.' : 'Nada confirmado ainda.';
       listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">'+msg+'</div>';
       HIST_rowsCache=[]; HIST_tabCache=tab; return;
     }
@@ -3956,7 +4104,9 @@ function HIST_reload(tab){
 function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
+  var grouping=(HIST_sortCol==='data'), lastBucket=null;
   rows.forEach(function(r,idx){
+    if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null); lastBucket=bk; } }
     var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], dataOp=HIST_fmtData(HIST_dataOp(tab,r));
     if(tab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
@@ -7488,6 +7638,14 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.9.0</span><span class="cl-ver-date">24/06/2026 11:45</span></div>
+      <div class="cl-item">Histórico agrupado por data: quando ordenado por Data, a lista ganha cabeçalhos de seção (Hoje, Últimos 7 dias, Últimos 30 dias e depois por mês), pela data de salvamento — igual à sua pasta de arquivos. Ao ordenar por Valor, a lista fica plana como antes</div>
+      <div class="cl-item">Novo botão Filtrar na barra do Histórico: filtra por período (Tudo, Últimos 7/30 dias, Este mês, Mês passado), por modo (Simples/Personalizada, nas abas Antecipação e Vendas) e por faixa de valor (mín/máx)</div>
+      <div class="cl-item">Os filtros ativos aparecem como etiquetas acima da lista, cada uma com × pra remover; o contador e o total do rodapé passam a refletir o que está filtrado</div>
+      <div class="cl-item">O filtro é reiniciado ao trocar de aba e é aplicado em cima do que já está carregado, sem mexer no banco</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.8.1</span><span class="cl-ver-date">24/06/2026 11:00</span></div>
