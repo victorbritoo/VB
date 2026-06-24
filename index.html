@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.14.0</title>
+<title>VB - v1.15.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.14.0<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.15.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3585,6 +3585,11 @@ function HIST_carregarFin(r){
   if(r.valor_parcela){ document.getElementById('fin-parcela').value = FIN_formatBR(Number(r.valor_parcela)); }
   if(r.data_inicio){ var pp=r.data_inicio.split('-'); document.getElementById('fin-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
   FIN_lastEdited='valor'; FIN_lastSolved='parcela'; FIN_update();
+  if(r.tem_investidor){
+    if(r.investidor_nome) document.getElementById('inv-nome').value=r.investidor_nome;
+    if(r.investidor_pct!=null) document.getElementById('inv-pctInv').value=FIN_formatBR(Number(r.investidor_pct));
+    FIN_enableInvestidor();
+  } else { FIN_disableInvestidor(); }
   FIN_updateConfirmarBtnLabel();
   FIN_snapshot = FIN_assinatura();
   VB_telaAnterior = 'hist';
@@ -3664,7 +3669,7 @@ function HIST_fmtDataLocal(iso){
   if(isNaN(d.getTime())) return '--';
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
 }
-function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos){
+function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, badge){
   var cls = 'background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:12px 16px;margin-bottom:6px;cursor:pointer;';
   var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
@@ -3677,7 +3682,9 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   } else {
     h += '<span style="width:16px;flex-shrink:0;display:inline-block;"></span>';
   }
-  h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;min-width:0;">'+HIST_esc(titulo)+'</div>';
+  h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;min-width:0;">'+HIST_esc(titulo);
+  if(badge){ h += ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:#fff;background:#111;border-radius:6px;padding:2px 6px;margin-left:4px;white-space:nowrap;">'+HIST_esc(badge)+'</span>'; }
+  h += '</div>';
   h += '</div>';
   // direita: ações
   h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
@@ -4378,7 +4385,7 @@ function HIST_renderRows(tab, rows){
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   rows.forEach(function(r,idx){
     if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null); lastBucket=bk; } }
-    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], dataOp=HIST_fmtData(HIST_dataOp(tab,r));
+    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', dataOp=HIST_fmtData(HIST_dataOp(tab,r));
     if(tab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
       valor=HIST_fmtMoeda(r.valor_bruto);
@@ -4397,6 +4404,12 @@ function HIST_renderRows(tab, rows){
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
+      if(r.tem_investidor){
+        rowBadge='INVESTIDOR';
+        if(r.investidor_nome) campos.push({l:'Investidor', v:r.investidor_nome});
+        if(r.investidor_parcela!=null) campos.push({l:'Parcela investidor', v:HIST_fmtMoeda(r.investidor_parcela)});
+        if(r.vb_parcela!=null) campos.push({l:'Parcela VB', v:HIST_fmtMoeda(r.vb_parcela)});
+      }
     } else if(tab==='ven'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_total);
@@ -4411,7 +4424,7 @@ function HIST_renderRows(tab, rows){
       resumoExtra=qtd+' lançamento'+(qtd!==1?'s':'');
       // Pagamentos sem detalhe extra -> sem setinha
     }
-    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos);
+    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge);
   });
   listaEl.innerHTML=html;
   listaEl.style.minHeight='auto';
@@ -4988,6 +5001,10 @@ function FIN_confirmarOperacao(btn){
     return y+'-'+m+'-'+d;
   }
 
+  var _invOn = !!FIN_invOn;
+  var _invNome = _invOn ? ((document.getElementById('inv-nome').value||'').trim().toUpperCase()||null) : null;
+  var _invD = (_invOn && typeof INV_getDados==='function') ? INV_getDados() : null;
+  var _invPct = _invOn ? (FIN_parseBR(document.getElementById('inv-pctInv').value)||null) : null;
   var row={
     descricao: desc||null,
     data_inicio: toISO(dataStr),
@@ -4995,7 +5012,13 @@ function FIN_confirmarOperacao(btn){
     valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
     qtd_parcelas: prazo>0?prazo:null,
     taxa: (!isNaN(taxa)&&taxa>0)?taxa:null,
-    valor_total: (!isNaN(parcela)&&parcela>0&&prazo>0)?parcela*prazo:null
+    valor_total: (!isNaN(parcela)&&parcela>0&&prazo>0)?parcela*prazo:null,
+    tem_investidor: _invOn,
+    investidor_nome: _invNome,
+    investidor_pct: _invPct,
+    investidor_parcela: _invD? _invD.pi : null,
+    vb_parcela: _invD? _invD.pv : null,
+    investidor_aporte: _invD? _invD.valorOP : null
   };
 
   var ehAtualizacao = !!FIN_currentOperationId;
@@ -8077,6 +8100,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.15.0</span><span class="cl-ver-date">24/06/2026 19:35</span></div>
+      <div class="cl-item">Financiamento com investidor agora fica explícito no Histórico: selo "INVESTIDOR" na linha fechada e, ao expandir, nome do investidor, parcela do investidor e parcela do VB (além da data da operação). Os dados do investidor passam a ser salvos no Supabase (requer as colunas tem_investidor, investidor_nome, investidor_pct, investidor_parcela, vb_parcela, investidor_aporte). Operações antigas ficam sem a marca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.14.0</span><span class="cl-ver-date">24/06/2026 19:05</span></div>
