@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.15.3</title>
+<title>VB - v1.16.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.15.3<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.16.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -3993,31 +3993,197 @@ function VB_updateBackupStatus(){
     el.style.display='none';
   }
 }
-function VB_backupExport(btn){
-  var _t = btn?btn.textContent:'';
-  if(btn){ btn.disabled=true; btn.textContent='GERANDO...'; }
-  function done(){ if(btn){ btn.disabled=false; btn.textContent=_t; } }
+// ===== Backup: menu JSON / PDF =====
+function VB_backupExport(btn){ VB_backupMenu(); }
+function VB_backupMenu(){
+  var ov=document.getElementById('vb-backup-menu');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='vb-backup-menu';
+    ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10050;align-items:flex-end;justify-content:center;';
+    ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
+      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">BACKUP DE TUDO</div>'
+      +'<button id="vb-bkp-json" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">BACKUP (JSON)</button>'
+      +'<button id="vb-bkp-pdf" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
+      +'<button id="vb-bkp-cancel" style="width:100%;padding:13px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) VB_backupMenuFechar(); });
+    ov.querySelector('#vb-bkp-json').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupJSON(); });
+    ov.querySelector('#vb-bkp-pdf').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupPDF(); });
+    ov.querySelector('#vb-bkp-cancel').addEventListener('click', VB_backupMenuFechar);
+  }
+  ov.style.display='flex';
+}
+function VB_backupMenuFechar(){ var ov=document.getElementById('vb-backup-menu'); if(ov) ov.style.display='none'; }
+
+// Busca compartilhada de todas as operações dos quatro módulos
+function VB_fetchTudo(onOk, onErr){
   var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
   Promise.all(tabelas.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
-    if(res.some(function(x){ return x.rows===null; })){ done(); VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); return; }
+    if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
     var dados={}, total=0;
     res.forEach(function(x){ dados[x.t]=x.rows||[]; total+=(x.rows||[]).length; });
-    var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
-    var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
-    var fname='VB - Backup - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.json';
-    var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-    var file=new File([blob], fname, {type:'application/json'});
-    try{ localStorage.setItem(VB_BACKUP_LS, payload.gerado_em); }catch(e){}
-    VB_updateBackupStatus();
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      navigator.share({files:[file]}).then(done).catch(done);
-    } else {
-      var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
-      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); done();
+    onOk(dados, total);
+  }).catch(function(){ onErr&&onErr(); });
+}
+
+function VB_backupJSON(){
+  VB_toast('Gerando backup…');
+  VB_fetchTudo(function(dados, total){
+    try{
+      var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
+      var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+      var fname='VB - Backup - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.json';
+      var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+      var file=new File([blob], fname, {type:'application/json'});
+      try{ localStorage.setItem(VB_BACKUP_LS, payload.gerado_em); }catch(e){}
+      VB_updateBackupStatus();
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file]}).catch(function(){});
+      } else {
+        var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
+      }
+      VB_toast(total+' operações no backup. Salve na pasta OPs.');
+    }catch(e){ VB_toast('Não consegui gerar o backup.'); }
+  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+}
+
+function VB_backupPDF(){
+  VB_toast('Gerando relatório…');
+  VB_fetchTudo(function(dados, total){
+    try{
+      if(!total){ VB_toast('Nada para o relatório.'); return; }
+      var pdf=VB_relatorioPDF(dados, total);
+      var blob=new Blob([pdf], {type:'application/pdf'});
+      var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+      var fname='VB - Relatório - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.pdf';
+      var file=new File([blob], fname, {type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file]}).catch(function(){});
+      } else {
+        var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
+      }
+      VB_toast(total+' operações no relatório.');
+    }catch(e){ VB_toast('Não consegui gerar o relatório.'); }
+  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+}
+
+function _cvToJpeg(cv){
+  var jurl=cv.toDataURL('image/jpeg',0.9);
+  var b=atob(jurl.split(',')[1]); var u=new Uint8Array(b.length);
+  for(var i=0;i<b.length;i++){ u[i]=b.charCodeAt(i); }
+  return {bytes:u, w:cv.width, h:cv.height};
+}
+
+// Relatório resumido: por tipo, uma linha por operação, ordenado por data. Paginação A4.
+function VB_relatorioPDF(dados, total){
+  var esc=2, W=820, Hp=1160, pad=40;
+  var hoje=new Date();
+  var hojeStr=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+  function money(v){ return (v==null||v==='')?'—':'R$ '+HIST_fmtMoeda(Number(v)); }
+  function dt(v){ var d=HIST_fmtData(v); return (d&&d!=='--')?d:'—'; }
+  function byDate(field){ return function(a,b){ var x=(a[field]||''),y=(b[field]||''); return x<y?-1:x>y?1:0; }; }
+
+  var secoes=[
+    { key:'antecipacoes', titulo:'ANTECIPAÇÃO', date:'data_operacao',
+      cols:[ {h:'Nome', x:pad, w:240, get:function(r){return (r.nome||r.cliente||'—');}},
+             {h:'Data', x:300, w:90,  get:function(r){return dt(r.data_operacao);}},
+             {h:'Bruto', x:410, w:160, get:function(r){return money(r.valor_bruto);}},
+             {h:'Líquido', x:600, w:180, get:function(r){return money(r.valor_liquido);}} ],
+      somaLabel:'Total bruto', soma:function(r){return Number(r.valor_bruto)||0;} },
+    { key:'financiamentos_hist', titulo:'FINANCIAMENTO', date:'data_inicio',
+      cols:[ {h:'Nome', x:pad, w:230, get:function(r){return (r.nome||r.descricao||'—')+(r.tem_investidor?'  •INV':'');}},
+             {h:'Início', x:290, w:90, get:function(r){return dt(r.data_inicio);}},
+             {h:'Financiado', x:400, w:170, get:function(r){return money(r.valor_financiado);}},
+             {h:'Parcela', x:600, w:180, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' ×'+r.qtd_parcelas):'');}} ],
+      somaLabel:'Total financiado', soma:function(r){return Number(r.valor_financiado)||0;} },
+    { key:'vendas', titulo:'VENDAS', date:'data_primeira_parcela',
+      cols:[ {h:'Nome', x:pad, w:240, get:function(r){return (r.nome||r.descricao||'—');}},
+             {h:'1ª parc.', x:300, w:90, get:function(r){return dt(r.data_primeira_parcela);}},
+             {h:'Total', x:410, w:160, get:function(r){return money(r.valor_total);}},
+             {h:'Parcela', x:600, w:180, get:function(r){return money(r.valor_parcela)+(r.quantidade_parcelas?(' ×'+r.quantidade_parcelas):'');}} ],
+      somaLabel:'Total', soma:function(r){return Number(r.valor_total)||0;} },
+    { key:'pagamentos', titulo:'PAGAMENTOS', date:'created_at',
+      cols:[ {h:'Data', x:pad, w:140, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
+             {h:'Total', x:230, w:200, get:function(r){return money(r.valor_total);}},
+             {h:'Lançamentos', x:470, w:200, get:function(r){return String((r.pagamentos||[]).length);}} ],
+      somaLabel:'Total', soma:function(r){return Number(r.valor_total)||0;} }
+  ];
+
+  var pages=[], cur=null, pageNo=0;
+  function commit(){
+    if(!cur) return;
+    var ctx=cur.ctx;
+    ctx.fillStyle='#bbb'; ctx.font='400 10px -apple-system,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('VB · Relatório · '+hojeStr+' · pág '+cur.no, W/2, Hp-16);
+    pages.push(_cvToJpeg(cur.cv));
+  }
+  function novaPagina(){
+    commit();
+    var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=Hp*esc;
+    var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hp);
+    pageNo++; cur={cv:cv, ctx:ctx, y:pad, no:pageNo};
+    ctx.fillStyle='#111'; ctx.textAlign='left'; ctx.font='700 26px Georgia,serif';
+    ctx.fillText('VB', pad, cur.y+12);
+    ctx.textAlign='right'; ctx.font='600 12px -apple-system,Arial,sans-serif'; ctx.fillStyle='#888';
+    ctx.fillText('RELATÓRIO · '+hojeStr, W-pad, cur.y+10);
+    cur.y+=36;
+    ctx.strokeStyle='#111'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,cur.y); ctx.lineTo(W-pad,cur.y); ctx.stroke();
+    cur.y+=22;
+  }
+  function ensure(h){ if(!cur || cur.y+h > Hp-40) novaPagina(); }
+  function clip(ctx, s, w){
+    s=String(s); if(ctx.measureText(s).width<=w) return s;
+    while(s.length>1 && ctx.measureText(s+'…').width>w) s=s.slice(0,-1);
+    return s+'…';
+  }
+
+  novaPagina();
+  secoes.forEach(function(sec){
+    var rows=(dados[sec.key]||[]).slice().sort(byDate(sec.date));
+    ensure(60);
+    var ctx=cur.ctx;
+    // cabeçalho da seção
+    ctx.fillStyle='#111'; ctx.fillRect(pad, cur.y, W-2*pad, 26);
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font='700 12px -apple-system,Arial,sans-serif';
+    ctx.fillText(sec.titulo+'   ('+rows.length+')', pad+10, cur.y+17);
+    cur.y+=26+8;
+    if(rows.length===0){
+      ctx.fillStyle='#aaa'; ctx.font='400 12px -apple-system,Arial,sans-serif';
+      ctx.fillText('Nenhuma operação.', pad+2, cur.y+12); cur.y+=26; return;
     }
-    VB_toast(total+' operações no backup. Salve na pasta OPs.');
-  }).catch(function(e){ done(); VB_toast('Não consegui gerar o backup.'); });
+    // cabeçalho de colunas
+    ctx=cur.ctx;
+    ctx.fillStyle='#999'; ctx.font='700 9px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+    sec.cols.forEach(function(c){ ctx.fillText(c.h.toUpperCase(), c.x, cur.y+8); });
+    cur.y+=14;
+    ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(pad,cur.y); ctx.lineTo(W-pad,cur.y); ctx.stroke();
+    cur.y+=4;
+    var soma=0;
+    rows.forEach(function(r){
+      ensure(20);
+      var ctx2=cur.ctx;
+      ctx2.fillStyle='#111'; ctx2.font='400 11px -apple-system,Arial,sans-serif'; ctx2.textAlign='left';
+      sec.cols.forEach(function(c){ ctx2.fillText(clip(ctx2, c.get(r), c.w), c.x, cur.y+12); });
+      cur.y+=19;
+      ctx2.strokeStyle='#f2f2f2'; ctx2.lineWidth=0.5; ctx2.beginPath(); ctx2.moveTo(pad,cur.y); ctx2.lineTo(W-pad,cur.y); ctx2.stroke();
+      if(sec.soma) soma+=sec.soma(r);
+    });
+    // subtotal
+    ensure(26);
+    var ctx3=cur.ctx;
+    cur.y+=4;
+    ctx3.fillStyle='#111'; ctx3.font='700 11px -apple-system,Arial,sans-serif'; ctx3.textAlign='right';
+    ctx3.fillText(sec.somaLabel+': R$ '+HIST_fmtMoeda(soma), W-pad, cur.y+10);
+    cur.y+=30;
+  });
+  commit();
+  return VB_buildPDF(pages);
 }
 
 // ===== Compartilhar do histórico: gera a imagem em silêncio e abre a folha do iPhone =====
@@ -8112,6 +8278,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.16.0</span><span class="cl-ver-date">24/06/2026 20:40</span></div>
+      <div class="cl-item">Botão BACKUP agora abre um menu: Backup (JSON) — a cópia de dados de sempre — ou Relatório (PDF). O relatório traz tudo do Supabase setorizado por tipo (Antecipação, Financiamento, Vendas, Pagamentos), uma linha por operação ordenada por data, com subtotal por seção e paginação A4. Operações com investidor saem marcadas com •INV. Só o backup JSON conta para o aviso de "último backup"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.15.3</span><span class="cl-ver-date">24/06/2026 20:15</span></div>
