@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.6.0</title>
+<title>VB - v1.7.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -292,7 +292,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.6.0<br>23/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.7.0<br>23/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1102,9 +1102,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <div id="hist-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
     <div style="display:flex;gap:5px;">
-      <button id="hist-sort-recentes" onclick="HIST_setSort('recentes')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Recentes</button>
-      <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
-      <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
+      <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
+      <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
     </div>
     <button id="hist-export" onclick="HIST_exportar()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Exportar</button>
   </div>
@@ -3585,15 +3584,23 @@ function HIST_carregarPag(r){
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
-function HIST_buildRow(tab, idx, titulo, valor, dataStr, linhas){
+function HIST_buildRow(tab, idx, titulo, valor, dataStr, resumoExtra, campos){
   var cls = 'background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:12px 16px;margin-bottom:6px;cursor:pointer;';
+  var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
   h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
-  h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;">'+HIST_esc(titulo)+'</div>';
+  // esquerda: setinha (se houver detalhe) + nome
+  h += '<div style="display:flex;align-items:flex-start;gap:7px;flex:1;min-width:0;">';
+  if(temExp){
+    h += '<button id="hist-chev-'+idx+'" onclick="HIST_toggleExp('+idx+',event)" style="border:none;background:none;padding:0;margin-top:1px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:18px;transition:transform .15s ease;">';
+    h += '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M9 6l6 6-6 6"/></svg></button>';
+  } else {
+    h += '<span style="width:16px;flex-shrink:0;display:inline-block;"></span>';
+  }
+  h += '<div style="font-size:14px;font-weight:700;color:#111;flex:1;min-width:0;">'+HIST_esc(titulo)+'</div>';
+  h += '</div>';
+  // direita: ações
   h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
-  h += '<button data-dup-tab="'+tab+'" data-dup-idx="'+idx+'" onclick="HIST_clickDuplicate(this,event)" ';
-  h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
-  h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
   h += '<button data-shr-tab="'+tab+'" data-shr-idx="'+idx+'" onclick="HIST_clickShare(this,event)" ';
   h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
   h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M7 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg></button>';
@@ -3606,14 +3613,34 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, linhas){
   h += 'style="border:none;background:#111;border-radius:8px;width:26px;height:26px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
   h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   h += '</div></div>';
+  // linha resumo (sempre): valor + data (+ extra). Alinhada sob o nome (pula a setinha).
   var valLabel = tab==='ant'?'Bruto ':tab==='fin'?'Financiado ':tab==='ven'?'Total ':'';
   var parts=[];
   if(valor){ parts.push('<span style="color:#111;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
   if(dataStr && dataStr!=='--'){ parts.push('<span style="color:#555;font-weight:600;">'+HIST_esc(dataStr)+'</span>'); }
-  if(linhas.length){ parts.push('<span style="color:#aaa;">'+HIST_esc(linhas.join(' · '))+'</span>'); }
-  if(parts.length) h += '<div style="font-size:11px;margin-top:6px;line-height:1.7;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
+  if(parts.length) h += '<div style="font-size:11px;margin-top:6px;line-height:1.7;padding-left:23px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  // detalhe expandível: grade 2 colunas (rótulo em cima, valor embaixo)
+  if(temExp){
+    h += '<div id="hist-exp-'+idx+'" style="display:none;margin-top:10px;padding:10px 0 2px 23px;border-top:0.5px solid #f0f0f0;">';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;">';
+    campos.forEach(function(c){
+      h += '<div><div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;">'+HIST_esc(c.l)+'</div>'+
+           '<div style="font-size:13px;color:#111;font-weight:600;margin-top:2px;">'+HIST_esc(c.v)+'</div></div>';
+    });
+    h += '</div></div>';
+  }
   h += '</div>';
   return h;
+}
+function HIST_toggleExp(idx, event){
+  event.stopPropagation();
+  var d=document.getElementById('hist-exp-'+idx);
+  var chev=document.getElementById('hist-chev-'+idx);
+  if(!d) return;
+  var aberto = d.style.display!=='none';
+  d.style.display = aberto ? 'none' : 'block';
+  if(chev) chev.style.transform = aberto ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 function HIST_clickItem(el){
   var tab=el.getAttribute('data-tab');
@@ -3661,19 +3688,6 @@ function HIST_clickRename(el, event){
   });
 }
 
-// ===== Duplicar: carrega a operação no módulo, mas como NOVA (zera o id -> confirmar insere) =====
-function HIST_clickDuplicate(el, event){
-  event.stopPropagation();
-  var tab=el.getAttribute('data-dup-tab');
-  var idx=parseInt(el.getAttribute('data-dup-idx'));
-  var r=HIST_rowsCache[idx]; if(!r) return;
-  if(tab==='ant'){ HIST_carregarAnt(r); ANT_currentOperationId=null; ANT_updateConfirmarBtnLabel && ANT_updateConfirmarBtnLabel(); }
-  else if(tab==='fin'){ HIST_carregarFin(r); FIN_currentOperationId=null; FIN_updateConfirmarBtnLabel && FIN_updateConfirmarBtnLabel(); }
-  else if(tab==='ven'){ HIST_carregarVen(r); VEN_currentOperationId=null; VEN_updateConfirmarBtnLabel && VEN_updateConfirmarBtnLabel(); }
-  else { HIST_carregarPag(r); PAG_currentOperationId=null; PAG_updateConfirmarBtnLabel && PAG_updateConfirmarBtnLabel(); }
-  VB_toast('Cópia carregada. Ajuste e confirme para criar uma nova.');
-}
-
 // ===== Exportar CSV da aba atual (respeita busca e ordenação) e abre a folha do iPhone =====
 function _csvCell(v){ return '"'+(''+(v==null?'':v)).replace(/"/g,'""')+'"'; }
 function HIST_csv(tab, rows){
@@ -3696,6 +3710,8 @@ function HIST_csv(tab, rows){
   return out.join('\r\n');
 }
 function HIST_exportar(){
+  if(HIST_exporting) return; HIST_exporting=true;
+  setTimeout(function(){ HIST_exporting=false; }, 1500);
   var tab=HIST_tabAtual;
   var rows=HIST_rowsCache||[];
   if(!rows.length){ VB_toast('Nada para exportar.'); return; }
@@ -3706,7 +3722,7 @@ function HIST_exportar(){
     var fname='VB - '+HIST_tabLabel(tab)+' '+dd+'-'+mm+'-'+hoje.getFullYear()+'.csv';
     var file=new File([blob], fname, {type:'text/csv'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
-      navigator.share({files:[file], title:fname}).catch(function(){});
+      navigator.share({files:[file]}).catch(function(){}); // só o arquivo, sem title (senão o iOS anexa um 2º item)
     } else {
       var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=fname;
       document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
@@ -3793,7 +3809,9 @@ function HIST_sharePag(r){
 }
 var HIST_searchTerm='';
 var HIST_searchTimer=null;
-var HIST_sortMode='recentes';
+var HIST_sortCol='data';
+var HIST_sortDir='desc';
+var HIST_exporting=false;
 // Coluna de nome por aba (Pagamentos não tem -> null)
 function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
 function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
@@ -3813,10 +3831,11 @@ function HIST_parseNum(s){
 }
 
 function HIST_styleSortChips(){
-  ['recentes','valor','data'].forEach(function(m){
-    var b=document.getElementById('hist-sort-'+m); if(!b) return;
-    if(m===HIST_sortMode){ b.style.background='#111'; b.style.color='#fff'; }
-    else { b.style.background='#fff'; b.style.color='#aaa'; }
+  ['data','valor'].forEach(function(c){
+    var b=document.getElementById('hist-sort-'+c); if(!b) return;
+    var base = (c==='data')?'Data':'Valor';
+    if(c===HIST_sortCol){ b.style.background='#111'; b.style.color='#fff'; b.textContent=base+(HIST_sortDir==='asc'?' ↑':' ↓'); }
+    else { b.style.background='#fff'; b.style.color='#aaa'; b.textContent=base; }
   });
 }
 
@@ -3824,7 +3843,7 @@ function HIST_loadTab(tab){
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
   HIST_searchTerm='';
-  HIST_sortMode='recentes';
+  HIST_sortCol='data'; HIST_sortDir='desc';
   HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
@@ -3847,8 +3866,9 @@ function HIST_clearSearch(){
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
   HIST_fetch('');
 }
-function HIST_setSort(mode){
-  HIST_sortMode=mode;
+function HIST_setSort(col){
+  if(col===HIST_sortCol){ HIST_sortDir = (HIST_sortDir==='desc'?'asc':'desc'); }
+  else { HIST_sortCol=col; HIST_sortDir='desc'; }
   HIST_styleSortChips();
   HIST_fetch(HIST_searchTerm);
 }
@@ -3873,9 +3893,9 @@ function HIST_fetch(term){
     else if(ors.length===1 && col) q=q.ilike(col,'%'+safe+'%');
     else if(num!=null && valCol) q=q.eq(valCol,num);
   }
-  if(HIST_sortMode==='valor') q=q.order(valCol,{ascending:false});
-  else if(HIST_sortMode==='data') q=q.order(HIST_dateCol(tab),{ascending:false});
-  else q=q.order('created_at',{ascending:false});
+  var asc = (HIST_sortDir==='asc');
+  if(HIST_sortCol==='valor') q=q.order(valCol,{ascending:asc});
+  else q=q.order(HIST_dateCol(tab),{ascending:asc});
   q.limit(500).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
@@ -3911,36 +3931,37 @@ function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
   rows.forEach(function(r,idx){
-    var titulo,linhas=[],valor,dataStr=HIST_fmtData(HIST_dataOp(tab,r));
+    var titulo, valor, dataStr=HIST_fmtData(HIST_dataOp(tab,r)), resumoExtra='', campos=[];
     if(tab==='ant'){
       titulo=r.cliente||'(sem nome)';
-      if(r.modo) linhas.push(r.modo==='personalizado'?'Personalizada':'Simples');
-      if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
-      if(r.tarifa) linhas.push('Tarifa '+HIST_fmtMoeda(r.tarifa));
-      if(r.quantidade_titulos) linhas.push(r.quantidade_titulos+' título'+(r.quantidade_titulos>1?'s':''));
-      if(r.prazo_medio) linhas.push('PM '+Number(r.prazo_medio).toFixed(1)+'d');
-      if(r.valor_liquido) linhas.push('Líq. '+HIST_fmtMoeda(r.valor_liquido));
       valor=HIST_fmtMoeda(r.valor_bruto);
+      if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
+      if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
+      if(r.tarifa) campos.push({l:'Tarifa', v:HIST_fmtMoeda(r.tarifa)});
+      if(r.quantidade_titulos) campos.push({l:'Títulos', v:String(r.quantidade_titulos)});
+      if(r.prazo_medio!=null) campos.push({l:'Prazo médio', v:Number(r.prazo_medio).toFixed(1)+' d'});
+      if(r.valor_liquido) campos.push({l:'Líquido', v:HIST_fmtMoeda(r.valor_liquido)});
     } else if(tab==='fin'){
       titulo=r.descricao||'(sem descrição)';
-      if(r.qtd_parcelas) linhas.push(r.qtd_parcelas+'x');
-      if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
-      if(r.taxa) linhas.push('Taxa '+r.taxa+'% a.m.');
-      if(r.valor_total) linhas.push('Total '+HIST_fmtMoeda(r.valor_total));
       valor=HIST_fmtMoeda(r.valor_financiado);
+      if(r.qtd_parcelas) campos.push({l:'Parcelas', v:r.qtd_parcelas+'x'});
+      if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
+      if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
+      if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
     } else if(tab==='ven'){
       titulo=r.descricao||'(sem descrição)';
-      if(r.quantidade_parcelas) linhas.push(r.quantidade_parcelas+'x');
-      if(r.valor_parcela) linhas.push('Parc. '+HIST_fmtMoeda(r.valor_parcela));
-      if(r.modo) linhas.push(r.modo);
       valor=HIST_fmtMoeda(r.valor_total);
+      if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
+      if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
+      if(r.modo) campos.push({l:'Modo', v:r.modo});
     } else {
       var qtd=(r.pagamentos||[]).length;
       titulo='Divisão · '+HIST_fmtMoeda(r.valor_total);
-      linhas.push(qtd+' lançamento'+(qtd!==1?'s':''));
       valor='';
+      resumoExtra=qtd+' lançamento'+(qtd!==1?'s':'');
+      // Pagamentos sem detalhe extra -> sem setinha
     }
-    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, linhas);
+    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, resumoExtra, campos);
   });
   listaEl.innerHTML=html;
   HIST_rowsCache=rows; HIST_tabCache=tab;
@@ -7434,6 +7455,19 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.7.0</span><span class="cl-ver-date">23/06/2026 17:00</span></div>
+      <div class="cl-item">Histórico mais enxuto: cada item mostra só nome, valor e data. Uma setinha › à esquerda expande os detalhes numa grade organizada (rótulo em cima, valor embaixo, dois por linha)</div>
+      <div class="cl-item">Cada item abre e fecha individualmente; a setinha só aparece quando há detalhe extra. Pagamentos mostra direto (valor, data e lançamentos)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.6.1</span><span class="cl-ver-date">23/06/2026 16:30</span></div>
+      <div class="cl-item">Exportar: corrigido o problema que gerava dois arquivos (era o título junto do arquivo no compartilhar do iOS). Agora gera só o CSV</div>
+      <div class="cl-item">Histórico: ordenação agora é só Data e Valor; tocar no mesmo botão alterna crescente/decrescente (a setinha ↑/↓ mostra a direção)</div>
+      <div class="cl-item">Histórico: removido o botão Duplicar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.6.0</span><span class="cl-ver-date">23/06/2026 16:00</span></div>
