@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.11.3</title>
+<title>VB - v1.12.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -341,7 +341,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.11.3<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.12.0<br>24/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1153,10 +1153,10 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="display:flex;gap:5px;">
       <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
       <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#aaa;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
-      <button id="hist-search-toggle" onclick="HIST_toggleSearch()" style="margin-left:4px;padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button>
+      <button id="hist-filter-btn" onclick="HIST_openFilter()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Filtrar</button>
     </div>
     <div style="display:flex;gap:5px;">
-      <button id="hist-filter-btn" onclick="HIST_openFilter()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Filtrar</button>
+      <button id="hist-search-toggle" onclick="HIST_toggleSearch()" style="padding:6px 10px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button>
       <button id="hist-export" onclick="HIST_exportar()" style="padding:6px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Exportar</button>
     </div>
   </div>
@@ -1171,9 +1171,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <div id="hist-total" style="display:none;margin-top:4px;padding:12px 16px;background:#111;border-radius:12px;color:#fff;justify-content:space-between;align-items:center;"></div>
 
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding:8px 12px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;">
+  <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
     <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupExport(this)" onclick="VB_backupExport(this)" style="padding:7px 14px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;flex-shrink:0;">⤓ BACKUP</button>
-    <span id="hist-backup-status" style="display:none;font-size:11px;color:#c0392b;font-weight:600;text-align:right;min-width:0;"></span>
+    <span id="hist-backup-status" style="display:none;font-size:11px;color:#c0392b;font-weight:600;min-width:0;"></span>
   </div>
 </div>
 </div>
@@ -3790,9 +3790,38 @@ function HIST_csv(tab, rows){
   lin.forEach(function(row){ out.push(row.map(_csvCell).join(';')); });
   return out.join('\r\n');
 }
+// ===== Exportar: abre o menu PDF / CSV =====
 function HIST_exportar(){
   if(HIST_exporting) return; HIST_exporting=true;
-  setTimeout(function(){ HIST_exporting=false; }, 1500);
+  setTimeout(function(){ HIST_exporting=false; }, 800);
+  var rows=HIST_rowsCache||[];
+  if(!rows.length){ VB_toast('Nada para exportar.'); return; }
+  HIST_abrirMenuExport();
+}
+function HIST_abrirMenuExport(){
+  var ov=document.getElementById('hist-export-menu');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='hist-export-menu';
+    ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10050;align-items:flex-end;justify-content:center;';
+    ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
+      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">EXPORTAR ESTA ABA</div>'
+      +'<button id="hist-export-pdf" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">PDF</button>'
+      +'<button id="hist-export-csv" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">CSV</button>'
+      +'<button id="hist-export-cancel" style="width:100%;padding:13px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) HIST_fecharMenuExport(); });
+    ov.querySelector('#hist-export-pdf').addEventListener('click', function(){ HIST_fecharMenuExport(); HIST_exportarPDF(); });
+    ov.querySelector('#hist-export-csv').addEventListener('click', function(){ HIST_fecharMenuExport(); HIST_csvExport(); });
+    ov.querySelector('#hist-export-cancel').addEventListener('click', HIST_fecharMenuExport);
+  }
+  ov.style.display='flex';
+}
+function HIST_fecharMenuExport(){ var ov=document.getElementById('hist-export-menu'); if(ov) ov.style.display='none'; }
+
+// ===== CSV da aba atual (respeita busca e ordenação) e abre a folha do iPhone =====
+function HIST_csvExport(){
   var tab=HIST_tabAtual;
   var rows=HIST_rowsCache||[];
   if(!rows.length){ VB_toast('Nada para exportar.'); return; }
@@ -3809,6 +3838,101 @@ function HIST_exportar(){
       document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
     }
   }catch(e){ VB_toast('Não consegui exportar.'); }
+}
+
+// ===== PDF da aba atual: uma operação por página, na ordem da lista, sem biblioteca nova =====
+// Converte a foto (PNG dataURL) em JPEG e devolve os bytes + dimensões (pra embutir como DCTDecode)
+function VB_pngToJpeg(dataURL){
+  return new Promise(function(res, rej){
+    var img=new Image();
+    img.onload=function(){
+      try{
+        var c=document.createElement('canvas');
+        c.width=img.naturalWidth||img.width; c.height=img.naturalHeight||img.height;
+        var ctx=c.getContext('2d');
+        ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
+        ctx.drawImage(img,0,0);
+        var jurl=c.toDataURL('image/jpeg',0.92);
+        var b=atob(jurl.split(',')[1]); var u=new Uint8Array(b.length);
+        for(var i=0;i<b.length;i++){ u[i]=b.charCodeAt(i); }
+        res({bytes:u, w:c.width, h:c.height});
+      }catch(e){ rej(e); }
+    };
+    img.onerror=function(){ rej(new Error('img')); };
+    img.src=dataURL;
+  });
+}
+// Monta o PDF na mão: catálogo + páginas + (por imagem) página/conteúdo/XObject JPEG
+function VB_buildPDF(images){
+  var enc=new TextEncoder();
+  var chunks=[], pos=0;
+  function push(u8){ chunks.push(u8); pos+=u8.length; }
+  function pushStr(s){ push(enc.encode(s)); }
+  var N=images.length;
+  var pageObjs=[], contObjs=[], imgObjs=[], num=3;
+  for(var i=0;i<N;i++){ pageObjs.push(num++); contObjs.push(num++); imgObjs.push(num++); }
+  var totalObjs=num-1;
+  var xref=new Array(totalObjs+1);
+  pushStr('%PDF-1.4\n');
+  xref[1]=pos; pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  xref[2]=pos;
+  var kids=pageObjs.map(function(p){ return p+' 0 R'; }).join(' ');
+  pushStr('2 0 obj\n<< /Type /Pages /Kids ['+kids+'] /Count '+N+' >>\nendobj\n');
+  for(var i=0;i<N;i++){
+    var im=images[i], W=im.w, H=im.h, pageN=pageObjs[i], contN=contObjs[i], imgN=imgObjs[i];
+    xref[pageN]=pos;
+    pushStr(pageN+' 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /XObject << /Im0 '+imgN+' 0 R >> >> /Contents '+contN+' 0 R >>\nendobj\n');
+    var content='q '+W+' 0 0 '+H+' 0 0 cm /Im0 Do Q';
+    xref[contN]=pos;
+    pushStr(contN+' 0 obj\n<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream\nendobj\n');
+    xref[imgN]=pos;
+    pushStr(imgN+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+im.bytes.length+' >>\nstream\n');
+    push(im.bytes);
+    pushStr('\nendstream\nendobj\n');
+  }
+  var xrefPos=pos;
+  pushStr('xref\n0 '+(totalObjs+1)+'\n');
+  pushStr('0000000000 65535 f \n');
+  for(var n=1;n<=totalObjs;n++){ pushStr(('0000000000'+xref[n]).slice(-10)+' 00000 n \n'); }
+  pushStr('trailer\n<< /Size '+(totalObjs+1)+' /Root 1 0 R >>\nstartxref\n'+xrefPos+'\n%%EOF');
+  var total=chunks.reduce(function(a,c){ return a+c.length; },0);
+  var out=new Uint8Array(total), o=0;
+  chunks.forEach(function(c){ out.set(c,o); o+=c.length; });
+  return out;
+}
+function HIST_exportarPDF(){
+  var tab=HIST_tabAtual;
+  var rows=HIST_rowsCache||[];
+  if(!rows.length){ VB_toast('Nada para exportar.'); return; }
+  var imgs=[], i=0;
+  VB_toast('Gerando PDF…');
+  function next(){
+    if(i>=rows.length){ finish(); return; }
+    if(rows.length>1) VB_toast('Gerando '+(i+1)+'/'+rows.length+'…');
+    var durl=null;
+    try{ durl=HIST_genImg(tab, rows[i]); }catch(e){ durl=null; }
+    if(!durl || durl.indexOf('data:')!==0){ i++; setTimeout(next,0); return; }
+    VB_pngToJpeg(durl).then(function(o){ imgs.push(o); i++; setTimeout(next,0); })
+                      .catch(function(){ i++; setTimeout(next,0); });
+  }
+  function finish(){
+    if(!imgs.length){ VB_toast('Não consegui gerar o PDF.'); return; }
+    try{
+      var pdf=VB_buildPDF(imgs);
+      var blob=new Blob([pdf], {type:'application/pdf'});
+      var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+      var fname='VB - '+HIST_tabLabel(tab)+' - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.pdf';
+      var file=new File([blob], fname, {type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file]}).catch(function(){});
+      } else {
+        var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+      }
+      VB_toast(imgs.length+' operações no PDF.');
+    }catch(e){ VB_toast('Não consegui gerar o PDF.'); }
+  }
+  next();
 }
 
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
@@ -3873,20 +3997,30 @@ function _histShareImg(imgId, prefix, descId, nomeArquivo){
   if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Sem dados suficientes pra gerar a imagem.'); return; }
   VB_compartilharImg(imgId, prefix, descId, nomeArquivo);
 }
+var HIST_voltaParaHist=false;
+// Compartilhar individual: carrega a operação no módulo e abre a tela da tabela (overlay com COMPARTILHAR/FECHAR).
+// O FECHAR volta pro Histórico (mesma aba, busca/ordenação preservadas).
 function HIST_clickShare(el, event){
   event.stopPropagation();
   var tab=el.getAttribute('data-shr-tab');
   var idx=parseInt(el.getAttribute('data-shr-idx'));
   var r=HIST_rowsCache[idx]; if(!r) return;
-  VB_toast('Gerando…');
+  HIST_voltaParaHist=true;
   try{
-    if(tab==='ant') HIST_shareAnt(r);
-    else if(tab==='fin') HIST_shareFin(r);
-    else if(tab==='ven') HIST_shareVen(r);
-    else HIST_sharePag(r);
-  }catch(e){ VB_silentGen=false; VB_toast('Não consegui gerar a imagem.'); }
+    if(tab==='ant'){ HIST_carregarAnt(r); ANT_gerarTabela(); }
+    else if(tab==='fin'){ HIST_carregarFin(r); FIN_compartilharTabela(); }
+    else if(tab==='ven'){ HIST_carregarVen(r); VEN_gerarTabela(); }
+    else { HIST_carregarPag(r); PAG_compartilhar(); }
+  }catch(e){ HIST_voltaParaHist=false; VB_toast('Não consegui abrir a tabela.'); }
 }
-function HIST_shareFin(r){
+// Gera a foto da operação em silêncio e devolve o dataURL (usado pelo PDF). Não abre overlay nem compartilha.
+function HIST_genImg(tab, r){
+  if(tab==='ant') return HIST_imgAnt(r);
+  if(tab==='fin') return HIST_imgFin(r);
+  if(tab==='ven') return HIST_imgVen(r);
+  return HIST_imgPag(r);
+}
+function HIST_imgFin(r){
   var snap={ d:_histGetVal('fin-tabelaDesc'), v:_histGetVal('fin-valor'), p:_histGetVal('fin-prazo'), pa:_histGetVal('fin-parcela'), dt:_histGetVal('fin-tabelaData') };
   _histSetVal('fin-tabelaDesc', (r.descricao||''));
   _histSetVal('fin-valor', r.valor_financiado?FIN_formatBR(Number(r.valor_financiado)):'');
@@ -3895,10 +4029,11 @@ function HIST_shareFin(r){
   _histSetVal('fin-tabelaData', r.data_inicio?HIST_fmtData(r.data_inicio):'');
   var img=document.getElementById('fin-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ FIN_compartilharTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('fin-tabelaImagem','FIN','fin-tabelaDesc', (r.nome||r.descricao||''));
+  var _vbimg=document.getElementById('fin-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   _histSetVal('fin-tabelaDesc',snap.d); _histSetVal('fin-valor',snap.v); _histSetVal('fin-prazo',snap.p); _histSetVal('fin-parcela',snap.pa); _histSetVal('fin-tabelaData',snap.dt);
+  return _vbimg;
 }
-function HIST_shareVen(r){
+function HIST_imgVen(r){
   var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
   _histSetVal('ven-tabelaDesc', (r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
@@ -3912,11 +4047,12 @@ function HIST_shareVen(r){
   }
   var img=document.getElementById('ven-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ VEN_gerarTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('ven-tabelaImagem','VEN','ven-tabelaDesc', (r.nome||r.descricao||''));
+  var _vbimg=document.getElementById('ven-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   VEN_modoPersonalizado=snap.mp; VEN_parcelas=snap.arr; VEN_parcelaCounter=snap.cnt;
   _histSetVal('ven-tabelaDesc',snap.d); _histSetVal('ven-parcela',snap.pa); _histSetVal('ven-qtd',snap.q); _histSetVal('ven-tabelaData',snap.dt); _histSetVal('ven-total',snap.t);
+  return _vbimg;
 }
-function HIST_shareAnt(r){
+function HIST_imgAnt(r){
   var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
   _histSetVal('ant-tabelaCliente', (r.cliente||''));
   _histSetVal('ant-taxa', r.taxa?ANT_formatBR(Number(r.taxa)):'');
@@ -3926,11 +4062,12 @@ function HIST_shareAnt(r){
   (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
   var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
-  _histShareImg('ant-tabelaImagem','ANT','ant-tabelaCliente', (r.nome||r.cliente||''));
+  var _vbimg=document.getElementById('ant-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   ANT_modoPersonalizado=snap.mp; ANT_titulos=snap.arr; ANT_tituloCounter=snap.cnt;
   _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt);
+  return _vbimg;
 }
-function HIST_sharePag(r){
+function HIST_imgPag(r){
   var snap={ t:_histGetVal('pag-total'), arr:PAG_pagamentos, cnt:PAG_counter, opId:PAG_currentOperationId };
   _histSetVal('pag-total', (r.valor_total!=null)?PAG_formatBR(Number(r.valor_total)):'');
   PAG_pagamentos=[]; PAG_counter=0;
@@ -3938,9 +4075,10 @@ function HIST_sharePag(r){
   PAG_currentOperationId=r.id||null;
   var img=document.getElementById('pag-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ PAG_compartilhar(); } finally { VB_silentGen=false; }
-  _histShareImg('pag-tabelaImagem','PAG',null);
+  var _vbimg=document.getElementById('pag-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   PAG_pagamentos=snap.arr; PAG_counter=snap.cnt; PAG_currentOperationId=snap.opId;
   _histSetVal('pag-total',snap.t);
+  return _vbimg;
 }
 var HIST_searchTerm='';
 var HIST_searchOpen=false;
@@ -4404,7 +4542,7 @@ function showScreen(name){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
-  if(name==='hist'){ VB_telaAnterior='home'; HIST_refresh(); }
+  if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_refresh(); }
   VB_telaAtual = name;
   window.scrollTo(0,0);
 }
@@ -4631,6 +4769,8 @@ function FIN_fecharTabela(){
   var ot=document.getElementById('fin-overlayTabela'); if(ot) ot.style.display='none';
   var img=document.getElementById('fin-tabelaImagem'); if(img){img.style.display='none';img.src='';}
   var dica=document.getElementById('fin-tabelaImagemDica'); if(dica) dica.style.display='none';
+
+  if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
 }
 function FIN_compartilharTabela(){
   var pmt    = FIN_parseBR(document.getElementById('fin-parcela').value);
@@ -5202,6 +5342,8 @@ function VEN_fecharTabela(){
   var ot = document.getElementById('ven-overlayTabela'); if(ot) ot.style.display='none';
   var img = document.getElementById('ven-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
   var dica = document.getElementById('ven-tabelaImagemDica'); if(dica) dica.style.display='none';
+
+  if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
 }
 
 function VEN_gerarTabela(){
@@ -5830,6 +5972,8 @@ function ANT_fecharTabela(){
   var img=document.getElementById('ant-tabelaImagem');
   img.style.display='none'; img.src='';
   document.getElementById('ant-tabelaDica').style.display='none';
+
+  if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
 }
 
 function ANT_titleCase(s){return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();})}
@@ -7081,6 +7225,8 @@ function PAG_fecharTabela(){
   var ot=document.getElementById('pag-overlayTabela'); if(ot) ot.style.display='none';
   var img=document.getElementById('pag-tabelaImagem'); if(img){ img.style.display='none'; img.src=''; }
   var dica=document.getElementById('pag-tabelaImagemDica'); if(dica) dica.style.display='none';
+
+  if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
 }
 
 PAG_maskVal(document.getElementById('pag-total'), function(){ PAG_update(); PAG_saveSession(); });
@@ -7810,6 +7956,18 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.12.0</span><span class="cl-ver-date">24/06/2026 18:10</span></div>
+      <div class="cl-item">Exportar do Histórico agora abre um menu PDF / CSV. O PDF gera a aba inteira como está na tela (respeitando busca e ordenação), uma operação por página, e abre na folha do iPhone — sem biblioteca nova, app segue offline. Nome "VB - [Aba] - DD-MM-AAAA.pdf"</div>
+      <div class="cl-item">Compartilhar de cada item do Histórico agora abre a tela da tabela do módulo (com a foto pronta e o botão COMPARTILHAR), em vez de abrir direto a folha do iPhone. O FECHAR volta pro Histórico na mesma aba, com a busca e ordenação preservadas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.4</span><span class="cl-ver-date">24/06/2026 17:00</span></div>
+      <div class="cl-item">Caixa do Backup mais discreta: saiu o painel cinza grande do rodapé — agora é só o botão BACKUP, com o aviso (quando aparece) ao lado</div>
+      <div class="cl-item">Barra do Histórico reorganizada: Filtrar foi para junto de Data/Valor (à esquerda) e a lupa foi para perto do Exportar (à direita)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.11.3</span><span class="cl-ver-date">24/06/2026 16:30</span></div>
