@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.19.2</title>
+<title>VB - v1.20.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -317,6 +317,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
       <button class="hist-fper" data-per="mespassado" onclick="HIST_setPeriodo('mespassado')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado</button>
     </div>
 
+    <div id="hist-filter-mes-sec" style="margin-bottom:18px;display:none;">
+      <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Mês</div>
+      <div id="hist-filter-mes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
     <div id="hist-filter-modo-sec" style="margin-bottom:18px;">
       <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Modo</div>
       <div style="display:flex;gap:6px;">
@@ -342,7 +347,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.19.2<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.0<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4239,7 +4244,7 @@ function VB_restaurarResumoHTML(P){
     h+='<div style="margin-top:8px;padding-top:8px;border-top:0.5px solid #eee;color:#555;">Total no backup <b>'+P.tot+'</b> · novas <b>'+tN+'</b> · alteradas <b>'+tA+'</b> · iguais <b>'+tI+'</b></div>';
     h+='</div>';
     if(tN+tA>0){
-      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:11.5px;color:#333;font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none;">📋 Log de alterações ('+(tN+tA)+') ▾</div>';
+      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:11.5px;color:#333;font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none;">Log de alterações ('+(tN+tA)+') ▾</div>';
       h+='<div id="vb-restore-altbox" style="display:none;max-height:200px;overflow-y:auto;border:0.5px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#555;line-height:1.55;">';
       if(allNovas.length){
         h+='<div style="font-weight:700;color:#111;margin-bottom:4px;">NOVAS ('+allNovas.length+')</div>';
@@ -4589,9 +4594,10 @@ function HIST_parseNum(s){
 }
 
 // ===== Filtro do Histórico (período + modo + faixa de valor) =====
-var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'' };
-function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!==''; }
-function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'' }; }
+var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'' };
+var HIST_allRows=[];
+function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!=='' || f.mesAno!==''; }
+function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'' }; }
 function HIST_periodoRange(){
   var f=HIST_filter, now=new Date();
   var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -4602,6 +4608,8 @@ function HIST_periodoRange(){
   if(f.periodo==='mespassado'){ return {ini:new Date(now.getFullYear(),now.getMonth()-1,1), fim:eod(new Date(now.getFullYear(),now.getMonth(),0))}; }
   return null;
 }
+function _ymOf(ca){ if(!ca) return ''; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function HIST_mesLabel(ym){ if(!ym) return ''; var pp=ym.split('-'); var M=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return (M[parseInt(pp[1],10)-1]||'?')+' '+pp[0]; }
 function HIST_filterRows(tab, rows){
   if(!HIST_hasActiveFilter()) return rows;
   var f=HIST_filter, valCol=HIST_valCol(tab), range=HIST_periodoRange();
@@ -4613,6 +4621,7 @@ function HIST_filterRows(tab, rows){
       if(range.ini && d<range.ini) return false;
       if(range.fim && d>range.fim) return false;
     }
+    if(f.mesAno){ if(_ymOf(r.created_at)!==f.mesAno) return false; }
     if(f.modo!=='todos' && (tab==='ant'||tab==='ven')){ if((r.modo||'')!==f.modo) return false; }
     if(vmin!=null && !(Number(r[valCol])>=vmin)) return false;
     if(vmax!=null && !(Number(r[valCol])<=vmax)) return false;
@@ -4638,13 +4647,26 @@ function HIST_sectionHeader(label, first){
 function HIST_openFilter(){
   var sec=document.getElementById('hist-filter-modo-sec');
   if(sec) sec.style.display = (HIST_tabAtual==='ant'||HIST_tabAtual==='ven') ? 'block' : 'none';
+  HIST_buildMeses();
   var mn=document.getElementById('hist-fval-min'); if(mn) mn.value=HIST_filter.valMin||'';
   var mx=document.getElementById('hist-fval-max'); if(mx) mx.value=HIST_filter.valMax||'';
   HIST_styleFilterUI();
   document.getElementById('hist-filter-overlay').style.display='flex';
 }
 function HIST_closeFilter(){ document.getElementById('hist-filter-overlay').style.display='none'; }
-function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_styleFilterUI(); }
+function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_filter.mesAno=''; HIST_styleFilterUI(); }
+function HIST_setMes(ym){ HIST_filter.mesAno=ym; if(ym) HIST_filter.periodo='tudo'; HIST_styleFilterUI(); }
+function HIST_buildMeses(){
+  var sec=document.getElementById('hist-filter-mes-sec'), list=document.getElementById('hist-filter-mes-list'); if(!sec||!list) return;
+  var counts={}; (HIST_allRows||[]).forEach(function(r){ var ym=_ymOf(r.created_at); if(ym) counts[ym]=(counts[ym]||0)+1; });
+  var yms=Object.keys(counts).sort().reverse();
+  if(!yms.length){ sec.style.display='none'; list.innerHTML=''; return; }
+  sec.style.display='block';
+  var bs='padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+  var html='<button class="hist-fmes" data-mes="" onclick="HIST_setMes(\'\')" style="'+bs+'">Todos</button>';
+  yms.forEach(function(ym){ html+='<button class="hist-fmes" data-mes="'+ym+'" onclick="HIST_setMes(\''+ym+'\')" style="'+bs+'">'+HIST_mesLabel(ym)+' ('+counts[ym]+')</button>'; });
+  list.innerHTML=html; HIST_styleFilterUI();
+}
 function HIST_setModo(m){ HIST_filter.modo=m; HIST_styleFilterUI(); }
 function HIST_styleFilterUI(){
   document.querySelectorAll('.hist-fper').forEach(function(b){
@@ -4653,6 +4675,10 @@ function HIST_styleFilterUI(){
   });
   document.querySelectorAll('.hist-fmodo').forEach(function(b){
     var on=b.getAttribute('data-modo')===HIST_filter.modo;
+    b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
+  });
+  document.querySelectorAll('.hist-fmes').forEach(function(b){
+    var on=b.getAttribute('data-mes')===(HIST_filter.mesAno||'');
     b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
   });
 }
@@ -4669,6 +4695,7 @@ function HIST_clearFilters(){
 }
 function HIST_clearOne(dim){
   if(dim==='periodo') HIST_filter.periodo='tudo';
+  else if(dim==='mes') HIST_filter.mesAno='';
   else if(dim==='modo') HIST_filter.modo='todos';
   else if(dim==='valor'){ HIST_filter.valMin=''; HIST_filter.valMax=''; }
   HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
@@ -4684,6 +4711,7 @@ function HIST_updateFilterUIState(){
   var chips=[];
   function chip(dim,txt){ return '<span style="display:inline-flex;align-items:center;gap:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:10px;">'+HIST_esc(txt)+'<span onclick="HIST_clearOne(\''+dim+'\')" style="cursor:pointer;opacity:0.7;padding:0 2px;">×</span></span>'; }
   if(HIST_filter.periodo!=='tudo') chips.push(chip('periodo', HIST_perLabel()));
+  if(HIST_filter.mesAno) chips.push(chip('mes', HIST_mesLabel(HIST_filter.mesAno)));
   if(HIST_filter.modo!=='todos' && (HIST_tabAtual==='ant'||HIST_tabAtual==='ven')) chips.push(chip('modo', HIST_filter.modo==='simples'?'Simples':'Personalizada'));
   if(HIST_filter.valMin!=='' || HIST_filter.valMax!==''){ chips.push(chip('valor','R$ '+(HIST_filter.valMin||'0')+' – '+(HIST_filter.valMax||'∞'))); }
   if(chips.length){ wrap.innerHTML=chips.join(''); wrap.style.display='flex'; }
@@ -4803,6 +4831,7 @@ function HIST_fetch(term){
   q.limit(500).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
+    HIST_allRows=rows.slice();
     rows=HIST_filterRows(tab, rows);
     if(rows.length===0){
       var msg = (term||HIST_hasActiveFilter()) ? 'Nada encontrado.' : 'Nada confirmado ainda.';
@@ -8560,6 +8589,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.0</span><span class="cl-ver-date">25/06/2026 10:40</span></div>
+      <div class="cl-item">Histórico: filtro por mês dentro do Filtrar. Lista só os meses que têm operação naquela aba (do mais novo pro mais antigo, com contagem) mais "Todos". Usa a mesma data exibida na linha. A lista filtrada alimenta o Exportar, então PDF/CSV saem só do mês escolhido. Próximo: busca global</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.19.3</span><span class="cl-ver-date">25/06/2026 10:15</span></div>
+      <div class="cl-item">Removido o emoji do "Log de alterações" na prévia do Restaurar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.19.2</span><span class="cl-ver-date">25/06/2026 10:05</span></div>
