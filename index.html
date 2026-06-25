@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.22.6</title>
+<title>VB - v1.22.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.22.6<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.22.8<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4129,8 +4129,7 @@ function VB_backupCompleto(){
           var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
           document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
         }
-        VB_toast(total+' operações no relatório. Agora salve o backup (JSON).');
-        setTimeout(function(){ VB_shareJSON(dados, total, function(){}); }, 900);
+        VB_toast(total+' operações no relatório completo.');
       }catch(e){ VB_toast('Não consegui gerar o relatório completo.'); }
     }
     next();
@@ -4310,7 +4309,7 @@ function VB_restaurarExec(){
   function done(){
     VB_restaurarFechar();
     if(erros.length){ VB_toast('Restaurado em parte. Erros: '+erros.join(' | ')); }
-    else { VB_toast(okCount+' operações restauradas. Abra o Histórico para conferir.'); }
+    else { VB_toast(okCount+' operações restauradas. Histórico atualizado.'); }
     if(typeof HIST_fetch==='function' && document.getElementById('hist-lista')){ try{ HIST_fetch(HIST_searchTerm||''); }catch(e){} }
   }
   next();
@@ -4552,7 +4551,9 @@ function HIST_imgVen(r){
   return _vbimg;
 }
 function HIST_imgAnt(r){
-  var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
+  var snap={ tx:_histGetVal('ant-taxa'), tf:_histGetVal('ant-tarifa'), cl:_histGetVal('ant-tabelaCliente'), vb:_histGetVal('ant-valorBruto'), q:_histGetVal('ant-qtd'), dt:_histGetVal('ant-tabelaData'), dop:_histGetVal('ant-dataOperacao'), mp:ANT_modoPersonalizado, arr:ANT_titulos, cnt:ANT_tituloCounter };
+  var _opd=HIST_fmtData(HIST_dataOp('ant',r)); if(!_opd||_opd==='--') _opd=HIST_fmtDataLocal(r.created_at);
+  if(_opd && _opd!=='--') _histSetVal('ant-dataOperacao', _opd);
   _histSetVal('ant-tabelaCliente', (r.cliente||''));
   _histSetVal('ant-taxa', r.taxa?ANT_formatBR(Number(r.taxa)):'');
   _histSetVal('ant-tarifa', r.tarifa?ANT_formatBR(Number(r.tarifa)):'');
@@ -4563,7 +4564,7 @@ function HIST_imgAnt(r){
   VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
   var _vbimg=document.getElementById('ant-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   ANT_modoPersonalizado=snap.mp; ANT_titulos=snap.arr; ANT_tituloCounter=snap.cnt;
-  _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt);
+  _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt); _histSetVal('ant-dataOperacao',snap.dop);
   return _vbimg;
 }
 function HIST_imgPag(r){
@@ -4925,7 +4926,11 @@ function HIST_fetchGlobal(term){
       HIST_rowsCache=[]; HIST_tabCache='global'; return;
     }
     HIST_renderRows('ant', all);
-    if(countEl){ countEl.textContent='Encontrado: '+all.length+' '+(all.length===1?'operação':'operações')+' · tudo'; }
+    if(countEl){
+      var pc={ant:0,fin:0,ven:0,pag:0}; all.forEach(function(r){ if(pc[r._tab]!=null) pc[r._tab]++; });
+      var det=[]; if(pc.ant) det.push(pc.ant+' antec'); if(pc.fin) det.push(pc.fin+' financ'); if(pc.ven) det.push(pc.ven+' venda'+(pc.ven>1?'s':'')); if(pc.pag) det.push(pc.pag+' pagto'+(pc.pag>1?'s':''));
+      countEl.textContent=all.length+' '+(all.length===1?'resultado':'resultados')+(det.length?' · '+det.join(' · '):'');
+    }
   }).catch(function(){
     listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Sem conexão.</div>';
   });
@@ -7336,7 +7341,7 @@ function ANT_repetirTitulos(){
   var baseVal=last.valor||'', lastDate=last.data||'';
   for(var k=0;k<n;k++){ ANT_tituloCounter++; lastDate=lastDate?ANT_addMonth(lastDate,1):''; ANT_titulos.push({id:ANT_tituloCounter, valor:baseVal, data:lastDate}); }
   ANT_renderTitulos(); ANT_recalcPersonalizado();
-  VB_toast(n+' título'+(n>1?'s':'')+' adicionado'+(n>1?'s':'')+'.');
+  VB_toast('+'+n+' título'+(n>1?'s':'')+'.');
 }
 
 function ANT_renderTitulos(){
@@ -8706,6 +8711,17 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.8</span><span class="cl-ver-date">25/06/2026 15:40</span></div>
+      <div class="cl-item">Correção: no Relatório completo, as antecipações mostravam "Data da Operação" como a data de hoje em vez da data salva. Agora o gerador usa a data real da operação — o que também faz a tabela reproduzir os prazos/valores como foram salvos, não recalculados para hoje</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.7</span><span class="cl-ver-date">25/06/2026 15:05</span></div>
+      <div class="cl-item">Relatório completo volta a compartilhar só o PDF (sem a segunda folha do JSON, que o iOS bloqueava). O backup JSON continua separado, no próprio botão</div>
+      <div class="cl-item">Refinos: REPETIR mostra "+N título(s)"; busca global mostra a contagem por tipo no topo (ex.: 5 resultados · 3 antec · 1 financ); toast do Restaurar enxuto já que o Histórico atualiza na hora</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.6</span><span class="cl-ver-date">25/06/2026 14:40</span></div>
