@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.20.2</title>
+<title>VB - v1.21.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.2<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.21.1<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4576,6 +4576,7 @@ function HIST_imgPag(r){
   return _vbimg;
 }
 var HIST_searchTerm='';
+var HIST_searchGlobal=false;
 var HIST_searchOpen=false;
 var HIST_searchTimer=null;
 var HIST_sortCol='data';
@@ -4587,6 +4588,7 @@ function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financ
 function HIST_valCol(tab){ return tab==='ant'?'valor_bruto':tab==='fin'?'valor_financiado':'valor_total'; }
 function HIST_dateCol(tab){ return 'created_at'; } // ordenar por Data = pelo carimbo de salvamento (mesmo exibido)
 function HIST_tabLabel(tab){ return tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'; }
+function HIST_tipoLabel(tab){ return tab==='ant'?'ANTEC':tab==='fin'?'FINANC':tab==='ven'?'VENDA':'PAGTO'; }
 function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
 function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
 // Converte "12.500,00" / "R$ 1.234" / "125" em número (ou null se não tiver dígito)
@@ -4686,8 +4688,10 @@ function HIST_buildMeses(){
 }
 function HIST_setModo(m){ HIST_filter.modo=m; HIST_styleFilterUI(); }
 function HIST_styleFilterUI(){
+  var _hasDateElse = (HIST_filter.meses.length>0) || !!(HIST_filter.de||HIST_filter.ate);
   document.querySelectorAll('.hist-fper').forEach(function(b){
-    var on=b.getAttribute('data-per')===HIST_filter.periodo;
+    var per=b.getAttribute('data-per');
+    var on = (per==='tudo') ? (HIST_filter.periodo==='tudo' && !_hasDateElse) : (HIST_filter.periodo===per);
     b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
   });
   document.querySelectorAll('.hist-fmodo').forEach(function(b){
@@ -4756,20 +4760,22 @@ function HIST_styleSortChips(){
 }
 
 function HIST_loadTab(tab){
+  var keep=(HIST_searchGlobal && HIST_searchTerm) ? HIST_searchTerm : '';
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
-  HIST_searchTerm='';
+  HIST_searchTerm=keep;
+  HIST_searchGlobal=false;
   HIST_resetFilter();
   HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
-  if(sEl){ sEl.value=''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
-  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
-  HIST_searchOpen=false;
-  var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
+  if(sEl){ sEl.value=keep; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = keep ? 'inline-flex' : 'none';
+  var wrap=document.getElementById('hist-search-wrap');
+  if(keep){ HIST_searchOpen=true; if(wrap) wrap.style.display='block'; } else { HIST_searchOpen=false; if(wrap) wrap.style.display='none'; }
   HIST_updateLupa();
   HIST_updateFilterUIState();
   VB_updateBackupStatus();
-  HIST_fetch('');
+  HIST_fetch(keep);
 }
 
 // Reabre a tela de Histórico preservando aba, ordenação e busca atuais
@@ -4794,7 +4800,7 @@ function HIST_onSearchInput(el){
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = term ? 'inline-flex' : 'none';
   HIST_updateLupa();
   clearTimeout(HIST_searchTimer);
-  HIST_searchTimer=setTimeout(function(){ HIST_fetch(term); }, 300);
+  HIST_searchTimer=setTimeout(function(){ if(HIST_searchGlobal && term){ HIST_fetchGlobal(term); } else { HIST_fetch(term); } }, 300);
 }
 function HIST_clearSearch(){
   var sEl=document.getElementById('hist-search'); if(sEl) sEl.value='';
@@ -4805,21 +4811,22 @@ function HIST_clearSearch(){
 }
 function HIST_updateLupa(){
   var btn=document.getElementById('hist-search-toggle'); if(!btn) return;
-  btn.style.display = (HIST_tabAtual==='pag') ? 'none' : 'inline-flex';
+  btn.style.display = 'inline-flex';
   var lit = !!HIST_searchTerm;
   btn.style.background = lit ? '#111' : '#fff';
   btn.style.color = lit ? '#fff' : '#111';
 }
 function HIST_openSearch(){
-  if(HIST_tabAtual==='pag') return;
   HIST_searchOpen=true;
+  HIST_searchGlobal=true;
+  var pl=document.getElementById('hist-search'); if(pl) pl.placeholder='Buscar em tudo (nome ou valor)';
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='block';
   var sEl=document.getElementById('hist-search');
   if(sEl){ try{ sEl.focus(); if(!sEl.value) sEl.select(); }catch(e){} }
   HIST_updateLupa();
 }
 function HIST_collapseSearch(){
-  HIST_searchOpen=false;
+  HIST_searchOpen=false; HIST_searchGlobal=false;
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
   var sEl=document.getElementById('hist-search'); if(sEl){ try{ sEl.blur(); }catch(e){} }
   HIST_updateLupa();
@@ -4884,6 +4891,42 @@ function HIST_fetch(term){
   });
 }
 
+function HIST_fetchGlobal(term){
+  var listaEl=document.getElementById('hist-lista');
+  var countEl=document.getElementById('hist-count');
+  var totalEl=document.getElementById('hist-total');
+  if(totalEl) totalEl.style.display='none';
+  if(countEl) countEl.textContent='';
+  listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Buscando em tudo...</div>';
+  listaEl.style.minHeight='200px';
+  var tabs=['ant','fin','ven','pag'];
+  var safe=term.replace(/[,*()]/g,' ');
+  var num=HIST_parseNum(term);
+  Promise.all(tabs.map(function(tb){
+    var col=HIST_nameCol(tb), valCol=HIST_valCol(tb);
+    var ors=[];
+    if(col){ ors.push('nome.ilike.%'+safe+'%'); ors.push(col+'.ilike.%'+safe+'%'); }
+    if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
+    if(!ors.length) return Promise.resolve({tb:tb, rows:[]});
+    var q=sb.from(HIST_tabela(tb)).select('*').or(ors.join(','));
+    return q.order('created_at',{ascending:false}).limit(200).then(function(res){ return {tb:tb, rows:(res.error?[]:(res.data||[]))}; }).catch(function(){ return {tb:tb, rows:[]}; });
+  })).then(function(parts){
+    var all=[];
+    parts.forEach(function(pt){ (pt.rows||[]).forEach(function(r){ r._tab=pt.tb; all.push(r); }); });
+    var asc=(HIST_sortDir==='asc');
+    all.sort(function(a,b){ var x=a.created_at||'', y=b.created_at||''; if(x===y) return 0; return asc?(x<y?-1:1):(x<y?1:-1); });
+    if(all.length>500) all=all.slice(0,500);
+    if(!all.length){
+      listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Nada encontrado em tudo.</div>';
+      HIST_rowsCache=[]; HIST_tabCache='global'; return;
+    }
+    HIST_renderRows('ant', all);
+    if(countEl){ countEl.textContent='Encontrado: '+all.length+' '+(all.length===1?'operação':'operações')+' · tudo'; }
+  }).catch(function(){
+    listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Sem conexão.</div>';
+  });
+}
+
 // Recarrega a lista respeitando uma busca ativa (usado após renomear/excluir)
 function HIST_reload(tab){
   HIST_fetch(HIST_searchTerm);
@@ -4894,9 +4937,10 @@ function HIST_renderRows(tab, rows){
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   rows.forEach(function(r,idx){
+    var rtab=r._tab||tab;
     if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null); lastBucket=bk; } }
-    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', dataOp=HIST_fmtData(HIST_dataOp(tab,r));
-    if(tab==='ant'){
+    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
+    if(rtab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
       valor=HIST_fmtMoeda(r.valor_bruto);
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
@@ -4906,7 +4950,7 @@ function HIST_renderRows(tab, rows){
       if(r.quantidade_titulos) campos.push({l:'Títulos', v:String(r.quantidade_titulos)});
       if(r.prazo_medio!=null) campos.push({l:'Prazo médio', v:Number(r.prazo_medio).toFixed(1)+' d'});
       if(r.valor_liquido) campos.push({l:'Líquido', v:HIST_fmtMoeda(r.valor_liquido)});
-    } else if(tab==='fin'){
+    } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
       if(dataOp && dataOp!=='--') campos.push({l:'Data início', v:dataOp});
@@ -4920,7 +4964,7 @@ function HIST_renderRows(tab, rows){
         if(r.investidor_parcela!=null) campos.push({l:'Parcela investidor', v:HIST_fmtMoeda(r.investidor_parcela)});
         if(r.vb_parcela!=null) campos.push({l:'Parcela VB', v:HIST_fmtMoeda(r.vb_parcela)});
       }
-    } else if(tab==='ven'){
+    } else if(rtab==='ven'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_total);
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
@@ -4934,7 +4978,8 @@ function HIST_renderRows(tab, rows){
       resumoExtra=qtd+' lançamento'+(qtd!==1?'s':'');
       // Pagamentos sem detalhe extra -> sem setinha
     }
-    html+=HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge);
+    if(r._tab) rowBadge=HIST_tipoLabel(rtab);
+    html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge);
   });
   listaEl.innerHTML=html;
   listaEl.style.minHeight='auto';
@@ -8622,6 +8667,16 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.21.1</span><span class="cl-ver-date">25/06/2026 12:30</span></div>
+      <div class="cl-item">Filtrar: Período vira rádio — sempre um único aceso. "Tudo" fica destacado só quando não há mês nem intervalo ativos; escolher um mês ou intervalo apaga o "Tudo", e clicar em "Tudo" limpa mês/intervalo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.21.0</span><span class="cl-ver-date">25/06/2026 12:10</span></div>
+      <div class="cl-item">Busca global: tocar na lupa passa a buscar nas quatro abas de uma vez, com a etiqueta do tipo (ANTEC/FINANC/VENDA/PAGTO) em cada resultado. Tocar numa aba depois afunila a mesma busca só para aquele tipo. Tocar numa operação abre ela normalmente, seja qual for o tipo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.2</span><span class="cl-ver-date">25/06/2026 11:35</span></div>
