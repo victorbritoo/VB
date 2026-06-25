@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.18.0</title>
+<title>VB - v1.19.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.18.0<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.19.0<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4002,10 +4002,11 @@ function VB_backupMenu(){
     ov.id='vb-backup-menu';
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10050;align-items:flex-end;justify-content:center;';
     ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
-      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">BACKUP DE TUDO</div>'
+      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">BACKUP</div>'
       +'<button id="vb-bkp-json" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">BACKUP (JSON)</button>'
       +'<button id="vb-bkp-pdf" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
       +'<button id="vb-bkp-full" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO COMPLETO (PDF)</button>'
+      +'<button id="vb-bkp-restore" style="width:100%;padding:13px;border:0.5px solid #c0392b;border-radius:14px;background:#fff;color:#c0392b;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RESTAURAR BACKUP</button>'
       +'<button id="vb-bkp-cancel" style="width:100%;padding:13px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
       +'</div>';
     document.body.appendChild(ov);
@@ -4013,6 +4014,7 @@ function VB_backupMenu(){
     ov.querySelector('#vb-bkp-json').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupJSON(); });
     ov.querySelector('#vb-bkp-pdf').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupPDF(); });
     ov.querySelector('#vb-bkp-full').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupCompleto(); });
+    ov.querySelector('#vb-bkp-restore').addEventListener('click', function(){ VB_backupMenuFechar(); VB_restaurarStart(); });
     ov.querySelector('#vb-bkp-cancel').addEventListener('click', VB_backupMenuFechar);
   }
   ov.style.display='flex';
@@ -4031,25 +4033,27 @@ function VB_fetchTudo(onOk, onErr){
   }).catch(function(){ onErr&&onErr(); });
 }
 
+function VB_shareJSON(dados, total, onDone){
+  try{
+    var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
+    var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+    var fname='VB - Backup - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.json';
+    var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    var file=new File([blob], fname, {type:'application/json'});
+    try{ localStorage.setItem(VB_BACKUP_LS, payload.gerado_em); }catch(e){}
+    VB_updateBackupStatus();
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).then(function(){ onDone&&onDone(); }).catch(function(){ onDone&&onDone(); });
+    } else {
+      var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); onDone&&onDone();
+    }
+  }catch(e){ onDone&&onDone(); }
+}
 function VB_backupJSON(){
   VB_toast('Gerando backup…');
   VB_fetchTudo(function(dados, total){
-    try{
-      var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
-      var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
-      var fname='VB - Backup - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.json';
-      var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-      var file=new File([blob], fname, {type:'application/json'});
-      try{ localStorage.setItem(VB_BACKUP_LS, payload.gerado_em); }catch(e){}
-      VB_updateBackupStatus();
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        navigator.share({files:[file]}).catch(function(){});
-      } else {
-        var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
-        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
-      }
-      VB_toast(total+' operações no backup. Salve na pasta OPs.');
-    }catch(e){ VB_toast('Não consegui gerar o backup.'); }
+    VB_shareJSON(dados, total, function(){ VB_toast(total+' operações no backup. Salve na pasta OPs.'); });
   }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
 }
 
@@ -4110,11 +4114,103 @@ function VB_backupCompleto(){
           var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
           document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
         }
-        VB_toast(total+' operações no relatório completo.');
+        VB_toast(total+' operações no relatório. Agora salve o backup (JSON).');
+        setTimeout(function(){ VB_shareJSON(dados, total, function(){}); }, 900);
       }catch(e){ VB_toast('Não consegui gerar o relatório completo.'); }
     }
     next();
   }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+}
+
+// ===== Restaurar backup (importar JSON de volta ao Supabase) =====
+// Modo UPSERT: atualiza pelos IDs e insere os que faltam — não apaga nem duplica.
+var VB_restPayload=null;
+function VB_restaurarStart(){
+  var inp=document.getElementById('vb-restore-file');
+  if(!inp){
+    inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.id='vb-restore-file'; inp.style.display='none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', function(){
+      var f=inp.files && inp.files[0]; if(!f){ return; }
+      var rd=new FileReader();
+      rd.onload=function(){
+        try{
+          var data=JSON.parse(rd.result);
+          if(!data || data.app!=='VB' || !data.dados){ VB_toast('Arquivo não parece um backup do VB.'); inp.value=''; return; }
+          var d=data.dados;
+          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length };
+          var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos;
+          if(!tot){ VB_toast('O backup está vazio.'); inp.value=''; return; }
+          VB_restPayload={ data:data, cont:cont, tot:tot };
+          VB_restaurarModal();
+        }catch(e){ VB_toast('Não consegui ler o arquivo (JSON inválido).'); }
+        inp.value='';
+      };
+      rd.onerror=function(){ VB_toast('Não consegui abrir o arquivo.'); inp.value=''; };
+      rd.readAsText(f);
+    });
+  }
+  inp.click();
+}
+function VB_restaurarModal(){
+  var P=VB_restPayload; if(!P) return;
+  var ger=P.data.gerado_em ? (function(){ var dt=new Date(P.data.gerado_em); return ('0'+dt.getDate()).slice(-2)+'/'+('0'+(dt.getMonth()+1)).slice(-2)+'/'+dt.getFullYear()+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2); })() : '—';
+  var ver=P.data.versao||'—';
+  var ov=document.getElementById('vb-restore-modal');
+  if(ov){ ov.remove(); }
+  ov=document.createElement('div'); ov.id='vb-restore-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10060;display:flex;align-items:center;justify-content:center;padding:18px;';
+  ov.innerHTML='<div style="width:100%;max-width:440px;background:#fff;border-radius:18px;padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">'
+    +'<div style="text-align:center;font-size:14px;letter-spacing:1px;color:#c0392b;font-weight:700;margin-bottom:6px;">RESTAURAR BACKUP</div>'
+    +'<div style="text-align:center;font-size:11px;color:#999;margin-bottom:16px;">Backup de '+ger+'  ·  v'+ver+'</div>'
+    +'<div style="font-size:13px;color:#333;line-height:1.7;border:0.5px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:14px;">'
+      +'Antecipações — <b>'+P.cont.antecipacoes+'</b><br>'
+      +'Financiamentos — <b>'+P.cont.financiamentos_hist+'</b><br>'
+      +'Vendas — <b>'+P.cont.vendas+'</b><br>'
+      +'Pagamentos — <b>'+P.cont.pagamentos+'</b><br>'
+      +'<span style="color:#c0392b;">Total — <b>'+P.tot+' operações</b></span>'
+    +'</div>'
+    +'<div style="font-size:12px;color:#666;line-height:1.5;margin-bottom:12px;">Isto vai <b>atualizar</b> as operações que já existem (pelo ID) e <b>inserir</b> as que faltam. Não apaga nem duplica nada. Recomendo gerar um backup atual antes, por garantia.</div>'
+    +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:6px;">Para confirmar, digite RESTAURAR:</div>'
+    +'<input id="vb-restore-word" type="text" autocapitalize="characters" placeholder="RESTAURAR" oninput="VB_restaurarCheck()" style="width:100%;height:42px;border:1px solid #ddd;border-radius:12px;padding:0 14px;font-size:15px;font-weight:600;letter-spacing:2px;color:#111;outline:none;text-transform:uppercase;margin-bottom:14px;font-family:-apple-system,sans-serif;">'
+    +'<button id="vb-restore-go" disabled onclick="VB_restaurarExec()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#eee;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:700;cursor:not-allowed;margin-bottom:8px;font-family:-apple-system,sans-serif;">RESTAURAR AGORA</button>'
+    +'<button onclick="VB_restaurarFechar()" style="width:100%;padding:12px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+}
+function VB_restaurarCheck(){
+  var w=document.getElementById('vb-restore-word'), b=document.getElementById('vb-restore-go');
+  if(!w||!b) return;
+  var ok=((w.value||'').trim().toUpperCase()==='RESTAURAR');
+  b.disabled=!ok;
+  b.style.background=ok?'#c0392b':'#eee'; b.style.color=ok?'#fff':'#aaa'; b.style.cursor=ok?'pointer':'not-allowed';
+}
+function VB_restaurarFechar(){ var ov=document.getElementById('vb-restore-modal'); if(ov) ov.remove(); VB_restPayload=null; }
+function VB_restaurarExec(){
+  var P=VB_restPayload; if(!P) return;
+  var w=document.getElementById('vb-restore-word');
+  if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
+  var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
+  var d=P.data.dados;
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]]];
+  var i=0, okCount=0, erros=[];
+  function next(){
+    if(i>=tabelas.length){ done(); return; }
+    var t=tabelas[i][0], rows=tabelas[i][1];
+    if(!rows.length){ i++; setTimeout(next,0); return; }
+    VB_toast('Restaurando '+t+' ('+rows.length+')...');
+    sb.from(t).upsert(rows, {onConflict:'id'}).then(function(res){
+      if(res.error){ erros.push(t+': '+res.error.message); } else { okCount+=rows.length; }
+      i++; setTimeout(next,0);
+    }).catch(function(e){ erros.push(t+': falhou'); i++; setTimeout(next,0); });
+  }
+  function done(){
+    VB_restaurarFechar();
+    if(erros.length){ VB_toast('Restaurado em parte. Erros: '+erros.join(' | ')); }
+    else { VB_toast(okCount+' operações restauradas. Abra o Histórico para conferir.'); }
+    if(typeof HIST_fetch==='function' && document.getElementById('hist-lista')){ try{ HIST_fetch(HIST_searchTerm||''); }catch(e){} }
+  }
+  next();
 }
 
 function _cvToJpeg(cv){
@@ -4142,7 +4238,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   }
 
   var ant=dados['antecipacoes']||[], fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
-  var tAnt=sum(ant,function(r){return r.valor_bruto;});
+  var tAnt=sum(ant.filter(function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); }),function(r){return r.valor_bruto;});
   var tFin=sum(fin,function(r){return r.valor_financiado;});
   var tVen=sum(ven,function(r){return r.valor_total;});
   var tPag=sum(pag,function(r){return r.valor_total;});
@@ -8376,6 +8472,22 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.19.0</span><span class="cl-ver-date">25/06/2026 09:10</span></div>
+      <div class="cl-item">Restaurar backup (no menu BACKUP): importa o JSON de volta ao Supabase em modo upsert — atualiza pelas IDs e insere o que falta, sem apagar nem duplicar. Travas antes de executar: lê o arquivo, mostra resumo do que será restaurado (com data/versão do backup) e exige digitar RESTAURAR para liberar o botão. Próximos: filtro por mês e busca global</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.18.2</span><span class="cl-ver-date">25/06/2026 08:30</span></div>
+      <div class="cl-item">Menu do backup renomeado de "BACKUP DE TUDO" para só "BACKUP"</div>
+      <div class="cl-item">Relatório completo agora manda também o JSON do backup num arquivo separado: primeiro abre a folha do PDF e, em seguida, a folha do JSON — para você salvar os dois no iCloud</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.18.1</span><span class="cl-ver-date">25/06/2026 08:15</span></div>
+      <div class="cl-item">Relatório: o indicador ANTECIPADO no topo passa a excluir as antecipações atrasadas (líquido maior que o bruto), que ficam só no campo ATRASADO — sem contar a mesma operação duas vezes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.18.0</span><span class="cl-ver-date">25/06/2026 08:00</span></div>
