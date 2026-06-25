@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.17.1</title>
+<title>VB - v1.17.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.17.1<br>24/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.17.2<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4085,7 +4085,8 @@ function VB_relatorioPDF(dados, total){
   var hoje=new Date();
   var hojeStr=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   var horaStr=('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
-  function money(v){ return (v==null||v==='')?'—':'R$ '+HIST_fmtMoeda(Number(v)); }
+  function _num(v){ var t=HIST_fmtMoeda(Number(v)||0); return String(t).replace(/^R\$\s*/,''); }
+  function money(v){ return (v==null||v==='')?'—':'R$ '+_num(v); }
   function dt(v){ var d=HIST_fmtData(v); return (d&&d!=='--')?d:'—'; }
   function byDate(field){ return function(a,b){ var x=(a[field]||''),y=(b[field]||''); return x<y?-1:x>y?1:0; }; }
   function sum(arr,f){ return (arr||[]).reduce(function(a,r){ return a+(Number(f(r))||0); },0); }
@@ -4106,24 +4107,24 @@ function VB_relatorioPDF(dados, total){
     { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao',
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
-             {h:'Bruto', x:430, w:160, get:function(r){return money(r.valor_bruto);}},
-             {h:'Líquido', x:620, w:160, get:function(r){return money(r.valor_liquido);}} ],
+             {h:'Bruto', x:430, w:160, r:1, get:function(r){return money(r.valor_bruto);}},
+             {h:'Líquido', x:620, w:160, r:1, get:function(r){return money(r.valor_liquido);}} ],
       somaLabel:'TOTAL BRUTO', soma:function(r){return Number(r.valor_bruto)||0;} },
     { key:'financiamentos_hist', titulo:'FINANCIAMENTOS', date:'data_inicio',
       cols:[ {h:'Nome', x:pad, w:240, get:function(r){return (r.nome||r.descricao||'—')+(r.tem_investidor?'  · INV':'');}},
              {h:'Início', x:320, w:90, get:function(r){return dt(r.data_inicio);}},
-             {h:'Financiado', x:430, w:160, get:function(r){return money(r.valor_financiado);}},
+             {h:'Financiado', x:430, w:160, r:1, get:function(r){return money(r.valor_financiado);}},
              {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' x '+r.qtd_parcelas):'');}} ],
       somaLabel:'TOTAL FINANCIADO', soma:function(r){return Number(r.valor_financiado)||0;} },
     { key:'vendas', titulo:'VENDAS', date:'data_primeira_parcela',
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.descricao||'—');}},
              {h:'1ª parc.', x:320, w:90, get:function(r){return dt(r.data_primeira_parcela);}},
-             {h:'Total', x:430, w:160, get:function(r){return money(r.valor_total);}},
+             {h:'Total', x:430, w:160, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.quantidade_parcelas?(' x '+r.quantidade_parcelas):'');}} ],
       somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} },
     { key:'pagamentos', titulo:'PAGAMENTOS', date:'created_at',
       cols:[ {h:'Data', x:pad, w:150, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
-             {h:'Total', x:320, w:200, get:function(r){return money(r.valor_total);}},
+             {h:'Total', x:320, w:200, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Lançamentos', x:560, w:200, get:function(r){return String((r.pagamentos||[]).length);}} ],
       somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} }
   ];
@@ -4144,9 +4145,9 @@ function VB_relatorioPDF(dados, total){
     cur.y+=20;
     if(primeira){
       // faixa de indicadores (6 células, P&B)
-      var inds=[ ['ANTECIPADO','R$ '+HIST_fmtMoeda(tAnt)], ['FINANCIADO','R$ '+HIST_fmtMoeda(tFin)],
-                 ['VENDAS','R$ '+HIST_fmtMoeda(tVen)], ['RECEBIMENTOS','R$ '+HIST_fmtMoeda(tPag)],
-                 ['OPERAÇÕES', String(total)], ['TICKET MÉDIO','R$ '+HIST_fmtMoeda(ticket)] ];
+      var inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)],
+                 ['VENDAS','R$ '+_num(tVen)], ['RECEBIMENTOS','R$ '+_num(tPag)],
+                 ['OPERAÇÕES', String(total)], ['TICKET MÉDIO','R$ '+_num(ticket)] ];
       var n=inds.length, gap=8, cw=(W-2*pad-(n-1)*gap)/n, ch=64;
       for(var i=0;i<n;i++){
         var cx=pad+i*(cw+gap);
@@ -4174,9 +4175,9 @@ function VB_relatorioPDF(dados, total){
     // título da seção
     ctx.fillStyle='#111'; ctx.textAlign='left'; ctx.font='700 15px -apple-system,Arial,sans-serif';
     ctx.fillText(sec.titulo, pad, cur.y+12);
-    ctx.fillStyle='#999'; ctx.font='600 12px -apple-system,Arial,sans-serif';
     var tw=ctx.measureText(sec.titulo).width;
-    ctx.fillText('('+rows.length+')', pad+tw+10, cur.y+12);
+    ctx.fillStyle='#999'; ctx.font='600 12px -apple-system,Arial,sans-serif';
+    ctx.fillText('('+rows.length+')', pad+tw+12, cur.y+12);
     cur.y+=20;
     ctx.strokeStyle='#111'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(pad,cur.y); ctx.lineTo(W-pad,cur.y); ctx.stroke();
     cur.y+=14;
@@ -4186,14 +4187,14 @@ function VB_relatorioPDF(dados, total){
     }
     // cabeçalho de colunas
     ctx.fillStyle='#999'; ctx.font='700 9px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
-    sec.cols.forEach(function(c){ ctx.fillText(c.h.toUpperCase(), c.x, cur.y+6); });
+    sec.cols.forEach(function(c){ if(c.r){ ctx.textAlign='right'; ctx.fillText(c.h.toUpperCase(), c.x+c.w, cur.y+6); ctx.textAlign='left'; } else { ctx.fillText(c.h.toUpperCase(), c.x, cur.y+6); } });
     cur.y+=14;
     var soma=0;
     rows.forEach(function(r){
       ensure(22);
       var cx2=cur.ctx;
       cx2.fillStyle='#222'; cx2.font='400 11px -apple-system,Arial,sans-serif'; cx2.textAlign='left';
-      sec.cols.forEach(function(c){ cx2.fillText(clip(cx2, c.get(r), c.w), c.x, cur.y+10); });
+      sec.cols.forEach(function(c){ var v=clip(cx2, c.get(r), c.w); if(c.r){ cx2.textAlign='right'; cx2.fillText(v, c.x+c.w, cur.y+10); cx2.textAlign='left'; } else { cx2.fillText(v, c.x, cur.y+10); } });
       cur.y+=18;
       cx2.strokeStyle='#f0f0f0'; cx2.lineWidth=0.5; cx2.beginPath(); cx2.moveTo(pad,cur.y); cx2.lineTo(W-pad,cur.y); cx2.stroke();
       if(sec.soma) soma+=sec.soma(r);
@@ -4206,7 +4207,7 @@ function VB_relatorioPDF(dados, total){
     c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
     c3.fillText(sec.somaLabel, bx+12, by+14);
     c3.fillStyle='#111'; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
-    c3.fillText('R$ '+HIST_fmtMoeda(soma), bx+boxW-12, by+23);
+    c3.fillText('R$ '+_num(soma), bx+boxW-12, by+23);
     cur.y+=boxH+26;
   });
 
@@ -8315,6 +8316,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.17.2</span><span class="cl-ver-date">25/06/2026 06:50</span></div>
+      <div class="cl-item">Relatório corrigido: tirado o "R$" duplicado nos valores; colunas de dinheiro (Bruto, Líquido, Financiado, Total) alinhadas à direita; e o contador "(n)" ao lado do título da seção não sobrepõe mais o texto. Seções vazias não mostram selo de total</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.17.1</span><span class="cl-ver-date">24/06/2026 21:20</span></div>
