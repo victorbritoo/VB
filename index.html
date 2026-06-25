@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.19.1</title>
+<title>VB - v1.19.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.19.1<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.19.2<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4154,6 +4154,16 @@ function VB_restaurarStart(){
   inp.click();
 }
 function VB_opNome(t,r){ return t==='antecipacoes'?(r.nome||r.cliente||'—'):(t==='pagamentos'?'Pagamento':(r.nome||r.descricao||'—')); }
+function VB_opData(t,r){
+  var v = t==='antecipacoes'?r.data_operacao : t==='financiamentos_hist'?r.data_inicio : t==='vendas'?r.data_primeira_parcela : (r.created_at?String(r.created_at).split('T')[0]:null);
+  var d=HIST_fmtData(v); return (d&&d!=='--')?d:'';
+}
+function VB_fmtVal(v){
+  if(v==null||v==='') return '—';
+  if(typeof v==='number') return (Math.abs(v)>=1 && v%1!==0)||v>=1000 ? HIST_fmtMoeda(v) : String(v);
+  if(typeof v==='object'){ try{ var n=Array.isArray(v)?v.length:Object.keys(v).length; return Array.isArray(v)?(n+' item'+(n===1?'':'s')):'{…}'; }catch(e){ return '—'; } }
+  var sx=String(v); return sx.length>22 ? sx.slice(0,22)+'…' : sx;
+}
 function VB_diffCampos(a,b){
   var keys={}; Object.keys(a||{}).forEach(function(k){keys[k]=1;}); Object.keys(b||{}).forEach(function(k){keys[k]=1;});
   var ch=[]; Object.keys(keys).forEach(function(k){ if(JSON.stringify(a?a[k]:null)!==JSON.stringify(b?b[k]:null)) ch.push(k); });
@@ -4168,14 +4178,17 @@ function VB_restaurarDiff(cb){
     res.forEach(function(x){
       if(x.rows===null){ okAll=false; diff[x.t]={fetchOk:false,novas:0,alt:0,ig:0,altList:[]}; return; }
       var cur={}; x.rows.forEach(function(r){ if(r.id!=null) cur[r.id]=r; });
-      var bk=d[x.t]||[], novas=0, alt=0, ig=0, altList=[];
+      var bk=d[x.t]||[], novas=0, alt=0, ig=0, altList=[], novasList=[];
       bk.forEach(function(r){
         var c=(r.id!=null)?cur[r.id]:null;
-        if(!c){ novas++; return; }
+        if(!c){ novas++; novasList.push({nome:VB_opNome(x.t,r), data:VB_opData(x.t,r)}); return; }
         var changed=VB_diffCampos(c,r);
-        if(changed.length){ alt++; altList.push({nome:VB_opNome(x.t,r), campos:changed}); } else ig++;
+        if(changed.length){
+          var dp=changed.map(function(k){ return {campo:k, de:VB_fmtVal(c[k]), para:VB_fmtVal(r[k])}; });
+          alt++; altList.push({nome:VB_opNome(x.t,r), campos:changed, depara:dp});
+        } else ig++;
       });
-      diff[x.t]={fetchOk:true, novas:novas, alt:alt, ig:ig, altList:altList};
+      diff[x.t]={fetchOk:true, novas:novas, alt:alt, ig:ig, altList:altList, novasList:novasList};
     });
     VB_restPayload.diff=diff; VB_restPayload.diffOk=okAll; cb&&cb();
   }).catch(function(){ VB_restPayload.diff=null; VB_restPayload.diffOk=false; cb&&cb(); });
@@ -4193,7 +4206,7 @@ function VB_restaurarModal(){
   ov=document.createElement('div'); ov.id='vb-restore-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10060;display:flex;align-items:center;justify-content:center;padding:18px;';
   ov.innerHTML='<div style="width:100%;max-width:440px;background:#fff;border-radius:18px;padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">'
-    +'<div style="text-align:center;font-size:14px;letter-spacing:1px;color:#c0392b;font-weight:700;margin-bottom:6px;">RESTAURAR BACKUP</div>'
+    +'<div style="text-align:center;font-size:14px;letter-spacing:1px;color:#111;font-weight:700;margin-bottom:6px;">RESTAURAR BACKUP</div>'
     +'<div style="text-align:center;font-size:11px;color:#999;margin-bottom:16px;">Backup de '+ger+'  ·  v'+ver+'</div>'
     +VB_restaurarResumoHTML(P)
     +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:6px;">Para confirmar, digite RESTAURAR:</div>'
@@ -4208,29 +4221,48 @@ function VB_restaurarResumoHTML(P){
   var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
   var h='';
   if(P.diff && P.diffOk){
-    var tN=0,tA=0,tI=0, allAlt=[];
-    h+='<div style="font-size:12.5px;color:#333;line-height:1.7;border:0.5px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:12px;">';
+    var tN=0,tA=0,tI=0, allAlt=[], allNovas=[];
+    h+='<div style="font-size:12.5px;color:#333;line-height:1.8;border:0.5px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:12px;">';
     keys.forEach(function(k){
-      var dd=P.diff[k]||{novas:0,alt:0,ig:0,altList:[]};
-      tN+=dd.novas; tA+=dd.alt; tI+=dd.ig; (dd.altList||[]).forEach(function(x){ allAlt.push(x); });
-      var cnt=P.cont[k];
-      h+=labels[k]+' — <b>'+cnt+'</b> <span style="color:#999;font-size:11px;">(novas '+dd.novas+' · alteradas '+dd.alt+' · iguais '+dd.ig+')</span><br>';
+      var dd=P.diff[k]||{novas:0,alt:0,ig:0,altList:[],novasList:[]};
+      tN+=dd.novas; tA+=dd.alt; tI+=dd.ig;
+      (dd.altList||[]).forEach(function(x){ x._tipo=labels[k]; allAlt.push(x); });
+      (dd.novasList||[]).forEach(function(x){ x._tipo=labels[k]; allNovas.push(x); });
+      var temNovidade=(dd.novas+dd.alt)>0;
+      if(temNovidade){
+        var part=[]; if(dd.novas) part.push(dd.novas+' nova'+(dd.novas>1?'s':'')); if(dd.alt) part.push(dd.alt+' alterada'+(dd.alt>1?'s':''));
+        h+='<div style="color:#111;font-weight:600;">'+labels[k]+' — '+part.join(' · ')+'</div>';
+      } else {
+        h+='<div style="color:#bbb;">'+labels[k]+' — sem mudanças</div>';
+      }
     });
-    h+='<span style="color:#c0392b;">Total — <b>'+P.tot+'</b> · novas <b>'+tN+'</b> · alteradas <b>'+tA+'</b> · iguais <b>'+tI+'</b></span>';
+    h+='<div style="margin-top:8px;padding-top:8px;border-top:0.5px solid #eee;color:#555;">Total no backup <b>'+P.tot+'</b> · novas <b>'+tN+'</b> · alteradas <b>'+tA+'</b> · iguais <b>'+tI+'</b></div>';
     h+='</div>';
-    if(tA>0){
-      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:11px;color:#c0392b;font-weight:600;cursor:pointer;margin-bottom:8px;">ver o que muda nas '+tA+' alteradas ▾</div>';
-      h+='<div id="vb-restore-altbox" style="display:none;max-height:160px;overflow-y:auto;border:0.5px solid #eee;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#555;line-height:1.6;">';
-      allAlt.slice(0,80).forEach(function(x){ h+='<div style="margin-bottom:4px;"><b>'+HIST_esc(x.nome)+'</b> — '+HIST_esc(x.campos.join(', '))+'</div>'; });
-      if(allAlt.length>80) h+='<div style="color:#aaa;">…e mais '+(allAlt.length-80)+'</div>';
+    if(tN+tA>0){
+      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:11.5px;color:#333;font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none;">📋 Log de alterações ('+(tN+tA)+') ▾</div>';
+      h+='<div id="vb-restore-altbox" style="display:none;max-height:200px;overflow-y:auto;border:0.5px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#555;line-height:1.55;">';
+      if(allNovas.length){
+        h+='<div style="font-weight:700;color:#111;margin-bottom:4px;">NOVAS ('+allNovas.length+')</div>';
+        allNovas.slice(0,100).forEach(function(x){ h+='<div style="margin-bottom:3px;">+ <b>'+HIST_esc(x.nome)+'</b>'+(x.data?(' <span style="color:#aaa;">'+x.data+'</span>'):'')+' <span style="color:#aaa;">['+x._tipo+']</span></div>'; });
+        if(allNovas.length>100) h+='<div style="color:#aaa;">…e mais '+(allNovas.length-100)+'</div>';
+      }
+      if(allAlt.length){
+        h+='<div style="font-weight:700;color:#111;margin:8px 0 4px;">ALTERADAS ('+allAlt.length+')</div>';
+        allAlt.slice(0,100).forEach(function(x){
+          h+='<div style="margin-bottom:6px;"><b>'+HIST_esc(x.nome)+'</b> <span style="color:#aaa;">['+x._tipo+']</span>';
+          (x.depara||[]).forEach(function(dp){ h+='<div style="color:#777;padding-left:10px;">'+HIST_esc(dp.campo)+': '+HIST_esc(dp.de)+' → <b style="color:#333;">'+HIST_esc(dp.para)+'</b></div>'; });
+          h+='</div>';
+        });
+        if(allAlt.length>100) h+='<div style="color:#aaa;">…e mais '+(allAlt.length-100)+'</div>';
+      }
       h+='</div>';
     }
-    h+='<div style="font-size:11.5px;color:#888;line-height:1.5;margin-bottom:12px;">Novas serão inseridas, alteradas serão atualizadas, iguais ficam como estão. <b>Nada é excluído</b> — operações que existem hoje e não estão no backup permanecem intactas.</div>';
+    h+='<div style="font-size:11.5px;color:#888;line-height:1.5;margin-bottom:12px;">Novas serão inseridas, alteradas atualizadas, iguais ficam como estão. <b>Nada é excluído</b> — o que existe hoje e não está no backup permanece intacto.</div>';
   } else {
     h+='<div style="font-size:13px;color:#333;line-height:1.7;border:0.5px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:12px;">';
     keys.forEach(function(k){ h+=labels[k]+' — <b>'+P.cont[k]+'</b><br>'; });
-    h+='<span style="color:#c0392b;">Total — <b>'+P.tot+' operações</b></span></div>';
-    h+='<div style="font-size:11.5px;color:#c0392b;line-height:1.5;margin-bottom:12px;">Não consegui comparar com o banco agora (sem conexão?). Mostrando só o conteúdo do arquivo. Mesmo assim, o restaurar não exclui nada.</div>';
+    h+='<span style="color:#555;">Total — <b>'+P.tot+' operações</b></span></div>';
+    h+='<div style="font-size:11.5px;color:#888;line-height:1.5;margin-bottom:12px;">Não consegui comparar com o banco agora (sem conexão?). Mostrando só o conteúdo do arquivo. Mesmo assim, o restaurar não exclui nada.</div>';
   }
   return h;
 }
@@ -8528,6 +8560,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.19.2</span><span class="cl-ver-date">25/06/2026 10:05</span></div>
+      <div class="cl-item">Prévia do Restaurar mais limpa: sem vermelho; cada tipo mostra só se tem novidade (em preto) ou "sem mudanças" (cinza discreto). Novo log de alterações fechado e expansível, separando Novas (a inserir) e Alteradas com o de-para campo a campo (valor atual no banco → valor do backup)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.19.1</span><span class="cl-ver-date">25/06/2026 09:40</span></div>
