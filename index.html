@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.21.1</title>
+<title>VB - v1.22.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.21.1<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.22.0<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -962,14 +962,21 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div id="ant-secPersonalizado" style="display:none;margin-bottom:6px;">
     <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:14px 16px;">
       <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:6px;text-align:center;">TÍTULOS INDIVIDUAIS</div>
-      <div style="display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;margin-bottom:4px;">
+      <div style="display:grid;grid-template-columns:18px 1fr 1fr 20px 20px;gap:6px;margin-bottom:4px;">
         <span></span>
         <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VALOR</span>
         <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VENCIMENTO</span>
         <span></span>
+        <span></span>
       </div>
       <div id="ant-listaTitulos" style="width:100%;"></div>
       <button id="ant-add-titulo-btn" style="width:100%;padding:9px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ TÍTULO</button>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;">
+        <span style="font-size:11px;color:#aaa;">Repetir o último</span>
+        <input id="ant-repetir-n" type="text" inputmode="numeric" maxlength="2" value="3" onclick="this.select()" oninput="this.value=this.value.replace(/\D/g,'')" style="width:42px;height:30px;border:0.5px solid #ddd;border-radius:8px;text-align:center;font-size:13px;font-weight:700;color:#111;outline:none;background:#fff;font-family:-apple-system,sans-serif;">
+        <span style="font-size:11px;color:#aaa;">vezes</span>
+        <button id="ant-repetir-btn" type="button" style="padding:7px 14px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#111;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">REPETIR</button>
+      </div>
     </div>
   </div>
 
@@ -6315,6 +6322,14 @@ function ANT_parseDate(s){
 function ANT_dateStr(d){
   return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
+function ANT_addMonth(dateStr,n){
+  var d=ANT_parseDate(dateStr); if(!d) return '';
+  n=n||1; var day=d.getDate();
+  var t=new Date(d.getFullYear(), d.getMonth()+n, 1);
+  var lastDay=new Date(t.getFullYear(), t.getMonth()+1, 0).getDate();
+  t.setDate(Math.min(day,lastDay));
+  return ANT_dateStr(t);
+}
 function ANT_maskDate(el,cb){
   el.addEventListener('input',function(){
     var raw=this.value.replace(/\D/g,'');
@@ -7277,7 +7292,10 @@ function ANT_toggleModo(){
 
 function ANT_adicionarTitulo(focus){
   ANT_tituloCounter++;
-  ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:''});
+  var _l=ANT_titulos.length?ANT_titulos[ANT_titulos.length-1]:null;
+  var _nv=(_l&&_l.valor)?_l.valor:'';
+  var _nd=(_l&&_l.data)?ANT_addMonth(_l.data,1):'';
+  ANT_titulos.push({id:ANT_tituloCounter, valor:_nv, data:_nd});
   ANT_renderTitulos();
   ANT_recalcPersonalizado();
   if(focus){
@@ -7294,10 +7312,37 @@ function ANT_adicionarTitulo(focus){
   b.addEventListener('touchend',function(e){ e.preventDefault(); ANT_adicionarTitulo(true); }, {passive:false});
   b.addEventListener('click',function(){ ANT_adicionarTitulo(true); });
 })();
+(function(){
+  var rb=document.getElementById('ant-repetir-btn');
+  if(!rb) return;
+  rb.addEventListener('touchend',function(e){ e.preventDefault(); ANT_repetirTitulos(); }, {passive:false});
+  rb.addEventListener('click',function(){ ANT_repetirTitulos(); });
+})();
 
 function ANT_removerTitulo(id){
   ANT_titulos=ANT_titulos.filter(function(t){return t.id!==id;});
   ANT_renderTitulos(); ANT_recalcPersonalizado();
+}
+function ANT_duplicarTitulo(id){
+  var i=-1; for(var k=0;k<ANT_titulos.length;k++){ if(ANT_titulos[k].id===id){ i=k; break; } }
+  if(i<0) return;
+  var base=ANT_titulos[i];
+  ANT_tituloCounter++;
+  var nd=base.data?ANT_addMonth(base.data,1):'';
+  ANT_titulos.splice(i+1,0,{id:ANT_tituloCounter, valor:(base.valor||''), data:nd});
+  ANT_renderTitulos(); ANT_recalcPersonalizado();
+}
+function ANT_repetirTitulos(){
+  var inp=document.getElementById('ant-repetir-n');
+  var n=parseInt((inp&&inp.value)||'0',10);
+  if(isNaN(n)||n<1){ VB_toast('Quantas vezes? Digite um número.'); return; }
+  if(n>24) n=24;
+  var last=ANT_titulos.length?ANT_titulos[ANT_titulos.length-1]:null;
+  if(!last || (!last.valor && !last.data)){ VB_toast('Preencha um título primeiro.'); return; }
+  var baseVal=last.valor||'', lastDate=last.data||'';
+  for(var k=0;k<n;k++){ ANT_tituloCounter++; lastDate=lastDate?ANT_addMonth(lastDate,1):''; ANT_titulos.push({id:ANT_tituloCounter, valor:baseVal, data:lastDate}); }
+  ANT_renderTitulos(); ANT_recalcPersonalizado();
+  VB_toast(n+' título'+(n>1?'s':'')+' adicionado'+(n>1?'s':'')+'.');
 }
 
 function ANT_renderTitulos(){
@@ -7305,7 +7350,7 @@ function ANT_renderTitulos(){
   lista.innerHTML='';
   ANT_titulos.forEach(function(t,idx){
     var row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;align-items:center;margin-bottom:6px;';
+    row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px 20px;gap:6px;align-items:center;margin-bottom:6px;';
     row.innerHTML=
       '<span style="font-size:10px;color:#aaa;font-weight:600;text-align:center;">'+String(idx+1).padStart(2,'0')+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:2px;border-bottom:0.5px solid #ddd;padding-bottom:2px;min-width:0;">'+
@@ -7317,6 +7362,7 @@ function ANT_renderTitulos(){
       '<input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" data-tid="'+t.id+'" data-field="data"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;text-align:center;font-family:-apple-system,sans-serif;width:100%;min-width:0;"'+
       (t.data?' value="'+t.data+'"':'')+'>'+
+      '<button onclick="ANT_duplicarTitulo('+t.id+')" title="Duplicar" style="border:none;background:none;font-size:13px;color:#bbb;cursor:pointer;padding:0;line-height:1;">⧉</button>'+
       '<button onclick="ANT_removerTitulo('+t.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;">×</button>';
     lista.appendChild(row);
   });
@@ -8667,6 +8713,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.0</span><span class="cl-ver-date">25/06/2026 13:10</span></div>
+      <div class="cl-item">Antecipação personalizada — preencher títulos mais rápido: ao tocar em "+ TÍTULO", a nova linha já vem com o valor do anterior e a data avançada 1 mês (mesmo dia). Botão "Duplicar" (⧉) em cada linha. E "Repetir o último ×N" (até 24) que gera N títulos com o mesmo valor e datas mês a mês. Virada de mês curto tratada (31 → último dia do mês)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.21.1</span><span class="cl-ver-date">25/06/2026 12:30</span></div>
