@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.20.1</title>
+<title>VB - v1.20.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.1<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.2<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4600,10 +4600,10 @@ function HIST_parseNum(s){
 }
 
 // ===== Filtro do Histórico (período + modo + faixa de valor) =====
-var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'', de:'', ate:'' };
+var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'', meses:[], de:'', ate:'' };
 var HIST_allRows=[];
-function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!=='' || f.mesAno!=='' || f.de!=='' || f.ate!==''; }
-function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'', de:'', ate:'' }; }
+function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!=='' || (f.meses&&f.meses.length>0) || f.de!=='' || f.ate!==''; }
+function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'', meses:[], de:'', ate:'' }; }
 function HIST_periodoRange(){
   var f=HIST_filter, now=new Date();
   var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -4629,7 +4629,7 @@ function HIST_filterRows(tab, rows){
       if(range.ini && d<range.ini) return false;
       if(range.fim && d>range.fim) return false;
     }
-    if(f.mesAno){ if(_ymOf(r.created_at)!==f.mesAno) return false; }
+    if(f.meses&&f.meses.length){ if(f.meses.indexOf(_ymOf(r.created_at))<0) return false; }
     if(f.de || f.ate){ var ld=_localYMD(r.created_at); var dde=_brToYMD(f.de), dat=_brToYMD(f.ate); if(dde && ld<dde) return false; if(dat && ld>dat) return false; }
     if(f.modo!=='todos' && (tab==='ant'||tab==='ven')){ if((r.modo||'')!==f.modo) return false; }
     if(vmin!=null && !(Number(r[valCol])>=vmin)) return false;
@@ -4665,9 +4665,14 @@ function HIST_openFilter(){
   document.getElementById('hist-filter-overlay').style.display='flex';
 }
 function HIST_closeFilter(){ document.getElementById('hist-filter-overlay').style.display='none'; }
-function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_filter.mesAno=''; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; var ms=document.getElementById('hist-filter-mes-sec'); if(ms)ms.style.display='none'; HIST_styleFilterUI(); }
+function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_filter.meses=[]; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; var ms=document.getElementById('hist-filter-mes-sec'); if(ms)ms.style.display='none'; HIST_styleFilterUI(); }
 function HIST_toggleMesList(){ var ms=document.getElementById('hist-filter-mes-sec'); if(!ms) return; ms.style.display=(ms.style.display==='none'?'block':'none'); }
-function HIST_setMes(ym){ HIST_filter.mesAno=ym; if(ym){ HIST_filter.periodo='tudo'; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; } var ms=document.getElementById('hist-filter-mes-sec'); if(ms)ms.style.display='none'; HIST_styleFilterUI(); }
+function HIST_setMes(ym){
+  if(!ym){ HIST_filter.meses=[]; }
+  else { var i=HIST_filter.meses.indexOf(ym); if(i>=0) HIST_filter.meses.splice(i,1); else HIST_filter.meses.push(ym);
+    if(HIST_filter.meses.length){ HIST_filter.periodo='tudo'; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; } }
+  HIST_styleFilterUI();
+}
 function HIST_buildMeses(){
   var sec=document.getElementById('hist-filter-mes-sec'), list=document.getElementById('hist-filter-mes-list'); if(!sec||!list) return;
   var counts={}; (HIST_allRows||[]).forEach(function(r){ var ym=_ymOf(r.created_at); if(ym) counts[ym]=(counts[ym]||0)+1; });
@@ -4690,18 +4695,19 @@ function HIST_styleFilterUI(){
     b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
   });
   document.querySelectorAll('.hist-fmes').forEach(function(b){
-    var on=b.getAttribute('data-mes')===(HIST_filter.mesAno||'');
+    var dm=b.getAttribute('data-mes');
+    var on = dm==='' ? (HIST_filter.meses.length===0) : (HIST_filter.meses.indexOf(dm)>=0);
     b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
   });
   var mb=document.getElementById('hist-mes-btn');
-  if(mb){ var act=!!HIST_filter.mesAno; mb.textContent=(act?HIST_mesLabel(HIST_filter.mesAno):'Mês passado')+' ▾'; mb.style.background=act?'#111':'#fff'; mb.style.color=act?'#fff':'#888'; mb.style.borderColor=act?'#111':'#ddd'; }
+  if(mb){ var n=HIST_filter.meses.length; var lbl=n===0?'Mês passado':(n===1?HIST_mesLabel(HIST_filter.meses[0]):(n+' meses')); mb.textContent=lbl+' ▾'; var act=n>0; mb.style.background=act?'#111':'#fff'; mb.style.color=act?'#fff':'#888'; mb.style.borderColor=act?'#111':'#ddd'; }
 }
 function HIST_applyFilter(){
   var mn=document.getElementById('hist-fval-min'), mx=document.getElementById('hist-fval-max');
   HIST_filter.valMin=mn?(mn.value||'').trim():''; HIST_filter.valMax=mx?(mx.value||'').trim():'';
   var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate');
   HIST_filter.de=de?(de.value||'').trim():''; HIST_filter.ate=at?(at.value||'').trim():'';
-  if(HIST_filter.de||HIST_filter.ate){ HIST_filter.periodo='tudo'; HIST_filter.mesAno=''; }
+  if(HIST_filter.de||HIST_filter.ate){ HIST_filter.periodo='tudo'; HIST_filter.meses=[]; }
   HIST_closeFilter(); HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
 }
 function HIST_clearFilters(){
@@ -4715,7 +4721,7 @@ function HIST_clearFilters(){
 }
 function HIST_clearOne(dim){
   if(dim==='periodo') HIST_filter.periodo='tudo';
-  else if(dim==='mes') HIST_filter.mesAno='';
+  else if(dim==='mes') HIST_filter.meses=[];
   else if(dim==='intervalo'){ HIST_filter.de=''; HIST_filter.ate=''; }
   else if(dim==='modo') HIST_filter.modo='todos';
   else if(dim==='valor'){ HIST_filter.valMin=''; HIST_filter.valMax=''; }
@@ -4732,7 +4738,7 @@ function HIST_updateFilterUIState(){
   var chips=[];
   function chip(dim,txt){ return '<span style="display:inline-flex;align-items:center;gap:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:10px;">'+HIST_esc(txt)+'<span onclick="HIST_clearOne(\''+dim+'\')" style="cursor:pointer;opacity:0.7;padding:0 2px;">×</span></span>'; }
   if(HIST_filter.periodo!=='tudo') chips.push(chip('periodo', HIST_perLabel()));
-  if(HIST_filter.mesAno) chips.push(chip('mes', HIST_mesLabel(HIST_filter.mesAno)));
+  if(HIST_filter.meses.length){ var _nm=HIST_filter.meses.length; chips.push(chip('mes', _nm===1?HIST_mesLabel(HIST_filter.meses[0]):(_nm+' meses'))); }
   if(HIST_filter.de||HIST_filter.ate) chips.push(chip('intervalo', (HIST_filter.de||'…')+' – '+(HIST_filter.ate||'…')));
   if(HIST_filter.modo!=='todos' && (HIST_tabAtual==='ant'||HIST_tabAtual==='ven')) chips.push(chip('modo', HIST_filter.modo==='simples'?'Simples':'Personalizada'));
   if(HIST_filter.valMin!=='' || HIST_filter.valMax!==''){ chips.push(chip('valor','R$ '+(HIST_filter.valMin||'0')+' – '+(HIST_filter.valMax||'∞'))); }
@@ -5625,6 +5631,11 @@ document.getElementById('fin-parcela').addEventListener('input',function(){
 FIN_initTabela();
 FIN_applyDegrauUI();
 FIN_restoreSession();
+(function(){
+  function _vbMaskDate(el){ if(!el) return; el.addEventListener('input',function(){ var raw=this.value.replace(/[^0-9]/g,''); var v=''; if(raw.length>0)v+=raw.substring(0,2); if(raw.length>2)v+='/'+raw.substring(2,4); if(raw.length>4)v+='/'+raw.substring(4,8); this.value=v; }); }
+  _vbMaskDate(document.getElementById('hist-fdt-de'));
+  _vbMaskDate(document.getElementById('hist-fdt-ate'));
+})();
 (function(){
   var ftd=document.getElementById('fin-tabelaData');
   if(ftd) ftd.addEventListener('input',function(){
@@ -8611,6 +8622,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.2</span><span class="cl-ver-date">25/06/2026 11:35</span></div>
+      <div class="cl-item">Filtrar: seletor de meses agora é multi-seleção (pode marcar vários meses avulsos, ex.: Junho + Abril); o botão mostra o mês quando é um só ou "N meses" quando são vários. Campos De/Até do Intervalo ganharam a mesma máscara de data dos outros campos (a barra aparece sozinha ao digitar e o ano completa)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.1</span><span class="cl-ver-date">25/06/2026 11:10</span></div>
