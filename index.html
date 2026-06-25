@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.17.2</title>
+<title>VB - v1.17.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.17.2<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.17.3<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4104,7 +4104,7 @@ function VB_relatorioPDF(dados, total){
   var ticket = total? (tAnt+tFin+tVen+tPag)/total : 0;
 
   var secoes=[
-    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao',
+    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', warn:function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
              {h:'Bruto', x:430, w:160, r:1, get:function(r){return money(r.valor_bruto);}},
@@ -4120,7 +4120,7 @@ function VB_relatorioPDF(dados, total){
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.descricao||'—');}},
              {h:'1ª parc.', x:320, w:90, get:function(r){return dt(r.data_primeira_parcela);}},
              {h:'Total', x:430, w:160, r:1, get:function(r){return money(r.valor_total);}},
-             {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.quantidade_parcelas?(' x '+r.quantidade_parcelas):'');}} ],
+             {h:'Parcela', x:620, w:160, get:function(r){ if(r.modo==='personalizado'){ var nn=(r.parcelas&&r.parcelas.length)?r.parcelas.length:(r.quantidade_parcelas||0); return 'Personalizada'+(nn?(' ('+nn+' parc.)'):''); } return money(r.valor_parcela)+(r.quantidade_parcelas?(' x '+r.quantidade_parcelas):''); }} ],
       somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} },
     { key:'pagamentos', titulo:'PAGAMENTOS', date:'created_at',
       cols:[ {h:'Data', x:pad, w:150, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
@@ -4146,8 +4146,7 @@ function VB_relatorioPDF(dados, total){
     if(primeira){
       // faixa de indicadores (6 células, P&B)
       var inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)],
-                 ['VENDAS','R$ '+_num(tVen)], ['RECEBIMENTOS','R$ '+_num(tPag)],
-                 ['OPERAÇÕES', String(total)], ['TICKET MÉDIO','R$ '+_num(ticket)] ];
+                 ['VENDAS','R$ '+_num(tVen)], ['OPERAÇÕES', String(total)] ];
       var n=inds.length, gap=8, cw=(W-2*pad-(n-1)*gap)/n, ch=64;
       for(var i=0;i<n;i++){
         var cx=pad+i*(cw+gap);
@@ -4193,7 +4192,8 @@ function VB_relatorioPDF(dados, total){
     rows.forEach(function(r){
       ensure(22);
       var cx2=cur.ctx;
-      cx2.fillStyle='#222'; cx2.font='400 11px -apple-system,Arial,sans-serif'; cx2.textAlign='left';
+      var _warn=(sec.warn && sec.warn(r));
+      cx2.fillStyle=_warn?'#c0392b':'#222'; cx2.font='400 11px -apple-system,Arial,sans-serif'; cx2.textAlign='left';
       sec.cols.forEach(function(c){ var v=clip(cx2, c.get(r), c.w); if(c.r){ cx2.textAlign='right'; cx2.fillText(v, c.x+c.w, cur.y+10); cx2.textAlign='left'; } else { cx2.fillText(v, c.x, cur.y+10); } });
       cur.y+=18;
       cx2.strokeStyle='#f0f0f0'; cx2.lineWidth=0.5; cx2.beginPath(); cx2.moveTo(pad,cur.y); cx2.lineTo(W-pad,cur.y); cx2.stroke();
@@ -8316,6 +8316,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.17.3</span><span class="cl-ver-date">25/06/2026 07:05</span></div>
+      <div class="cl-item">Relatório: tirados os indicadores Recebimentos e Ticket médio do topo (ficam Antecipado, Financiado, Vendas e Operações); antecipações com juros negativo (líquido maior que o bruto) saem em vermelho; e vendas personalizadas agora aparecem como "Personalizada (N parc.)" em vez de "valor x N", que não fazia sentido quando as parcelas variam</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.17.2</span><span class="cl-ver-date">25/06/2026 06:50</span></div>
