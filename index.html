@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.20.0</title>
+<title>VB - v1.20.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -309,17 +309,23 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:12px;letter-spacing:2px;color:#888;font-weight:600;margin-bottom:16px;text-align:center;font-family:-apple-system,sans-serif;">FILTRAR</div>
 
     <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Período</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;">
-      <button class="hist-fper" data-per="tudo"       onclick="HIST_setPeriodo('tudo')"       style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Tudo</button>
-      <button class="hist-fper" data-per="7d"         onclick="HIST_setPeriodo('7d')"         style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 7 dias</button>
-      <button class="hist-fper" data-per="30d"        onclick="HIST_setPeriodo('30d')"        style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 30 dias</button>
-      <button class="hist-fper" data-per="mes"        onclick="HIST_setPeriodo('mes')"        style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Este mês</button>
-      <button class="hist-fper" data-per="mespassado" onclick="HIST_setPeriodo('mespassado')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado</button>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+      <button class="hist-fper" data-per="tudo" onclick="HIST_setPeriodo('tudo')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Tudo</button>
+      <button class="hist-fper" data-per="7d" onclick="HIST_setPeriodo('7d')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 7 dias</button>
+      <button class="hist-fper" data-per="30d" onclick="HIST_setPeriodo('30d')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Últimos 30 dias</button>
+      <button class="hist-fper" data-per="mes" onclick="HIST_setPeriodo('mes')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Este mês</button>
+      <button id="hist-mes-btn" type="button" onclick="HIST_toggleMesList()" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado ▾</button>
     </div>
 
-    <div id="hist-filter-mes-sec" style="margin-bottom:18px;display:none;">
-      <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Mês</div>
+    <div id="hist-filter-mes-sec" style="margin-bottom:16px;display:none;">
       <div id="hist-filter-mes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Intervalo</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;">
+      <input id="hist-fdt-de" type="text" inputmode="numeric" maxlength="10" placeholder="De" onclick="if(!this.value)this.select()" onblur="autoCompleteDate(this)" style="flex:1;min-width:0;box-sizing:border-box;height:42px;border:0.5px solid #ddd;border-radius:12px;padding:0 10px;font-size:13px;color:#111;outline:none;background:#fff;text-align:center;font-family:-apple-system,sans-serif;">
+      <span style="color:#bbb;font-size:13px;">até</span>
+      <input id="hist-fdt-ate" type="text" inputmode="numeric" maxlength="10" placeholder="Até" onclick="if(!this.value)this.select()" onblur="autoCompleteDate(this)" style="flex:1;min-width:0;box-sizing:border-box;height:42px;border:0.5px solid #ddd;border-radius:12px;padding:0 10px;font-size:13px;color:#111;outline:none;background:#fff;text-align:center;font-family:-apple-system,sans-serif;">
     </div>
 
     <div id="hist-filter-modo-sec" style="margin-bottom:18px;">
@@ -347,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.0<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.20.1<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4594,10 +4600,10 @@ function HIST_parseNum(s){
 }
 
 // ===== Filtro do Histórico (período + modo + faixa de valor) =====
-var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'' };
+var HIST_filter = { periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'', de:'', ate:'' };
 var HIST_allRows=[];
-function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!=='' || f.mesAno!==''; }
-function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'' }; }
+function HIST_hasActiveFilter(){ var f=HIST_filter; return f.periodo!=='tudo' || f.modo!=='todos' || f.valMin!=='' || f.valMax!=='' || f.mesAno!=='' || f.de!=='' || f.ate!==''; }
+function HIST_resetFilter(){ HIST_filter={ periodo:'tudo', modo:'todos', valMin:'', valMax:'', mesAno:'', de:'', ate:'' }; }
 function HIST_periodoRange(){
   var f=HIST_filter, now=new Date();
   var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -4609,6 +4615,8 @@ function HIST_periodoRange(){
   return null;
 }
 function _ymOf(ca){ if(!ca) return ''; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function _localYMD(ca){ if(!ca) return ''; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function _brToYMD(s){ if(!s) return ''; var p=String(s).trim().split('/'); if(p.length!==3) return ''; if(p[0].length<2||p[1].length<2||p[2].length<4) return ''; return p[2]+'-'+p[1]+'-'+p[0]; }
 function HIST_mesLabel(ym){ if(!ym) return ''; var pp=ym.split('-'); var M=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return (M[parseInt(pp[1],10)-1]||'?')+' '+pp[0]; }
 function HIST_filterRows(tab, rows){
   if(!HIST_hasActiveFilter()) return rows;
@@ -4622,6 +4630,7 @@ function HIST_filterRows(tab, rows){
       if(range.fim && d>range.fim) return false;
     }
     if(f.mesAno){ if(_ymOf(r.created_at)!==f.mesAno) return false; }
+    if(f.de || f.ate){ var ld=_localYMD(r.created_at); var dde=_brToYMD(f.de), dat=_brToYMD(f.ate); if(dde && ld<dde) return false; if(dat && ld>dat) return false; }
     if(f.modo!=='todos' && (tab==='ant'||tab==='ven')){ if((r.modo||'')!==f.modo) return false; }
     if(vmin!=null && !(Number(r[valCol])>=vmin)) return false;
     if(vmax!=null && !(Number(r[valCol])<=vmax)) return false;
@@ -4648,14 +4657,17 @@ function HIST_openFilter(){
   var sec=document.getElementById('hist-filter-modo-sec');
   if(sec) sec.style.display = (HIST_tabAtual==='ant'||HIST_tabAtual==='ven') ? 'block' : 'none';
   HIST_buildMeses();
+  var de=document.getElementById('hist-fdt-de'); if(de) de.value=HIST_filter.de||'';
+  var at=document.getElementById('hist-fdt-ate'); if(at) at.value=HIST_filter.ate||'';
   var mn=document.getElementById('hist-fval-min'); if(mn) mn.value=HIST_filter.valMin||'';
   var mx=document.getElementById('hist-fval-max'); if(mx) mx.value=HIST_filter.valMax||'';
   HIST_styleFilterUI();
   document.getElementById('hist-filter-overlay').style.display='flex';
 }
 function HIST_closeFilter(){ document.getElementById('hist-filter-overlay').style.display='none'; }
-function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_filter.mesAno=''; HIST_styleFilterUI(); }
-function HIST_setMes(ym){ HIST_filter.mesAno=ym; if(ym) HIST_filter.periodo='tudo'; HIST_styleFilterUI(); }
+function HIST_setPeriodo(p){ HIST_filter.periodo=p; HIST_filter.mesAno=''; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; var ms=document.getElementById('hist-filter-mes-sec'); if(ms)ms.style.display='none'; HIST_styleFilterUI(); }
+function HIST_toggleMesList(){ var ms=document.getElementById('hist-filter-mes-sec'); if(!ms) return; ms.style.display=(ms.style.display==='none'?'block':'none'); }
+function HIST_setMes(ym){ HIST_filter.mesAno=ym; if(ym){ HIST_filter.periodo='tudo'; HIST_filter.de=''; HIST_filter.ate=''; var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate'); if(de)de.value=''; if(at)at.value=''; } var ms=document.getElementById('hist-filter-mes-sec'); if(ms)ms.style.display='none'; HIST_styleFilterUI(); }
 function HIST_buildMeses(){
   var sec=document.getElementById('hist-filter-mes-sec'), list=document.getElementById('hist-filter-mes-list'); if(!sec||!list) return;
   var counts={}; (HIST_allRows||[]).forEach(function(r){ var ym=_ymOf(r.created_at); if(ym) counts[ym]=(counts[ym]||0)+1; });
@@ -4681,21 +4693,30 @@ function HIST_styleFilterUI(){
     var on=b.getAttribute('data-mes')===(HIST_filter.mesAno||'');
     b.style.background=on?'#111':'#fff'; b.style.color=on?'#fff':'#888'; b.style.borderColor=on?'#111':'#ddd';
   });
+  var mb=document.getElementById('hist-mes-btn');
+  if(mb){ var act=!!HIST_filter.mesAno; mb.textContent=(act?HIST_mesLabel(HIST_filter.mesAno):'Mês passado')+' ▾'; mb.style.background=act?'#111':'#fff'; mb.style.color=act?'#fff':'#888'; mb.style.borderColor=act?'#111':'#ddd'; }
 }
 function HIST_applyFilter(){
   var mn=document.getElementById('hist-fval-min'), mx=document.getElementById('hist-fval-max');
   HIST_filter.valMin=mn?(mn.value||'').trim():''; HIST_filter.valMax=mx?(mx.value||'').trim():'';
+  var de=document.getElementById('hist-fdt-de'), at=document.getElementById('hist-fdt-ate');
+  HIST_filter.de=de?(de.value||'').trim():''; HIST_filter.ate=at?(at.value||'').trim():'';
+  if(HIST_filter.de||HIST_filter.ate){ HIST_filter.periodo='tudo'; HIST_filter.mesAno=''; }
   HIST_closeFilter(); HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
 }
 function HIST_clearFilters(){
   HIST_resetFilter();
   var mn=document.getElementById('hist-fval-min'); if(mn) mn.value='';
   var mx=document.getElementById('hist-fval-max'); if(mx) mx.value='';
+  var de=document.getElementById('hist-fdt-de'); if(de) de.value='';
+  var at=document.getElementById('hist-fdt-ate'); if(at) at.value='';
+  var ms=document.getElementById('hist-filter-mes-sec'); if(ms) ms.style.display='none';
   HIST_styleFilterUI(); HIST_closeFilter(); HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
 }
 function HIST_clearOne(dim){
   if(dim==='periodo') HIST_filter.periodo='tudo';
   else if(dim==='mes') HIST_filter.mesAno='';
+  else if(dim==='intervalo'){ HIST_filter.de=''; HIST_filter.ate=''; }
   else if(dim==='modo') HIST_filter.modo='todos';
   else if(dim==='valor'){ HIST_filter.valMin=''; HIST_filter.valMax=''; }
   HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
@@ -4712,6 +4733,7 @@ function HIST_updateFilterUIState(){
   function chip(dim,txt){ return '<span style="display:inline-flex;align-items:center;gap:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:10px;">'+HIST_esc(txt)+'<span onclick="HIST_clearOne(\''+dim+'\')" style="cursor:pointer;opacity:0.7;padding:0 2px;">×</span></span>'; }
   if(HIST_filter.periodo!=='tudo') chips.push(chip('periodo', HIST_perLabel()));
   if(HIST_filter.mesAno) chips.push(chip('mes', HIST_mesLabel(HIST_filter.mesAno)));
+  if(HIST_filter.de||HIST_filter.ate) chips.push(chip('intervalo', (HIST_filter.de||'…')+' – '+(HIST_filter.ate||'…')));
   if(HIST_filter.modo!=='todos' && (HIST_tabAtual==='ant'||HIST_tabAtual==='ven')) chips.push(chip('modo', HIST_filter.modo==='simples'?'Simples':'Personalizada'));
   if(HIST_filter.valMin!=='' || HIST_filter.valMax!==''){ chips.push(chip('valor','R$ '+(HIST_filter.valMin||'0')+' – '+(HIST_filter.valMax||'∞'))); }
   if(chips.length){ wrap.innerHTML=chips.join(''); wrap.style.display='flex'; }
@@ -8589,6 +8611,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.1</span><span class="cl-ver-date">25/06/2026 11:10</span></div>
+      <div class="cl-item">Filtrar reorganizado: o botão "Mês passado" virou um seletor que abre a lista de meses anteriores (com contagem), em vez de espalhar um botão por mês. Novo Intervalo livre De/Até por data. Período rápido, mês e intervalo são mutuamente exclusivos. Tudo alimenta o Exportar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.20.0</span><span class="cl-ver-date">25/06/2026 10:40</span></div>
