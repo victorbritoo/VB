@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.17.5</title>
+<title>VB - v1.18.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -342,7 +342,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.17.5<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.18.0<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4005,12 +4005,14 @@ function VB_backupMenu(){
       +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">BACKUP DE TUDO</div>'
       +'<button id="vb-bkp-json" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">BACKUP (JSON)</button>'
       +'<button id="vb-bkp-pdf" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
+      +'<button id="vb-bkp-full" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO COMPLETO (PDF)</button>'
       +'<button id="vb-bkp-cancel" style="width:100%;padding:13px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
       +'</div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function(e){ if(e.target===ov) VB_backupMenuFechar(); });
     ov.querySelector('#vb-bkp-json').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupJSON(); });
     ov.querySelector('#vb-bkp-pdf').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupPDF(); });
+    ov.querySelector('#vb-bkp-full').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupCompleto(); });
     ov.querySelector('#vb-bkp-cancel').addEventListener('click', VB_backupMenuFechar);
   }
   ov.style.display='flex';
@@ -4072,6 +4074,49 @@ function VB_backupPDF(){
   }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
 }
 
+// Relatório completo: capa-resumo + foto/tabela de cada operação (1 por página), por tipo e data.
+function VB_backupCompleto(){
+  VB_toast('Gerando relatório completo…');
+  VB_fetchTudo(function(dados, total){
+    if(!total){ VB_toast('Nada para o relatório.'); return; }
+    var imgs;
+    try{ imgs = VB_relatorioPDF(dados, total, true); }catch(e){ VB_toast('Não consegui montar a capa.'); return; }
+    var ordem=[['antecipacoes','ant','data_operacao'],['financiamentos_hist','fin','data_inicio'],['vendas','ven','data_primeira_parcela'],['pagamentos','pag','created_at']];
+    var lista=[];
+    ordem.forEach(function(o){
+      var rows=(dados[o[0]]||[]).slice().sort(function(a,b){ var x=(a[o[2]]||''),y=(b[o[2]]||''); return x<y?-1:x>y?1:0; });
+      rows.forEach(function(r){ lista.push({tab:o[1], r:r}); });
+    });
+    var i=0;
+    function next(){
+      if(i>=lista.length){ finish(); return; }
+      VB_toast('Foto '+(i+1)+'/'+lista.length+'…');
+      var it=lista[i], durl=null;
+      try{ durl=HIST_genImg(it.tab, it.r); }catch(e){ durl=null; }
+      if(!durl || durl.indexOf('data:')!==0){ i++; setTimeout(next,0); return; }
+      VB_pngToJpeg(durl, HIST_pdfFooter(it.tab, it.r)).then(function(o){ imgs.push(o); i++; setTimeout(next,0); })
+                                                       .catch(function(){ i++; setTimeout(next,0); });
+    }
+    function finish(){
+      try{
+        var pdf=VB_buildPDF(imgs);
+        var blob=new Blob([pdf], {type:'application/pdf'});
+        var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
+        var fname='VB - Relatório completo - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.pdf';
+        var file=new File([blob], fname, {type:'application/pdf'});
+        if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+          navigator.share({files:[file]}).catch(function(){});
+        } else {
+          var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+          document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
+        }
+        VB_toast(total+' operações no relatório completo.');
+      }catch(e){ VB_toast('Não consegui gerar o relatório completo.'); }
+    }
+    next();
+  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+}
+
 function _cvToJpeg(cv){
   var jurl=cv.toDataURL('image/jpeg',0.9);
   var b=atob(jurl.split(',')[1]); var u=new Uint8Array(b.length);
@@ -4080,7 +4125,7 @@ function _cvToJpeg(cv){
 }
 
 // Relatório resumido (panorama total): indicadores + seções por tipo, uma linha por operação, ordenado por data.
-function VB_relatorioPDF(dados, total){
+function VB_relatorioPDF(dados, total, returnImages){
   var esc=2, W=820, Hp=1160, pad=40;
   var hoje=new Date();
   var hojeStr=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
@@ -4190,7 +4235,7 @@ function VB_relatorioPDF(dados, total){
     ctx.fillStyle='#999'; ctx.font='700 9px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
     sec.cols.forEach(function(c){ if(c.r){ ctx.textAlign='right'; ctx.fillText(c.h.toUpperCase(), c.x+c.w, cur.y+6); ctx.textAlign='left'; } else { ctx.fillText(c.h.toUpperCase(), c.x, cur.y+6); } });
     cur.y+=14;
-    var soma=0;
+    var soma=0, somaAtraso=0;
     rows.forEach(function(r){
       ensure(22);
       var cx2=cur.ctx;
@@ -4200,6 +4245,7 @@ function VB_relatorioPDF(dados, total){
       cur.y+=18;
       cx2.strokeStyle='#f0f0f0'; cx2.lineWidth=0.5; cx2.beginPath(); cx2.moveTo(pad,cur.y); cx2.lineTo(W-pad,cur.y); cx2.stroke();
       if(sec.soma) soma+=sec.soma(r);
+      if(_warn) somaAtraso+=(Number(r.valor_liquido)||0);
     });
     // selo de subtotal (com borda, sem cor)
     ensure(46);
@@ -4210,7 +4256,19 @@ function VB_relatorioPDF(dados, total){
     c3.fillText(sec.somaLabel, bx+12, by+14);
     c3.fillStyle='#111'; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
     c3.fillText('R$ '+_num(soma), bx+boxW-12, by+23);
-    cur.y+=boxH+26;
+    cur.y+=boxH+10;
+    // selo ATRASADO (só na Antecipação, quando houver atrasados) — em vermelho
+    if(sec.key==='antecipacoes' && somaAtraso>0){
+      ensure(boxH+12);
+      var c4=cur.ctx; var by2=cur.y;
+      c4.strokeStyle='#c0392b'; c4.lineWidth=1; c4.strokeRect(bx, by2, boxW, boxH);
+      c4.fillStyle='#c0392b'; c4.font='700 9px -apple-system,Arial,sans-serif'; c4.textAlign='left';
+      c4.fillText('ATRASADO (LÍQUIDO)', bx+12, by2+14);
+      c4.font='700 15px -apple-system,Arial,sans-serif'; c4.textAlign='right';
+      c4.fillText('R$ '+_num(somaAtraso), bx+boxW-12, by2+23);
+      cur.y+=boxH+10;
+    }
+    cur.y+=16;
   });
 
   // rodapé "Página X de N" em todas as páginas
@@ -4223,7 +4281,7 @@ function VB_relatorioPDF(dados, total){
     ctx.fillText('Página '+(idx+1)+' de '+N, W-pad, Hp-16);
     return _cvToJpeg(p.cv);
   });
-  return VB_buildPDF(imgs);
+  return returnImages ? imgs : VB_buildPDF(imgs);
 }
 
 // ===== Compartilhar do histórico: gera a imagem em silêncio e abre a folha do iPhone =====
@@ -8318,6 +8376,12 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.18.0</span><span class="cl-ver-date">25/06/2026 08:00</span></div>
+      <div class="cl-item">Relatório: selo "ATRASADO (LÍQUIDO)" em vermelho dentro da seção Antecipação, somando o líquido das operações atrasadas daquela seção</div>
+      <div class="cl-item">Novo no menu do backup: "Relatório completo (PDF)" — a capa-resumo (indicadores + tabela por tipo) seguida da foto/tabela de cada operação, uma por página, ordenada por tipo e data, com rodapé cliente — data — VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.17.5</span><span class="cl-ver-date">25/06/2026 07:30</span></div>
