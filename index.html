@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.27.1</title>
+<title>VB - v1.28.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.27.1<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.28.0<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4047,6 +4047,34 @@ function VB_relSetEscopo(e){
   function off(b){ if(!b)return; b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
   if(e==='todos'){ on(t); off(a); } else { on(a); off(t); }
 }
+var VB_relPeriodo='tudo'; // período do relatório — próprio, NÃO usa o filtro do Histórico
+function VB_relPeriodoRange(){
+  var now=new Date();
+  var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  function eod(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999); }
+  var p=VB_relPeriodo;
+  if(p==='hoje'){ return {ini:startToday, fim:eod(now)}; }
+  if(p==='7d'){ var a=new Date(startToday); a.setDate(a.getDate()-7); return {ini:a, fim:eod(now)}; }
+  if(p==='30d'){ var b=new Date(startToday); b.setDate(b.getDate()-30); return {ini:b, fim:eod(now)}; }
+  if(p==='mes'){ return {ini:new Date(now.getFullYear(),now.getMonth(),1), fim:eod(new Date(now.getFullYear(),now.getMonth()+1,0))}; }
+  if(p==='mespassado'){ return {ini:new Date(now.getFullYear(),now.getMonth()-1,1), fim:eod(new Date(now.getFullYear(),now.getMonth(),0))}; }
+  return null;
+}
+function VB_relPeriodoLabel(){
+  var p=VB_relPeriodo;
+  return p==='hoje'?'Hoje':p==='7d'?'Últimos 7 dias':p==='30d'?'Últimos 30 dias':p==='mes'?'Este mês':p==='mespassado'?'Mês passado':'Todo o período';
+}
+function VB_relSetPeriodo(p){
+  VB_relPeriodo=p;
+  var ov=document.getElementById('vb-relatorio-menu'); if(!ov) return;
+  var btns=ov.querySelectorAll('.vb-rel-per');
+  for(var i=0;i<btns.length;i++){
+    var on=(btns[i].getAttribute('data-per')===p);
+    btns[i].style.background=on?'#111':'#fff';
+    btns[i].style.color=on?'#fff':'#888';
+    btns[i].style.borderColor=on?'#111':'#ddd';
+  }
+}
 function VB_relatorioMenu(){
   var ov=document.getElementById('vb-relatorio-menu');
   if(!ov){
@@ -4058,6 +4086,15 @@ function VB_relatorioMenu(){
       +'<div style="display:flex;gap:8px;margin-bottom:10px;">'
       +'<button id="vb-rel-aba" style="flex:1;padding:9px;border:0.5px solid #111;border-radius:11px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">ABA ATUAL</button>'
       +'<button id="vb-rel-todos" style="flex:1;padding:9px;border:0.5px solid #ddd;border-radius:11px;background:#fff;color:#888;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">TODOS</button>'
+      +'</div>'
+      +'<div style="text-align:center;font-size:10px;letter-spacing:1px;color:#bbb;font-weight:600;margin:2px 0 6px;">PERÍODO</div>'
+      +'<div id="vb-rel-perrow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">'
+      +'<button class="vb-rel-per" data-per="tudo" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Tudo</button>'
+      +'<button class="vb-rel-per" data-per="hoje" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Hoje</button>'
+      +'<button class="vb-rel-per" data-per="7d" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">7 dias</button>'
+      +'<button class="vb-rel-per" data-per="30d" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">30 dias</button>'
+      +'<button class="vb-rel-per" data-per="mes" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Este mês</button>'
+      +'<button class="vb-rel-per" data-per="mespassado" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado</button>'
       +'</div>'
       +'<div id="vb-rel-hint" style="text-align:center;font-size:11px;color:#bbb;margin-bottom:12px;line-height:1.4;min-height:14px;"></div>'
       +'<button id="vb-rel-pdf" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
@@ -4071,10 +4108,13 @@ function VB_relatorioMenu(){
     ov.querySelector('#vb-rel-cancel').addEventListener('click', VB_relatorioMenuFechar);
     ov.querySelector('#vb-rel-aba').addEventListener('click', function(){ VB_relSetEscopo('aba'); });
     ov.querySelector('#vb-rel-todos').addEventListener('click', function(){ VB_relSetEscopo('todos'); });
+    var _perBtns=ov.querySelectorAll('.vb-rel-per');
+    for(var _i=0;_i<_perBtns.length;_i++){ _perBtns[_i].addEventListener('click', function(){ VB_relSetPeriodo(this.getAttribute('data-per')); }); }
   }
   var nomes={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'};
   var abaBtn=ov.querySelector('#vb-rel-aba'); if(abaBtn) abaBtn.textContent=(nomes[HIST_tabAtual]||'ABA ATUAL');
   VB_relSetEscopo(VB_relEscopo);
+  VB_relSetPeriodo(VB_relPeriodo);
   var hint=ov.querySelector('#vb-rel-hint');
   if(hint){ hint.textContent=(HIST_searchGlobal && HIST_searchTerm)?'Busca ativa — o relatório sai do resultado da busca (todos os tipos).':''; }
   ov.style.display='flex';
@@ -4190,18 +4230,15 @@ function VB_fetchTudo(onOk, onErr){
   }).catch(function(){ onErr&&onErr(); });
 }
 
-// Filtro (data + busca) do Histórico aplicado aos relatórios — NÃO usa modo/valor (que são por aba)
+// Filtro do relatório: período PRÓPRIO do relatório (VB_relPeriodo) + busca. NÃO usa o filtro do Histórico.
 function VB_passaFiltro(tab, r){
-  var f=HIST_filter;
-  var range=HIST_periodoRange();
+  var range=VB_relPeriodoRange();
   if(range){
     var d=r.created_at?new Date(r.created_at):null;
     if(!d||isNaN(d.getTime())) return false;
     if(range.ini && d<range.ini) return false;
     if(range.fim && d>range.fim) return false;
   }
-  if(f.meses&&f.meses.length){ if(f.meses.indexOf(_ymOf(r.created_at))<0) return false; }
-  if(f.de||f.ate){ var ld=_localYMD(r.created_at); var dde=_brToYMD(f.de),dat=_brToYMD(f.ate); if(dde&&ld<dde)return false; if(dat&&ld>dat)return false; }
   var term=(HIST_searchTerm||'').trim();
   if(term){
     var col=HIST_nameCol(tab), valCol=HIST_valCol(tab), lc=term.toLowerCase(), hit=false;
@@ -4212,7 +4249,7 @@ function VB_passaFiltro(tab, r){
   }
   return true;
 }
-function VB_filtroRelAtivo(){ return HIST_hasActiveFilter() || !!(HIST_searchTerm||'').trim(); }
+function VB_filtroRelAtivo(){ return (VB_relPeriodo!=='tudo') || !!(HIST_searchTerm||'').trim(); }
 function VB_fetchFiltrado(onOk, onErr){
   VB_fetchTudo(function(dados, total){
     var mapa={antecipacoes:'ant', financiamentos_hist:'fin', vendas:'ven', pagamentos:'pag'};
@@ -4575,12 +4612,7 @@ function VB_relatorioPDF(dados, total, returnImages){
     if(typeof HIST_searchGlobal!=='undefined' && HIST_searchGlobal && HIST_searchTerm){ escopo='Busca: "'+HIST_searchTerm+'"'; }
     else if(typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos'){ escopo='Todos os tipos'; }
     else { escopo=(nomes[HIST_tabAtual]||'Todos os tipos'); }
-    var per='Todo o período', f=(typeof HIST_filter!=='undefined')?HIST_filter:null;
-    if(f){
-      if(f.de||f.ate){ per='Período '+(f.de||'…')+' a '+(f.ate||'…'); }
-      else if(f.meses && f.meses.length){ per=f.meses.map(function(m){return HIST_mesLabel(m);}).join(', '); }
-      else if(f.periodo && f.periodo!=='tudo'){ var lbl={'7d':'Últimos 7 dias','30d':'Últimos 30 dias','mes':'Este mês','mespassado':'Mês passado'}; per=lbl[f.periodo]||'Todo o período'; }
-    }
+    var per=(typeof VB_relPeriodoLabel==='function')?VB_relPeriodoLabel():'Todo o período';
     return escopo+'  ·  '+per;
   })();
 
@@ -4603,9 +4635,9 @@ function VB_relatorioPDF(dados, total, returnImages){
              {h:'Financiado', x:430, w:160, r:1, get:function(r){return money(r.valor_financiado);}},
              {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' x '+r.qtd_parcelas):'');}} ],
       somaLabel:'TOTAL FINANCIADO', soma:function(r){return Number(r.valor_financiado)||0;} },
-    { key:'vendas', titulo:'VENDAS', date:'data_primeira_parcela',
+    { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.descricao||'—');}},
-             {h:'1ª parc.', x:320, w:90, get:function(r){return dt(r.data_primeira_parcela);}},
+             {h:'Data', x:320, w:90, get:function(r){return r.created_at?dt(_localYMD(r.created_at)):'—';}},
              {h:'Total', x:430, w:160, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Parcela', x:620, w:160, get:function(r){ if(r.modo==='personalizado'){ var nn=(r.parcelas&&r.parcelas.length)?r.parcelas.length:(r.quantidade_parcelas||0); return 'Personalizada'+(nn?(' ('+nn+' parc.)'):''); } return money(r.valor_parcela)+(r.quantidade_parcelas?(' x '+r.quantidade_parcelas):''); }} ],
       somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} },
@@ -4738,9 +4770,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   var N=pages.length;
   var imgs=pages.map(function(p, idx){
     var ctx=p.ctx;
-    ctx.fillStyle='#bbb'; ctx.font='400 10px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
-    ctx.fillText('VB FACTORING', pad, Hp-16);
-    ctx.textAlign='right';
+    ctx.fillStyle='#bbb'; ctx.font='400 10px -apple-system,Arial,sans-serif'; ctx.textAlign='right';
     ctx.fillText('Página '+(idx+1)+' de '+N, W-pad, Hp-16);
     return _cvToJpeg(p.cv);
   });
@@ -8989,6 +9019,17 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.28.0</span><span class="cl-ver-date">26/06/2026 16:10</span></div>
+      <div class="cl-item">Relatório: agora o período fica DENTRO do menu RELATÓRIO — linha de botões Tudo · Hoje · 7 dias · 30 dias · Este mês · Mês passado. Escolhe ali e o relatório (e o completo) sai só daquele recorte, sem precisar abrir o Filtrar do Histórico. O relatório deixou de seguir o filtro do Histórico (período/mês/intervalo) — ele tem o período próprio agora. "Hoje" é novo. A busca (lupa) continua valendo por cima quando ativa</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.27.2</span><span class="cl-ver-date">26/06/2026 15:40</span></div>
+      <div class="cl-item">Relatório: na seção Vendas, a coluna de data agora mostra a DATA DA VENDA (carimbo de salvamento, created_at) em vez da 1ª parcela. A ordenação das vendas no relatório passa a seguir essa mesma data. Obs.: editar uma venda atualiza o carimbo, então a data exibida muda pra data da edição</div>
+      <div class="cl-item">Relatório: removido o "VB FACTORING" do rodapé — fica só "Página X de N" à direita</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.27.1</span><span class="cl-ver-date">26/06/2026 15:15</span></div>
