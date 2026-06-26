@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.26.0</title>
+<title>VB - v1.26.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.26.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.26.1<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4038,6 +4038,15 @@ function VB_backupMenu(){
 }
 function VB_backupMenuFechar(){ var ov=document.getElementById('vb-backup-menu'); if(ov) ov.style.display='none'; }
 
+var VB_relEscopo='aba'; // 'aba' = só a aba atual | 'todos' = os quatro tipos
+function VB_relSetEscopo(e){
+  VB_relEscopo=e;
+  var ov=document.getElementById('vb-relatorio-menu'); if(!ov) return;
+  var a=ov.querySelector('#vb-rel-aba'), t=ov.querySelector('#vb-rel-todos');
+  function on(b){ if(!b)return; b.style.background='#111'; b.style.color='#fff'; b.style.borderColor='#111'; }
+  function off(b){ if(!b)return; b.style.background='#fff'; b.style.color='#888'; b.style.borderColor='#ddd'; }
+  if(e==='todos'){ on(t); off(a); } else { on(a); off(t); }
+}
 function VB_relatorioMenu(){
   var ov=document.getElementById('vb-relatorio-menu');
   if(!ov){
@@ -4046,7 +4055,11 @@ function VB_relatorioMenu(){
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10050;align-items:flex-end;justify-content:center;';
     ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
       +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:6px;">RELATÓRIO</div>'
-      +'<div id="vb-rel-escopo" style="text-align:center;font-size:11px;color:#bbb;margin-bottom:14px;line-height:1.4;"></div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+      +'<button id="vb-rel-aba" style="flex:1;padding:9px;border:0.5px solid #111;border-radius:11px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">ABA ATUAL</button>'
+      +'<button id="vb-rel-todos" style="flex:1;padding:9px;border:0.5px solid #ddd;border-radius:11px;background:#fff;color:#888;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">TODOS</button>'
+      +'</div>'
+      +'<div id="vb-rel-hint" style="text-align:center;font-size:11px;color:#bbb;margin-bottom:12px;line-height:1.4;min-height:14px;"></div>'
       +'<button id="vb-rel-pdf" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
       +'<button id="vb-rel-full" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO COMPLETO (PDF)</button>'
       +'<button id="vb-rel-cancel" style="width:100%;padding:13px;border:0.5px solid #eee;border-radius:14px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
@@ -4056,13 +4069,14 @@ function VB_relatorioMenu(){
     ov.querySelector('#vb-rel-pdf').addEventListener('click', function(){ VB_relatorioMenuFechar(); VB_backupPDF(); });
     ov.querySelector('#vb-rel-full').addEventListener('click', function(){ VB_relatorioMenuFechar(); VB_backupCompleto(); });
     ov.querySelector('#vb-rel-cancel').addEventListener('click', VB_relatorioMenuFechar);
+    ov.querySelector('#vb-rel-aba').addEventListener('click', function(){ VB_relSetEscopo('aba'); });
+    ov.querySelector('#vb-rel-todos').addEventListener('click', function(){ VB_relSetEscopo('todos'); });
   }
-  var esc=ov.querySelector('#vb-rel-escopo');
-  if(esc){
-    var nomes={ant:'Antecipação',fin:'Financiamento',ven:'Vendas',pag:'Pagamentos'};
-    if(HIST_searchGlobal && HIST_searchTerm){ esc.textContent='Escopo: busca atual (todos os tipos)'; }
-    else { esc.textContent='Escopo: '+(nomes[HIST_tabAtual]||'aba atual')+'  ·  use a busca (lupa) para o relatório total'; }
-  }
+  var nomes={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'};
+  var abaBtn=ov.querySelector('#vb-rel-aba'); if(abaBtn) abaBtn.textContent=(nomes[HIST_tabAtual]||'ABA ATUAL');
+  VB_relSetEscopo(VB_relEscopo);
+  var hint=ov.querySelector('#vb-rel-hint');
+  if(hint){ hint.textContent=(HIST_searchGlobal && HIST_searchTerm)?'Busca ativa — o relatório sai do resultado da busca (todos os tipos).':''; }
   ov.style.display='flex';
 }
 function VB_relatorioMenuFechar(){ var ov=document.getElementById('vb-relatorio-menu'); if(ov) ov.style.display='none'; }
@@ -4202,7 +4216,7 @@ function VB_filtroRelAtivo(){ return HIST_hasActiveFilter() || !!(HIST_searchTer
 function VB_fetchFiltrado(onOk, onErr){
   VB_fetchTudo(function(dados, total){
     var mapa={antecipacoes:'ant', financiamentos_hist:'fin', vendas:'ven', pagamentos:'pag'};
-    var soTab = (HIST_searchGlobal && HIST_searchTerm) ? null : HIST_tabAtual; // segue a aba; busca global = todos os tipos
+    var soTab = ((typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos') || (HIST_searchGlobal && HIST_searchTerm)) ? null : HIST_tabAtual; // escopo do menu (Aba/Todos); busca ativa = todos
     var out={}, tot=0;
     Object.keys(dados).forEach(function(tname){
       var tab=mapa[tname]||'ant';
@@ -8927,6 +8941,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.26.1</span><span class="cl-ver-date">26/06/2026 13:30</span></div>
+      <div class="cl-item">Menu RELATÓRIO ganhou seletor de escopo no topo: "Aba atual" (mostra o nome da aba) e "Todos" (os quatro tipos). Não depende mais da lupa para o relatório total — é só tocar em Todos. Se houver busca ativa, o relatório respeita a busca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.26.0</span><span class="cl-ver-date">26/06/2026 13:00</span></div>
