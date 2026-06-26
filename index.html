@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.24.0</title>
+<title>VB - v1.24.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.24.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.24.1<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4053,13 +4053,21 @@ function _crc32(buf){
 function _u16(n){ return [n&0xFF,(n>>8)&0xFF]; }
 function _u32(n){ return [n&0xFF,(n>>8)&0xFF,(n>>16)&0xFF,(n>>24)&0xFF]; }
 function _utf8(s){ var e=unescape(encodeURIComponent(s)), a=[]; for(var i=0;i<e.length;i++)a.push(e.charCodeAt(i)); return a; }
+function _dosDT(d){
+  if(!d || isNaN(d.getTime())) d=new Date();
+  var y=d.getFullYear(); if(y<1980) y=1980;
+  var date=((((y-1980)&0x7f)<<9) | ((d.getMonth()+1)<<5) | d.getDate()) & 0xFFFF;
+  var time=((d.getHours()<<11) | (d.getMinutes()<<5) | (Math.floor(d.getSeconds()/2))) & 0xFFFF;
+  return {date:date, time:time};
+}
 function VB_makeZip(files){
   var chunks=[], central=[], offset=0;
   files.forEach(function(f){
     var nameB=_utf8(f.name), data=f.bytes, crc=_crc32(data), sz=data.length;
-    var lfh=new Uint8Array([].concat(_u32(0x04034b50),_u16(20),_u16(0x0800),_u16(0),_u16(0),_u16(0),_u32(crc),_u32(sz),_u32(sz),_u16(nameB.length),_u16(0),nameB));
+    var dt=_dosDT(f.date);
+    var lfh=new Uint8Array([].concat(_u32(0x04034b50),_u16(20),_u16(0x0800),_u16(0),_u16(dt.time),_u16(dt.date),_u32(crc),_u32(sz),_u32(sz),_u16(nameB.length),_u16(0),nameB));
     chunks.push(lfh); chunks.push(data);
-    central.push(new Uint8Array([].concat(_u32(0x02014b50),_u16(20),_u16(20),_u16(0x0800),_u16(0),_u16(0),_u16(0),_u32(crc),_u32(sz),_u32(sz),_u16(nameB.length),_u16(0),_u16(0),_u16(0),_u16(0),_u32(0),_u32(offset),nameB)));
+    central.push(new Uint8Array([].concat(_u32(0x02014b50),_u16(20),_u16(20),_u16(0x0800),_u16(0),_u16(dt.time),_u16(dt.date),_u32(crc),_u32(sz),_u32(sz),_u16(nameB.length),_u16(0),_u16(0),_u16(0),_u16(0),_u32(0),_u32(offset),nameB)));
     offset += lfh.length + sz;
   });
   var cdSize=0; central.forEach(function(c){ cdSize+=c.length; });
@@ -4099,14 +4107,14 @@ function VB_exportarZip(){
         var base=VB_zipNome(it.tab, it.r).replace(/[\\/:*?"<>|\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80) || 'op';
         var nm=base, c=2; while(usados[nm.toLowerCase()]){ nm=base+' ('+(c++)+')'; }
         usados[nm.toLowerCase()]=true;
-        files.push({name:nm+'.jpg', bytes:o.bytes, key:it.key});
+        files.push({name:nm+'.jpg', bytes:o.bytes, key:it.key, date:(it.r.created_at?new Date(it.r.created_at):new Date())});
         i++; setTimeout(next,0);
       }).catch(function(){ i++; setTimeout(next,0); });
     }
     function finish(){
       if(!files.length){ VB_toast('Não consegui gerar as imagens.'); return; }
       try{
-        var zip=VB_makeZip(files.map(function(f){ return {name:f.name, bytes:f.bytes}; }));
+        var zip=VB_makeZip(files.map(function(f){ return {name:f.name, bytes:f.bytes, date:f.date}; }));
         var blob=new Blob([zip], {type:'application/zip'});
         var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
         var fname='VB - Operações - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.zip';
@@ -8864,6 +8872,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.24.1</span><span class="cl-ver-date">26/06/2026 10:50</span></div>
+      <div class="cl-item">Correção do ZIP: cada foto agora carrega a data e hora salvas no Histórico (created_at, em hora local). Antes vinha sem data e o iOS mostrava 30/11/1979</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.24.0</span><span class="cl-ver-date">26/06/2026 10:10</span></div>
