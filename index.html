@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.28.0</title>
+<title>VB - v1.29.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,12 +353,12 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.28.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.29.0<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
-    <button onclick="showScreen('fin')" style="display:block;width:100%;padding:14px 18px;border:none;border-radius:14px;background:#111;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <div style="font-size:18px;font-weight:700;color:#fff;">Financiamentos</div>
+    <button onclick="showScreen('fin')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <div style="font-size:18px;font-weight:700;color:#111;">Financiamentos</div>
     </button>
     <button onclick="PIN_request('quit')" style="display:block;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:center;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <div style="font-size:18px;font-weight:700;color:#111;">Quitação Antecipada</div>
@@ -1194,8 +1194,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div id="hist-total" style="display:none;margin-top:4px;padding:12px 16px;background:#111;border-radius:12px;color:#fff;justify-content:space-between;align-items:center;"></div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
-    <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupMenu()" onclick="VB_backupMenu()" style="padding:14px;border:0.5px solid #111;border-radius:12px;background:#111;color:#fff;font-size:12px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">⤓ BACKUP</button>
     <button id="hist-relatorio-btn" type="button" ontouchend="event.preventDefault();VB_relatorioMenu()" onclick="VB_relatorioMenu()" style="padding:14px;border:0.5px solid #111;border-radius:12px;background:#fff;color:#111;font-size:12px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">▤ RELATÓRIO</button>
+    <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupMenu()" onclick="VB_backupMenu()" style="padding:14px;border:0.5px solid #111;border-radius:12px;background:#111;color:#fff;font-size:12px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">⤓ BACKUP</button>
   </div>
   <div style="text-align:center;margin-top:8px;"><span id="hist-backup-status" style="display:none;font-size:11px;color:#c0392b;font-weight:600;"></span></div>
 </div>
@@ -4048,6 +4048,7 @@ function VB_relSetEscopo(e){
   if(e==='todos'){ on(t); off(a); } else { on(a); off(t); }
 }
 var VB_relPeriodo='tudo'; // período do relatório — próprio, NÃO usa o filtro do Histórico
+var VB_relMesSel=null; // 'YYYY-MM' quando o usuário escolhe um mês completo específico
 function VB_relPeriodoRange(){
   var now=new Date();
   var startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -4057,12 +4058,13 @@ function VB_relPeriodoRange(){
   if(p==='7d'){ var a=new Date(startToday); a.setDate(a.getDate()-7); return {ini:a, fim:eod(now)}; }
   if(p==='30d'){ var b=new Date(startToday); b.setDate(b.getDate()-30); return {ini:b, fim:eod(now)}; }
   if(p==='mes'){ return {ini:new Date(now.getFullYear(),now.getMonth(),1), fim:eod(new Date(now.getFullYear(),now.getMonth()+1,0))}; }
-  if(p==='mespassado'){ return {ini:new Date(now.getFullYear(),now.getMonth()-1,1), fim:eod(new Date(now.getFullYear(),now.getMonth(),0))}; }
+  if(p==='messel' && VB_relMesSel){ var pp=VB_relMesSel.split('-'); var Y=parseInt(pp[0],10), Mo=parseInt(pp[1],10)-1; return {ini:new Date(Y,Mo,1), fim:eod(new Date(Y,Mo+1,0))}; }
   return null;
 }
 function VB_relPeriodoLabel(){
   var p=VB_relPeriodo;
-  return p==='hoje'?'Hoje':p==='7d'?'Últimos 7 dias':p==='30d'?'Últimos 30 dias':p==='mes'?'Este mês':p==='mespassado'?'Mês passado':'Todo o período';
+  if(p==='messel' && VB_relMesSel) return HIST_mesLabel(VB_relMesSel);
+  return p==='hoje'?'Hoje':p==='7d'?'Últimos 7 dias':p==='30d'?'Últimos 30 dias':p==='mes'?'Este mês':'Todo o período';
 }
 function VB_relSetPeriodo(p){
   VB_relPeriodo=p;
@@ -4074,6 +4076,37 @@ function VB_relSetPeriodo(p){
     btns[i].style.color=on?'#fff':'#888';
     btns[i].style.borderColor=on?'#111':'#ddd';
   }
+  var mb=ov.querySelector('#vb-rel-mesbtn');
+  if(mb){ mb.textContent=(p==='messel'&&VB_relMesSel)?HIST_mesLabel(VB_relMesSel):'Escolher mês ▾'; }
+}
+function VB_relMesPicker(){
+  var ov=document.getElementById('vb-rel-mespicker');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='vb-rel-mespicker';
+    ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10060;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  var now=new Date();
+  var html='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);max-height:72vh;display:flex;flex-direction:column;">';
+  html+='<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:10px;">ESCOLHER MÊS</div>';
+  html+='<div style="overflow-y:auto;-webkit-overflow-scrolling:touch;">';
+  for(var k=1;k<=24;k++){
+    var d=new Date(now.getFullYear(), now.getMonth()-k, 1);
+    var ym=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+    var sel=(ym===VB_relMesSel);
+    html+='<button class="vb-rel-mesopt" data-ym="'+ym+'" style="display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;border:0.5px solid '+(sel?'#111':'#eee')+';border-radius:11px;background:'+(sel?'#111':'#fff')+';color:'+(sel?'#fff':'#333')+';font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+HIST_mesLabel(ym)+'</button>';
+  }
+  html+='</div>';
+  html+='<button id="vb-rel-mescancel" style="width:100%;padding:12px;margin-top:8px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>';
+  html+='</div>';
+  ov.innerHTML=html;
+  ov.querySelector('#vb-rel-mescancel').addEventListener('click', function(){ ov.style.display='none'; });
+  var opts=ov.querySelectorAll('.vb-rel-mesopt');
+  for(var i=0;i<opts.length;i++){
+    opts[i].addEventListener('click', function(){ VB_relMesSel=this.getAttribute('data-ym'); ov.style.display='none'; VB_relSetPeriodo('messel'); });
+  }
+  ov.style.display='flex';
 }
 function VB_relatorioMenu(){
   var ov=document.getElementById('vb-relatorio-menu');
@@ -4084,8 +4117,8 @@ function VB_relatorioMenu(){
     ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
       +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:6px;">RELATÓRIO</div>'
       +'<div style="display:flex;gap:8px;margin-bottom:10px;">'
-      +'<button id="vb-rel-aba" style="flex:1;padding:9px;border:0.5px solid #111;border-radius:11px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">ABA ATUAL</button>'
       +'<button id="vb-rel-todos" style="flex:1;padding:9px;border:0.5px solid #ddd;border-radius:11px;background:#fff;color:#888;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">TODOS</button>'
+      +'<button id="vb-rel-aba" style="flex:1;padding:9px;border:0.5px solid #111;border-radius:11px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">ABA ATUAL</button>'
       +'</div>'
       +'<div style="text-align:center;font-size:10px;letter-spacing:1px;color:#bbb;font-weight:600;margin:2px 0 6px;">PERÍODO</div>'
       +'<div id="vb-rel-perrow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">'
@@ -4094,7 +4127,7 @@ function VB_relatorioMenu(){
       +'<button class="vb-rel-per" data-per="7d" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">7 dias</button>'
       +'<button class="vb-rel-per" data-per="30d" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">30 dias</button>'
       +'<button class="vb-rel-per" data-per="mes" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Este mês</button>'
-      +'<button class="vb-rel-per" data-per="mespassado" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Mês passado</button>'
+      +'<button class="vb-rel-per" data-per="messel" id="vb-rel-mesbtn" style="flex:1 1 28%;padding:8px 6px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Escolher mês ▾</button>'
       +'</div>'
       +'<div id="vb-rel-hint" style="text-align:center;font-size:11px;color:#bbb;margin-bottom:12px;line-height:1.4;min-height:14px;"></div>'
       +'<button id="vb-rel-pdf" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RELATÓRIO (PDF)</button>'
@@ -4109,7 +4142,7 @@ function VB_relatorioMenu(){
     ov.querySelector('#vb-rel-aba').addEventListener('click', function(){ VB_relSetEscopo('aba'); });
     ov.querySelector('#vb-rel-todos').addEventListener('click', function(){ VB_relSetEscopo('todos'); });
     var _perBtns=ov.querySelectorAll('.vb-rel-per');
-    for(var _i=0;_i<_perBtns.length;_i++){ _perBtns[_i].addEventListener('click', function(){ VB_relSetPeriodo(this.getAttribute('data-per')); }); }
+    for(var _i=0;_i<_perBtns.length;_i++){ _perBtns[_i].addEventListener('click', function(){ var per=this.getAttribute('data-per'); if(per==='messel'){ VB_relMesPicker(); return; } VB_relMesSel=null; VB_relSetPeriodo(per); }); }
   }
   var nomes={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'};
   var abaBtn=ov.querySelector('#vb-rel-aba'); if(abaBtn) abaBtn.textContent=(nomes[HIST_tabAtual]||'ABA ATUAL');
@@ -9019,6 +9052,14 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.29.0</span><span class="cl-ver-date">26/06/2026 16:40</span></div>
+      <div class="cl-item">Relatório: "Mês passado" virou "Escolher mês ▾" — abre uma lista pra escolher qualquer mês completo anterior (ex.: Julho 2025), até 24 meses atrás. O relatório sai daquele mês inteiro</div>
+      <div class="cl-item">Relatório: no menu, TODOS passou pra esquerda e ABA ATUAL pra direita</div>
+      <div class="cl-item">Histórico: os botões de baixo trocaram de lado — RELATÓRIO à esquerda, BACKUP à direita</div>
+      <div class="cl-item">Tela inicial: Financiamentos agora tem a mesma cor dos outros módulos (branco); só o Histórico segue preto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.28.0</span><span class="cl-ver-date">26/06/2026 16:10</span></div>
