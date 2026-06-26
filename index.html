@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.25.0</title>
+<title>VB - v1.25.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.25.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.25.1<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4212,7 +4212,7 @@ function VB_backupJSON(){
 
 function VB_backupPDF(){
   VB_toast('Gerando relatório…');
-  VB_fetchTudo(function(dados, total){
+  VB_fetchFiltrado(function(dados, total){
     try{
       if(!total){ VB_toast(VB_filtroRelAtivo()?'Nada no filtro/busca para o relatório.':'Nada para o relatório.'); return; }
       var pdf=VB_relatorioPDF(dados, total);
@@ -4232,45 +4232,61 @@ function VB_backupPDF(){
 }
 
 // Folha divisória de seção no Relatório completo (nome do tipo + contagem + subtotal)
-function VB_dividerCanvas(titulo, linha2, linha3){
+function VB_dividerCanvas(titulo, linha2, linha3, cor){
   var esc=2, W=820, H=1160;
   var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
   var c=cv.getContext('2d'); c.scale(esc,esc);
   c.fillStyle='#fff'; c.fillRect(0,0,W,H);
   c.textAlign='center';
-  c.fillStyle='#111'; c.font='700 46px -apple-system,Arial,sans-serif';
+  c.fillStyle=cor||'#111'; c.font='700 46px -apple-system,Arial,sans-serif';
   c.fillText(titulo, W/2, H/2-20);
-  c.strokeStyle='#111'; c.lineWidth=2; c.beginPath(); c.moveTo(W/2-120,H/2+6); c.lineTo(W/2+120,H/2+6); c.stroke();
+  c.strokeStyle=cor||'#111'; c.lineWidth=2; c.beginPath(); c.moveTo(W/2-120,H/2+6); c.lineTo(W/2+120,H/2+6); c.stroke();
   if(linha2){ c.fillStyle='#666'; c.font='400 20px -apple-system,Arial,sans-serif'; c.fillText(linha2, W/2, H/2+44); }
-  if(linha3){ c.fillStyle='#111'; c.font='700 24px -apple-system,Arial,sans-serif'; c.fillText(linha3, W/2, H/2+80); }
+  if(linha3){ c.fillStyle=cor||'#111'; c.font='700 24px -apple-system,Arial,sans-serif'; c.fillText(linha3, W/2, H/2+80); }
   return _cvToJpeg(cv);
 }
 
 // Relatório completo: capa-resumo + foto/tabela de cada operação (1 por página), por tipo e data.
 function VB_backupCompleto(){
   VB_toast('Gerando relatório completo…');
-  VB_fetchTudo(function(dados, total){
+  VB_fetchFiltrado(function(dados, total){
     if(!total){ VB_toast('Nada para o relatório.'); return; }
     var imgs;
     try{ imgs = VB_relatorioPDF(dados, total, true); }catch(e){ VB_toast('Não consegui montar a capa.'); return; }
-    var ordem=[['antecipacoes','ant','data_operacao'],['financiamentos_hist','fin','data_inicio'],['vendas','ven','data_primeira_parcela'],['pagamentos','pag','created_at']];
+    var emDia=function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); };
+    var atrasada=function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); };
+    var ordem=[
+      {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'ant', filtro:emDia},
+      {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'atr', filtro:atrasada},
+      {tbl:'financiamentos_hist', tab:'fin', date:'data_inicio', dkey:'fin'},
+      {tbl:'vendas', tab:'ven', date:'data_primeira_parcela', dkey:'ven'},
+      {tbl:'pagamentos', tab:'pag', date:'created_at', dkey:'pag'}
+    ];
     var lista=[];
     ordem.forEach(function(o){
-      var rows=(dados[o[0]]||[]).slice().sort(function(a,b){ var x=(a[o[2]]||''),y=(b[o[2]]||''); return x<y?-1:x>y?1:0; });
-      rows.forEach(function(r){ lista.push({tab:o[1], r:r}); });
+      var rows=(dados[o.tbl]||[]).slice();
+      if(o.filtro) rows=rows.filter(o.filtro);
+      rows.sort(function(a,b){ var x=(a[o.date]||''),y=(b[o.date]||''); return x<y?-1:x>y?1:0; });
+      rows.forEach(function(r){ lista.push({tab:o.tab, dkey:o.dkey, r:r}); });
     });
-    var meta={ ant:{nome:'ANTECIPAÇÕES', tbl:'antecipacoes', vcol:'valor_bruto', sfx:' (bruto)'}, fin:{nome:'FINANCIAMENTOS', tbl:'financiamentos_hist', vcol:'valor_financiado', sfx:''}, ven:{nome:'VENDAS', tbl:'vendas', vcol:'valor_total', sfx:''}, pag:{nome:'PAGAMENTOS', tbl:'pagamentos', vcol:'valor_total', sfx:''} };
+    var meta={
+      ant:{nome:'ANTECIPAÇÕES', tbl:'antecipacoes', vcol:'valor_bruto', sfx:' (bruto)', filtro:emDia},
+      atr:{nome:'ATRASADOS (COBRANÇA)', tbl:'antecipacoes', vcol:'valor_liquido', sfx:' (a cobrar)', filtro:atrasada, cor:'#c0392b'},
+      fin:{nome:'FINANCIAMENTOS', tbl:'financiamentos_hist', vcol:'valor_financiado', sfx:''},
+      ven:{nome:'VENDAS', tbl:'vendas', vcol:'valor_total', sfx:''},
+      pag:{nome:'PAGAMENTOS', tbl:'pagamentos', vcol:'valor_total', sfx:''}
+    };
     var prevTab=null, i=0;
     function next(){
       if(i>=lista.length){ finish(); return; }
       var it=lista[i];
-      if(it.tab!==prevTab){
-        prevTab=it.tab;
-        var m=meta[it.tab], rowsT=(dados[m.tbl]||[]);
+      if(it.dkey!==prevTab){
+        prevTab=it.dkey;
+        var m=meta[it.dkey], rowsT=(dados[m.tbl]||[]); if(m.filtro) rowsT=rowsT.filter(m.filtro);
         var sub=rowsT.reduce(function(a,r){ return a+(Number(r[m.vcol])||0); },0);
         var l2=rowsT.length+' opera'+(rowsT.length===1?'ção':'ções');
         var l3='R$ '+sub.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+m.sfx;
-        try{ imgs.push(VB_dividerCanvas(m.nome, l2, l3)); }catch(e){}
+        try{ imgs.push(VB_dividerCanvas(m.nome, l2, l3, m.cor)); }catch(e){}
       }
       VB_toast('Foto '+(i+1)+'/'+lista.length+'…');
       var durl=null;
@@ -8883,6 +8899,12 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.25.1</span><span class="cl-ver-date">26/06/2026 12:05</span></div>
+      <div class="cl-item">Correção: o "respeitar filtro/busca" do Relatório e do Relatório completo não estava ligado de fato (a troca tinha falhado silenciosamente). Agora os dois usam o recorte filtrado/buscado</div>
+      <div class="cl-item">Relatório completo: atrasados ganham bloco próprio com divisória vermelha "ATRASADOS (COBRANÇA)" (contagem + total a cobrar) e as fotos em seguida, separados das antecipações em dia — espelhando a capa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.25.0</span><span class="cl-ver-date">26/06/2026 11:30</span></div>
