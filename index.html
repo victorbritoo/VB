@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.29.0</title>
+<title>VB - v1.29.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.29.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.29.1<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4087,15 +4087,19 @@ function VB_relMesPicker(){
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     document.body.appendChild(ov);
   }
-  var now=new Date();
+  var nowYM=(function(){var n=new Date();return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2);})();
+  var counts={}; (HIST_allRows||[]).forEach(function(r){ var ym=_ymOf(r.created_at); if(ym && ym!==nowYM) counts[ym]=(counts[ym]||0)+1; });
+  var yms=Object.keys(counts).sort().reverse();
   var html='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);max-height:72vh;display:flex;flex-direction:column;">';
   html+='<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:10px;">ESCOLHER MÊS</div>';
   html+='<div style="overflow-y:auto;-webkit-overflow-scrolling:touch;">';
-  for(var k=1;k<=24;k++){
-    var d=new Date(now.getFullYear(), now.getMonth()-k, 1);
-    var ym=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
-    var sel=(ym===VB_relMesSel);
-    html+='<button class="vb-rel-mesopt" data-ym="'+ym+'" style="display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;border:0.5px solid '+(sel?'#111':'#eee')+';border-radius:11px;background:'+(sel?'#111':'#fff')+';color:'+(sel?'#fff':'#333')+';font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+HIST_mesLabel(ym)+'</button>';
+  if(!yms.length){
+    html+='<div style="text-align:center;color:#bbb;font-size:13px;padding:18px 0;">Nenhum mês anterior com operação</div>';
+  } else {
+    yms.forEach(function(ym){
+      var sel=(ym===VB_relMesSel);
+      html+='<button class="vb-rel-mesopt" data-ym="'+ym+'" style="display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:6px;border:0.5px solid '+(sel?'#111':'#eee')+';border-radius:11px;background:'+(sel?'#111':'#fff')+';color:'+(sel?'#fff':'#333')+';font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+HIST_mesLabel(ym)+' <span style="font-weight:500;opacity:0.7;">('+counts[ym]+')</span></button>';
+    });
   }
   html+='</div>';
   html+='<button id="vb-rel-mescancel" style="width:100%;padding:12px;margin-top:8px;border:0.5px solid #eee;border-radius:12px;background:#fafafa;color:#aaa;font-size:12px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>';
@@ -9052,6 +9056,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.29.1</span><span class="cl-ver-date">26/06/2026 16:55</span></div>
+      <div class="cl-item">Relatório → Escolher mês: a lista agora mostra só os meses que têm operação (com a contagem ao lado), em vez de uma lista fixa. O mês atual fica de fora (use "Este mês")</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.29.0</span><span class="cl-ver-date">26/06/2026 16:40</span></div>
