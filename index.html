@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.22.11</title>
+<title>VB - v1.22.12</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.22.11<br>25/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.22.12<br>25/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -6458,6 +6458,7 @@ document.getElementById('ant-valorBruto').addEventListener('blur', function(){
 });
 ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); ANT_recalc(); });
 ANT_maskVal(document.getElementById('ant-valorLiquido'),  function(){ ANT_userFields.add('liquido'); ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela'); ANT_recalc(); });
+document.getElementById('ant-valorLiquido').addEventListener('blur', function(){ if(!ANT_modoPersonalizado) ANT_recalc(); });
 ANT_maskVal(document.getElementById('ant-tarifa'),        function(){ ANT_modoPersonalizado ? ANT_recalcPersonalizado() : ANT_recalc(); });
 document.getElementById('ant-qtd').addEventListener('input',function(){
   this.value=this.value.replace(/\D/g,'');
@@ -6493,10 +6494,22 @@ function ANT_recalc(){
   if(hasLiq && vlOk && nOk && tOk && pmOk){
     var newVB=ANT_calcVBfromVL(VL,taxa,pm,tar);
     if(!isNaN(newVB)&&newVB>0){
-      var vptR1=ANT_ceilStep(newVB/n, ANT_degrau);
-      document.getElementById('ant-valorBruto').value  =ANT_formatBR(newVB);
-      document.getElementById('ant-valorParcela').value=ANT_formatBR(vptR1);
-      VB=newVB; VP=vptR1; vbOk=true; vpOk=true;
+      var _ativoL = document.activeElement && document.activeElement.id==='ant-valorLiquido';
+      if(_ativoL){
+        // enquanto digita o líquido: bruto e parcela exatos (mantém n×parcela = bruto)
+        document.getElementById('ant-valorBruto').value  =ANT_formatBR(newVB);
+        document.getElementById('ant-valorParcela').value=ANT_formatBR(newVB/n);
+        VB=newVB; VP=newVB/n; vbOk=true; vpOk=true;
+      } else {
+        // arredonda a parcela e faz o bruto seguir (bruto = n×parcela); líquido recalcula
+        var _vptR1=ANT_ceilStep(newVB/n, ANT_degrau);
+        var _brutoR=_vptR1*n;
+        var _liqR=ANT_calcVL(_brutoR,taxa,pm,tar); if(_liqR<0)_liqR=0;
+        document.getElementById('ant-valorBruto').value  =ANT_formatBR(_brutoR);
+        document.getElementById('ant-valorParcela').value=ANT_formatBR(_vptR1);
+        document.getElementById('ant-valorLiquido').value=ANT_formatBR(_liqR);
+        VB=_brutoR; VP=_vptR1; VL=_liqR; vbOk=true; vpOk=true; vlOk=true;
+      }
     }
   }
   // CASO 2: Usuário preencheu Bruto → calcular Parcela e Líquido
@@ -8739,6 +8752,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.12</span><span class="cl-ver-date">25/06/2026 17:20</span></div>
+      <div class="cl-item">Correção (Antecipação simplificada): ao arredondar o valor por título, o Valor Bruto Total agora acompanha (bruto = quantidade × parcela arredondada) e o Líquido recalcula. Antes a parcela arredondava só na exibição e o bruto ficava preso no valor vindo do líquido — gerando bruto ≠ soma dos títulos no app e no PDF. Enquanto você digita o líquido os valores ficam exatos; ao sair do campo (ou tocar no arredondamento) ele ajusta</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.22.11</span><span class="cl-ver-date">25/06/2026 16:55</span></div>
