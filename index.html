@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.27.0</title>
+<title>VB - v1.27.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.27.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.27.1<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4634,9 +4634,16 @@ function VB_relatorioPDF(dados, total, returnImages){
       ctx.fillStyle='#666'; ctx.font='600 12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
       ctx.fillText(_escTxt, pad, cur.y+2);
       cur.y+=22;
-      // faixa de indicadores (6 células, P&B)
-      var inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)],
-                 ['VENDAS','R$ '+_num(tVen)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
+      // faixa de indicadores (P&B) — adapta ao escopo do relatório
+      var _busca = (typeof HIST_searchGlobal!=='undefined' && HIST_searchGlobal && HIST_searchTerm);
+      var _todos = _busca || (typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos');
+      var _escTab = _todos ? 'todos' : (typeof HIST_tabAtual!=='undefined' ? HIST_tabAtual : 'todos');
+      var inds;
+      if(_escTab==='ven')      inds=[ ['VENDAS','R$ '+_num(tVen)], ['OPERAÇÕES', String(total)] ];
+      else if(_escTab==='fin') inds=[ ['FINANCIADO','R$ '+_num(tFin)], ['OPERAÇÕES', String(total)] ];
+      else if(_escTab==='pag') inds=[ ['OPERAÇÕES', String(total)] ];
+      else if(_escTab==='ant') inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
+      else                     inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)], ['VENDAS','R$ '+_num(tVen)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
       var n=inds.length, gap=8, cw=(W-2*pad-(n-1)*gap)/n, ch=64;
       for(var i=0;i<n;i++){
         var cx=pad+i*(cw+gap);
@@ -8982,6 +8989,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.27.1</span><span class="cl-ver-date">26/06/2026 15:15</span></div>
+      <div class="cl-item">Relatório: a faixa de indicadores do topo agora acompanha o recorte. Quando o relatório é de um tipo só, mostra apenas o indicador daquele tipo + OPERAÇÕES — aba Vendas → VENDAS; Financiamento → FINANCIADO; Antecipação → ANTECIPADO + ATRASADO; Pagamentos → só OPERAÇÕES. Em "Todos os tipos" ou na busca, continua mostrando as 5 células. Acaba com os "R$ 0,00" de tipos que não entram no recorte</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.27.0</span><span class="cl-ver-date">26/06/2026 14:10</span></div>
