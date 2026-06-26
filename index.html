@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.24.1</title>
+<title>VB - v1.25.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.24.1<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.25.0<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4091,10 +4091,9 @@ function VB_setExported(m){ try{ localStorage.setItem(VB_ZIP_LS, JSON.stringify(
 function VB_exportarZip(){
   VB_toast('Procurando operações novas…');
   VB_fetchTudo(function(dados, total){
-    var exported=VB_getExported();
     var ordem=[['antecipacoes','ant'],['financiamentos_hist','fin'],['vendas','ven'],['pagamentos','pag']];
     var lista=[];
-    ordem.forEach(function(o){ (dados[o[0]]||[]).forEach(function(r){ if(r.id==null) return; var key=o[1]+':'+r.id; if(!exported[key]) lista.push({tab:o[1], r:r, key:key}); }); });
+    ordem.forEach(function(o){ (dados[o[0]]||[]).forEach(function(r){ if(r.id==null) return; if(!r.exportada_em) lista.push({tab:o[1], r:r}); }); });
     if(!lista.length){ VB_toast('Nenhuma operação nova para exportar.'); return; }
     var files=[], usados={}, i=0;
     function next(){
@@ -4107,7 +4106,7 @@ function VB_exportarZip(){
         var base=VB_zipNome(it.tab, it.r).replace(/[\\/:*?"<>|\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80) || 'op';
         var nm=base, c=2; while(usados[nm.toLowerCase()]){ nm=base+' ('+(c++)+')'; }
         usados[nm.toLowerCase()]=true;
-        files.push({name:nm+'.jpg', bytes:o.bytes, key:it.key, date:(it.r.created_at?new Date(it.r.created_at):new Date())});
+        files.push({name:nm+'.jpg', bytes:o.bytes, tab:it.tab, id:it.r.id, date:(it.r.created_at?new Date(it.r.created_at):new Date())});
         i++; setTimeout(next,0);
       }).catch(function(){ i++; setTimeout(next,0); });
     }
@@ -4119,7 +4118,19 @@ function VB_exportarZip(){
         var hoje=new Date(), dd=('0'+hoje.getDate()).slice(-2), mm=('0'+(hoje.getMonth()+1)).slice(-2);
         var fname='VB - Operações - '+dd+'-'+mm+'-'+hoje.getFullYear()+'.zip';
         var file=new File([blob], fname, {type:'application/zip'});
-        var done=function(){ var ex=VB_getExported(); files.forEach(function(f){ ex[f.key]=true; }); VB_setExported(ex); VB_toast(files.length+' imagem(ns) exportada(s) e marcada(s).'); };
+        var done=function(){
+          var nowIso=new Date().toISOString();
+          var mapaT={ant:'antecipacoes',fin:'financiamentos_hist',ven:'vendas',pag:'pagamentos'};
+          var porTab={antecipacoes:[],financiamentos_hist:[],vendas:[],pagamentos:[]};
+          files.forEach(function(f){ var t=mapaT[f.tab]; if(t && f.id!=null) porTab[t].push(f.id); });
+          var tabs=Object.keys(porTab).filter(function(t){ return porTab[t].length; });
+          var k=0, falhou=false;
+          (function marca(){
+            if(k>=tabs.length){ VB_toast(falhou ? (files.length+' exportadas — mas a marca não salvou online (sem conexão?).') : (files.length+' imagem(ns) exportada(s) e marcada(s) online.')); return; }
+            var t=tabs[k];
+            sb.from(t).update({exportada_em:nowIso}).in('id',porTab[t]).then(function(res){ if(res.error) falhou=true; k++; marca(); }).catch(function(){ falhou=true; k++; marca(); });
+          })();
+        };
         if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){ navigator.share({files:[file]}).then(done).catch(function(){ done(); }); }
         else { var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); done(); }
       }catch(e){ VB_toast('Não consegui montar o ZIP.'); }
@@ -8872,6 +8883,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.25.0</span><span class="cl-ver-date">26/06/2026 11:30</span></div>
+      <div class="cl-item">ZIP "só as novas" agora é controlado no Supabase (coluna exportada_em), não mais no aparelho — à prova de limpar cache ou trocar de iPhone, e a marca entra no backup JSON. Requer ALTER TABLE adicionando exportada_em (timestamptz) nas quatro tabelas. Ao exportar, o app grava a data de exportação no banco; se estiver offline, avisa que a marca não salvou</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.24.1</span><span class="cl-ver-date">26/06/2026 10:50</span></div>
