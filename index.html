@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.26.1</title>
+<title>VB - v1.27.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -353,7 +353,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.26.1<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.27.0<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:4px;">VB</div>
     <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -4569,6 +4569,21 @@ function VB_relatorioPDF(dados, total, returnImages){
   var atrasados = ant.filter(function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); });
   var tAtraso = atrasados.reduce(function(a,r){ return a + (Number(r.valor_liquido)||0); }, 0);
 
+  var _escTxt=(function(){
+    var nomes={ant:'Antecipação',fin:'Financiamento',ven:'Vendas',pag:'Pagamentos'};
+    var escopo;
+    if(typeof HIST_searchGlobal!=='undefined' && HIST_searchGlobal && HIST_searchTerm){ escopo='Busca: "'+HIST_searchTerm+'"'; }
+    else if(typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos'){ escopo='Todos os tipos'; }
+    else { escopo=(nomes[HIST_tabAtual]||'Todos os tipos'); }
+    var per='Todo o período', f=(typeof HIST_filter!=='undefined')?HIST_filter:null;
+    if(f){
+      if(f.de||f.ate){ per='Período '+(f.de||'…')+' a '+(f.ate||'…'); }
+      else if(f.meses && f.meses.length){ per=f.meses.map(function(m){return HIST_mesLabel(m);}).join(', '); }
+      else if(f.periodo && f.periodo!=='tudo'){ var lbl={'7d':'Últimos 7 dias','30d':'Últimos 30 dias','mes':'Este mês','mespassado':'Mês passado'}; per=lbl[f.periodo]||'Todo o período'; }
+    }
+    return escopo+'  ·  '+per;
+  })();
+
   var secoes=[
     { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
       cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
@@ -4616,6 +4631,9 @@ function VB_relatorioPDF(dados, total, returnImages){
     ctx.strokeStyle='#111'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,cur.y); ctx.lineTo(W-pad,cur.y); ctx.stroke();
     cur.y+=20;
     if(primeira){
+      ctx.fillStyle='#666'; ctx.font='600 12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(_escTxt, pad, cur.y+2);
+      cur.y+=22;
       // faixa de indicadores (6 células, P&B)
       var inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)],
                  ['VENDAS','R$ '+_num(tVen)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
@@ -4685,6 +4703,29 @@ function VB_relatorioPDF(dados, total, returnImages){
     cur.y+=boxH+10;
     cur.y+=16;
   });
+
+  // fechamento: TOTAL GERAL
+  (function(){
+    ensure(70);
+    var c=cur.ctx; cur.y+=4;
+    var geral=tAnt+tFin+tVen+tPag;
+    var boxW=W-2*pad, boxH=44, bx=pad, by=cur.y;
+    c.fillStyle='#111'; c.fillRect(bx,by,boxW,boxH);
+    c.fillStyle='#bbb'; c.font='700 9px -apple-system,Arial,sans-serif'; c.textAlign='left';
+    c.fillText('TOTAL GERAL  ·  '+total+' opera'+(total===1?'ção':'ções'), bx+14, by+18);
+    c.fillStyle='#fff'; c.font='700 18px -apple-system,Arial,sans-serif'; c.textAlign='right';
+    c.fillText('R$ '+_num(geral), bx+boxW-14, by+29);
+    cur.y+=boxH+8;
+    if(tAtraso>0){
+      var by2=cur.y;
+      c.strokeStyle='#c0392b'; c.lineWidth=1; c.strokeRect(bx,by2,boxW,34);
+      c.fillStyle='#c0392b'; c.font='700 9px -apple-system,Arial,sans-serif'; c.textAlign='left';
+      c.fillText('A COBRAR (ATRASADOS)', bx+14, by2+14);
+      c.font='700 15px -apple-system,Arial,sans-serif'; c.textAlign='right';
+      c.fillText('R$ '+_num(tAtraso), bx+boxW-14, by2+23);
+      cur.y+=34+8;
+    }
+  })();
 
   // rodapé "Página X de N" em todas as páginas
   var N=pages.length;
@@ -8941,6 +8982,11 @@ function INV_gerarTabela(){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.27.0</span><span class="cl-ver-date">26/06/2026 14:10</span></div>
+      <div class="cl-item">Relatório: cabeçalho agora mostra o recorte (escopo + período) — ex.: "Vendas · Junho 2026" ou "Todos os tipos · 01/06 a 30/06". E ganhou um TOTAL GERAL no fim, com a quantidade de operações; quando há atrasados, o total a cobrar aparece destacado em vermelho logo abaixo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.26.1</span><span class="cl-ver-date">26/06/2026 13:30</span></div>
