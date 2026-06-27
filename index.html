@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.31.0</title>
+<title>VB - v1.31.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -355,7 +355,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.31.0<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.31.2<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -9124,6 +9124,16 @@ function REC_vencDoMes(ym,dia){ var p=(''+ym).split('-'); var y=parseInt(p[0],10
 function REC_addYM(ym,k){ var p=(''+ym).split('-'); var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1+k, 1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 function REC_ymAtual(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 function REC_byVenc(a,b){ var av=a.venc||'9999', bv=b.venc||'9999'; return av<bv?-1:av>bv?1:0; }
+function REC_valStr(n){ return (n!=null&&n!=='')?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
+function REC_isoToBR(iso){ if(!iso) return ''; var p=(''+iso).split('-'); if(p.length!==3) return ''; return p[2]+'/'+p[1]+'/'+p[0]; }
+function REC_brToIso(br){ var p=(''+br).split('/'); if(p.length<2) return null; var d=p[0].replace(/\D/g,''), m=p[1].replace(/\D/g,''), y=p[2]?p[2].replace(/\D/g,''):''; if(!d||!m) return null; d=('0'+d).slice(-2); m=('0'+m).slice(-2); if(!y) y=''+new Date().getFullYear(); else if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m+'-'+d; }
+function REC_maskData(el){ var v=el.value.replace(/\D/g,'').slice(0,8); var out=v; if(v.length>4) out=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4); else if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
+function REC_ymToBR(ym){ if(!ym) return ''; var p=(''+ym).split('-'); if(p.length<2) return ''; return p[1]+'/'+p[0]; }
+function REC_brToYM(br){ var p=(''+br).split('/'); if(p.length<2) return ''; var m=p[0].replace(/\D/g,''), y=p[1].replace(/\D/g,''); if(!m||!y) return ''; m=('0'+m).slice(-2); if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m; }
+function REC_maskMesAno(el){ var v=el.value.replace(/\D/g,'').slice(0,6); var out=v; if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
+function REC_maskVal(el){ var raw=el.value.replace(/\D/g,''); el.value=raw?Number(parseInt(raw,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
+function REC_parcValInput(idx,el){ REC_maskVal(el); if(REC_editParc[idx]) REC_editParc[idx].valor=REC_parseBR(el.value); }
+function REC_parcDataBlur(idx,el){ if(typeof autoCompleteDate==='function'){ autoCompleteDate(el); } if(REC_editParc[idx]) REC_editParc[idx].venc=REC_brToIso(el.value); }
 
 function REC_normalize(r){
   var parc = Array.isArray(r.parcelas)?r.parcelas.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null}; }):[];
@@ -9256,12 +9266,12 @@ function REC_openEditor(ac){
       +'<div style="font-size:11px;letter-spacing:0.5px;color:#aaa;font-weight:700;margin-bottom:8px;">PARCELAS</div>'
       +'<div style="display:flex;gap:8px;margin-bottom:10px;">'+seg('iguais','IGUAIS / MENSAL')+seg('diferentes','DIFERENTES')+'</div>'
       +'<div id="rec-gen-iguais" style="background:#f7f7f5;border-radius:12px;padding:10px;margin-bottom:10px;">'
-        +'<div style="display:flex;gap:6px;margin-bottom:6px;">'
-          +'<div style="flex:1.3;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">VALOR PARC.</div><input id="rec-g-val" inputmode="decimal" placeholder="0,00" style="'+REC_inpCss+'"></div>'
-          +'<div style="flex:1;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">Nº VEZES</div><input id="rec-g-qtd" inputmode="numeric" placeholder="24" style="'+REC_inpCss+'"></div>'
-          +'<div style="flex:1;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">DIA</div><input id="rec-g-dia" inputmode="numeric" placeholder="27" style="'+REC_inpCss+'"></div>'
+        +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
+          +'<div style="flex:1.3;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">VALOR PARC. (R$)</div><input id="rec-g-val" inputmode="numeric" oninput="REC_maskVal(this)" onclick="this.select()" placeholder="0,00" style="'+REC_inpCss+'text-align:right;"></div>'
+          +'<div style="flex:0.8;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">Nº VEZES</div><input id="rec-g-qtd" inputmode="numeric" onclick="this.select()" placeholder="24" style="'+REC_inpCss+'text-align:center;"></div>'
+          +'<div style="flex:0.8;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">DIA</div><input id="rec-g-dia" inputmode="numeric" onclick="this.select()" placeholder="27" style="'+REC_inpCss+'text-align:center;"></div>'
         +'</div>'
-        +'<div style="margin-bottom:8px;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">MÊS DE INÍCIO</div><input id="rec-g-inicio" type="month" value="'+REC_ymAtual()+'" style="'+REC_inpCss+'"></div>'
+        +'<div style="margin-bottom:8px;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">MÊS DE INÍCIO</div><input id="rec-g-inicio" inputmode="numeric" maxlength="7" oninput="REC_maskMesAno(this)" onclick="this.select()" value="'+REC_ymToBR(REC_ymAtual())+'" placeholder="MM/AAAA" style="'+REC_inpCss+'text-align:center;"></div>'
         +'<button onclick="REC_genIguais()" style="width:100%;padding:9px;border:0.5px solid #111;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">GERAR PARCELAS</button>'
       +'</div>'
       +'<div id="rec-parc-list"></div>'
@@ -9284,11 +9294,11 @@ function REC_genIguais(){
   var val=REC_parseBR((document.getElementById('rec-g-val')||{}).value);
   var qtd=parseInt((document.getElementById('rec-g-qtd')||{}).value||'0',10);
   var dia=parseInt((document.getElementById('rec-g-dia')||{}).value||'0',10);
-  var inicio=(document.getElementById('rec-g-inicio')||{}).value||'';
+  var inicio=REC_brToYM((document.getElementById('rec-g-inicio')||{}).value||'');
   if(!(val>0)){ VB_toast('Informe o valor da parcela.'); return; }
   if(!qtd||qtd<1){ VB_toast('Informe o nº de vezes.'); return; }
   if(!dia||dia<1||dia>31){ VB_toast('Informe o dia (1 a 31).'); return; }
-  if(!inicio){ VB_toast('Informe o mês de início.'); return; }
+  if(!inicio){ VB_toast('Informe o mês de início (MM/AAAA).'); return; }
   var arr=[]; for(var k=0;k<qtd;k++){ arr.push({valor:val, venc:REC_vencDoMes(REC_addYM(inicio,k),dia), recebido:false, recebido_em:null}); }
   REC_editParc=arr; REC_renderParcEditor();
   VB_toast(qtd+' parcelas geradas.');
@@ -9299,14 +9309,14 @@ function REC_renderParcEditor(){
   var cont=document.getElementById('rec-parc-list'); if(!cont) return;
   if(!REC_editParc.length){ cont.innerHTML='<div style="font-size:11px;color:#bbb;padding:4px 2px 8px;">Nenhuma parcela. Gere acima (Iguais) ou adicione uma a uma (Diferentes).</div>'; return; }
   cont.innerHTML=REC_editParc.map(function(p,idx){
-    var valStr=(p.valor!=null&&p.valor!=='')?(''+p.valor).replace('.',','):'';
     var circ=p.recebido
       ? '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;background:#1a7f3c;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
       : '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;border:1.5px solid #ccc;display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
     return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">'
       +circ
-      +'<input value="'+REC_esc(valStr)+'" oninput="REC_editParc['+idx+'].valor=REC_parseBR(this.value)" inputmode="decimal" placeholder="Valor" style="'+REC_inpCss+'flex:1.2;">'
-      +'<input type="date" value="'+REC_esc(p.venc||'')+'" onchange="REC_editParc['+idx+'].venc=this.value" style="'+REC_inpCss+'flex:1.3;">'
+      +'<span style="font-size:11px;color:#bbb;font-weight:600;width:22px;text-align:right;flex-shrink:0;">'+(idx+1)+'</span>'
+      +'<input value="'+REC_esc(REC_valStr(p.valor))+'" oninput="REC_parcValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="0,00" style="'+REC_inpCss+'flex:1.1;text-align:right;">'
+      +'<input value="'+REC_esc(REC_isoToBR(p.venc))+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="REC_parcDataBlur('+idx+',this)" onclick="this.select()" style="'+REC_inpCss+'flex:1.2;text-align:center;">'
       +'<button onclick="REC_editParc.splice('+idx+',1);REC_renderParcEditor()" style="border:none;background:none;color:#c0392b;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>'
     +'</div>';
   }).join('');
@@ -9318,7 +9328,7 @@ function REC_salvar(btn){
   if(!tit){ VB_toast('Escreva o título.'); return; }
   var nota=((document.getElementById('rec-f-nota')||{}).value||'').trim()||null;
   var parc=REC_editParc.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null}; });
-  var row={ titulo:tit, obs:nota, parcelas:parc };
+  var row={ pessoa:tit, obs:nota, parcelas:parc };
   if(btn){ btn.textContent='Salvando...'; btn.disabled=true; }
   var q=REC_editId?sb.from('recebimentos').update(row).eq('id',REC_editId).select():sb.from('recebimentos').insert(row).select();
   q.then(function(res){
@@ -9361,6 +9371,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.31.2</span><span class="cl-ver-date">26/06/2026 22:15</span></div>
+      <div class="cl-item">Recebimentos padronizado com o resto do app: valores em R$ com milhar/centavos e máscara enquanto digita (5.000,00), datas em DD/MM/AAAA por texto (sem o seletor "25 de jun." do iOS) e mês de início em MM/AAAA. Linhas de parcela alinhadas, com número da parcela, valor à direita e data centralizada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.31.1</span><span class="cl-ver-date">26/06/2026 21:50</span></div>
+      <div class="cl-item">Recebimentos: corrigido o "não salvou" — o acordo agora grava numa coluna que já existe na tabela, sem depender de migração extra</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.31.0</span><span class="cl-ver-date">26/06/2026 21:30</span></div>
