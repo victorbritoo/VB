@@ -81,7 +81,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.31.2</title>
+<title>VB - v1.31.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -355,7 +355,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.31.2<br>26/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.31.3<br>26/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
@@ -1232,18 +1232,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <div id="rec-hero" style="background:#111;border-radius:16px;padding:16px 18px;margin-bottom:12px;color:#fff;"></div>
 
-  <div style="position:relative;margin-bottom:8px;">
-    <input id="rec-search" type="text" placeholder="Buscar acordo, pessoa, nota" oninput="REC_render()" style="width:100%;height:38px;border:0.5px solid #ddd;border-radius:12px;padding:0 14px;font-size:14px;color:#111;outline:none;background:#fff;font-family:-apple-system,sans-serif;box-sizing:border-box;">
-  </div>
-
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
-    <div id="rec-filtros" style="display:flex;gap:5px;flex-wrap:wrap;">
-      <button class="rec-fbtn" data-f="tudo" onclick="REC_setFiltro('tudo')" style="padding:6px 11px;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Tudo</button>
-      <button class="rec-fbtn" data-f="receber" onclick="REC_setFiltro('receber')" style="padding:6px 11px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">A receber</button>
-      <button class="rec-fbtn" data-f="atrasado" onclick="REC_setFiltro('atrasado')" style="padding:6px 11px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Atrasado</button>
-      <button class="rec-fbtn" data-f="quitado" onclick="REC_setFiltro('quitado')" style="padding:6px 11px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Quitados</button>
-    </div>
-    <button onclick="REC_novo()" style="padding:8px 14px;border:none;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;flex-shrink:0;">+ NOVO</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <input id="rec-search" type="text" placeholder="Buscar cliente, descrição" oninput="REC_render()" style="flex:1;height:40px;border:0.5px solid #ddd;border-radius:12px;padding:0 14px;font-size:14px;color:#111;outline:none;background:#fff;font-family:-apple-system,sans-serif;box-sizing:border-box;">
+    <button onclick="REC_novo()" title="Adicionar" style="width:40px;height:40px;flex-shrink:0;border:none;border-radius:12px;background:#111;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
   </div>
 
   <div id="rec-lista"></div>
@@ -9101,30 +9092,27 @@ function INV_gerarTabela(){
 })();
 
 /* ============================================================
-   Módulo RECEBIMENTOS  (centrado no acordo, com parcelas)
-   Modelo: 1 linha = 1 acordo; parcelas em JSONB.
-   Cobre: venda parcelada, parcelas diferentes e financiamento.
+   Módulo RECEBIMENTOS  (lista cronológica + acordo estruturado)
+   Linha = parcela. Tipo/Cliente/Descrição. Rateio opcional.
+   Atrasado em vermelho, recebidos em CONCLUÍDOS.
    ============================================================ */
 var REC_acordos=[];
-var REC_filtro='tudo';
 var REC_editId=null;
 var REC_editParc=[];
-var REC_genMode='iguais';
+var REC_editTipo='dinheiro';
+var REC_editRateio=[];
+var REC_rateioOn=false;
+var REC_genMode='unico';
 var REC_delArmed=false;
+var REC_TIPOS={dinheiro:'Dinheiro',cheque:'Cheque',boleto:'Boleto'};
 var REC_inpCss='width:100%;height:38px;border:0.5px solid #ddd;border-radius:10px;padding:0 12px;font-size:14px;color:#111;outline:none;background:#fff;font-family:-apple-system,sans-serif;box-sizing:border-box;';
 var REC_taCss='width:100%;min-height:44px;border:0.5px solid #ddd;border-radius:10px;padding:9px 12px;font-size:14px;color:#111;outline:none;background:#fff;font-family:-apple-system,sans-serif;box-sizing:border-box;resize:vertical;line-height:1.4;';
 
 function REC_money(n){ n=Number(n)||0; return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function REC_valStr(n){ return (n!=null&&n!=='')?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
 function REC_parseBR(s){ if(s==null) return 0; s=(''+s).trim().replace(/\./g,'').replace(',','.'); var v=parseFloat(s); return isNaN(v)?0:v; }
 function REC_esc(s){ return (s==null?'':(''+s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function REC_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-function REC_fmtVenc(iso){ if(!iso) return 'sem data'; var p=(''+iso).split('-'); if(p.length!==3) return iso; return p[2]+'/'+p[1]+'/'+p[0]; }
-function REC_diasNoMes(y,m){ return new Date(y,m,0).getDate(); }
-function REC_vencDoMes(ym,dia){ var p=(''+ym).split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10); var d=Math.min(dia, REC_diasNoMes(y,m)); return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2); }
-function REC_addYM(ym,k){ var p=(''+ym).split('-'); var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1+k, 1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
-function REC_ymAtual(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
-function REC_byVenc(a,b){ var av=a.venc||'9999', bv=b.venc||'9999'; return av<bv?-1:av>bv?1:0; }
-function REC_valStr(n){ return (n!=null&&n!=='')?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
 function REC_isoToBR(iso){ if(!iso) return ''; var p=(''+iso).split('-'); if(p.length!==3) return ''; return p[2]+'/'+p[1]+'/'+p[0]; }
 function REC_brToIso(br){ var p=(''+br).split('/'); if(p.length<2) return null; var d=p[0].replace(/\D/g,''), m=p[1].replace(/\D/g,''), y=p[2]?p[2].replace(/\D/g,''):''; if(!d||!m) return null; d=('0'+d).slice(-2); m=('0'+m).slice(-2); if(!y) y=''+new Date().getFullYear(); else if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m+'-'+d; }
 function REC_maskData(el){ var v=el.value.replace(/\D/g,'').slice(0,8); var out=v; if(v.length>4) out=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4); else if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
@@ -9132,23 +9120,17 @@ function REC_ymToBR(ym){ if(!ym) return ''; var p=(''+ym).split('-'); if(p.lengt
 function REC_brToYM(br){ var p=(''+br).split('/'); if(p.length<2) return ''; var m=p[0].replace(/\D/g,''), y=p[1].replace(/\D/g,''); if(!m||!y) return ''; m=('0'+m).slice(-2); if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m; }
 function REC_maskMesAno(el){ var v=el.value.replace(/\D/g,'').slice(0,6); var out=v; if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
 function REC_maskVal(el){ var raw=el.value.replace(/\D/g,''); el.value=raw?Number(parseInt(raw,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
-function REC_parcValInput(idx,el){ REC_maskVal(el); if(REC_editParc[idx]) REC_editParc[idx].valor=REC_parseBR(el.value); }
-function REC_parcDataBlur(idx,el){ if(typeof autoCompleteDate==='function'){ autoCompleteDate(el); } if(REC_editParc[idx]) REC_editParc[idx].venc=REC_brToIso(el.value); }
+function REC_ymAtual(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function REC_diasNoMes(y,m){ return new Date(y,m,0).getDate(); }
+function REC_vencDoMes(ym,dia){ var p=(''+ym).split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10); var d=Math.min(dia, REC_diasNoMes(y,m)); return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2); }
+function REC_addYM(ym,k){ var p=(''+ym).split('-'); var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1+k, 1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 
 function REC_normalize(r){
-  var parc = Array.isArray(r.parcelas)?r.parcelas.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null}; }):[];
-  if(!parc.length && (r.valor!=null || r.venc)){ parc=[{valor:Number(r.valor)||0, venc:r.venc||null, recebido:!!r.recebido, recebido_em:r.recebido_em||null}]; }
-  return { id:r.id, titulo:r.titulo||r.pessoa||'(sem título)', obs:r.obs||'', parcelas:parc };
+  var arr=Array.isArray(r.parcelas)?r.parcelas.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null, rateio:Array.isArray(p.rateio)?p.rateio:[]}; }):[];
+  if(!arr.length){ arr=[{valor:Number(r.valor)||0, venc:r.venc||null, recebido:!!r.recebido, recebido_em:r.recebido_em||null, rateio:[]}]; }
+  return { id:r.id, cliente:r.pessoa||r.titulo||'', descricao:r.descricao||'', tipo:r.tipo||'dinheiro', parcelas:arr };
 }
 function REC_acordoById(id){ for(var i=0;i<REC_acordos.length;i++){ if(REC_acordos[i].id===id) return REC_acordos[i]; } return null; }
-
-function REC_stats(ac){
-  var hoje=REC_hojeISO();
-  var tot=ac.parcelas.length, rec=0, somaTot=0, somaRec=0, somaPend=0, temAtraso=false;
-  ac.parcelas.forEach(function(p){ var v=Number(p.valor)||0; somaTot+=v; if(p.recebido){ rec++; somaRec+=v; } else { somaPend+=v; if(p.venc&&p.venc<hoje) temAtraso=true; } });
-  var pend=ac.parcelas.filter(function(p){ return !p.recebido; }).slice().sort(REC_byVenc);
-  return { tot:tot, rec:rec, somaTot:somaTot, somaRec:somaRec, somaPend:somaPend, prox:pend[0]||null, temAtraso:temAtraso, quitado:(tot>0&&rec===tot) };
-}
 
 function REC_load(){
   sb.from('recebimentos').select('*').order('created_at',{ascending:false}).then(function(res){
@@ -9158,12 +9140,19 @@ function REC_load(){
   }).catch(function(e){ console.log('REC load ex',e); VB_toast('Sem conexão para carregar recebimentos.'); });
 }
 
-function REC_setFiltro(f){ REC_filtro=f; REC_render(); }
+function REC_tituloItem(it){
+  var tl=REC_TIPOS[it.ac.tipo]||'';
+  var s=(tl?tl+' ':'')+(it.ac.cliente||'(sem cliente)')+(it.ac.descricao?' ('+it.ac.descricao+')':'');
+  if(it.total>1) s+=' '+(it.idx+1)+'/'+it.total;
+  return s;
+}
 
 function REC_render(){
   var hoje=REC_hojeISO(), ym=hoje.slice(0,7);
-  var tReceberMes=0, tAtrasado=0, tRecebidoMes=0, tReceberTot=0;
-  REC_acordos.forEach(function(ac){ ac.parcelas.forEach(function(p){
+  var tReceberMes=0,tAtrasado=0,tRecebidoMes=0,tReceberTot=0;
+  var items=[];
+  REC_acordos.forEach(function(ac){ ac.parcelas.forEach(function(p,idx){
+    items.push({ac:ac,p:p,idx:idx,total:ac.parcelas.length});
     var v=Number(p.valor)||0;
     if(!p.recebido){ tReceberTot+=v; if(p.venc&&p.venc<hoje) tAtrasado+=v; if(p.venc&&p.venc.slice(0,7)===ym) tReceberMes+=v; }
     else if(p.recebido_em&&(''+p.recebido_em).slice(0,7)===ym) tRecebidoMes+=v;
@@ -9181,114 +9170,115 @@ function REC_render(){
       +'</div>';
   }
 
-  var fb=document.querySelectorAll('.rec-fbtn');
-  for(var i=0;i<fb.length;i++){ var on=fb[i].getAttribute('data-f')===REC_filtro; fb[i].style.background=on?'#111':'#fff'; fb[i].style.color=on?'#fff':'#888'; fb[i].style.borderColor=on?'#111':'#ddd'; }
-
   var s=document.getElementById('rec-search'); var termo=(s?s.value:'').trim().toLowerCase();
-  var list=REC_acordos.slice();
-  if(termo){ list=list.filter(function(ac){ return ((ac.titulo||'')+' '+(ac.obs||'')).toLowerCase().indexOf(termo)!==-1; }); }
-  if(REC_filtro!=='tudo'){
-    list=list.filter(function(ac){ var st=REC_stats(ac);
-      if(REC_filtro==='quitado') return st.quitado;
-      if(REC_filtro==='atrasado') return st.temAtraso;
-      if(REC_filtro==='receber') return !st.quitado;
-      return true; });
-  }
-  // ordena: com atraso primeiro, depois por próxima parcela
-  list.sort(function(a,b){ var sa=REC_stats(a), sb2=REC_stats(b);
-    if(sa.temAtraso!==sb2.temAtraso) return sa.temAtraso?-1:1;
-    var av=(sa.prox&&sa.prox.venc)||'9999', bv=(sb2.prox&&sb2.prox.venc)||'9999';
-    return av<bv?-1:av>bv?1:0; });
+  if(termo){ items=items.filter(function(it){ return (REC_tituloItem(it)+' ').toLowerCase().indexOf(termo)!==-1; }); }
+
+  var pend=items.filter(function(it){ return !it.p.recebido; });
+  var conc=items.filter(function(it){ return it.p.recebido; });
+  pend.sort(function(a,b){ var av=a.p.venc||'9999',bv=b.p.venc||'9999'; return av<bv?-1:av>bv?1:0; });
+  conc.sort(function(a,b){ var av=a.p.recebido_em||a.p.venc||'',bv=b.p.recebido_em||b.p.venc||''; return av>bv?-1:av<bv?1:0; });
 
   var cont=document.getElementById('rec-lista'); if(!cont) return;
-  if(!list.length){ cont.innerHTML='<div style="text-align:center;color:#bbb;font-size:13px;padding:34px 0;line-height:1.6;">Nenhum recebimento aqui.<br>Toque em <b>+ NOVO</b> para começar.</div>'; return; }
-  cont.innerHTML=list.map(REC_cardHTML).join('');
+  if(!pend.length && !conc.length){ cont.innerHTML='<div style="text-align:center;color:#bbb;font-size:13px;padding:34px 0;line-height:1.6;">Nenhum recebimento.<br>Toque no <b>+</b> para adicionar.</div>'; return; }
+  var html='';
+  if(pend.length){ html+=pend.map(REC_rowHTML).join(''); }
+  else { html+='<div style="text-align:center;color:#bbb;font-size:12px;padding:18px 0;">Nada a receber. Tudo em dia 👏</div>'; }
+  if(conc.length){
+    html+='<div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:#aaa;margin:18px 2px 8px;">CONCLUÍDOS</div>';
+    html+=conc.map(REC_rowHTML).join('');
+  }
+  cont.innerHTML=html;
 }
 
-function REC_cardHTML(ac){
-  var st=REC_stats(ac), hoje=REC_hojeISO();
-  var pct=st.tot?Math.round(st.rec/st.tot*100):0;
-  var atras=st.prox&&st.prox.venc&&st.prox.venc<hoje;
-  var corBar=st.quitado?'#1a7f3c':(st.temAtraso?'#c0392b':'#111');
-  var titColor=st.quitado?'#999':'#111';
-  // bloco da próxima parcela / receber
-  var proxBloco;
-  if(st.quitado){
-    proxBloco='<div style="font-size:12px;color:#1a7f3c;font-weight:600;">✓ Quitado</div>';
-  } else if(st.prox){
-    proxBloco='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      +'<div style="min-width:0;"><div style="font-size:9px;letter-spacing:0.5px;color:#aaa;font-weight:600;">PRÓXIMA</div><div style="font-size:14px;font-weight:700;color:#111;">'+REC_money(st.prox.valor)+' <span style="font-size:12px;font-weight:500;color:'+(atras?'#c0392b':'#888')+';">· '+REC_fmtVenc(st.prox.venc)+(atras?' (atrasada)':'')+'</span></div></div>'
-      +'<button onclick="REC_receberProxima('+ac.id+',event)" style="flex-shrink:0;padding:8px 14px;border:0.5px solid #1a7f3c;border-radius:10px;background:#1a7f3c;color:#fff;font-size:11px;letter-spacing:0.5px;font-weight:700;cursor:pointer;">RECEBER</button>'
-    +'</div>';
-  } else {
-    proxBloco='<div style="font-size:12px;color:#aaa;">Sem parcelas</div>';
-  }
-  var subtitulo = st.tot>1 ? (st.rec+'/'+st.tot+' recebidas · '+REC_money(st.somaRec)+' de '+REC_money(st.somaTot)) : (REC_money(st.somaRec)+' de '+REC_money(st.somaTot));
-  return '<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:13px 15px;margin-bottom:8px;">'
-    +'<div onclick="REC_abrir('+ac.id+')" style="cursor:pointer;">'
-      +'<div style="font-size:15px;font-weight:600;color:'+titColor+';line-height:1.3;margin-bottom:8px;">'+REC_esc(ac.titulo)+'</div>'
-      +'<div style="height:5px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:5px;"><div style="height:100%;width:'+pct+'%;background:'+corBar+';border-radius:3px;"></div></div>'
-      +'<div style="font-size:11px;color:#999;margin-bottom:11px;">'+subtitulo+'</div>'
-    +'</div>'
-    +proxBloco
+function REC_rowHTML(it){
+  var hoje=REC_hojeISO();
+  var atras=!it.p.recebido && it.p.venc && it.p.venc<hoje;
+  var corData=atras?'#c0392b':'#888';
+  var corTit=it.p.recebido?'#aaa':(atras?'#c0392b':'#111');
+  var circ=it.p.recebido
+    ? '<span onclick="REC_toggleItem('+it.ac.id+','+it.idx+',event)" style="width:24px;height:24px;border-radius:50%;background:#1a7f3c;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
+    : '<span onclick="REC_toggleItem('+it.ac.id+','+it.idx+',event)" style="width:24px;height:24px;border-radius:50%;border:1.5px solid '+(atras?'#c0392b':'#ccc')+';display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
+  return '<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
+    +circ
+    +'<div onclick="REC_abrir('+it.ac.id+')" style="flex:1;cursor:pointer;min-width:0;"><div style="font-size:14px;font-weight:600;color:'+corTit+';line-height:1.3;'+(it.p.recebido?'text-decoration:line-through;text-decoration-color:#ccc;':'')+'">'+REC_esc(REC_tituloItem(it))+'</div></div>'
+    +'<div onclick="REC_abrir('+it.ac.id+')" style="text-align:right;cursor:pointer;flex-shrink:0;"><div style="font-size:14px;font-weight:700;color:'+(it.p.recebido?'#aaa':'#111')+';">'+REC_money(it.p.valor)+'</div><div style="font-size:11px;color:'+corData+';margin-top:2px;">'+REC_isoToBR(it.p.venc)+'</div></div>'
   +'</div>';
 }
 
-function REC_receberProxima(id,ev){
+function REC_toggleItem(acId,idx,ev){
   if(ev&&ev.stopPropagation) ev.stopPropagation();
-  var ac=REC_acordoById(id); if(!ac) return;
-  var st=REC_stats(ac); if(!st.prox) return;
-  st.prox.recebido=true; st.prox.recebido_em=new Date().toISOString();
+  var ac=REC_acordoById(acId); if(!ac) return; var p=ac.parcelas[idx]; if(!p) return;
+  p.recebido=!p.recebido; p.recebido_em=p.recebido?new Date().toISOString():null;
   REC_render();
-  REC_persist(ac);
-}
-function REC_persist(ac){
-  sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não salvou (sem conexão?).'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão para salvar.'); REC_load(); });
+  sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não salvou (sem conexão?).'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão.'); REC_load(); });
 }
 
-/* ----- Editor do acordo ----- */
-function REC_novo(){ REC_editId=null; REC_editParc=[]; REC_genMode='iguais'; REC_delArmed=false; REC_openEditor({titulo:'',obs:'',parcelas:[]}); }
-function REC_abrir(id){ var ac=REC_acordoById(id); if(!ac) return; REC_editId=id; REC_genMode='iguais'; REC_delArmed=false; REC_editParc=ac.parcelas.map(function(p){ return {valor:p.valor,venc:p.venc,recebido:p.recebido,recebido_em:p.recebido_em}; }); REC_openEditor(ac); }
+/* ----- Editor ----- */
+function REC_novo(){ REC_editId=null; REC_editTipo='dinheiro'; REC_genMode='unico'; REC_rateioOn=false; REC_editRateio=[]; REC_delArmed=false; REC_editParc=[{valor:0,venc:'',recebido:false,recebido_em:null,rateio:[]}]; REC_openEditor({}); }
+function REC_abrir(id){ var ac=REC_acordoById(id); if(!ac) return; REC_editId=id; REC_editTipo=ac.tipo||'dinheiro'; REC_genMode='unico'; REC_delArmed=false; REC_editParc=ac.parcelas.map(function(p){ return {valor:p.valor,venc:p.venc,recebido:p.recebido,recebido_em:p.recebido_em,rateio:(p.rateio||[]).slice()}; }); var r0=REC_editParc[0]||{}; REC_editRateio=(r0.rateio||[]).map(function(x){ return {nome:x.nome,valor:x.valor}; }); REC_rateioOn=REC_editRateio.length>0; REC_openEditor(ac); }
 
 function REC_openEditor(ac){
   var ov=document.getElementById('rec-editor');
   if(!ov){ ov=document.createElement('div'); ov.id='rec-editor'; ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10070;align-items:flex-end;justify-content:center;'; ov.addEventListener('click',function(e){ if(e.target===ov) REC_closeEditor(); }); document.body.appendChild(ov); }
-  var seg=function(m,txt){ var on=REC_genMode===m; return '<button onclick="REC_setGen(\''+m+'\')" style="flex:1;padding:8px;border:0.5px solid '+(on?'#111':'#ddd')+';border-radius:9px;background:'+(on?'#111':'#fff')+';color:'+(on?'#fff':'#888')+';font-size:11px;letter-spacing:0.5px;font-weight:700;cursor:pointer;">'+txt+'</button>'; };
+  var tipoBtn=function(t){ var on=REC_editTipo===t; return '<button onclick="REC_setTipo(\''+t+'\')" style="flex:1;padding:9px;border:0.5px solid '+(on?'#111':'#ddd')+';border-radius:10px;background:'+(on?'#111':'#fff')+';color:'+(on?'#fff':'#888')+';font-size:12px;font-weight:700;cursor:pointer;">'+REC_TIPOS[t]+'</button>'; };
   var html='<div style="width:100%;max-width:480px;background:#fff;border-radius:18px 18px 0 0;max-height:94vh;display:flex;flex-direction:column;font-family:-apple-system,sans-serif;">'
     +'<div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid #eee;">'
       +'<button onclick="REC_closeEditor()" style="border:none;background:none;color:#888;font-size:13px;cursor:pointer;">Cancelar</button>'
-      +'<div style="font-size:12px;letter-spacing:1px;font-weight:700;color:#111;">'+(REC_editId?'EDITAR ACORDO':'NOVO ACORDO')+'</div>'
+      +'<div style="font-size:12px;letter-spacing:1px;font-weight:700;color:#111;">'+(REC_editId?'EDITAR':'NOVO RECEBIMENTO')+'</div>'
       +'<button onclick="REC_salvar(this)" style="border:none;background:none;color:#1a7f3c;font-size:13px;font-weight:700;cursor:pointer;">Salvar</button>'
     +'</div>'
     +'<div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));">'
-      +'<div style="margin-bottom:10px;"><div style="font-size:10px;letter-spacing:0.5px;color:#aaa;font-weight:600;margin-bottom:3px;">TÍTULO</div><textarea id="rec-f-tit" rows="2" placeholder="ex.: Wanderson WET (OP RAM 1500)" style="'+REC_taCss+'">'+REC_esc(ac.titulo||'')+'</textarea></div>'
-      +'<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:#aaa;font-weight:600;margin-bottom:3px;">NOTA</div><textarea id="rec-f-nota" rows="3" placeholder="Rateio do sócio, forma de pagamento, observações... (livre)" style="'+REC_taCss+'">'+REC_esc(ac.obs||'')+'</textarea></div>'
-      +'<div style="font-size:11px;letter-spacing:0.5px;color:#aaa;font-weight:700;margin-bottom:8px;">PARCELAS</div>'
-      +'<div style="display:flex;gap:8px;margin-bottom:10px;">'+seg('iguais','IGUAIS / MENSAL')+seg('diferentes','DIFERENTES')+'</div>'
-      +'<div id="rec-gen-iguais" style="background:#f7f7f5;border-radius:12px;padding:10px;margin-bottom:10px;">'
+      +'<div style="display:flex;gap:8px;margin-bottom:12px;">'+tipoBtn('dinheiro')+tipoBtn('cheque')+tipoBtn('boleto')+'</div>'
+      +'<div style="margin-bottom:10px;"><div style="font-size:10px;letter-spacing:0.5px;color:#aaa;font-weight:600;margin-bottom:3px;">CLIENTE</div><input id="rec-f-cli" value="'+REC_esc(ac.cliente||'')+'" placeholder="ex.: Wanderson WET" style="'+REC_inpCss+'"></div>'
+      +'<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:#aaa;font-weight:600;margin-bottom:3px;">DESCRIÇÃO <span style="color:#ccc;font-weight:400;letter-spacing:0;">(vai entre parênteses)</span></div><input id="rec-f-desc" value="'+REC_esc(ac.descricao||'')+'" placeholder="ex.: OP RAM 1500" style="'+REC_inpCss+'"></div>'
+      +'<div style="font-size:11px;letter-spacing:0.5px;color:#aaa;font-weight:700;margin-bottom:8px;">VALOR E DATA</div>'
+      +'<div id="rec-parc-list"></div>'
+      +'<button onclick="REC_addParc()" style="width:100%;padding:9px;border:0.5px dashed #bbb;border-radius:10px;background:#fff;color:#666;font-size:12px;font-weight:600;cursor:pointer;margin-top:2px;">+ Adicionar parcela</button>'
+      +'<button onclick="REC_toggleGen()" id="rec-gen-toggle" style="width:100%;padding:9px;border:none;border-radius:10px;background:none;color:#888;font-size:11px;font-weight:600;cursor:pointer;margin-top:2px;text-decoration:underline;">gerar parcelas mensais (financiamento)</button>'
+      +'<div id="rec-gen-box" style="display:none;background:#f7f7f5;border-radius:12px;padding:10px;margin-top:6px;">'
         +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
-          +'<div style="flex:1.3;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">VALOR PARC. (R$)</div><input id="rec-g-val" inputmode="numeric" oninput="REC_maskVal(this)" onclick="this.select()" placeholder="0,00" style="'+REC_inpCss+'text-align:right;"></div>'
+          +'<div style="flex:1.3;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">VALOR PARC.</div><input id="rec-g-val" inputmode="numeric" oninput="REC_maskVal(this)" onclick="this.select()" placeholder="0,00" style="'+REC_inpCss+'text-align:right;"></div>'
           +'<div style="flex:0.8;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">Nº VEZES</div><input id="rec-g-qtd" inputmode="numeric" onclick="this.select()" placeholder="24" style="'+REC_inpCss+'text-align:center;"></div>'
           +'<div style="flex:0.8;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">DIA</div><input id="rec-g-dia" inputmode="numeric" onclick="this.select()" placeholder="27" style="'+REC_inpCss+'text-align:center;"></div>'
         +'</div>'
         +'<div style="margin-bottom:8px;"><div style="font-size:9px;color:#aaa;font-weight:600;margin-bottom:2px;">MÊS DE INÍCIO</div><input id="rec-g-inicio" inputmode="numeric" maxlength="7" oninput="REC_maskMesAno(this)" onclick="this.select()" value="'+REC_ymToBR(REC_ymAtual())+'" placeholder="MM/AAAA" style="'+REC_inpCss+'text-align:center;"></div>'
-        +'<button onclick="REC_genIguais()" style="width:100%;padding:9px;border:0.5px solid #111;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">GERAR PARCELAS</button>'
+        +'<button onclick="REC_genIguais()" style="width:100%;padding:9px;border:0.5px solid #111;border-radius:10px;background:#fff;color:#111;font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">GERAR</button>'
       +'</div>'
-      +'<div id="rec-parc-list"></div>'
-      +'<button onclick="REC_addParc()" style="width:100%;padding:9px;border:0.5px dashed #bbb;border-radius:10px;background:#fff;color:#666;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;">+ Adicionar parcela</button>'
-      +(REC_editId?'<button onclick="REC_excluir(this)" style="width:100%;padding:11px;border:none;border-radius:10px;background:#fff;color:#c0392b;font-size:12px;font-weight:600;cursor:pointer;margin-top:16px;">Excluir acordo</button>':'')
+      +'<hr style="border:none;border-top:0.5px solid #eee;margin:14px 0 10px;">'
+      +'<button onclick="REC_toggleRateio()" id="rec-rateio-toggle" style="width:100%;padding:11px;border:0.5px solid '+(REC_rateioOn?'#111':'#ddd')+';border-radius:10px;background:'+(REC_rateioOn?'#111':'#fff')+';color:'+(REC_rateioOn?'#fff':'#888')+';font-size:12px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':'')+'</button>'
+      +'<div id="rec-rateio-box" style="display:'+(REC_rateioOn?'block':'none')+';margin-top:8px;"></div>'
+      +'<div style="margin-top:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:#aaa;font-weight:600;margin-bottom:3px;">NOTA</div><textarea id="rec-f-nota" rows="2" placeholder="forma de pagamento, observações... (livre)" style="'+REC_taCss+'">'+REC_esc(ac.obs||'')+'</textarea></div>'
+      +(REC_editId?'<button onclick="REC_excluir(this)" style="width:100%;padding:11px;border:none;border-radius:10px;background:#fff;color:#c0392b;font-size:12px;font-weight:600;cursor:pointer;margin-top:14px;">Excluir</button>':'')
     +'</div>'
   +'</div>';
   ov.innerHTML=html; ov.style.display='flex';
-  REC_setGen(REC_genMode); REC_renderParcEditor();
+  REC_renderParcEditor(); REC_renderRateio();
 }
 
-function REC_setGen(m){
-  REC_genMode=m;
-  var g=document.getElementById('rec-gen-iguais'); if(g) g.style.display=(m==='iguais')?'':'none';
-  var segs=document.querySelectorAll('#rec-editor [onclick^="REC_setGen"]');
-  for(var i=0;i<segs.length;i++){ var on=segs[i].getAttribute('onclick').indexOf("'"+m+"'")!==-1; segs[i].style.background=on?'#111':'#fff'; segs[i].style.color=on?'#fff':'#888'; segs[i].style.borderColor=on?'#111':'#ddd'; }
+function REC_setTipo(t){ REC_editTipo=t; var segs=document.querySelectorAll('#rec-editor [onclick^="REC_setTipo"]'); for(var i=0;i<segs.length;i++){ var on=segs[i].getAttribute('onclick').indexOf("'"+t+"'")!==-1; segs[i].style.background=on?'#111':'#fff'; segs[i].style.color=on?'#fff':'#888'; segs[i].style.borderColor=on?'#111':'#ddd'; } }
+function REC_toggleGen(){ var b=document.getElementById('rec-gen-box'); if(b) b.style.display=(b.style.display==='none')?'block':'none'; }
+
+function REC_renderParcEditor(){
+  var cont=document.getElementById('rec-parc-list'); if(!cont) return;
+  if(!REC_editParc.length){ cont.innerHTML='<div style="font-size:11px;color:#bbb;padding:4px 2px 8px;">Sem parcela. Adicione abaixo.</div>'; return; }
+  var multi=REC_editParc.length>1;
+  cont.innerHTML=REC_editParc.map(function(p,idx){
+    var circ=p.recebido
+      ? '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;background:#1a7f3c;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
+      : '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;border:1.5px solid #ccc;display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
+    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">'
+      +circ
+      +(multi?'<span style="font-size:11px;color:#bbb;font-weight:600;width:22px;text-align:right;flex-shrink:0;">'+(idx+1)+'</span>':'')
+      +'<input value="'+REC_esc(REC_valStr(p.valor))+'" oninput="REC_parcValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="Valor" style="'+REC_inpCss+'flex:1.1;text-align:right;">'
+      +'<input value="'+REC_esc(REC_isoToBR(p.venc))+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="REC_parcDataBlur('+idx+',this)" onclick="this.select()" style="'+REC_inpCss+'flex:1.2;text-align:center;">'
+      +(multi?'<button onclick="REC_editParc.splice('+idx+',1);REC_renderParcEditor()" style="border:none;background:none;color:#c0392b;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>':'<span style="width:20px;flex-shrink:0;"></span>')
+    +'</div>';
+  }).join('');
 }
+function REC_parcValInput(idx,el){ REC_maskVal(el); if(REC_editParc[idx]) REC_editParc[idx].valor=REC_parseBR(el.value); }
+function REC_parcDataBlur(idx,el){ if(typeof autoCompleteDate==='function'){ autoCompleteDate(el); } if(REC_editParc[idx]) REC_editParc[idx].venc=REC_brToIso(el.value); }
+function REC_togParc(idx){ var p=REC_editParc[idx]; if(!p) return; p.recebido=!p.recebido; p.recebido_em=p.recebido?new Date().toISOString():null; REC_renderParcEditor(); }
+function REC_addParc(){ REC_editParc.push({valor:0,venc:'',recebido:false,recebido_em:null,rateio:[]}); REC_renderParcEditor(); }
 
 function REC_genIguais(){
   var val=REC_parseBR((document.getElementById('rec-g-val')||{}).value);
@@ -9299,50 +9289,57 @@ function REC_genIguais(){
   if(!qtd||qtd<1){ VB_toast('Informe o nº de vezes.'); return; }
   if(!dia||dia<1||dia>31){ VB_toast('Informe o dia (1 a 31).'); return; }
   if(!inicio){ VB_toast('Informe o mês de início (MM/AAAA).'); return; }
-  var arr=[]; for(var k=0;k<qtd;k++){ arr.push({valor:val, venc:REC_vencDoMes(REC_addYM(inicio,k),dia), recebido:false, recebido_em:null}); }
+  var arr=[]; for(var k=0;k<qtd;k++){ arr.push({valor:val, venc:REC_vencDoMes(REC_addYM(inicio,k),dia), recebido:false, recebido_em:null, rateio:[]}); }
   REC_editParc=arr; REC_renderParcEditor();
+  var b=document.getElementById('rec-gen-box'); if(b) b.style.display='none';
   VB_toast(qtd+' parcelas geradas.');
 }
-function REC_addParc(){ REC_editParc.push({valor:0, venc:'', recebido:false, recebido_em:null}); REC_renderParcEditor(); }
 
-function REC_renderParcEditor(){
-  var cont=document.getElementById('rec-parc-list'); if(!cont) return;
-  if(!REC_editParc.length){ cont.innerHTML='<div style="font-size:11px;color:#bbb;padding:4px 2px 8px;">Nenhuma parcela. Gere acima (Iguais) ou adicione uma a uma (Diferentes).</div>'; return; }
-  cont.innerHTML=REC_editParc.map(function(p,idx){
-    var circ=p.recebido
-      ? '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;background:#1a7f3c;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
-      : '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;border:1.5px solid #ccc;display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
+/* ----- Rateio ----- */
+function REC_toggleRateio(){
+  REC_rateioOn=!REC_rateioOn;
+  if(REC_rateioOn && !REC_editRateio.length){ REC_editRateio=[{nome:'',valor:0}]; }
+  var b=document.getElementById('rec-rateio-box'); if(b) b.style.display=REC_rateioOn?'block':'none';
+  var t=document.getElementById('rec-rateio-toggle'); if(t){ t.style.background=REC_rateioOn?'#111':'#fff'; t.style.color=REC_rateioOn?'#fff':'#888'; t.style.borderColor=REC_rateioOn?'#111':'#ddd'; t.textContent='RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':''); }
+  REC_renderRateio();
+}
+function REC_renderRateio(){
+  var cont=document.getElementById('rec-rateio-box'); if(!cont) return;
+  if(!REC_rateioOn){ cont.innerHTML=''; return; }
+  var html=REC_editRateio.map(function(rt,idx){
     return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">'
-      +circ
-      +'<span style="font-size:11px;color:#bbb;font-weight:600;width:22px;text-align:right;flex-shrink:0;">'+(idx+1)+'</span>'
-      +'<input value="'+REC_esc(REC_valStr(p.valor))+'" oninput="REC_parcValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="0,00" style="'+REC_inpCss+'flex:1.1;text-align:right;">'
-      +'<input value="'+REC_esc(REC_isoToBR(p.venc))+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="REC_parcDataBlur('+idx+',this)" onclick="this.select()" style="'+REC_inpCss+'flex:1.2;text-align:center;">'
-      +'<button onclick="REC_editParc.splice('+idx+',1);REC_renderParcEditor()" style="border:none;background:none;color:#c0392b;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>'
+      +'<input value="'+REC_esc(rt.nome||'')+'" oninput="REC_editRateio['+idx+'].nome=this.value" placeholder="Sócio" style="'+REC_inpCss+'flex:1.2;">'
+      +'<input value="'+REC_esc(REC_valStr(rt.valor))+'" oninput="REC_rateioValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="Parte (R$)" style="'+REC_inpCss+'flex:1;text-align:right;">'
+      +'<button onclick="REC_editRateio.splice('+idx+',1);REC_renderRateio()" style="border:none;background:none;color:#c0392b;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>'
     +'</div>';
   }).join('');
+  html+='<button onclick="REC_editRateio.push({nome:\'\',valor:0});REC_renderRateio()" style="width:100%;padding:8px;border:0.5px dashed #bbb;border-radius:10px;background:#fff;color:#666;font-size:11px;font-weight:600;cursor:pointer;">+ Sócio</button>';
+  cont.innerHTML=html;
 }
-function REC_togParc(idx){ var p=REC_editParc[idx]; if(!p) return; p.recebido=!p.recebido; p.recebido_em=p.recebido?new Date().toISOString():null; REC_renderParcEditor(); }
+function REC_rateioValInput(idx,el){ REC_maskVal(el); if(REC_editRateio[idx]) REC_editRateio[idx].valor=REC_parseBR(el.value); }
 
 function REC_salvar(btn){
-  var tit=((document.getElementById('rec-f-tit')||{}).value||'').trim();
-  if(!tit){ VB_toast('Escreva o título.'); return; }
+  var cli=((document.getElementById('rec-f-cli')||{}).value||'').trim();
+  if(!cli){ VB_toast('Informe o cliente.'); return; }
+  var desc=((document.getElementById('rec-f-desc')||{}).value||'').trim()||null;
   var nota=((document.getElementById('rec-f-nota')||{}).value||'').trim()||null;
-  var parc=REC_editParc.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null}; });
-  var row={ pessoa:tit, obs:nota, parcelas:parc };
+  var rateio = (REC_rateioOn?REC_editRateio:[]).filter(function(rt){ return (rt.nome&&rt.nome.trim())||Number(rt.valor)>0; }).map(function(rt){ return {nome:(rt.nome||'').trim(), valor:Number(rt.valor)||0}; });
+  if(!REC_editParc.length){ VB_toast('Informe ao menos uma parcela (valor e data).'); return; }
+  var parc=REC_editParc.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null, rateio:rateio.slice()}; });
+  var row={ pessoa:cli, descricao:desc, tipo:REC_editTipo, obs:nota, parcelas:parc };
   if(btn){ btn.textContent='Salvando...'; btn.disabled=true; }
   var q=REC_editId?sb.from('recebimentos').update(row).eq('id',REC_editId).select():sb.from('recebimentos').insert(row).select();
   q.then(function(res){
     if(res.error){ console.log('REC save error',res.error); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Não salvou (sem conexão?).'); return; }
-    REC_closeEditor(); VB_toast(REC_editId?'Acordo atualizado.':'Acordo criado.'); REC_load();
+    REC_closeEditor(); VB_toast(REC_editId?'Atualizado.':'Adicionado.'); REC_load();
   }).catch(function(e){ console.log('REC save ex',e); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Sem conexão para salvar.'); });
 }
 
 function REC_closeEditor(){ var ov=document.getElementById('rec-editor'); if(ov) ov.style.display='none'; REC_delArmed=false; }
-
 function REC_excluir(btn){
   if(!REC_editId) return;
-  if(!REC_delArmed){ REC_delArmed=true; if(btn){ btn.textContent='Tocar de novo para excluir'; btn.style.background='#c0392b'; btn.style.color='#fff'; } setTimeout(function(){ REC_delArmed=false; if(btn){ btn.textContent='Excluir acordo'; btn.style.background='#fff'; btn.style.color='#c0392b'; } },3000); return; }
-  sb.from('recebimentos').delete().eq('id',REC_editId).then(function(res){ if(res.error){ console.log('REC del error',res.error); VB_toast('Não excluiu (sem conexão?).'); return; } REC_closeEditor(); VB_toast('Acordo excluído.'); REC_load(); }).catch(function(e){ console.log('REC del ex',e); VB_toast('Sem conexão.'); });
+  if(!REC_delArmed){ REC_delArmed=true; if(btn){ btn.textContent='Tocar de novo para excluir'; btn.style.background='#c0392b'; btn.style.color='#fff'; } setTimeout(function(){ REC_delArmed=false; if(btn){ btn.textContent='Excluir'; btn.style.background='#fff'; btn.style.color='#c0392b'; } },3000); return; }
+  sb.from('recebimentos').delete().eq('id',REC_editId).then(function(res){ if(res.error){ console.log('REC del error',res.error); VB_toast('Não excluiu (sem conexão?).'); return; } REC_closeEditor(); VB_toast('Excluído.'); REC_load(); }).catch(function(e){ console.log('REC del ex',e); VB_toast('Sem conexão.'); });
 }
 
 </script>
@@ -9371,6 +9368,13 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.31.3</span><span class="cl-ver-date">26/06/2026 22:50</span></div>
+      <div class="cl-item">Recebimentos virou lista cronológica corrida: cada parcela é uma linha em ordem de vencimento, atrasado em vermelho, e os recebidos descem para a seção CONCLUÍDOS. Marcar recebido continua num toque na bolinha</div>
+      <div class="cl-item">Adicionar (botão +): Tipo (Dinheiro / Cheque / Boleto) → Cliente → Descrição (entre parênteses) → Valor → Data. Título da linha vira "Tipo Cliente (Descrição)"</div>
+      <div class="cl-item">Rateio de sócio opcional: ativa e preenche a parte de cada sócio. Para financiamento, o "gerar parcelas mensais" continua disponível (valor, nº de vezes, dia e mês de início)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.31.2</span><span class="cl-ver-date">26/06/2026 22:15</span></div>
