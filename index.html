@@ -25,8 +25,9 @@
   - Arquivo único HTML (PWA), sem build/sem dependências externas.
   - Editar o JS por marcadores/âncoras internas; cuidado com o
     problema conhecido do </script> duplo ao editar.
-  - 5 módulos: Financiamentos, Quitação, Antecipação, Pagamentos,
-    Vendas (+ Investidor dentro do Financiamento). Home + Changelog.
+  - Módulos: Financiamentos (com seletor SIMULAÇÃO/QUITAÇÃO e
+    Investidor por dentro), Antecipação, Pagamentos, Vendas,
+    Recebimentos. Home + Histórico + Changelog.
 
 [4] PERSISTÊNCIA
   - Sem localStorage por padrão. Exceções (auto-save da sessão no
@@ -81,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.32.6</title>
+<title>VB - v1.33.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -355,18 +356,13 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.32.6<br>30/06/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.33.0<br>30/06/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:8px;">
     <button onclick="showScreen('fin')" style="display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="flex-shrink:0;display:inline-flex;color:#111;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V10"/><path d="M9 21V10"/><path d="M15 21V10"/><path d="M19 21V10"/><path d="M3 10l9-6 9 6"/><path d="M3 10h18"/></svg></span>
       <span style="font-size:18px;font-weight:700;color:#111;flex:1;">Financiamentos</span>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <button onclick="PIN_request('quit')" style="display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <span style="flex-shrink:0;display:inline-flex;color:#111;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.4 2.4 4.6-5.2"/></svg></span>
-      <span style="font-size:18px;font-weight:700;color:#111;flex:1;">Quitação Antecipada</span>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button onclick="PIN_request('ant')" style="display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
@@ -402,13 +398,22 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-fin" class="vb-screen">
 <div class="card">
-  <div id="fin-captureZone" style="background:#f5f5f3;padding:10px 0 8px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+  <!-- HEADER COMPARTILHADO (logo + toggle investidor) -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <button id="fin-inv-toggle" class="no-print" onclick="FIN_toggleInvestidor()" title="Operação com investidor" style="width:46px;height:26px;border:0.5px solid #ddd;border-radius:13px;background:#fff;padding:0;cursor:pointer;"></button>
   </div>
-  <div class="simulacao-label">FINANCIAMENTOS</div>
+
+  <!-- SELETOR SIMULAÇÃO / QUITAÇÃO -->
+  <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+    <button id="fin-seg-sim" onclick="FIN_setModo('sim')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">SIMULAÇÃO</button>
+    <button id="fin-seg-quit" onclick="FIN_setModo('quit')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">QUITAÇÃO ANTECIPADA</button>
+  </div>
   <hr class="divider">
+
+  <!-- ===== MODO SIMULAÇÃO ===== -->
+  <div id="fin-modo-sim">
+  <div id="fin-captureZone" style="background:#f5f5f3;padding:10px 0 8px;">
 
   <div class="field-card" style="padding: 14px 20px; margin-bottom: 6px;">
     <div class="field-label" style="text-align:center;">VALOR FINANCIADO</div>
@@ -560,6 +565,90 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 
   <button id="fin-btnConfirmar" onclick="FIN_confirmarOperacao(this)" style="width:100%;padding:12px;border:0.5px solid #111;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#111;font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
+
+  </div><!-- fim fin-modo-sim -->
+
+  <!-- ===== MODO QUITAÇÃO ANTECIPADA ===== -->
+  <div id="fin-modo-quit" style="display:none;">
+
+  <!-- DATA QUITAÇÃO + PRÓXIMO VENCIMENTO -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
+    <div class="field-card" style="padding:7px 14px;text-align:center;">
+      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">DATA QUITAÇÃO</div>
+      <input type="text" inputmode="numeric" id="quit-dataQuit" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)"
+        style="width:100%;border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+    </div>
+    <div class="field-card" style="padding:7px 14px;text-align:center;">
+      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">PRÓXIMO VENCIMENTO</div>
+      <input type="text" inputmode="numeric" id="quit-dataProx" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)"
+        style="width:100%;border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+    </div>
+  </div>
+
+  <!-- PARCELAS A VENCER + TAXA DE DESCONTO -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
+    <div class="field-card" style="padding:7px 14px;text-align:center;">
+      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">PARCELAS A VENCER</div>
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;">
+        <input class="input-big" style="text-align:center;font-size:22px;" id="quit-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()">
+      </div>
+    </div>
+    <div class="field-card" style="padding:7px 14px;text-align:center;">
+      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">TAXA DE DESCONTO</div>
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;gap:4px;">
+        <input class="input-big" style="text-align:center;font-size:22px;width:64px;" id="quit-taxa" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+        <span style="font-size:12px;color:#aaa;font-weight:500;">% a.m.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALOR DA PARCELA -->
+  <div class="field-card" style="padding:7px 20px;margin-bottom:3px;">
+    <div class="field-label" style="text-align:center;margin-bottom:2px;">VALOR DA PARCELA</div>
+    <div class="valor-row" style="justify-content:center;align-items:center;">
+      <span class="valor-prefix">R$</span>
+      <input class="input-big" style="text-align:center;font-size:26px;" id="quit-parcela" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="quit-result" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
+      <div class="field-card" style="padding:8px 14px;text-align:center;">
+        <div style="font-size:8px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:5px;">VALOR QUITAÇÃO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <span style="font-size:18px;font-weight:700;color:#111;" id="quit-valor">---</span>
+        </div>
+      </div>
+      <div class="field-card" style="padding:8px 14px;text-align:center;">
+        <div style="font-size:8px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:5px;">DESCONTO OBTIDO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <span style="font-size:18px;font-weight:700;color:#111;" id="quit-desconto">---</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAMPO COPIAR WHATSAPP -->
+    <div class="field-card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;padding:7px 16px;">
+      <span id="quit-msgWpp" data-copyraw="true" style="font-size:13px;font-weight:600;color:#111;flex:1;line-height:1.4;">---</span>
+      <button class="copy-btn" style="opacity:0.4;flex-shrink:0;" onclick="copyValue('quit-msgWpp',this)" title="Copiar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- CARREGAR -->
+  <button onclick="QUIT_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;margin-top:2px;margin-bottom:6px;font-family:-apple-system,sans-serif;">CARREGAR</button>
+
+  <!-- LIMPAR + COMPARTILHAR -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <button onclick="QUIT_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
+    <button onclick="QUIT_compartilhar()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
+  </div>
+
+  </div><!-- fim fin-modo-quit -->
 
 </div>
 
@@ -779,98 +868,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 </div>
 
 </div>
-<div id="screen-quit" class="vb-screen">
-<div class="card">
-
-  <!-- TOPO -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-    <div>
-      <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
-      <div class="simulacao-label">QUITAÇÃO ANTECIPADA</div>
-    </div>
-  </div>
-  <hr class="divider">
-
-  <!-- DATA QUITAÇÃO + PRÓXIMO VENCIMENTO -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
-    <div class="field-card" style="padding:7px 14px;text-align:center;">
-      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">DATA QUITAÇÃO</div>
-      <input type="text" inputmode="numeric" id="quit-dataQuit" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)"
-        style="width:100%;border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
-    </div>
-    <div class="field-card" style="padding:7px 14px;text-align:center;">
-      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">PRÓXIMO VENCIMENTO</div>
-      <input type="text" inputmode="numeric" id="quit-dataProx" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)"
-        style="width:100%;border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
-    </div>
-  </div>
-
-  <!-- PARCELAS A VENCER + TAXA DE DESCONTO -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
-    <div class="field-card" style="padding:7px 14px;text-align:center;">
-      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">PARCELAS A VENCER</div>
-      <div style="height:28px;display:flex;align-items:center;justify-content:center;">
-        <input class="input-big" style="text-align:center;font-size:22px;" id="quit-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()">
-      </div>
-    </div>
-    <div class="field-card" style="padding:7px 14px;text-align:center;">
-      <div style="font-size:9px;line-height:11px;letter-spacing:1px;color:#aaa;font-weight:500;height:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:3px;">TAXA DE DESCONTO</div>
-      <div style="height:28px;display:flex;align-items:center;justify-content:center;gap:4px;">
-        <input class="input-big" style="text-align:center;font-size:22px;width:64px;" id="quit-taxa" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
-        <span style="font-size:12px;color:#aaa;font-weight:500;">% a.m.</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- VALOR DA PARCELA -->
-  <div class="field-card" style="padding:7px 20px;margin-bottom:3px;">
-    <div class="field-label" style="text-align:center;margin-bottom:2px;">VALOR DA PARCELA</div>
-    <div class="valor-row" style="justify-content:center;align-items:center;">
-      <span class="valor-prefix">R$</span>
-      <input class="input-big" style="text-align:center;font-size:26px;" id="quit-parcela" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
-    </div>
-  </div>
-
-  <!-- RESULTADO -->
-  <div id="quit-result" style="display:none;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
-      <div class="field-card" style="padding:8px 14px;text-align:center;">
-        <div style="font-size:8px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:5px;">VALOR QUITAÇÃO</div>
-        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
-          <span style="font-size:11px;color:#aaa;">R$</span>
-          <span style="font-size:18px;font-weight:700;color:#111;" id="quit-valor">---</span>
-        </div>
-      </div>
-      <div class="field-card" style="padding:8px 14px;text-align:center;">
-        <div style="font-size:8px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:5px;">DESCONTO OBTIDO</div>
-        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
-          <span style="font-size:11px;color:#aaa;">R$</span>
-          <span style="font-size:18px;font-weight:700;color:#111;" id="quit-desconto">---</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CAMPO COPIAR WHATSAPP -->
-    <div class="field-card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;padding:7px 16px;">
-      <span id="quit-msgWpp" data-copyraw="true" style="font-size:13px;font-weight:600;color:#111;flex:1;line-height:1.4;">---</span>
-      <button class="copy-btn" style="opacity:0.4;flex-shrink:0;" onclick="copyValue('quit-msgWpp',this)" title="Copiar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- CARREGAR -->
-  <button onclick="QUIT_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;margin-top:2px;margin-bottom:6px;font-family:-apple-system,sans-serif;">CARREGAR</button>
-
-  <!-- LIMPAR + COMPARTILHAR -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-    <button onclick="QUIT_limpar()" style="padding:12px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
-    <button onclick="QUIT_compartilhar()" style="padding:12px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
-  </div>
-
-</div>
-</div>
-
 <!-- OVERLAY TABELA (foto Quitação) -->
 <div id="quit-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
   <img id="quit-tabelaImagem" style="display:none;width:100%;max-width:390px;margin:0 auto;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
@@ -5543,10 +5540,11 @@ function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','quit','hist','rec'].forEach(function(s){
+  ['fin','ant','pag','ven','hist','rec'].forEach(function(s){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
+  if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
   if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_refresh(); }
   if(name==='home'){ VB_updateBackupStatus(); }
   if(name==='rec'){ REC_load(); }
@@ -5748,6 +5746,31 @@ function FIN_disableInvestidor(){
   document.getElementById('fin-botoesRow').style.display='grid';
   var b=document.getElementById('fin-inv-toggle');
   b.textContent=''; b.style.background='#fff'; b.style.borderColor='#ddd';
+}
+
+// Seletor SIMULAÇÃO / QUITAÇÃO ANTECIPADA dentro do Financiamento
+function FIN_setModo(modo){
+  var sim=document.getElementById('fin-modo-sim');
+  var quit=document.getElementById('fin-modo-quit');
+  var bSim=document.getElementById('fin-seg-sim');
+  var bQuit=document.getElementById('fin-seg-quit');
+  var invT=document.getElementById('fin-inv-toggle');
+  var on ='padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;';
+  var off='padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;';
+  if(modo==='quit'){
+    if(sim)  sim.style.display='none';
+    if(quit) quit.style.display='block';
+    if(bSim) bSim.style.cssText=off;
+    if(bQuit)bQuit.style.cssText=on;
+    if(invT) invT.style.visibility='hidden';
+  } else {
+    if(sim)  sim.style.display='block';
+    if(quit) quit.style.display='none';
+    if(bSim) bSim.style.cssText=on;
+    if(bQuit)bQuit.style.cssText=off;
+    if(invT) invT.style.visibility='visible';
+  }
+  window.scrollTo(0,0);
 }
 
 
@@ -9650,6 +9673,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.33.0</span><span class="cl-ver-date">30/06/2026</span></div>
+      <div class="cl-item">Quitação Antecipada saiu da home e virou um modo dentro de Financiamentos. No topo da tela tem um seletor SIMULAÇÃO / QUITAÇÃO ANTECIPADA que troca o conteúdo — os dois fluxos ficam separados e limpos, sem misturar com o Confirmar Operação. Ao abrir Financiamentos sempre começa em SIMULAÇÃO. A calculadora de quitação (carregar/compartilhar/cálculo) continua igual</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.32.6</span><span class="cl-ver-date">30/06/2026</span></div>
