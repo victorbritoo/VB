@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.33.5</title>
+<title>VB - v1.34.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.33.5<br>01/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.34.0<br>01/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
@@ -891,14 +891,14 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <!-- TOPO -->
   <div style="margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
-    <div class="sub" style="margin-bottom:0;">ANTECIPAÇÃO</div>
+    <div class="simulacao-label">ANTECIPAÇÃO</div>
   </div>
   <!-- SELETOR SIMPLES / PERSONALIZAR -->
   <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
     <button id="ant-seg-simples" onclick="ANT_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">Simples</button>
     <button id="ant-seg-pers" onclick="ANT_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">Personalizada</button>
   </div>
-  <hr class="hr" style="margin-bottom:6px;">
+  <hr class="divider">
 
   <!-- CLIENTE + DATA — em card -->
   <div class="fc" style="padding:12px 16px;margin-bottom:6px;">
@@ -1088,12 +1088,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-pag" class="vb-screen">
 <div class="card">
   <!-- Cabeçalho -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div onclick="VB_voltarDeTela()" style="font-family:Georgia,serif;font-size:32px;font-weight:400;color:#111;cursor:pointer;">VB</div>
-
+  <div style="margin-bottom:2px;">
+    <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
+    <div class="simulacao-label">PAGAMENTOS</div>
   </div>
-  <div style="font-size:11px;letter-spacing:5px;color:#888;font-weight:500;margin-bottom:6px;">PAGAMENTOS</div>
-  <div style="border:none;border-top:0.5px solid #ccc;margin-bottom:6px;"></div>
+  <hr class="divider">
 
   <!-- Valor Total -->
   <div class="fc" style="text-align:center;margin-bottom:6px;">
@@ -5902,6 +5901,7 @@ function FIN_compartilharTabela(){
   ctx.fillText('R$ '+FIN_formatBR(total), c2, y+altTot*0.68);
 
   VB_drawWatermark(ctx, W, H);
+  VB_carimboData(ctx, W);
   var dataURL = cv.toDataURL('image/png');
   var img = document.getElementById('fin-tabelaImagem');
   img.src = dataURL;
@@ -6527,6 +6527,7 @@ function VEN_gerarTabela(){
     ctx.restore();
   }
 
+  VB_carimboData(ctx, W);
   img.src = cv.toDataURL('image/png');
   img.style.display = 'block';
   // copia o código (útil pra colar no CARREGAR)
@@ -7429,6 +7430,7 @@ function ANT_gerarTabela(){
   }
 
   // Mostrar
+  VB_carimboData(ctx, W);
   var dataURL=cv.toDataURL('image/png');
   var img=document.getElementById('ant-tabelaImagem');
   img.src=dataURL; img.style.display='block';
@@ -7445,6 +7447,20 @@ function ANT_gerarTabela(){
 }
 
 // Helper: retângulo arredondado (compatível com Safari antigo)
+// Carimbo de data/hora no topo-direita das fotos geradas (coords lógicas, largura W)
+function VB_carimboData(ctx, W){
+  try{
+    var d=new Date(), p=function(n){return String(n).padStart(2,'0');};
+    var txt=p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
+    ctx.save();
+    ctx.font='500 9px Helvetica, Arial, sans-serif';
+    ctx.fillStyle='#b3b3b3';
+    ctx.textAlign='right';
+    ctx.textBaseline='top';
+    ctx.fillText(txt, W-14, 12);
+    ctx.restore();
+  }catch(e){}
+}
 function VB_roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();
   ctx.moveTo(x+r,y);
@@ -7670,6 +7686,7 @@ function ANT_gerarResumoFoto(){
   y+=qrCardH;
 
   var img=document.getElementById('ant-tabelaImagem');
+  VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
@@ -8284,6 +8301,7 @@ function PAG_compartilhar(){
   ctx.restore();
 
   var img=document.getElementById('pag-tabelaImagem');
+  VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
   // copia o código (útil pra colar no Safari)
@@ -8408,6 +8426,7 @@ function PAG_salvarFoto(){
   }
 
   var img=document.getElementById('pag-tabelaImagem');
+  VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
   // copia o mesmo código (puro) que está no QR
@@ -8834,6 +8853,7 @@ function QUIT_compartilhar(){
   }
 
   var img=document.getElementById('quit-tabelaImagem');
+  VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
@@ -9116,6 +9136,7 @@ function INV_gerarTabela(){
 
   VB_drawWatermark(ctx, W, H);
   var img=document.getElementById('inv-tabelaImagem');
+  VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
   document.getElementById('inv-tabelaImagemDica').style.display='block';
@@ -9684,6 +9705,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.34.0</span><span class="cl-ver-date">01/07/2026</span></div>
+      <div class="cl-item">Todas as fotos compartilhadas (Financiamento, Antecipação, Vendas, Pagamentos, Quitação e Investidor) agora trazem um carimbo de data/hora discreto no topo à direita, formato DD/MM/AAAA HH:MM — pra saber quando cada print foi gerado</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.33.6</span><span class="cl-ver-date">01/07/2026</span></div>
+      <div class="cl-item">Cabeçalhos padronizados: Pagamentos e Antecipação agora usam o mesmo logo, rótulo (com o recuo de 10px) e divisória dos outros módulos. Pagamentos não fica mais encostado à esquerda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.33.5</span><span class="cl-ver-date">01/07/2026</span></div>
