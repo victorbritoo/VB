@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.33.4</title>
+<title>VB - v1.33.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.33.4<br>01/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.33.5<br>01/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
@@ -762,11 +762,15 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div class="card">
 
   <!-- HEADER -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+  <div style="margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
-    <button id="ven-btnPersonalizar" onclick="VEN_togglePersonalizar()" style="border:0.5px solid #c9a84c;border-radius:8px;background:#fff;font-size:8px;letter-spacing:0.5px;color:#c9a84c;font-weight:700;cursor:pointer;margin-top:12px;padding:5px 8px;white-space:nowrap;">PERSONALIZAR</button>
+    <div class="simulacao-label">VENDAS</div>
   </div>
-  <div class="simulacao-label">VENDAS</div>
+  <!-- SELETOR SIMPLES / PERSONALIZADA -->
+  <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
+    <button id="ven-seg-simples" onclick="VEN_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">Simples</button>
+    <button id="ven-seg-pers" onclick="VEN_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">Personalizada</button>
+  </div>
   <hr class="divider">
 
   <!-- VALOR TOTAL DA VENDA -->
@@ -891,8 +895,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
   <!-- SELETOR SIMPLES / PERSONALIZAR -->
   <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
-    <button id="ant-seg-simples" onclick="ANT_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">SIMPLES</button>
-    <button id="ant-seg-pers" onclick="ANT_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">PERSONALIZAR</button>
+    <button id="ant-seg-simples" onclick="ANT_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">Simples</button>
+    <button id="ant-seg-pers" onclick="ANT_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">Personalizada</button>
   </div>
   <hr class="hr" style="margin-bottom:6px;">
 
@@ -6237,24 +6241,31 @@ function VEN_syncFromParcelas(){
   document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? VEN_formatBR(soma/count) : '';
 }
 
+function VEN_setModo(modo){
+  var querPers = (modo==='pers');
+  if(querPers !== VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
+  else { VEN_updateSeg(); }
+}
+function VEN_updateSeg(){
+  var bS=document.getElementById('ven-seg-simples');
+  var bP=document.getElementById('ven-seg-pers');
+  var on ='padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;';
+  var off='padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;';
+  if(VEN_modoPersonalizado){ if(bP)bP.style.cssText=on; if(bS)bS.style.cssText=off; }
+  else { if(bS)bS.style.cssText=on; if(bP)bP.style.cssText=off; }
+}
 function VEN_togglePersonalizar(){
   VEN_modoPersonalizado = !VEN_modoPersonalizado;
+  VEN_updateSeg();
   var sec  = document.getElementById('ven-secPersonalizado');
-  var btn  = document.getElementById('ven-btnPersonalizar');
   var secData = document.getElementById('ven-secTabelaData');
 
   if(VEN_modoPersonalizado){
-    btn.textContent = 'SIMPLES';
-    btn.style.background = '#c9a84c';
-    btn.style.color = '#fff';
     sec.style.display = 'block';
     secData.style.display = 'none';
     document.getElementById('ven-cardParcela').style.display = 'none';
     VEN_popularParcelas();
   } else {
-    btn.textContent = 'PERSONALIZAR';
-    btn.style.background = '#fff';
-    btn.style.color = '#c9a84c';
     sec.style.display = 'none';
     secData.style.display = 'block';
     document.getElementById('ven-cardParcela').style.display = 'block';
@@ -9673,6 +9684,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.33.5</span><span class="cl-ver-date">01/07/2026</span></div>
+      <div class="cl-item">Seletor de pílulas Simples / Personalizada padronizado: rótulos ajustados na Antecipação e o mesmo seletor aplicado na Vendas (no lugar do botão dourado). Ativo em preto, igual ao Financiamento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.33.4</span><span class="cl-ver-date">01/07/2026</span></div>
