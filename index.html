@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.34.0</title>
+<title>VB - v1.34.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:390px;margin:0 auto;padding:16px 36px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.34.0<br>01/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.34.2<br>01/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:6px;">VB</div>
     <div style="font-size:12px;letter-spacing:6px;color:#888;font-weight:500;margin-bottom:8px;">OPERAÇÕES</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
@@ -768,8 +768,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
   <!-- SELETOR SIMPLES / PERSONALIZADA -->
   <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
-    <button id="ven-seg-simples" onclick="VEN_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">Simples</button>
-    <button id="ven-seg-pers" onclick="VEN_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">Personalizada</button>
+    <button id="ven-seg-simples" onclick="VEN_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">SIMPLES</button>
+    <button id="ven-seg-pers" onclick="VEN_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">PERSONALIZADA</button>
   </div>
   <hr class="divider">
 
@@ -895,8 +895,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
   <!-- SELETOR SIMPLES / PERSONALIZAR -->
   <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
-    <button id="ant-seg-simples" onclick="ANT_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">Simples</button>
-    <button id="ant-seg-pers" onclick="ANT_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">Personalizada</button>
+    <button id="ant-seg-simples" onclick="ANT_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">SIMPLES</button>
+    <button id="ant-seg-pers" onclick="ANT_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">PERSONALIZADA</button>
   </div>
   <hr class="divider">
 
@@ -3637,6 +3637,7 @@ function HIST_esc(s){
 
 function HIST_carregarFin(r){
   FIN_currentOperationId = r.id;
+  VB_carimboTS = r.created_at||null;
   // Set all fields before triggering recalc
   if(r.descricao) document.getElementById('fin-tabelaDesc').value = r.descricao;
   if(r.valor_financiado){ document.getElementById('fin-valor').value = FIN_formatBR(Number(r.valor_financiado)); }
@@ -3657,6 +3658,7 @@ function HIST_carregarFin(r){
 }
 function HIST_carregarAnt(r){
   ANT_currentOperationId = r.id;
+  VB_carimboTS = r.created_at||null;
   // Fill all fields first, then recalc once at the end
   if(r.cliente) document.getElementById('ant-tabelaCliente').value = r.cliente;
   if(r.data_operacao){ var p=r.data_operacao.split('-'); document.getElementById('ant-dataOperacao').value=p[2]+'/'+p[1]+'/'+p[0]; }
@@ -3686,6 +3688,7 @@ function HIST_carregarAnt(r){
 }
 function HIST_carregarVen(r){
   VEN_currentOperationId = r.id;
+  VB_carimboTS = r.created_at||null;
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
@@ -3707,6 +3710,7 @@ function HIST_carregarVen(r){
 }
 function HIST_carregarPag(r){
   PAG_currentOperationId = r.id;
+  VB_carimboTS = r.created_at||null;
   if(r.valor_total) document.getElementById('pag-total').value = PAG_formatBR(Number(r.valor_total));
   PAG_pagamentos=[]; PAG_counter=0;
   (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||'')}); });
@@ -5964,6 +5968,7 @@ function FIN_updateConfirmarBtnLabel(){
 }
 var FIN_nomeChecked=false;
 function FIN_confirmarOperacao(btn){
+  VB_carimboTS = null;
   var _nomeEl=document.getElementById('fin-tabelaDesc');
   if(!(_nomeEl.value||'').trim() && !FIN_nomeChecked){
     VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
@@ -6038,6 +6043,7 @@ function FIN_confirmarOperacao(btn){
 function FIN_limpar(){
   FIN_snapshot = null;
   FIN_currentOperationId = null;
+  VB_carimboTS = null;
   FIN_updateConfirmarBtnLabel();
   FIN_lastEdited='';
   FIN_lastSolved='';
@@ -6184,6 +6190,7 @@ function VEN_limpar(){
     var el = document.getElementById(id); if(el) el.value='';
   });
   VEN_currentOperationId = null;
+  VB_carimboTS = null;
   VEN_updateConfirmarBtnLabel();
   VEN_initTabela();
 }
@@ -6553,6 +6560,7 @@ function VEN_updateConfirmarBtnLabel(){
 }
 var VEN_nomeChecked=false;
 function VEN_confirmarOperacao(btn){
+  VB_carimboTS = null;
   var _nomeEl=document.getElementById('ven-tabelaDesc');
   if(!(_nomeEl.value||'').trim() && !VEN_nomeChecked){
     VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
@@ -6963,6 +6971,7 @@ function ANT_limpar(){
   ANT_titulos=[]; ANT_tituloCounter=0;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
   ANT_currentOperationId = null;
+  VB_carimboTS = null;
   ANT_updateConfirmarBtnLabel();
   ANT_autoFitLiquido();
   ANT_initData();
@@ -7447,10 +7456,14 @@ function ANT_gerarTabela(){
 }
 
 // Helper: retângulo arredondado (compatível com Safari antigo)
+// Timestamp da operação carregada (created_at) p/ carimbo bater com o Histórico; null = usa agora
+var VB_carimboTS = null;
 // Carimbo de data/hora no topo-direita das fotos geradas (coords lógicas, largura W)
 function VB_carimboData(ctx, W){
   try{
-    var d=new Date(), p=function(n){return String(n).padStart(2,'0');};
+    var d = VB_carimboTS ? new Date(VB_carimboTS) : new Date();
+    if(isNaN(d.getTime())) d=new Date();
+    var p=function(n){return String(n).padStart(2,'0');};
     var txt=p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
     ctx.save();
     ctx.font='500 9px Helvetica, Arial, sans-serif';
@@ -7481,6 +7494,7 @@ function ANT_updateConfirmarBtnLabel(){
 
 var ANT_nomeChecked=false;
 function ANT_confirmarOperacao(btn){
+  VB_carimboTS = null;
   var _nomeEl=document.getElementById('ant-tabelaCliente');
   if(!(_nomeEl.value||'').trim() && !ANT_nomeChecked){
     VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
@@ -8047,6 +8061,7 @@ function PAG_updateConfirmarBtnLabel(){
   b.textContent = PAG_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
 }
 function PAG_confirmarOperacao(btn){
+  VB_carimboTS = null;
   var total=PAG_parseBR(document.getElementById('pag-total').value);
   var itens=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; }).map(function(p){ return {desc:(p.desc||''), valor:(p.valor||'')}; });
 
@@ -8088,6 +8103,7 @@ function PAG_limpar(){
   document.getElementById('pag-saldo').textContent='R$ ---';
   document.getElementById('pag-soma').textContent='---';
   PAG_currentOperationId = null;
+  VB_carimboTS = null;
   PAG_updateConfirmarBtnLabel();
   PAG_setLinhasIniciais();
   PAG_render();
@@ -8853,7 +8869,9 @@ function QUIT_compartilhar(){
   }
 
   var img=document.getElementById('quit-tabelaImagem');
+  var _tsKeep=VB_carimboTS; VB_carimboTS=null; // Quitação é calculadora → carimbo = agora
   VB_carimboData(ctx, W);
+  VB_carimboTS=_tsKeep;
   img.src=cv.toDataURL('image/png'); img.style.display='block';
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
@@ -9705,6 +9723,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.34.2</span><span class="cl-ver-date">01/07/2026</span></div>
+      <div class="cl-item">O carimbo das fotos agora mostra a mesma data/hora do Histórico (o created_at da operação), não o momento do print. Operação carregada e recompartilhada mantém a data original; ao salvar de novo, acompanha a nova data. Operação nova (ainda sem salvar) e a Quitação, que é só calculadora, usam a hora atual</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.34.1</span><span class="cl-ver-date">01/07/2026</span></div>
+      <div class="cl-item">Seletores de Antecipação e Vendas com os rótulos em maiúsculo: SIMPLES / PERSONALIZADA</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.34.0</span><span class="cl-ver-date">01/07/2026</span></div>
