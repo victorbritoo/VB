@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.36.2</title>
+<title>VB - v1.36.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.36.2<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.36.5<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -790,10 +790,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <!-- PARCELAS -->
   <div class="field-card" style="padding:7px 16px;margin-bottom:4px;text-align:center;">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PARCELAS</div>
-    <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;">
-      <input class="input-big" style="text-align:center;width:60px;font-size:26px;font-weight:700;color:#111;" id="ven-qtd" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" onclick="this.select()">
-      <span style="font-size:11px;letter-spacing:1px;color:#aaa;font-weight:500;">vezes</span>
-    </div>
+    <input class="input-big" style="text-align:center;width:80px;font-size:26px;font-weight:700;color:#111;" id="ven-qtd" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" onclick="this.select()">
   </div>
 
   <!-- VALOR DA PARCELA -->
@@ -5186,11 +5183,11 @@ function HIST_styleSortChips(){
 }
 
 function HIST_loadTab(tab){
-  var keep=(HIST_searchGlobal && HIST_searchTerm) ? HIST_searchTerm : '';
+  var keep=HIST_searchTerm||'';
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
   HIST_searchTerm=keep;
-  HIST_searchGlobal=false;
+  HIST_searchGlobal=false; // aba marcada = busca só nessa aba
   HIST_resetFilter();
   HIST_styleSortChips();
   var sEl=document.getElementById('hist-search');
@@ -5212,7 +5209,7 @@ function HIST_refresh(){
   var sEl=document.getElementById('hist-search');
   if(sEl){ sEl.value=HIST_searchTerm||''; sEl.placeholder='Buscar em '+HIST_tabLabel(tab)+' (nome ou valor)'; }
   var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display = HIST_searchTerm ? 'inline-flex' : 'none';
-  HIST_searchOpen=false;
+  HIST_searchOpen=false; HIST_searchGlobal=false;
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
   HIST_updateLupa();
   HIST_updateFilterUIState();
@@ -5245,17 +5242,23 @@ function HIST_updateLupa(){
 function HIST_openSearch(){
   HIST_searchOpen=true;
   HIST_searchGlobal=true;
+  HIST_setTabStyle(null); // busca aberta = nenhuma aba marcada (global)
   var pl=document.getElementById('hist-search'); if(pl) pl.placeholder='Buscar em tudo (nome ou valor)';
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='block';
   var sEl=document.getElementById('hist-search');
   if(sEl){ try{ sEl.focus(); if(!sEl.value) sEl.select(); }catch(e){} }
   HIST_updateLupa();
+  if(HIST_searchTerm){ HIST_fetchGlobal(HIST_searchTerm); }
 }
 function HIST_collapseSearch(){
   HIST_searchOpen=false; HIST_searchGlobal=false;
+  var sEl=document.getElementById('hist-search'); if(sEl){ sEl.value=''; try{ sEl.blur(); }catch(e){} }
+  var limpou=!!HIST_searchTerm; HIST_searchTerm='';
+  var cl=document.getElementById('hist-search-clear'); if(cl) cl.style.display='none';
   var wrap=document.getElementById('hist-search-wrap'); if(wrap) wrap.style.display='none';
-  var sEl=document.getElementById('hist-search'); if(sEl){ try{ sEl.blur(); }catch(e){} }
+  HIST_setTabStyle(HIST_tabAtual); // volta a marcar a aba
   HIST_updateLupa();
+  if(limpou) HIST_fetch('');
 }
 function HIST_toggleSearch(){
   if(HIST_searchOpen) HIST_collapseSearch(); else HIST_openSearch();
@@ -5280,8 +5283,8 @@ function HIST_fetch(term){
   var col=HIST_nameCol(tab), valCol=HIST_valCol(tab);
   if(term){
     var safe=term.replace(/[,*()]/g,' ');
-    var ors=[];
-    if(col){ ors.push('nome.ilike.%'+safe+'%'); ors.push(col+'.ilike.%'+safe+'%'); }
+    var ors=['nome.ilike.%'+safe+'%'];
+    if(col) ors.push(col+'.ilike.%'+safe+'%');
     var num=HIST_parseNum(term);
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(ors.length) q=q.or(ors.join(','));
@@ -5330,8 +5333,8 @@ function HIST_fetchGlobal(term){
   var num=HIST_parseNum(term);
   Promise.all(tabs.map(function(tb){
     var col=HIST_nameCol(tb), valCol=HIST_valCol(tb);
-    var ors=[];
-    if(col){ ors.push('nome.ilike.%'+safe+'%'); ors.push(col+'.ilike.%'+safe+'%'); }
+    var ors=['nome.ilike.%'+safe+'%'];
+    if(col) ors.push(col+'.ilike.%'+safe+'%');
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(!ors.length) return Promise.resolve({tb:tb, rows:[]});
     var q=sb.from(HIST_tabela(tb)).select('*').or(ors.join(','));
@@ -6350,11 +6353,11 @@ function VEN_renderParcelas(){
     var obsOpen = p.obs ? 'block' : 'none';
     row.innerHTML =
       '<span style="font-size:10px;color:#bbb;font-weight:700;text-align:center;align-self:center;">'+String(p.id).padStart(2,'0')+'</span>'+
-      '<div style="display:flex;align-items:baseline;gap:1px;border-bottom:0.5px solid #ddd;padding-bottom:2px;">'+
+      '<div style="display:flex;align-items:baseline;justify-content:center;gap:1px;border-bottom:0.5px solid #ddd;padding-bottom:2px;">'+
         '<span style="font-size:10px;color:#aaa;">R$</span>'+
         '<input type="text" inputmode="numeric" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
         ' placeholder="0,00" value="'+(p.valor||'')+'"'+
-        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;font-family:-apple-system,sans-serif;">'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;text-align:center;font-family:-apple-system,sans-serif;">'+
       '</div>'+
       '<input type="text" inputmode="numeric" data-pid="'+p.id+'" data-field="data"'+
       ' placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" value="'+(p.data||'')+'"'+
@@ -9754,6 +9757,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.5</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Busca do Histórico no modelo final: tocar na lupa abre a busca em tudo e desmarca as abas; tocar numa aba durante a busca restringe os resultados só àquela aba (mantendo o texto digitado); fechar a busca volta ao normal com a aba marcada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.4</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Busca do Histórico agora é sempre em todas as abas: digitou, procura em Financiamento, Antecipação, Pagamentos e Vendas de uma vez, independente da aba selecionada. Acabou a busca restrita à aba — trocar de aba mantém a busca ativa e os resultados globais</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.3</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Busca do Histórico corrigida: em Pagamentos ela não olhava o nome da operação (só valor), então nomes personalizados como os dos pagamentos nunca eram encontrados — agora a busca por nome vale em todas as abas e na busca global. Vendas: removido o "vezes" do card PARCELAS e os valores das parcelas individuais ficaram centralizados na coluna</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.2</span><span class="cl-ver-date">02/07/2026</span></div>
