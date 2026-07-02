@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.36.5</title>
+<title>VB - v1.36.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.36.5<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.36.8<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -4084,7 +4084,8 @@ function VB_backupMenu(){
     ov.id='vb-backup-menu';
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10050;align-items:flex-end;justify-content:center;';
     ov.innerHTML='<div style="width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
-      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:14px;">BACKUP</div>'
+      +'<div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:4px;">BACKUP</div>'
+      +'<div id="vb-bkp-ultimo" style="text-align:center;font-size:11px;color:#bbb;font-weight:500;margin-bottom:14px;">—</div>'
       +'<button id="vb-bkp-json" style="width:100%;padding:13px;border:none;border-radius:14px;background:#111;color:#fff;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">BACKUP (JSON)</button>'
       +'<button id="vb-bkp-zip" style="width:100%;padding:13px;border:0.5px solid #ddd;border-radius:14px;background:#fff;color:#111;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">EXPORTAR IMAGENS (ZIP)</button>'
       +'<button id="vb-bkp-restore" style="width:100%;padding:13px;border:0.5px solid #c0392b;border-radius:14px;background:#fff;color:#c0392b;font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RESTAURAR BACKUP</button>'
@@ -4098,6 +4099,27 @@ function VB_backupMenu(){
     ov.querySelector('#vb-bkp-cancel').addEventListener('click', VB_backupMenuFechar);
   }
   ov.style.display='flex';
+  VB_bkpUltimoRender(VB_lerBackupLocal());
+  try{
+    sb.from('vb_meta').select('valor').eq('chave','ultimo_backup').maybeSingle().then(function(res){
+      if(res && res.data && res.data.valor){
+        var remoto=res.data.valor, local=VB_lerBackupLocal();
+        var best=(!local || new Date(remoto)>new Date(local)) ? remoto : local;
+        VB_bkpUltimoRender(best);
+      }
+    });
+  }catch(e){}
+}
+function VB_bkpUltimoRender(iso){
+  var el=document.getElementById('vb-bkp-ultimo'); if(!el) return;
+  if(!iso){ el.textContent='Nenhum backup feito ainda'; el.style.color='#c0392b'; return; }
+  var d=new Date(iso);
+  if(isNaN(d.getTime())){ el.textContent='—'; el.style.color='#bbb'; return; }
+  var pp=function(n){return ('0'+n).slice(-2);};
+  var txt='Último backup: '+pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear()+' '+pp(d.getHours())+':'+pp(d.getMinutes());
+  var dias=Math.floor((Date.now()-d.getTime())/86400000);
+  el.textContent=txt;
+  el.style.color = dias>=7 ? '#c0392b' : '#bbb';
 }
 function VB_backupMenuFechar(){ var ov=document.getElementById('vb-backup-menu'); if(ov) ov.style.display='none'; }
 
@@ -5067,8 +5089,8 @@ function HIST_bucketLabel(iso){
   var m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   return m[d.getMonth()]+' '+d.getFullYear();
 }
-function HIST_sectionHeader(label, first){
-  var cnt = first ? '<span id="hist-count-inline" style="font-size:11px;font-weight:600;letter-spacing:0.2px;color:#bbb;"></span>' : '';
+function HIST_sectionHeader(label, first, count){
+  var cnt = (count!=null) ? '<span style="font-size:11px;font-weight:600;letter-spacing:0.2px;color:#bbb;">'+count+' '+(count===1?'Operação':'Operações')+'</span>' : '';
   return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.4px;color:#aaa;margin:'+(first?'2px':'16px')+' 2px 8px;"><span>'+HIST_esc(label)+'</span>'+cnt+'</div>';
 }
 function HIST_setCount(text){
@@ -5306,12 +5328,12 @@ function HIST_fetch(term){
     // contador
     if(countEl){
       var n=rows.length, capped=(n>=500?'500+':n);
-      HIST_setCount((term?'Encontrado: ':'')+capped+' '+(n===1?'Operação':'Operações'));
+      HIST_setCount(term ? ('Encontrado: '+capped+' '+(n===1?'Operação':'Operações')) : '');
     }
     // total
     if(totalEl){
       var soma=rows.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
-      totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+')</span>'+
+      totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+rows.length+' '+(rows.length===1?'OPERAÇÃO':'OPERAÇÕES')+'</span>'+
         '<span style="font-size:15px;font-weight:700;">'+HIST_fmtMoeda(soma)+'</span>';
       totalEl.style.display='flex';
     }
@@ -5369,9 +5391,11 @@ function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
+  var bucketCount={};
+  if(grouping){ rows.forEach(function(r){ var bk=HIST_bucketLabel(r.created_at); bucketCount[bk]=(bucketCount[bk]||0)+1; }); }
   rows.forEach(function(r,idx){
     var rtab=r._tab||tab;
-    if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null); lastBucket=bk; } }
+    if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk]); lastBucket=bk; } }
     var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
     if(rtab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
@@ -9757,6 +9781,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.8</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Histórico: contador geral de operações voltou, agora dentro da barra preta do rodapé — TOTAL (BRUTO) · 5 OPERAÇÕES ao lado do valor. Vale pra todas as abas e respeita filtros</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.7</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Histórico: cada grupo de data (Hoje, Últimos 7 Dias, Últimos 30 Dias, meses) agora mostra no lado direito a quantidade de operações daquele grupo. O contador geral só aparece quando há busca ativa ("Encontrado: ...")</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.6</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Menu de backup agora mostra a data e hora do último backup logo abaixo do título (ex.: "Último backup: 02/07/2026 15:40"), lendo da vb_meta no Supabase. Fica vermelho se tiver 7+ dias ou se nunca houve backup</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.5</span><span class="cl-ver-date">02/07/2026</span></div>
