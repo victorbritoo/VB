@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.46.0</title>
+<title>VB - v1.46.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -8164,7 +8164,11 @@ function ANT_toggleModo(){
   }
 }
 
+var ANT_addLock=0;
 function ANT_adicionarTitulo(focus){
+  var agora=Date.now();
+  if(agora-ANT_addLock<500) return; // ignora toques repetidos (touchend+click no iOS)
+  ANT_addLock=agora;
   ANT_tituloCounter++;
   ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:'', tipo:'deb'});
   ANT_renderTitulos();
@@ -8234,7 +8238,7 @@ function ANT_renderTitulos(){
       '<input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" data-tid="'+t.id+'" data-field="data"'+
       ' style="border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:12px;color:#111;text-align:center;font-family:-apple-system,sans-serif;width:100%;min-width:0;"'+
       (t.data?' value="'+t.data+'"':'')+'>'+
-      '<button onclick="ANT_removerTitulo('+t.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;">×</button>';
+      '<button data-rmid="'+t.id+'" onclick="ANT_removerTituloArm(this,'+t.id+')" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0;line-height:1;width:22px;height:22px;">×</button>';
     lista.appendChild(row);
   });
   lista.querySelectorAll('[data-field="valor"]').forEach(function(el){
@@ -8255,6 +8259,17 @@ function ANT_renderTitulos(){
   });
 }
 
+function ANT_removerTituloArm(btn, id){
+  if(btn.dataset.armed!=='1'){
+    btn.dataset.armed='1';
+    btn.textContent='✓';
+    btn.style.color='#c0392b';
+    btn.style.fontWeight='700';
+    var t=setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='×'; btn.style.color='#ccc'; btn.style.fontWeight='400'; } },2500);
+    return;
+  }
+  ANT_removerTitulo(id);
+}
 function ANT_toggleTipo(id){
   var t=ANT_titulos.find(function(x){return x.id===id;});
   if(!t) return;
@@ -10412,6 +10427,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Títulos da Antecipação personalizada mais à prova de dedo: o + parou de adicionar dois de uma vez (o toque disparava touchend e click juntos no iOS — agora tem trava de 500ms), e o × de remover pede dois toques (primeiro vira ✓ vermelho, o segundo confirma) pra não apagar um título digitado sem querer</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.0</span><span class="cl-ver-date">03/07/2026</span></div>
