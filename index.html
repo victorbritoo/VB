@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.46.4</title>
+<title>VB - v1.46.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.4<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.6<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -8164,6 +8164,42 @@ function ANT_toggleModo(){
   }
 }
 
+var ANT_repArmed=false, ANT_repArmTimer=null;
+function ANT_repetirArm(){
+  var b=document.getElementById('ant-repetir-btn');
+  if(!ANT_repArmed){
+    ANT_repArmed=true;
+    if(b){ b.textContent='CONFIRMAR'; b.style.color='#fff'; b.style.background='#111'; b.style.borderColor='#111'; }
+    ANT_repArmTimer=setTimeout(function(){ ANT_repArmReset(); }, 2500);
+    return;
+  }
+  ANT_repArmReset();
+  ANT_repetirTitulos();
+}
+function ANT_repArmReset(){
+  ANT_repArmed=false;
+  if(ANT_repArmTimer){ clearTimeout(ANT_repArmTimer); ANT_repArmTimer=null; }
+  var b=document.getElementById('ant-repetir-btn');
+  if(b){ b.textContent='REPETIR'; b.style.color='#111'; b.style.background='#fff'; b.style.borderColor='#ddd'; }
+}
+var ANT_addArmed=false, ANT_addArmTimer=null;
+function ANT_addTituloArm(){
+  var b=document.getElementById('ant-add-titulo-btn');
+  if(!ANT_addArmed){
+    ANT_addArmed=true;
+    if(b){ b.textContent='CONFIRMAR'; b.style.color='#111'; b.style.borderColor='#111'; b.style.fontWeight='700'; }
+    ANT_addArmTimer=setTimeout(function(){ ANT_addArmReset(); }, 2500);
+    return;
+  }
+  ANT_addArmReset();
+  ANT_adicionarTitulo(true);
+}
+function ANT_addArmReset(){
+  ANT_addArmed=false;
+  if(ANT_addArmTimer){ clearTimeout(ANT_addArmTimer); ANT_addArmTimer=null; }
+  var b=document.getElementById('ant-add-titulo-btn');
+  if(b){ b.textContent='+ TÍTULO'; b.style.color='#aaa'; b.style.borderColor='#ddd'; b.style.fontWeight='500'; }
+}
 function ANT_adicionarTitulo(focus){
   ANT_tituloCounter++;
   ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:'', tipo:'deb'});
@@ -8188,8 +8224,8 @@ function VB_onTap(el, fn){
     el.addEventListener('click', function(){ fn(); });
   }
 }
-VB_onTap(document.getElementById('ant-add-titulo-btn'), function(){ ANT_adicionarTitulo(false); });
-VB_onTap(document.getElementById('ant-repetir-btn'), function(){ ANT_repetirTitulos(); });
+VB_onTap(document.getElementById('ant-add-titulo-btn'), function(){ ANT_addTituloArm(); });
+VB_onTap(document.getElementById('ant-repetir-btn'), function(){ ANT_repetirArm(); });
 
 function ANT_removerTitulo(id){
   ANT_titulos=ANT_titulos.filter(function(t){return t.id!==id;});
@@ -10424,6 +10460,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.6</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">O REPETIR também passou a pedir dois toques (CONFIRMAR), como o + TÍTULO e o × — era nele que a repetição acidental mais atrapalhava</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.5</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">O + TÍTULO da Antecipação personalizada agora pede dois toques, igual o × de remover: o primeiro toque mostra CONFIRMAR (preto), o segundo adiciona. Acaba de vez com o título repetido por toque acidental</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.4</span><span class="cl-ver-date">03/07/2026</span></div>
