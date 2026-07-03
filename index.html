@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.42.3</title>
+<title>VB - v1.42.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -294,6 +294,16 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="vb-c2-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100003;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
+    <div id="vb-c2-msg" style="font-size:13px;color:#555;font-weight:400;margin-bottom:16px;text-align:center;line-height:1.4;font-family:-apple-system,sans-serif;"></div>
+    <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+      <button id="vb-c2-yes" type="button" ontouchend="event.preventDefault();VB_c2Pick(true)" onclick="VB_c2Pick(true)" style="padding:13px;border:none;border-radius:12px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">SALVAR</button>
+      <button id="vb-c2-no" type="button" ontouchend="event.preventDefault();VB_c2Pick(false)" onclick="VB_c2Pick(false)" style="padding:13px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:12px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">DESCARTAR</button>
+    </div>
+  </div>
+</div>
+
 <div id="vb-sair-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100002;align-items:center;justify-content:center;padding:24px;">
   <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
     <div style="font-size:12px;letter-spacing:2px;color:#888;font-weight:600;margin-bottom:8px;text-align:center;font-family:-apple-system,sans-serif;">ALTERAÇÕES NÃO SALVAS</div>
@@ -356,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.42.3<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.42.4<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1254,7 +1264,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <hr class="divider">
 
   <!-- ADICIONAR COMPRA -->
-  <button id="mer-form-open" onclick="MER_toggleForm()" style="width:100%;padding:10px;border:0.5px dashed #ccc;border-radius:14px;background:transparent;font-size:11px;letter-spacing:2px;color:#888;font-weight:600;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">+ ADICIONAR</button>
+  <div style="display:flex;justify-content:center;margin-bottom:8px;"><button id="mer-form-open" onclick="MER_toggleForm()" style="width:44px;height:44px;border:0.5px solid #ddd;border-radius:50%;background:#fff;font-size:24px;font-weight:300;color:#555;cursor:pointer;font-family:-apple-system,sans-serif;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;">+</button></div>
   <div id="mer-form" class="field-card" style="padding:8px 16px;margin-bottom:4px;display:none;">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
     <input id="mer-desc" type="text" placeholder="ROLEX SUBMARINER 128610 SÉRIE X1Y2" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
@@ -3846,7 +3856,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   var cls = 'position:relative;background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:8px 14px;margin-bottom:5px;cursor:pointer;';
   var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:1px;">';
   // esquerda: setinha (se houver detalhe) + nome
   h += '<div style="display:flex;align-items:flex-start;gap:7px;flex:1;min-width:0;">';
   if(temExp){
@@ -3875,12 +3885,12 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
     h += '<div style="position:absolute;right:14px;top:calc(50% + 17px);transform:translateY(-50%);font-size:10px;color:#bbb;font-weight:500;white-space:nowrap;">'+HIST_esc(dataStr)+(horaStr?(' <span style="color:#ccc;">'+HIST_esc(horaStr)+'</span>'):'')+'</div>';
   }
   // linha resumo (sempre): valor + data (+ extra). Alinhada sob o nome (pula a setinha).
-  var valLabel = tab==='ant'?'Bruto: ':tab==='fin'?'Financiado: ':tab==='ven'?'Valor: ':'';
+  var valLabel = tab==='ant'?'Bruto: ':tab==='fin'?'Financiado: ':tab==='ven'?'Venda: ':'';
   var parts=[];
   if(valor){ parts.push('<span style="color:#111;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
   if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
-  if(parts.length) h += '<div style="font-size:11px;margin-top:0;line-height:1.35;padding-left:23px;padding-right:92px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
-  if(linha2) h += '<div style="font-size:11px;margin-top:0;line-height:1.35;padding-left:23px;padding-right:92px;">'+linha2+'</div>';
+  if(parts.length) h += '<div style="font-size:11px;margin-top:-1px;line-height:1.3;padding-left:23px;padding-right:92px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  if(linha2) h += '<div style="font-size:11px;margin-top:0;line-height:1.3;padding-left:23px;padding-right:92px;">'+linha2+'</div>';
   // detalhe expandível: grade 2 colunas (rótulo em cima, valor embaixo)
   if(temExp){
     h += '<div id="hist-exp-'+idx+'" style="display:none;margin-top:10px;padding:10px 0 2px 23px;border-top:0.5px solid #f0f0f0;">';
@@ -8863,11 +8873,52 @@ function MER_load(){
   if(el && !el.value) el.value=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
   sb.from('mercadorias').select('*').order('created_at',{ascending:false}).then(function(res){
     if(res.error){ document.getElementById('mer-lista').innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:24px;">Erro ao carregar: '+HIST_esc(res.error.message||res.error.code||'')+'</div>'; console.log('MER_load error:', res.error); return; }
-    MER_rows=res.data||[];
+    MER_rows=(res.data||[]).slice().sort(function(a,b){
+      var da=a.data_compra||a.created_at||'', db=b.data_compra||b.created_at||'';
+      return db<da?-1:db>da?1:0;
+    });
     MER_render();
   });
 }
+var VB_c2Cb=null;
+function VB_confirm2(msg, yesLabel, noLabel, cb){
+  document.getElementById('vb-c2-msg').textContent=msg;
+  document.getElementById('vb-c2-yes').textContent=yesLabel||'SALVAR';
+  document.getElementById('vb-c2-no').textContent=noLabel||'DESCARTAR';
+  VB_c2Cb=cb;
+  var ov=document.getElementById('vb-c2-overlay'); if(ov) ov.style.display='flex';
+}
+function VB_c2Pick(v){
+  var ov=document.getElementById('vb-c2-overlay'); if(ov) ov.style.display='none';
+  var cb=VB_c2Cb; VB_c2Cb=null;
+  if(cb) cb(v);
+}
+function MER_dirtyGuard(next){
+  if(!MER_editId) { next(); return; }
+  // compara valores atuais com o registro em edição
+  var r=MER_rows.find(function(x){return String(x.id)===String(MER_editId);});
+  var atual={
+    descricao:(document.getElementById('mer-desc').value||'').trim(),
+    custo:VEN_parseBR(document.getElementById('mer-custo').value)||0,
+    data:(document.getElementById('mer-data').value||''),
+    fornecedor:(document.getElementById('mer-fornecedor').value||'').trim(),
+    pagamento:(document.getElementById('mer-pagamento').value||'').trim(),
+    socio:(document.getElementById('mer-socio').value||'').trim(),
+    vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0
+  };
+  var orig= r ? {
+    descricao:(r.descricao||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
+    fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0
+  } : null;
+  var mudou = !orig || JSON.stringify(atual)!==JSON.stringify(orig);
+  if(!mudou){ MER_cancelEdit(); next(); return; }
+  VB_confirm2('Você alterou este item. Salvar as alterações?', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar){ MER_add(document.getElementById('mer-add-btn')); }
+    else { MER_cancelEdit(); next(); }
+  });
+}
 function MER_setTab(t){
+  if(MER_editId){ MER_dirtyGuard(function(){ MER_setTab(t); }); return; }
   MER_tab=t;
   var on ='padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;';
   var off='padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;';
@@ -8922,10 +8973,11 @@ function MER_toggleForm(force){
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   var abrir = (force===true) ? true : (force===false) ? false : (f.style.display==='none');
   f.style.display = abrir ? 'block' : 'none';
-  if(b) b.textContent = abrir ? '− FECHAR' : '+ ADICIONAR';
+  if(b){ b.textContent = abrir ? '×' : '+'; b.style.fontSize = abrir ? '22px' : '24px'; }
   if(!abrir && MER_editId) MER_cancelEdit();
 }
 function MER_editar(id){
+  if(MER_editId && String(MER_editId)!==String(id)){ MER_dirtyGuard(function(){ MER_editar(id); }); return; }
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
   MER_editId=r.id;
@@ -8950,7 +9002,7 @@ function MER_cancelEdit(){
   ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
-  if(f && f.style.display!=='none'){ f.style.display='none'; if(b) b.textContent='+ ADICIONAR'; }
+  if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
 }
 function MER_updateAddBtn(){
   var b=document.getElementById('mer-add-btn'), c=document.getElementById('mer-cancel-btn');
@@ -8958,6 +9010,7 @@ function MER_updateAddBtn(){
   if(c) c.style.display = MER_editId ? 'block' : 'none';
 }
 function MER_baixa(btn){
+  if(MER_editId){ var _id=btn.dataset.merid; MER_dirtyGuard(function(){ MER_load(); }); return; }
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='CONFIRMAR'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; btn.style.fontSize='9px'; btn.style.letterSpacing='1px'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='✓'; btn.style.color='#888'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; btn.style.fontSize='12px'; btn.style.letterSpacing='0'; },2500); return; }
   sb.from('mercadorias').update({status:'vendida'}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não deu baixa: '+(res.error.message||'')); return; }
@@ -10255,6 +10308,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.42.4</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Estoque: lista ordenada por data da compra (mais recente primeiro); ao editar um item e sair dele (trocar de aba, editar outro, dar baixa) o app pergunta se quer SALVAR ou DESCARTAR as alterações; o adicionar virou um botão + redondo no topo. Histórico de Vendas: Venda: no lugar de Total, e o lucro com sócio em Lucro VB: / Lucro [SÓCIO]:. Linhas de resumo ainda mais coladas ao título pra enxugar os cards</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.42.3</span><span class="cl-ver-date">03/07/2026</span></div>
