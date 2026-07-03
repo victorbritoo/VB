@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.44.1</title>
+<title>VB - v1.45.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.44.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.45.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -8996,6 +8996,21 @@ function MER_fmtData(iso){
   var p=(''+iso).slice(0,10).split('-');
   return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : '';
 }
+function MER_dias(iso){
+  if(!iso) return null;
+  var pp=(''+iso).split('T')[0].split('-'); if(pp.length!==3) return null;
+  var d=new Date(parseInt(pp[0]),parseInt(pp[1])-1,parseInt(pp[2]));
+  if(isNaN(d.getTime())) return null;
+  var hoje=new Date(); hoje.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  return Math.round((hoje-d)/86400000);
+}
+function MER_diasEntre(a,b){
+  if(!a||!b) return null;
+  function pd(x){ var pp=(''+x).split('T')[0].split('-'); return new Date(parseInt(pp[0]),parseInt(pp[1])-1,parseInt(pp[2])); }
+  var da=pd(a), db=pd(b); if(isNaN(da)||isNaN(db)) return null;
+  da.setHours(0,0,0,0); db.setHours(0,0,0,0);
+  return Math.round((db-da)/86400000);
+}
 function MER_render(){
   var lista=document.getElementById('mer-lista'); if(!lista) return;
   var termo=((document.getElementById('mer-busca')||{}).value||'').trim().toLowerCase();
@@ -9013,7 +9028,11 @@ function MER_render(){
       html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_editar(\''+r.id+'\')">'
         +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
-        +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+(MER_tab==='vendida'?' · <span style="color:#2e7d32;font-weight:700;">VENDIDA</span>':'')+'</div>'
+        +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)
+          +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
+          +((MER_tab==='estoque'&&r.data_compra&&MER_dias(r.data_compra)!=null)?(' <span style="color:#bbb;">('+MER_dias(r.data_compra)+'d em estoque)</span>'):'')
+          +((MER_tab==='vendida'&&r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' · <span style="color:#2e7d32;font-weight:700;">girou em '+MER_diasEntre(r.data_compra,r.data_venda)+'d</span>'):(MER_tab==='vendida'?' · <span style="color:#2e7d32;font-weight:700;">VENDIDA</span>':''))
+          +'</div>'
         +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
         +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((Number(r.custo)>0)?(' ('+Math.round((Number(r.valor_socio)||0)/Number(r.custo)*100)+'%)'):'')):'')+'</div>'):'')
         +'</div>'
@@ -9082,7 +9101,7 @@ function MER_updateAddBtn(){
 function MER_baixa(btn){
   if(MER_editId){ var _id=btn.dataset.merid; MER_dirtyGuard(function(){ MER_load(); }); return; }
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='CONFIRMAR'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; btn.style.fontSize='9px'; btn.style.letterSpacing='1px'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='✓'; btn.style.color='#888'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; btn.style.fontSize='12px'; btn.style.letterSpacing='0'; },2500); return; }
-  sb.from('mercadorias').update({status:'vendida'}).eq('id',btn.dataset.merid).then(function(res){
+  sb.from('mercadorias').update({status:'vendida', data_venda:(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})()}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não deu baixa: '+(res.error.message||'')); return; }
     VB_toast('Baixa dada: VENDIDA.');
     MER_load();
@@ -9090,7 +9109,7 @@ function MER_baixa(btn){
 }
 function MER_voltar(btn){
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='CONFIRMAR'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; btn.style.fontSize='9px'; btn.style.letterSpacing='1px'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='↩'; btn.style.color='#888'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; btn.style.fontSize='13px'; btn.style.letterSpacing='0'; },2500); return; }
-  sb.from('mercadorias').update({status:'estoque', venda_id:null}).eq('id',btn.dataset.merid).then(function(res){
+  sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
     VB_toast('De volta ao estoque.');
     MER_load();
@@ -10381,6 +10400,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.45.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Tempo em estoque: cada item na aba ESTOQUE mostra há quantos dias está parado — ex.: Custo R$ 50.000 · 01/06/2026 (32d em estoque). Nos VENDIDOS, mostra em quanto tempo o item girou (da compra até a baixa) — ex.: girou em 18d. A data da baixa passa a ser gravada (SQL: alter table mercadorias add column if not exists data_venda date;) e é limpa se o item voltar ao estoque. Vendidos antigos, sem data de baixa registrada, seguem só com a marca VENDIDA</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.44.1</span><span class="cl-ver-date">03/07/2026</span></div>
