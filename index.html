@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.44.0</title>
+<title>VB - v1.44.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.44.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.44.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -4908,7 +4908,19 @@ function VB_relatorioPDF(dados, total, returnImages){
              {h:'Custo', x:456, w:110, r:1, get:function(r){return (r.custo!=null)?money(r.custo):'—';}},
              {h:'Lucro', x:572, w:100, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return money(l); }},
              {h:'Lucro VB', x:678, w:102, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0; if(r.socio&&vs>0&&c>0){ var pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; return money(l*(pVB/100)); } return money(l); }} ],
-      somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} },
+      somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;},
+      extraSelos:function(rows){
+        var lucroTot=0, lucroVB=0;
+        (rows||[]).forEach(function(r){
+          if(r.custo==null) return;
+          var l=Number(r.valor_total||0)-Number(r.custo||0);
+          lucroTot+=l;
+          var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0;
+          if(r.socio&&vs>0&&c>0){ var pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; lucroVB+=l*(pVB/100); }
+          else { lucroVB+=l; }
+        });
+        return [ {label:'LUCRO TOTAL', valor:lucroTot}, {label:'LUCRO VB', valor:lucroVB} ];
+      } },
     { key:'pagamentos', titulo:'PAGAMENTOS', date:'created_at',
       cols:[ {h:'Data', x:pad, w:150, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
              {h:'Total', x:320, w:200, r:1, get:function(r){return money(r.valor_total);}},
@@ -5007,6 +5019,19 @@ function VB_relatorioPDF(dados, total, returnImages){
     c3.fillText(sec.somaLabel, bx+12, by+14);
     c3.fillStyle=_ac; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
     c3.fillText('R$ '+_num(soma), bx+boxW-12, by+23);
+    // selos extras (ex.: Vendas -> Lucro Total, Lucro VB) alinhados à esquerda do selo principal
+    if(sec.extraSelos){
+      var extras=sec.extraSelos(rows)||[];
+      var ew=190, eh=boxH, gap=10, ex=bx-gap-ew;
+      extras.slice().reverse().forEach(function(s){
+        c3.strokeStyle='#ccc'; c3.lineWidth=1; c3.strokeRect(ex, by, ew, eh);
+        c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
+        c3.fillText(s.label, ex+12, by+14);
+        c3.fillStyle='#111'; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
+        c3.fillText('R$ '+_num(s.valor), ex+ew-12, by+23);
+        ex -= (ew+gap);
+      });
+    }
     cur.y+=boxH+10;
     cur.y+=16;
   });
@@ -10356,6 +10381,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.44.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Relatório de Vendas melhorado pra sócios: além do selo TOTAL, agora traz dois selos ao lado — LUCRO TOTAL (lucro cheio de todas as vendas) e LUCRO VB (a sua parte real, considerando a divisão de lucro de cada venda com sócio). Assim o relatório fecha com quanto foi vendido, o lucro do conjunto e quanto é seu de fato</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.44.0</span><span class="cl-ver-date">03/07/2026</span></div>
