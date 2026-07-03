@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.37.2</title>
+<title>VB - v1.37.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.2<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.3<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -827,7 +827,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">CUSTO</div>
         <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
           <span style="font-size:11px;color:#aaa;">R$</span>
-          <input id="ven-custo" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" oninput="VEN_updateLucro()" style="border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;width:100px;text-align:center;font-family:-apple-system,sans-serif;">
+          <input id="ven-custo" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;width:100px;text-align:center;font-family:-apple-system,sans-serif;">
         </div>
       </div>
       <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
@@ -835,9 +835,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <span id="ven-lucro" style="font-size:16px;font-weight:700;color:#111;">---</span>
       </div>
     </div>
-    <hr style="border:none;border-top:0.5px solid #eee;margin:6px 0;">
-    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">IDENTIFICAÇÃO</div>
-    <input id="ven-ident" type="text" placeholder="Nº de série, IMEI, placa..." style="width:100%;border:none;background:transparent;outline:none;font-size:13px;font-weight:600;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
   </div>
 
   <div class="field-card" style="margin-top:4px;padding:8px 16px;">
@@ -3717,7 +3714,6 @@ function HIST_carregarVen(r){
   VEN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   document.getElementById('ven-custo').value = r.custo!=null ? VEN_formatBR(Number(r.custo)) : '';
-  document.getElementById('ven-ident').value = r.identificacao||'';
   VEN_updateLucro();
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
@@ -5637,7 +5633,7 @@ function ANT_assinatura(){
 }
 function VEN_assinatura(){
   return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-total'),VB_val('ven-qtd'),
-    VB_val('ven-parcela'),VB_val('ven-tabelaData'),VB_val('ven-custo'),VB_val('ven-ident'),
+    VB_val('ven-parcela'),VB_val('ven-tabelaData'),VB_val('ven-custo'),
     (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
     (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs];}):[])]);
 }
@@ -6304,7 +6300,8 @@ function VEN_update(){
   }
 }
 
-VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_update(); });
+VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_update(); VEN_updateLucro(); });
+VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
 (function(){
   var vtd=document.getElementById('ven-tabelaData');
   if(vtd) vtd.addEventListener('input',function(){
@@ -6326,7 +6323,7 @@ function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
   if(VEN_modoPersonalizado) VEN_togglePersonalizar();
-  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo','ven-ident'].forEach(function(id){
+  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
   VEN_currentOperationId = null;
@@ -6741,8 +6738,7 @@ function VEN_confirmarOperacao(btn){
     quantidade_parcelas: qtd>0?qtd:null,
     valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
     parcelas: parcelasPayload,
-    custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })(),
-    identificacao: ((document.getElementById('ven-ident').value||'').trim() || null)
+    custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })()
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
@@ -9872,6 +9868,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.3</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Vendas: removido o campo IDENTIFICAÇÃO — a própria DESCRIÇÃO cumpre esse papel (nº de série, placa etc. vão nela, e a busca já encontra por ela). O card ficou só CUSTO | LUCRO. Custo agora com máscara de dinheiro igual aos demais campos (casas decimais ao digitar), e o lucro recalcula também quando o valor total muda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.2</span><span class="cl-ver-date">02/07/2026</span></div>
