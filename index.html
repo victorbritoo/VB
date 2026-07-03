@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.36.8</title>
+<title>VB - v1.37.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.36.8<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.0<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -5292,6 +5292,33 @@ function HIST_setSort(col){
   HIST_fetch(HIST_searchTerm);
 }
 
+// Lucro por operação: ant = juros (bruto − líquido − tarifa; atrasados fora),
+// fin = juros totais ou spread do investidor, ven = total − custo (quando houver custo)
+function HIST_lucroRow(tab, r){
+  if(tab==='ant'){
+    var b=Number(r.valor_bruto)||0, l=Number(r.valor_liquido)||0;
+    if(l>b) return null; // atrasado
+    var j=b-l-(Number(r.tarifa)||0);
+    return isFinite(j)?j:null;
+  }
+  if(tab==='fin'){
+    var n=Number(r.qtd_parcelas)||0;
+    if(r.tem_investidor){
+      if(r.vb_parcela!=null) return Number(r.vb_parcela)*n;
+      if(r.valor_parcela!=null && r.investidor_parcela!=null) return (Number(r.valor_parcela)-Number(r.investidor_parcela))*n;
+      return null;
+    }
+    if(r.valor_total!=null && r.valor_financiado!=null) return Number(r.valor_total)-Number(r.valor_financiado);
+    if(r.valor_parcela!=null && n) return Number(r.valor_parcela)*n-(Number(r.valor_financiado)||0);
+    return null;
+  }
+  if(tab==='ven'){
+    if(r.custo==null || r.custo==='') return null;
+    return (Number(r.valor_total)||0)-(Number(r.custo)||0);
+  }
+  return null;
+}
+
 function HIST_fetch(term){
   var tab=HIST_tabAtual;
   var listaEl=document.getElementById('hist-lista');
@@ -5333,8 +5360,32 @@ function HIST_fetch(term){
     // total
     if(totalEl){
       var soma=rows.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
-      totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+rows.length+' '+(rows.length===1?'OPERAÇÃO':'OPERAÇÕES')+'</span>'+
-        '<span style="font-size:15px;font-weight:700;">'+HIST_fmtMoeda(soma)+'</span>';
+      var nOps=rows.length, opsTxt=nOps+' '+(nOps===1?'OPERAÇÃO':'OPERAÇÕES');
+      var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
+      var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
+      if(tab==='ant'){
+        var atr=0, temAtr=false, lucro=0, temL=false;
+        rows.forEach(function(r){
+          var b=Number(r.valor_bruto)||0, l=Number(r.valor_liquido)||0;
+          if(l>b){ atr+=b; temAtr=true; }
+          else { var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; } }
+        });
+        totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;text-align:center;">'
+          +'<div>'+lbl('ATRASADOS')+val(temAtr?HIST_fmtMoeda(atr):'—', temAtr?'#ff6b6b':null)+'</div>'
+          +'<div>'+lbl('BRUTO · '+opsTxt)+val(HIST_fmtMoeda(soma))+'</div>'
+          +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'—')+'</div>'
+          +'</div>';
+      } else if(tab==='fin' || tab==='ven'){
+        var lucro2=0, temL2=false;
+        rows.forEach(function(r){ var j=HIST_lucroRow(tab, r); if(j!=null){ lucro2+=j; temL2=true; } });
+        totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+          +'<div>'+lbl('TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt)+val(HIST_fmtMoeda(soma))+'</div>'
+          +'<div>'+lbl('LUCRO')+val(temL2?HIST_fmtMoeda(lucro2):'—')+'</div>'
+          +'</div>';
+      } else {
+        totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt+'</span>'+
+          '<span style="font-size:15px;font-weight:700;">'+HIST_fmtMoeda(soma)+'</span>';
+      }
       totalEl.style.display='flex';
     }
   }).catch(function(e){
@@ -9781,6 +9832,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.0</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Barra de totais do Histórico com lucro por aba. Antecipação: três colunas — ATRASADOS (em vermelho), BRUTO (com nº de operações) e LUCRO (só os juros: bruto − líquido − tarifa; atrasados ficam fora do lucro). Financiamento: TOTAL + LUCRO (juros totais; com investidor, o spread = parcela VB × nº de parcelas). Vendas: TOTAL + LUCRO (total − custo, das vendas que tiverem custo — campo que chega na próxima fase). Pagamentos sem mudança</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.36.8</span><span class="cl-ver-date">02/07/2026</span></div>
