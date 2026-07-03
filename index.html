@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.41.1</title>
+<title>VB - v1.41.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.41.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.41.2<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1254,7 +1254,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <hr class="divider">
 
   <!-- ADICIONAR COMPRA -->
-  <div class="field-card" style="padding:8px 16px;margin-bottom:4px;">
+  <button id="mer-form-open" onclick="MER_toggleForm()" style="width:100%;padding:10px;border:0.5px dashed #ccc;border-radius:14px;background:transparent;font-size:11px;letter-spacing:2px;color:#888;font-weight:600;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">+ ADICIONAR MERCADORIA</button>
+  <div id="mer-form" class="field-card" style="padding:8px 16px;margin-bottom:4px;display:none;">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
     <input id="mer-desc" type="text" placeholder="ROLEX SUBMARINER 128610 SÉRIE X1Y2" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
     <div class="two-col" style="margin-top:6px;">
@@ -8837,12 +8838,12 @@ function MER_render(){
         +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
         +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+(MER_tab==='vendida'?' · <span style="color:#2e7d32;font-weight:700;">VENDIDA</span>':'')+'</div>'
         +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
-        +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)):'')+'</div>'):'')
+        +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((Number(r.custo)>0)?(' ('+Math.round((Number(r.valor_socio)||0)/Number(r.custo)*100)+'%)'):'')):'')+'</div>'):'')
         +'</div>'
         +(MER_tab==='estoque'
           ? '<button data-merid="'+r.id+'" onclick="MER_baixa(this)" title="Dar baixa (vendida)" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:12px;color:#888;cursor:pointer;padding:3px 8px;flex-shrink:0;font-weight:700;">✓</button>'
             +'<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0;">×</button>'
-          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:12px;color:#888;cursor:pointer;padding:3px 8px;flex-shrink:0;font-weight:700;">↩</button>')
+          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:9px;letter-spacing:1px;color:#888;cursor:pointer;padding:4px 8px;flex-shrink:0;font-weight:700;font-family:-apple-system,sans-serif;">VOLTAR</button>')
         +'</div>';
     });
     lista.innerHTML=html;
@@ -8861,6 +8862,13 @@ function MER_render(){
   }
 }
 var MER_editId=null;
+function MER_toggleForm(force){
+  var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
+  var abrir = (force===true) ? true : (force===false) ? false : (f.style.display==='none');
+  f.style.display = abrir ? 'block' : 'none';
+  if(b) b.textContent = abrir ? '− FECHAR' : '+ ADICIONAR MERCADORIA';
+  if(!abrir && MER_editId) MER_cancelEdit();
+}
 function MER_editar(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
@@ -8877,6 +8885,7 @@ function MER_editar(id){
     if(d && d.style.display==='none') MER_toggleDetalhes();
   }
   MER_updateAddBtn();
+  MER_toggleForm(true);
   window.scrollTo(0,0);
   VB_toast('Editando. Salve ou cancele.');
 }
@@ -8884,6 +8893,8 @@ function MER_cancelEdit(){
   MER_editId=null;
   ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   MER_updateAddBtn();
+  var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
+  if(f && f.style.display!=='none'){ f.style.display='none'; if(b) b.textContent='+ ADICIONAR MERCADORIA'; }
 }
 function MER_updateAddBtn(){
   var b=document.getElementById('mer-add-btn'), c=document.getElementById('mer-cancel-btn');
@@ -8899,7 +8910,7 @@ function MER_baixa(btn){
   });
 }
 function MER_voltar(btn){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='VOLTAR?'; btn.style.color='#c0392b'; btn.style.borderColor='#c0392b'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='↩'; btn.style.color='#888'; btn.style.borderColor='#ddd'; },2500); return; }
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='CONFIRMA?'; btn.style.color='#c0392b'; btn.style.borderColor='#c0392b'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='VOLTAR'; btn.style.color='#888'; btn.style.borderColor='#ddd'; },2500); return; }
   sb.from('mercadorias').update({status:'estoque', venda_id:null}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
     VB_toast('De volta ao estoque.');
@@ -8940,6 +8951,7 @@ function MER_add(btn){
     MER_editId=null;
     ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     MER_updateAddBtn();
+    MER_toggleForm(false);
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
     MER_load();
   });
@@ -10187,6 +10199,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.41.2</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Mercadorias: percentual de participação do sócio ao lado do valor dele na lista (ex.: R$ 56.000,00 (50%)); botão de voltar ao estoque virou texto VOLTAR no padrão do app (sem setinha); formulário de cadastro agora fica fechado, abrindo pelo botão + ADICIONAR MERCADORIA (e abre sozinho ao tocar num item pra editar; fecha ao salvar ou cancelar)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.41.1</span><span class="cl-ver-date">03/07/2026</span></div>
