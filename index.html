@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.37.3</title>
+<title>VB - v1.38.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.3<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.38.0<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -771,11 +771,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <div class="simulacao-label">VENDAS</div>
   </div>
-  <!-- SELETOR SIMPLES / PERSONALIZADA -->
-  <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
-    <button id="ven-seg-simples" onclick="VEN_setModo('simples')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">SIMPLES</button>
-    <button id="ven-seg-pers" onclick="VEN_setModo('pers')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">PERSONALIZADA</button>
-  </div>
   <hr class="divider">
 
   <!-- VALOR TOTAL DA VENDA -->
@@ -807,7 +802,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <!-- SEÇÃO PERSONALIZAR PARCELAS -->
   <div id="ven-secPersonalizado" style="display:none;margin-bottom:4px;">
     <div style="background:#fff;border-radius:14px;border:0.5px solid #e0e0e0;padding:10px 16px;">
-      <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:5px;text-align:center;">PARCELAS INDIVIDUAIS</div>
+      <div style="font-size:10px;letter-spacing:2px;color:#999;font-weight:500;margin-bottom:5px;text-align:center;">PARCELAS</div>
       <div style="display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;margin-bottom:6px;">
         <span></span>
         <span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:500;text-align:center;">VALOR</span>
@@ -816,6 +811,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <span></span>
       </div>
       <div id="ven-listaParcelas"></div>
+      <button onclick="VEN_repetirParcela()" style="width:100%;padding:7px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
     </div>
   </div>
 
@@ -3718,16 +3714,18 @@ function HIST_carregarVen(r){
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
+    VEN_modoPersonalizado=true;
     VEN_parcelas=[]; VEN_parcelaCounter=0;
     r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
-    if(!VEN_modoPersonalizado) VEN_togglePersonalizar(); else VEN_renderParcelas();
+    VEN_renderParcelas(); VEN_mostrarLista(true);
     VEN_syncFromParcelas();
   } else {
+    VEN_modoPersonalizado=false;
     if(r.quantidade_parcelas) document.getElementById('ven-qtd').value=String(r.quantidade_parcelas);
     if(r.valor_parcela){ document.getElementById('ven-parcela').value=VEN_formatBR(Number(r.valor_parcela)); }
     if(r.data_primeira_parcela){ var pp=r.data_primeira_parcela.split('-'); document.getElementById('ven-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
-    if(VEN_modoPersonalizado) VEN_togglePersonalizar();
     VEN_update && VEN_update();
+    VEN_autoLista();
   }
   VEN_updateConfirmarBtnLabel();
   VEN_snapshot = VEN_assinatura();
@@ -6300,7 +6298,7 @@ function VEN_update(){
   }
 }
 
-VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_update(); VEN_updateLucro(); });
+VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_modoPersonalizado=false; VEN_update(); VEN_updateLucro(); VEN_autoLista(); });
 VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
 (function(){
   var vtd=document.getElementById('ven-tabelaData');
@@ -6311,18 +6309,21 @@ VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
     if(raw.length>2) v+='/'+raw.substring(2,4);
     if(raw.length>4) v+='/'+raw.substring(4,8);
     this.value=v;
+    if(this.value.length===10){ VEN_modoPersonalizado=false; VEN_autoLista(); }
   });
 })();
-VEN_maskVal(document.getElementById('ven-parcela'), function(){ VEN_parcelaManual=true; VEN_update(); });
+VEN_maskVal(document.getElementById('ven-parcela'), function(){ VEN_parcelaManual=true; VEN_modoPersonalizado=false; VEN_update(); VEN_autoLista(); });
 document.getElementById('ven-qtd').addEventListener('input', function(){
   this.value = this.value.replace(/\D/g,'');
+  VEN_modoPersonalizado=false;
   VEN_update();
+  VEN_autoLista();
 });
 
 function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
-  if(VEN_modoPersonalizado) VEN_togglePersonalizar();
+  VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
@@ -6392,37 +6393,29 @@ function VEN_syncFromParcelas(){
   document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? VEN_formatBR(soma/count) : '';
 }
 
-function VEN_setModo(modo){
-  var querPers = (modo==='pers');
-  if(querPers !== VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
-  else { VEN_updateSeg(); }
+// Fluxo único: a lista de parcelas é gerada dos campos de cima e fica sempre editável.
+// VEN_modoPersonalizado agora significa "lista editada manualmente".
+function VEN_mostrarLista(show){ var sec=document.getElementById('ven-secPersonalizado'); if(sec) sec.style.display=show?'block':'none'; }
+function VEN_autoLista(){
+  if(VEN_modoPersonalizado) return; // edição manual em curso: não regenerar
+  var qtd=parseInt(document.getElementById('ven-qtd').value||'0');
+  if(qtd>0){ VEN_popularParcelas(); VEN_mostrarLista(true); }
+  else { VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false); }
 }
-function VEN_updateSeg(){
-  var bS=document.getElementById('ven-seg-simples');
-  var bP=document.getElementById('ven-seg-pers');
-  var on ='padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;';
-  var off='padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;';
-  if(VEN_modoPersonalizado){ if(bP)bP.style.cssText=on; if(bS)bS.style.cssText=off; }
-  else { if(bS)bS.style.cssText=on; if(bP)bP.style.cssText=off; }
-}
-function VEN_togglePersonalizar(){
-  VEN_modoPersonalizado = !VEN_modoPersonalizado;
-  VEN_updateSeg();
-  var sec  = document.getElementById('ven-secPersonalizado');
-  var secData = document.getElementById('ven-secTabelaData');
-
-  if(VEN_modoPersonalizado){
-    sec.style.display = 'block';
-    secData.style.display = 'none';
-    document.getElementById('ven-cardParcela').style.display = 'none';
-    VEN_popularParcelas();
-  } else {
-    sec.style.display = 'none';
-    secData.style.display = 'block';
-    document.getElementById('ven-cardParcela').style.display = 'block';
-    VEN_parcelas = [];
-    VEN_parcelaCounter = 0;
+function VEN_repetirParcela(){
+  var last=VEN_parcelas[VEN_parcelas.length-1];
+  VEN_parcelaCounter++;
+  var novo={id:VEN_parcelaCounter, valor:(last?last.valor:''), data:'', obs:''};
+  if(last && last.data){
+    var pp=last.data.split('/');
+    if(pp.length===3){
+      var d=new Date(parseInt(pp[2]),parseInt(pp[1]),parseInt(pp[0])); // mês +1
+      novo.data=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    }
   }
+  VEN_parcelas.push(novo);
+  VEN_modoPersonalizado=true;
+  VEN_renderParcelas(); VEN_syncFromParcelas(); VEN_mostrarLista(true);
 }
 
 function VEN_popularParcelas(){
@@ -6490,7 +6483,7 @@ function VEN_renderParcelas(){
       var raw = this.value.replace(/\D/g,'');
       this.value = raw ? VEN_formatBR(parseInt(raw)/100) : '';
       var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
-      if(p){ p.valor = this.value; VEN_syncFromParcelas(); }
+      if(p){ p.valor = this.value; VEN_modoPersonalizado=true; VEN_syncFromParcelas(); }
     });
   });
 
@@ -6499,7 +6492,7 @@ function VEN_renderParcelas(){
     el.addEventListener('input',function(){
       this.value=this.value.toUpperCase();
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
-      if(p) p.obs=this.value;
+      if(p){ p.obs=this.value; VEN_modoPersonalizado=true; }
     });
   });
 
@@ -6513,7 +6506,7 @@ function VEN_renderParcelas(){
       if(raw.length>4) v += '/'+raw.substring(4,8);
       this.value = v;
       var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
-      if(p) p.data = this.value;
+      if(p){ p.data = this.value; VEN_modoPersonalizado=true; }
     });
   });
   // Botão "i" (observação): dispara no toque pra abrir o teclado no iPhone
@@ -6527,6 +6520,7 @@ function VEN_renderParcelas(){
 
 function VEN_removerParcela(id){
   VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
+  VEN_modoPersonalizado=true;
   VEN_renderParcelas();
   VEN_syncFromParcelas();
 }
@@ -6789,8 +6783,7 @@ function VEN_aplicar(obj){
   var perso=!!obj.perso;
   VEN_currentOperationId = obj.id || null;
   VEN_updateConfirmarBtnLabel();
-  if(perso && !VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
-  else if(!perso && VEN_modoPersonalizado){ VEN_togglePersonalizar(); }
+  VEN_modoPersonalizado = perso;
   document.getElementById('ven-total').value   = obj.tot||'';
   document.getElementById('ven-qtd').value     = obj.qtd||'';
   document.getElementById('ven-parcela').value = obj.parc||'';
@@ -6804,8 +6797,10 @@ function VEN_aplicar(obj){
     });
     VEN_renderParcelas();
     VEN_syncFromParcelas();
+    VEN_mostrarLista(true);
   } else {
     VEN_parcelaManual=false;
+    VEN_autoLista();
   }
   return true;
 }
@@ -9868,6 +9863,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.38.0</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Vendas unificada num fluxo só: acabou o seletor SIMPLES/PERSONALIZADA. Preencheu valor, parcelas e 1ª data, a lista de parcelas aparece gerada automaticamente (iguais, mês a mês) e é sempre editável — mexeu num valor ou data, o total recalcula. Novo botão + REPETIR ÚLTIMA duplica a última parcela pulando um mês, igual à Antecipação. Mexer nos campos de cima regenera a lista do zero. Vendas antigas dos dois modos carregam normalmente, e o salvamento continua compatível (lista intacta salva como simples; lista editada salva as parcelas individuais)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.3</span><span class="cl-ver-date">02/07/2026</span></div>
