@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.40.0</title>
+<title>VB - v1.40.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.40.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.40.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1295,7 +1295,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         </div>
       </div>
     </div>
-    <button onclick="MER_add(this)" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ ADICIONAR AO ESTOQUE</button>
+    <button id="mer-add-btn" onclick="MER_add(this)" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ ADICIONAR AO ESTOQUE</button>
+    <button id="mer-cancel-btn" onclick="MER_cancelEdit()" style="display:none;width:100%;padding:7px;border:none;background:transparent;font-size:10px;letter-spacing:2px;color:#c0392b;font-weight:600;cursor:pointer;margin-top:4px;">CANCELAR EDIÇÃO</button>
   </div>
 
   <!-- SELETOR ESTOQUE / VENDIDAS -->
@@ -6416,7 +6417,6 @@ document.getElementById('ven-qtd').addEventListener('input', function(){
 function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
-  VEN_mercadoriaId = null;
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
@@ -6853,10 +6853,6 @@ function VEN_confirmarOperacao(btn){
       return;
     }
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
-    if(VEN_mercadoriaId){
-      sb.from('mercadorias').update({status:'vendida', venda_id: VEN_currentOperationId||null}).eq('id',VEN_mercadoriaId).then(function(){});
-      VEN_mercadoriaId=null;
-    }
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -8806,15 +8802,16 @@ function MER_render(){
     var html='';
     rows.forEach(function(r){
       html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
-        +'<div style="flex:1;min-width:0;">'
+        +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_editar(\''+r.id+'\')">'
         +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
         +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+(MER_tab==='vendida'?' · <span style="color:#2e7d32;font-weight:700;">VENDIDA</span>':'')+'</div>'
         +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
         +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)):'')+'</div>'):'')
         +'</div>'
         +(MER_tab==='estoque'
-          ? '<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0;">×</button>'
-          : '')
+          ? '<button data-merid="'+r.id+'" onclick="MER_baixa(this)" title="Dar baixa (vendida)" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:12px;color:#888;cursor:pointer;padding:3px 8px;flex-shrink:0;font-weight:700;">✓</button>'
+            +'<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0;">×</button>'
+          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:12px;color:#888;cursor:pointer;padding:3px 8px;flex-shrink:0;font-weight:700;">↩</button>')
         +'</div>';
     });
     lista.innerHTML=html;
@@ -8831,6 +8828,52 @@ function MER_render(){
       +'</span>';
     tot.style.display='flex';
   }
+}
+var MER_editId=null;
+function MER_editar(id){
+  var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
+  if(!r) return;
+  MER_editId=r.id;
+  document.getElementById('mer-desc').value=r.descricao||'';
+  document.getElementById('mer-custo').value=r.custo!=null?MER_fmtBR(r.custo):'';
+  document.getElementById('mer-data').value=MER_fmtData(r.data_compra)||'';
+  document.getElementById('mer-fornecedor').value=r.fornecedor||'';
+  document.getElementById('mer-pagamento').value=r.pagamento||'';
+  document.getElementById('mer-socio').value=r.socio||'';
+  document.getElementById('mer-valorSocio').value=r.valor_socio!=null?MER_fmtBR(r.valor_socio):'';
+  if(r.fornecedor||r.pagamento||r.socio||r.valor_socio){
+    var d=document.getElementById('mer-detalhes');
+    if(d && d.style.display==='none') MER_toggleDetalhes();
+  }
+  MER_updateAddBtn();
+  window.scrollTo(0,0);
+  VB_toast('Editando. Salve ou cancele.');
+}
+function MER_cancelEdit(){
+  MER_editId=null;
+  ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  MER_updateAddBtn();
+}
+function MER_updateAddBtn(){
+  var b=document.getElementById('mer-add-btn'), c=document.getElementById('mer-cancel-btn');
+  if(b) b.textContent = MER_editId ? 'SALVAR ALTERAÇÕES' : '+ ADICIONAR AO ESTOQUE';
+  if(c) c.style.display = MER_editId ? 'block' : 'none';
+}
+function MER_baixa(btn){
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='VENDIDA?'; btn.style.color='#c0392b'; btn.style.borderColor='#c0392b'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='✓'; btn.style.color='#888'; btn.style.borderColor='#ddd'; },2500); return; }
+  sb.from('mercadorias').update({status:'vendida'}).eq('id',btn.dataset.merid).then(function(res){
+    if(res.error){ VB_toast('Não deu baixa: '+(res.error.message||'')); return; }
+    VB_toast('Baixa dada: VENDIDA.');
+    MER_load();
+  });
+}
+function MER_voltar(btn){
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='VOLTAR?'; btn.style.color='#c0392b'; btn.style.borderColor='#c0392b'; setTimeout(function(){ btn.dataset.armed=''; btn.textContent='↩'; btn.style.color='#888'; btn.style.borderColor='#ddd'; },2500); return; }
+  sb.from('mercadorias').update({status:'estoque', venda_id:null}).eq('id',btn.dataset.merid).then(function(res){
+    if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
+    VB_toast('De volta ao estoque.');
+    MER_load();
+  });
 }
 function MER_toggleDetalhes(){
   var d=document.getElementById('mer-detalhes'), t=document.getElementById('mer-det-toggle');
@@ -8850,16 +8893,23 @@ function MER_add(btn){
   var pgto=(document.getElementById('mer-pagamento').value||'').trim();
   var socio=(document.getElementById('mer-socio').value||'').trim();
   var vSocio=VEN_parseBR(document.getElementById('mer-valorSocio').value);
-  if(btn){ btn.disabled=true; btn.textContent='ADICIONANDO...'; }
-  sb.from('mercadorias').insert({
-    descricao:desc, custo:custo, data_compra:iso, status:'estoque',
+  var payload={
+    descricao:desc, custo:custo, data_compra:iso,
     fornecedor: forn||null, pagamento: pgto||null,
     socio: socio||null, valor_socio: (!isNaN(vSocio)&&vSocio>0)?vSocio:null
-  }).select().then(function(res){
-    if(btn){ btn.disabled=false; btn.textContent='+ ADICIONAR AO ESTOQUE'; }
-    if(res.error){ VB_toast('Não salvou: '+(res.error.message||res.error.code||'erro desconhecido')); console.log('MER_add error:', res.error); return; }
+  };
+  if(btn){ btn.disabled=true; btn.textContent='SALVANDO...'; }
+  var q = MER_editId
+    ? sb.from('mercadorias').update(payload).eq('id', MER_editId).select()
+    : sb.from('mercadorias').insert(Object.assign({status:'estoque'}, payload)).select();
+  q.then(function(res){
+    if(btn){ btn.disabled=false; }
+    if(res.error){ MER_updateAddBtn(); VB_toast('Não salvou: '+(res.error.message||res.error.code||'erro desconhecido')); console.log('MER_add error:', res.error); return; }
+    var editava=!!MER_editId;
+    MER_editId=null;
     ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    VB_toast('Mercadoria no estoque.');
+    MER_updateAddBtn();
+    VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
     MER_load();
   });
 }
@@ -8874,7 +8924,6 @@ function MER_del(btn){
 }
 
 // ── Integração Vendas: puxar do estoque ──
-var VEN_mercadoriaId=null;
 function VEN_abrirEstoque(){
   var ov=document.getElementById('ven-estoqueOverlay'); if(!ov) return;
   ov.style.display='flex';
@@ -8901,10 +8950,9 @@ function VEN_pegarEstoque(id){
   if(!r) return;
   document.getElementById('ven-tabelaDesc').value=(r.descricao||'').toUpperCase();
   document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
-  VEN_mercadoriaId=r.id;
   VEN_updateLucro();
   VEN_fecharEstoque();
-  VB_toast('Puxado do estoque. Ao confirmar a venda, vira VENDIDA.');
+  VB_toast('Puxado do estoque. A baixa é manual, em Mercadorias.');
 }
 function VEN_fecharEstoque(){ var ov=document.getElementById('ven-estoqueOverlay'); if(ov) ov.style.display='none'; }
 
@@ -10105,6 +10153,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.40.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Mercadorias: tocar num item carrega ele no formulário pra editar (botão vira SALVAR ALTERAÇÕES, com CANCELAR EDIÇÃO). Baixa agora é 100% manual: a venda não mexe mais no estoque — cada item em estoque tem o botão ✓ pra dar baixa (dois toques pra confirmar) e as vendidas têm ↩ pra voltar ao estoque</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.40.0</span><span class="cl-ver-date">03/07/2026</span></div>
