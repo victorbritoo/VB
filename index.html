@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.45.1</title>
+<title>VB - v1.46.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.45.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -4484,7 +4484,7 @@ function VB_exportarZip(){
 }
 
 function VB_fetchTudo(onOk, onErr){
-  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
   Promise.all(tabelas.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
@@ -4676,8 +4676,8 @@ function VB_restaurarStart(){
           var data=JSON.parse(rd.result);
           if(!data || data.app!=='VB' || !data.dados){ VB_toast('Arquivo não parece um backup do VB.'); inp.value=''; return; }
           var d=data.dados;
-          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length };
-          var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos;
+          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length };
+          var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos+cont.mercadorias+cont.listas+cont.recebimentos;
           if(!tot){ VB_toast('O backup está vazio.'); inp.value=''; return; }
           VB_restPayload={ data:data, cont:cont, tot:tot, diff:null };
           VB_toast('Analisando o backup...');
@@ -4709,7 +4709,7 @@ function VB_diffCampos(a,b){
 }
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
-  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
+  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
   Promise.all(tabs.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
@@ -4755,8 +4755,8 @@ function VB_restaurarModal(){
   document.body.appendChild(ov);
 }
 function VB_restaurarResumoHTML(P){
-  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos'};
-  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos'];
+  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos'};
+  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
   var h='';
   if(P.diff && P.diffOk){
     var tN=0,tA=0,tI=0, allAlt=[], allNovas=[];
@@ -4818,7 +4818,7 @@ function VB_restaurarExec(){
   if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
   var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
   var d=P.data.dados;
-  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]]];
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]]];
   var i=0, okCount=0, erros=[];
   function next(){
     if(i>=tabelas.length){ done(); return; }
@@ -10412,6 +10412,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Backup completo: o Estoque (mercadorias), as Listas e os Recebimentos agora entram no backup JSON — antes só antecipações, financiamentos, vendas e pagamentos eram salvos, e o resto ficava desprotegido. O Restaurar também passou a cobrir essas tabelas, com contagem e resumo (novas/alteradas) por tabela. Importante: seu próximo backup vai incluir o estoque; backups antigos não têm essas tabelas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.45.1</span><span class="cl-ver-date">03/07/2026</span></div>
