@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.38.0</title>
+<title>VB - v1.39.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.38.0<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.39.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -375,6 +375,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:18px 4px 8px;font-family:-apple-system,sans-serif;">GESTÃO</div>
     <button onclick="PIN_request('rec')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:#111;flex:1;text-align:center;">Recebimentos</span>
+    </button>
+    <button onclick="PIN_request('mer')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <span style="font-size:19px;font-weight:600;color:#111;flex:1;text-align:center;">Mercadorias</span>
     </button>
     <button onclick="PIN_request('hist')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:none;border-radius:14px;background:#111;text-align:left;cursor:pointer;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:#fff;flex:1;text-align:center;">Histórico</span>
@@ -831,6 +834,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <span id="ven-lucro" style="font-size:16px;font-weight:700;color:#111;">---</span>
       </div>
     </div>
+    <button onclick="VEN_abrirEstoque()" style="width:100%;padding:7px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">PUXAR DO ESTOQUE</button>
   </div>
 
   <div class="field-card" style="margin-top:4px;padding:8px 16px;">
@@ -853,6 +857,15 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 </div>
 
 
+
+<!-- OVERLAY ESTOQUE -->
+<div id="ven-estoqueOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10001;align-items:flex-end;" onclick="if(event.target===this)VEN_fecharEstoque()">
+  <div style="background:#f5f5f3;border-radius:18px 18px 0 0;width:100%;max-width:440px;margin:0 auto;padding:16px 16px 28px;max-height:70vh;overflow-y:auto;">
+    <div style="text-align:center;font-size:12px;letter-spacing:1px;color:#999;font-weight:600;margin-bottom:10px;">EM ESTOQUE</div>
+    <div id="ven-estoqueLista"><div style="text-align:center;color:#ccc;font-size:12px;">Carregando...</div></div>
+    <button onclick="VEN_fecharEstoque()" style="width:100%;padding:9px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">CANCELAR</button>
+  </div>
+</div>
 
 <!-- OVERLAY TABELA -->
 <div id="ven-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
@@ -1228,6 +1241,47 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button id="hist-backup-btn" type="button" ontouchend="event.preventDefault();VB_backupMenu()" onclick="VB_backupMenu()" style="padding:14px;border:0.5px solid #111;border-radius:12px;background:#111;color:#fff;font-size:12px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 18a4.5 4.5 0 0 1-1-8.9A5.5 5.5 0 0 1 17 8.5a4 4 0 0 1 .9 9.4"/><path d="M12 16V9"/><path d="M9 12l3-3 3 3"/></svg>BACKUP</button>
   </div>
   <div style="text-align:center;margin-top:8px;"><span id="hist-backup-status" style="display:none;font-size:11px;color:#c0392b;font-weight:600;"></span></div>
+</div>
+</div>
+
+<div id="screen-mer" class="vb-screen">
+<div class="card">
+  <div style="margin-bottom:2px;">
+    <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
+    <div class="simulacao-label">MERCADORIAS</div>
+  </div>
+  <hr class="divider">
+
+  <!-- ADICIONAR COMPRA -->
+  <div class="field-card" style="padding:8px 16px;margin-bottom:4px;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
+    <input id="mer-desc" type="text" placeholder="ROLEX SUBMARINER 128610 SÉRIE X1Y2" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+    <div class="two-col" style="margin-top:6px;">
+      <div style="padding-right:12px;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">CUSTO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <input id="mer-custo" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;width:100px;text-align:center;font-family:-apple-system,sans-serif;">
+        </div>
+      </div>
+      <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">DATA DA COMPRA</div>
+        <input id="mer-data" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" style="width:100%;border:none;background:transparent;outline:none;font-size:14px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+      </div>
+    </div>
+    <button onclick="MER_add(this)" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:8px;">+ ADICIONAR AO ESTOQUE</button>
+  </div>
+
+  <!-- SELETOR ESTOQUE / VENDIDAS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
+    <button id="mer-seg-estoque" onclick="MER_setTab('estoque')" style="padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;">EM ESTOQUE</button>
+    <button id="mer-seg-vendidas" onclick="MER_setTab('vendida')" style="padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;">VENDIDAS</button>
+  </div>
+
+  <div id="mer-lista"><div style="text-align:center;color:#ccc;font-size:12px;margin-top:24px;">Carregando...</div></div>
+
+  <!-- TOTAL EM ESTOQUE -->
+  <div id="mer-total" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#111;border-radius:14px;padding:10px 16px;align-items:center;justify-content:space-between;color:#fff;"></div>
 </div>
 </div>
 
@@ -5666,7 +5720,7 @@ function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','hist','rec'].forEach(function(s){
+  ['fin','ant','pag','ven','hist','rec','mer'].forEach(function(s){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
@@ -5674,6 +5728,7 @@ function showScreen(name){
   if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_refresh(); }
   if(name==='home'){ VB_updateBackupStatus(); }
   if(name==='rec'){ REC_load(); }
+  if(name==='mer'){ MER_load(); }
   VB_telaAtual = name;
   window.scrollTo(0,0);
 }
@@ -6300,6 +6355,17 @@ function VEN_update(){
 
 VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_modoPersonalizado=false; VEN_update(); VEN_updateLucro(); VEN_autoLista(); });
 VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
+VEN_maskVal(document.getElementById('mer-custo'), function(){});
+(function(){
+  var md=document.getElementById('mer-data');
+  if(md) md.addEventListener('input',function(){
+    var raw=this.value.replace(/[^0-9]/g,''); var v='';
+    if(raw.length>0) v+=raw.substring(0,2);
+    if(raw.length>2) v+='/'+raw.substring(2,4);
+    if(raw.length>4) v+='/'+raw.substring(4,8);
+    this.value=v;
+  });
+})();
 (function(){
   var vtd=document.getElementById('ven-tabelaData');
   if(vtd) vtd.addEventListener('input',function(){
@@ -6323,6 +6389,7 @@ document.getElementById('ven-qtd').addEventListener('input', function(){
 function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
+  VEN_mercadoriaId = null;
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
@@ -6390,7 +6457,14 @@ function VEN_syncFromParcelas(){
   var soma  = VEN_parcelas.reduce(function(a,p){ return a + (VEN_parseBR(p.valor)||0); }, 0);
   document.getElementById('ven-qtd').value   = count > 0 ? String(count) : '';
   document.getElementById('ven-total').value = soma > 0 ? VEN_formatBR(soma) : '';
-  document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? VEN_formatBR(soma/count) : '';
+  // valor da parcela: só quando todas são iguais; misturadas = traço
+  var iguais = count > 0;
+  if(count > 0){
+    var v0 = VEN_parseBR(VEN_parcelas[0].valor)||0;
+    for(var i=1;i<count;i++){ if(Math.abs((VEN_parseBR(VEN_parcelas[i].valor)||0)-v0)>0.005){ iguais=false; break; } }
+  }
+  document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? (iguais ? VEN_formatBR(soma/count) : '—') : '';
+  VEN_updateLucro();
 }
 
 // Fluxo único: a lista de parcelas é gerada dos campos de cima e fica sempre editável.
@@ -6752,6 +6826,10 @@ function VEN_confirmarOperacao(btn){
       return;
     }
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
+    if(VEN_mercadoriaId){
+      sb.from('mercadorias').update({status:'vendida', venda_id: VEN_currentOperationId||null}).eq('id',VEN_mercadoriaId).then(function(){});
+      VEN_mercadoriaId=null;
+    }
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -8666,6 +8744,125 @@ var PIN_buffer = '', PIN_target = '';
 var PIN_PROTECTED = ['ant','pag','ven','quit','fin-inv','log','hist'];
 var PIN_GRACE_MS = 10*60*1000; // 10 minutos
 var PIN_unlockedUntil = 0;
+// ══════════ MERCADORIAS ══════════
+var MER_rows=[], MER_tab='estoque';
+function MER_fmtBR(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function MER_load(){
+  var hoje=new Date();
+  var el=document.getElementById('mer-data');
+  if(el && !el.value) el.value=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
+  sb.from('mercadorias').select('*').order('created_at',{ascending:false}).then(function(res){
+    if(res.error){ document.getElementById('mer-lista').innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:24px;">Erro ao carregar (tabela mercadorias existe?).</div>'; return; }
+    MER_rows=res.data||[];
+    MER_render();
+  });
+}
+function MER_setTab(t){
+  MER_tab=t;
+  var on ='padding:9px 0;border:0.5px solid #111;border-radius:10px;background:#111;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;';
+  var off='padding:9px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:#888;font-weight:600;cursor:pointer;';
+  var bE=document.getElementById('mer-seg-estoque'), bV=document.getElementById('mer-seg-vendidas');
+  if(t==='estoque'){ bE.style.cssText=on; bV.style.cssText=off; } else { bV.style.cssText=on; bE.style.cssText=off; }
+  MER_render();
+}
+function MER_fmtData(iso){
+  if(!iso) return '';
+  var p=(''+iso).slice(0,10).split('-');
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : '';
+}
+function MER_render(){
+  var lista=document.getElementById('mer-lista'); if(!lista) return;
+  var rows=MER_rows.filter(function(r){ return (r.status||'estoque')===MER_tab; });
+  if(!rows.length){
+    lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:24px;">'+(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.')+'</div>';
+  } else {
+    var html='';
+    rows.forEach(function(r){
+      html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
+        +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+(MER_tab==='vendida'?' · <span style="color:#2e7d32;font-weight:700;">VENDIDA</span>':'')+'</div>'
+        +'</div>'
+        +(MER_tab==='estoque'
+          ? '<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;background:none;font-size:16px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0;">×</button>'
+          : '')
+        +'</div>';
+    });
+    lista.innerHTML=html;
+  }
+  // total em estoque
+  var est=MER_rows.filter(function(r){ return (r.status||'estoque')==='estoque'; });
+  var soma=est.reduce(function(a,r){ return a+(Number(r.custo)||0); },0);
+  var tot=document.getElementById('mer-total');
+  if(tot){
+    tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">EM ESTOQUE · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+      +'<span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>';
+    tot.style.display='flex';
+  }
+}
+function MER_add(btn){
+  var desc=(document.getElementById('mer-desc').value||'').trim();
+  var custo=VEN_parseBR(document.getElementById('mer-custo').value);
+  var dataStr=(document.getElementById('mer-data').value||'');
+  if(!desc){ VB_toast('Preencha a descrição.'); return; }
+  if(isNaN(custo)||custo<=0){ VB_toast('Preencha o custo.'); return; }
+  var iso=null, pp=dataStr.split('/');
+  if(pp.length===3){ var y=pp[2]; if(y.length===2) y='20'+y; iso=y+'-'+('0'+pp[1]).slice(-2)+'-'+('0'+pp[0]).slice(-2); }
+  if(btn){ btn.disabled=true; btn.textContent='ADICIONANDO...'; }
+  sb.from('mercadorias').insert({descricao:desc, custo:custo, data_compra:iso, status:'estoque'}).select().then(function(res){
+    if(btn){ btn.disabled=false; btn.textContent='+ ADICIONAR AO ESTOQUE'; }
+    if(res.error){ VB_toast('Não salvou (rodou o SQL da tabela?).'); return; }
+    document.getElementById('mer-desc').value='';
+    document.getElementById('mer-custo').value='';
+    VB_toast('Mercadoria no estoque.');
+    MER_load();
+  });
+}
+function MER_del(btn){
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='✓'; btn.style.color='#c0392b'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='×'; btn.style.color='#ccc'; },2500); return; }
+  var id=btn.dataset.merdel;
+  sb.from('mercadorias').delete().eq('id',id).then(function(res){
+    if(res.error){ VB_toast('Não excluiu.'); return; }
+    VB_toast('Excluída.');
+    MER_load();
+  });
+}
+
+// ── Integração Vendas: puxar do estoque ──
+var VEN_mercadoriaId=null;
+function VEN_abrirEstoque(){
+  var ov=document.getElementById('ven-estoqueOverlay'); if(!ov) return;
+  ov.style.display='flex';
+  var lista=document.getElementById('ven-estoqueLista');
+  lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;">Carregando...</div>';
+  sb.from('mercadorias').select('*').eq('status','estoque').order('created_at',{ascending:false}).then(function(res){
+    if(res.error){ lista.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;">Erro (tabela mercadorias existe?).</div>'; return; }
+    var rows=res.data||[];
+    if(!rows.length){ lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;">Nada em estoque.</div>'; return; }
+    var html='';
+    rows.forEach(function(r){
+      html+='<button onclick="VEN_pegarEstoque(\''+r.id+'\')" style="width:100%;text-align:left;background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:9px 14px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
+        +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
+        +'<div style="font-size:11px;color:#999;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+'</div>'
+        +'</button>';
+    });
+    lista.innerHTML=html;
+    VEN_estoqueCache=rows;
+  });
+}
+var VEN_estoqueCache=[];
+function VEN_pegarEstoque(id){
+  var r=VEN_estoqueCache.find(function(x){ return String(x.id)===String(id); });
+  if(!r) return;
+  document.getElementById('ven-tabelaDesc').value=(r.descricao||'').toUpperCase();
+  document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_mercadoriaId=r.id;
+  VEN_updateLucro();
+  VEN_fecharEstoque();
+  VB_toast('Puxado do estoque. Ao confirmar a venda, vira VENDIDA.');
+}
+function VEN_fecharEstoque(){ var ov=document.getElementById('ven-estoqueOverlay'); if(ov) ov.style.display='none'; }
+
 function PIN_grant(target){
   PIN_unlockedUntil = Date.now() + PIN_GRACE_MS; // libera/renova a janela
   if(target==='fin-inv'){ FIN_enableInvestidor(); return; }
@@ -9863,6 +10060,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.39.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Novo módulo MERCADORIAS (home, grupo GESTÃO): cadastro de compras com descrição, custo e data; abas EM ESTOQUE / VENDIDAS; barra preta com capital parado (itens e soma dos custos); excluir com toque duplo de confirmação. Na Venda, novo botão PUXAR DO ESTOQUE no card de custo: escolhe a mercadoria, a descrição e o custo entram sozinhos e, ao confirmar a venda, ela vira VENDIDA automaticamente no estoque. Requer SQL: create table if not exists mercadorias (id uuid primary key default gen_random_uuid(), created_at timestamptz default now(), descricao text, custo numeric, data_compra date, status text default 'estoque', venda_id uuid);</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.38.1</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Vendas: quando as parcelas da lista são desiguais, o campo VALOR DA PARCELA mostra um traço em vez da média (que enganava). Volta a mostrar o valor quando todas são iguais. Lucro também recalcula ao editar parcelas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.38.0</span><span class="cl-ver-date">02/07/2026</span></div>
