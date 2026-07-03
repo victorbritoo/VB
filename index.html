@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.40.1</title>
+<title>VB - v1.41.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.40.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.41.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -834,6 +834,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <span id="ven-lucro" style="font-size:16px;font-weight:700;color:#111;">---</span>
       </div>
     </div>
+    <div id="ven-margem" style="display:none;text-align:center;font-size:10px;color:#999;font-weight:600;margin-top:5px;line-height:1.5;"></div>
     <button onclick="VEN_abrirEstoque()" style="width:100%;padding:7px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">PUXAR DO ESTOQUE</button>
   </div>
 
@@ -3768,8 +3769,8 @@ function HIST_carregarAnt(r){
 
   if(r.modo==='personalizado' && r.titulos && r.titulos.length>0){
     ANT_titulos=[]; ANT_tituloCounter=0;
-    (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
-    if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:'',data:''}); }
+    (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||''),tipo:(it.tp||'deb')}); });
+    if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:'',data:'',tipo:'deb'}); }
     if(!ANT_modoPersonalizado){ ANT_toggleModo(); } else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   } else {
     // Modo simples: preenche bruto e qtd, depois recalc (taxa e tarifa já preenchidas acima)
@@ -5091,7 +5092,7 @@ function HIST_imgAnt(r){
   _histSetVal('ant-tarifa', r.tarifa?ANT_formatBR(Number(r.tarifa)):'');
   // sempre usa os títulos salvos (valor+data) -> planilha de títulos
   ANT_modoPersonalizado=true; ANT_titulos=[]; ANT_tituloCounter=0;
-  (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||'')}); });
+  (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||''),tipo:(it.tp||'deb')}); });
   var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
   var _vbimg=document.getElementById('ant-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
@@ -5708,7 +5709,7 @@ function ANT_assinatura(){
   return JSON.stringify([VB_val('ant-tabelaCliente'),VB_val('ant-dataOperacao'),VB_val('ant-taxa'),
     VB_val('ant-tarifa'),VB_val('ant-valorBruto'),VB_val('ant-qtd'),VB_val('ant-tabelaData'),
     (typeof ANT_modoPersonalizado!=='undefined'?!!ANT_modoPersonalizado:false),
-    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data];}):[])]);
+    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[])]);
 }
 function VEN_assinatura(){
   return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-total'),VB_val('ven-qtd'),
@@ -6417,6 +6418,7 @@ document.getElementById('ven-qtd').addEventListener('input', function(){
 function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
+  VEN_socioNome=null; VEN_socioValor=0;
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
@@ -6429,10 +6431,28 @@ function VEN_limpar(){
 
 function VEN_updateLucro(){
   var el=document.getElementById('ven-lucro'); if(!el) return;
+  var mg=document.getElementById('ven-margem');
   var t=VEN_parseBR(document.getElementById('ven-total').value);
   var c=VEN_parseBR(document.getElementById('ven-custo').value);
-  if(!isNaN(t)&&t>0 && !isNaN(c)&&c>0){ el.textContent='R$ '+VEN_formatBR(t-c); el.style.color = (t-c)<0 ? '#c0392b' : '#111'; }
-  else { el.textContent='---'; el.style.color='#111'; }
+  if(!isNaN(t)&&t>0 && !isNaN(c)&&c>0){
+    var lucro=t-c;
+    el.textContent='R$ '+VEN_formatBR(lucro); el.style.color = lucro<0 ? '#c0392b' : '#111';
+    if(mg){
+      var pct=(lucro/c)*100;
+      var html='MARGEM '+pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% s/ custo';
+      if(VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<c){
+        var fS=VEN_socioValor/c, fV=1-fS;
+        var pS=Math.round(fS*100), pV=100-pS;
+        html+='<br>'+HIST_esc(VEN_socioNome)+' ('+pS+'%): custo R$ '+VEN_formatBR(VEN_socioValor)+' · lucro R$ '+VEN_formatBR(lucro*fS)
+            +'<br>VOCÊ ('+pV+'%): custo R$ '+VEN_formatBR(c-VEN_socioValor)+' · lucro R$ '+VEN_formatBR(lucro*fV);
+      }
+      mg.innerHTML=html; mg.style.display='block';
+    }
+  }
+  else {
+    el.textContent='---'; el.style.color='#111';
+    if(mg){ mg.style.display='none'; mg.innerHTML=''; }
+  }
 }
 function VEN_initTabela(){
   var hoje = new Date();
@@ -7397,7 +7417,7 @@ function ANT_prepZoom(){
 // Lista canônica de títulos (valor+data) — expande o modo simples pra ficar igual ao personalizado
 function ANT_payloadTitulos(){
   if(ANT_modoPersonalizado){
-    return ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0 && t.data;}).map(function(t){ return {v:t.valor, d:t.data}; });
+    return ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0 && t.data;}).map(function(t){ return {v:t.valor, d:t.data, tp:(t.tipo||'deb')}; });
   }
   var VB=ANT_parseBR(document.getElementById('ant-valorBruto').value);
   var n=parseInt(document.getElementById('ant-qtd').value||'0');
@@ -7434,9 +7454,9 @@ function ANT_aplicar(obj){
   ANT_titulos=[]; ANT_tituloCounter=0;
   (obj.t||[]).forEach(function(it){
     ANT_tituloCounter++;
-    ANT_titulos.push({id:ANT_tituloCounter, valor:(it.v||''), data:(it.d||'')});
+    ANT_titulos.push({id:ANT_tituloCounter, valor:(it.v||''), data:(it.d||''), tipo:(it.tp||'deb')});
   });
-  if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:''}); }
+  if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:'', tipo:'deb'}); }
   if(!ANT_modoPersonalizado){ ANT_toggleModo(); }
   else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   return (obj.t||[]).length;
@@ -8016,7 +8036,7 @@ function ANT_toggleModo(){
 
 function ANT_adicionarTitulo(focus){
   ANT_tituloCounter++;
-  ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:''});
+  ANT_titulos.push({id:ANT_tituloCounter, valor:'', data:'', tipo:'deb'});
   ANT_renderTitulos();
   ANT_recalcPersonalizado();
   if(focus){
@@ -8061,7 +8081,7 @@ function ANT_repetirTitulos(){
   var last=ANT_titulos.length?ANT_titulos[ANT_titulos.length-1]:null;
   if(!last || (!last.valor && !last.data)){ VB_toast('Preencha um título primeiro.'); return; }
   var baseVal=last.valor||'', lastDate=last.data||'';
-  for(var k=0;k<n;k++){ ANT_tituloCounter++; lastDate=lastDate?ANT_addMonth(lastDate,1):''; ANT_titulos.push({id:ANT_tituloCounter, valor:baseVal, data:lastDate}); }
+  for(var k=0;k<n;k++){ ANT_tituloCounter++; lastDate=lastDate?ANT_addMonth(lastDate,1):''; ANT_titulos.push({id:ANT_tituloCounter, valor:baseVal, data:lastDate, tipo:(ANT_titulos.length?(ANT_titulos[ANT_titulos.length-1].tipo||'deb'):'deb')}); }
   ANT_renderTitulos(); ANT_recalcPersonalizado();
   VB_toast('+'+n+' título'+(n>1?'s':'')+'.');
 }
@@ -8072,10 +8092,11 @@ function ANT_renderTitulos(){
   ANT_titulos.forEach(function(t,idx){
     var row=document.createElement('div');
     row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;align-items:center;margin-bottom:6px;';
+    var ehPg=(t.tipo==='pg');
     row.innerHTML=
-      '<span style="font-size:10px;color:#aaa;font-weight:600;text-align:center;">'+String(idx+1).padStart(2,'0')+'</span>'+
+      '<span onclick="ANT_toggleTipo('+t.id+')" title="Tocar: alternar débito/pagamento" style="cursor:pointer;font-size:9px;font-weight:700;text-align:center;'+(ehPg?'color:#111;border:0.5px solid #111;border-radius:4px;padding:1px 0;':'color:#aaa;')+'">'+(ehPg?'PG':String(idx+1).padStart(2,'0'))+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:2px;border-bottom:0.5px solid #ddd;padding-bottom:2px;min-width:0;">'+
-        '<span style="font-size:11px;color:#aaa;flex-shrink:0;">R$</span>'+
+        '<span style="font-size:11px;color:'+(ehPg?'#111':'#aaa')+';flex-shrink:0;font-weight:'+(ehPg?'700':'400')+';">'+(ehPg?'−R$':'R$')+'</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" data-tid="'+t.id+'" data-field="valor"'+
         ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:#111;width:100%;min-width:0;font-family:-apple-system,sans-serif;"'+
         (t.valor?' value="'+t.valor+'"':'')+'>'+
@@ -8104,6 +8125,14 @@ function ANT_renderTitulos(){
   });
 }
 
+function ANT_toggleTipo(id){
+  var t=ANT_titulos.find(function(x){return x.id===id;});
+  if(!t) return;
+  t.tipo = (t.tipo==='pg') ? 'deb' : 'pg';
+  ANT_renderTitulos();
+  ANT_recalcPersonalizado();
+  VB_toast(t.tipo==='pg' ? 'Título marcado como PAGAMENTO (abate).' : 'Título de volta a DÉBITO.');
+}
 function ANT_recalcPersonalizado(){
   var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
@@ -8112,16 +8141,17 @@ function ANT_recalcPersonalizado(){
   ANT_titulos.forEach(function(t){
     var v=ANT_parseBR(t.valor||'0');
     if(isNaN(v)||v<=0) return;
-    totalVB+=v;
+    var s=(t.tipo==='pg')?-1:1;
+    totalVB+=s*v;
     if(t.data&&!isNaN(taxa)&&taxa>0){
       var venc=ANT_parseDate(t.data);
       if(!venc) return;
-      var pr=ANT_prazoDe(hoje,venc);
-      totalJuros+=v*taxa*(pr/30);
-      prazos.push({prazo:pr,valor:v});
+      var pr=(s<0)?ANT_diasEntre(hoje,venc):ANT_prazoDe(hoje,venc); // PG: dias exatos, sem +4
+      totalJuros+=s*v*taxa*(pr/30);
+      if(s>0) prazos.push({prazo:pr,valor:v});
     }
   });
-  var n=ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0;}).length;
+  var n=ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0 && t.tipo!=='pg';}).length;
   var totalLiq=totalVB-totalJuros-tar;
   if(prazos.length>0){
     var pesoTotal=prazos.reduce(function(a,x){return a+x.valor;},0);
@@ -8145,9 +8175,10 @@ function ANT_getTitulosPersonalizados(){
     var v=ANT_parseBR(t.valor||'0');
     if(isNaN(v)||v<=0||!t.data) return;
     var venc=ANT_parseDate(t.data); if(!venc) return;
-    var pr=ANT_prazoDe(hoje,venc); var j=v*taxa*(pr/30),vl=v-j; tj+=j; tl+=vl;
+    var s=(t.tipo==='pg')?-1:1;
+    var pr=(s<0)?ANT_diasEntre(hoje,venc):ANT_prazoDe(hoje,venc); var j=s*v*taxa*(pr/30),vl=s*v-j; tj+=j; tl+=vl; // PG: sem +4
     var vd=String(venc.getDate()).padStart(2,'0'),vm2=String(venc.getMonth()+1).padStart(2,'0'),va=venc.getFullYear();
-    rows.push({nro:String(idx+1).padStart(2,'0'),vb:v,venc:vd+'/'+vm2+'/'+va,prazo:pr,juros:j,vliq:vl});
+    rows.push({nro:(s<0?'PG':String(idx+1).padStart(2,'0')),vb:s*v,venc:vd+'/'+vm2+'/'+va,prazo:pr,juros:j,vliq:vl});
   });
   return {rows:rows,totalJuros:tj,totalLiq:tl-tar};
 }
@@ -8945,11 +8976,14 @@ function VEN_abrirEstoque(){
   });
 }
 var VEN_estoqueCache=[];
+var VEN_socioNome=null, VEN_socioValor=0;
 function VEN_pegarEstoque(id){
   var r=VEN_estoqueCache.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
   document.getElementById('ven-tabelaDesc').value=(r.descricao||'').toUpperCase();
   document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_socioNome = r.socio||null;
+  VEN_socioValor = Number(r.valor_socio)||0;
   VEN_updateLucro();
   VEN_fecharEstoque();
   VB_toast('Puxado do estoque. A baixa é manual, em Mercadorias.');
@@ -10153,6 +10187,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.41.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Antecipação: títulos marcados como PAGAMENTO (PG) não levam mais o +4 de float no prazo — capitalizam pelos dias exatos desde a data do pagamento. Débitos seguem com o +4 de sempre</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.41.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Antecipação personalizada: cada título agora pode ser DÉBITO ou PAGAMENTO — toca no número da linha pra alternar (vira a tag PG, com o valor precedido de −). Pagamentos abatem do bruto e capitalizam na mesma taxa da operação a partir da data deles, então o saldo corrigido fica sempre justo em qualquer data op. Prazo médio e quantidade contam só os débitos. O sinal sai na tabela/foto (linha PG com valor negativo), salva no Histórico e recarrega. Feito pra operações de atraso: dívida capitalizando e pagamentos parciais abatendo na mesma régua</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.40.2</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Vendas: o card CUSTO/LUCRO agora mostra a MARGEM (% do lucro sobre o custo) sempre que dá pra calcular. E quando a mercadoria puxada do estoque tem sócio, mostra o rateio completo: percentual, custo e lucro de cada um (sócio e você), na proporção das partes da compra</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.40.1</span><span class="cl-ver-date">03/07/2026</span></div>
