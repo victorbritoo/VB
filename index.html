@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.37.0</title>
+<title>VB - v1.37.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -356,7 +356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.0<br>02/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.37.2<br>02/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -783,7 +783,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="field-label" style="text-align:center;">VALOR TOTAL DA VENDA</div>
     <div class="valor-row" style="justify-content:center">
       <span class="valor-prefix">R$</span>
-      <input class="input-big" style="text-align:center" id="ven-total" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()">
+      <input class="input-big" style="text-align:center" id="ven-total" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" oninput="VEN_updateLucro()">
     </div>
   </div>
 
@@ -820,6 +820,26 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 
   <!-- GERAR TABELA -->
+    <!-- CUSTO / LUCRO / IDENTIFICAÇÃO (interno — não sai na foto) -->
+  <div class="field-card" style="margin-top:4px;padding:8px 16px;">
+    <div class="two-col">
+      <div style="padding-right:12px;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">CUSTO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:#aaa;">R$</span>
+          <input id="ven-custo" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" oninput="VEN_updateLucro()" style="border:none;background:transparent;outline:none;font-size:16px;font-weight:700;color:#111;width:100px;text-align:center;font-family:-apple-system,sans-serif;">
+        </div>
+      </div>
+      <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">LUCRO</div>
+        <span id="ven-lucro" style="font-size:16px;font-weight:700;color:#111;">---</span>
+      </div>
+    </div>
+    <hr style="border:none;border-top:0.5px solid #eee;margin:6px 0;">
+    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">IDENTIFICAÇÃO</div>
+    <input id="ven-ident" type="text" placeholder="Nº de série, IMEI, placa..." style="width:100%;border:none;background:transparent;outline:none;font-size:13px;font-weight:600;color:#111;text-align:center;font-family:-apple-system,sans-serif;">
+  </div>
+
   <div class="field-card" style="margin-top:4px;padding:8px 16px;">
     <div style="margin-bottom:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
@@ -3696,6 +3716,9 @@ function HIST_carregarAnt(r){
 function HIST_carregarVen(r){
   VEN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
+  document.getElementById('ven-custo').value = r.custo!=null ? VEN_formatBR(Number(r.custo)) : '';
+  document.getElementById('ven-ident').value = r.identificacao||'';
+  VEN_updateLucro();
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
@@ -4381,6 +4404,7 @@ function VB_passaFiltro(tab, r){
     var col=HIST_nameCol(tab), valCol=HIST_valCol(tab), lc=term.toLowerCase(), hit=false;
     if(((r.nome||'')+'').toLowerCase().indexOf(lc)>=0) hit=true;
     if(!hit && col && r[col]!=null && (''+r[col]).toLowerCase().indexOf(lc)>=0) hit=true;
+    if(!hit && r.identificacao!=null && (''+r.identificacao).toLowerCase().indexOf(lc)>=0) hit=true;
     if(!hit){ var num=HIST_parseNum(term); if(num!=null && valCol && Number(r[valCol])===num) hit=true; }
     if(!hit) return false;
   }
@@ -5334,6 +5358,7 @@ function HIST_fetch(term){
     var safe=term.replace(/[,*()]/g,' ');
     var ors=['nome.ilike.%'+safe+'%'];
     if(col) ors.push(col+'.ilike.%'+safe+'%');
+    if(tab==='ven') ors.push('identificacao.ilike.%'+safe+'%');
     var num=HIST_parseNum(term);
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(ors.length) q=q.or(ors.join(','));
@@ -5364,15 +5389,18 @@ function HIST_fetch(term){
       var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
       var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
       if(tab==='ant'){
-        var atr=0, temAtr=false, lucro=0, temL=false;
+        var atr=0, nAtr=0, bruto=0, nOk=0, lucro=0, temL=false;
         rows.forEach(function(r){
           var b=Number(r.valor_bruto)||0, l=Number(r.valor_liquido)||0;
-          if(l>b){ atr+=b; temAtr=true; }
-          else { var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; } }
+          if(l>b){ atr+=b; nAtr++; }
+          else {
+            bruto+=b; nOk++;
+            var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; }
+          }
         });
         totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;text-align:center;">'
-          +'<div>'+lbl('ATRASADOS')+val(temAtr?HIST_fmtMoeda(atr):'—', temAtr?'#ff6b6b':null)+'</div>'
-          +'<div>'+lbl('BRUTO · '+opsTxt)+val(HIST_fmtMoeda(soma))+'</div>'
+          +'<div>'+lbl('ATRASADOS'+(nAtr?' · '+nAtr:''))+val(nAtr?HIST_fmtMoeda(atr):'—', nAtr?'#ff6b6b':null)+'</div>'
+          +'<div>'+lbl('BRUTO · '+nOk)+val(HIST_fmtMoeda(bruto))+'</div>'
           +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'—')+'</div>'
           +'</div>';
       } else if(tab==='fin' || tab==='ven'){
@@ -5408,6 +5436,7 @@ function HIST_fetchGlobal(term){
     var col=HIST_nameCol(tb), valCol=HIST_valCol(tb);
     var ors=['nome.ilike.%'+safe+'%'];
     if(col) ors.push(col+'.ilike.%'+safe+'%');
+    if(tb==='vendas') ors.push('identificacao.ilike.%'+safe+'%');
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(!ors.length) return Promise.resolve({tb:tb, rows:[]});
     var q=sb.from(HIST_tabela(tb)).select('*').or(ors.join(','));
@@ -5478,6 +5507,8 @@ function HIST_renderRows(tab, rows){
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
       if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
+      if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
+      if(r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); var _lv=HIST_lucroRow('ven', r); if(_lv!=null) campos.push({l:'Lucro', v:HIST_fmtMoeda(_lv)}); }
       if(r.modo) campos.push({l:'Modo', v:r.modo});
     } else {
       var qtd=(r.pagamentos||[]).length;
@@ -5606,7 +5637,7 @@ function ANT_assinatura(){
 }
 function VEN_assinatura(){
   return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-total'),VB_val('ven-qtd'),
-    VB_val('ven-parcela'),VB_val('ven-tabelaData'),
+    VB_val('ven-parcela'),VB_val('ven-tabelaData'),VB_val('ven-custo'),VB_val('ven-ident'),
     (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
     (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs];}):[])]);
 }
@@ -6295,7 +6326,7 @@ function VEN_limpar(){
   VEN_snapshot = null;
   VEN_parcelaManual = false;
   if(VEN_modoPersonalizado) VEN_togglePersonalizar();
-  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc'].forEach(function(id){
+  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo','ven-ident'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
   VEN_currentOperationId = null;
@@ -6304,6 +6335,13 @@ function VEN_limpar(){
   VEN_initTabela();
 }
 
+function VEN_updateLucro(){
+  var el=document.getElementById('ven-lucro'); if(!el) return;
+  var t=VEN_parseBR(document.getElementById('ven-total').value);
+  var c=VEN_parseBR(document.getElementById('ven-custo').value);
+  if(!isNaN(t)&&t>0 && !isNaN(c)&&c>0){ el.textContent='R$ '+VEN_formatBR(t-c); el.style.color = (t-c)<0 ? '#c0392b' : '#111'; }
+  else { el.textContent='---'; el.style.color='#111'; }
+}
 function VEN_initTabela(){
   var hoje = new Date();
   var dd=String(hoje.getDate()).padStart(2,'0'), mm=String(hoje.getMonth()+1).padStart(2,'0'), yyyy=hoje.getFullYear();
@@ -6702,7 +6740,9 @@ function VEN_confirmarOperacao(btn){
     valor_total: (!isNaN(total)&&total>0)?total:null,
     quantidade_parcelas: qtd>0?qtd:null,
     valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
-    parcelas: parcelasPayload
+    parcelas: parcelasPayload,
+    custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })(),
+    identificacao: ((document.getElementById('ven-ident').value||'').trim() || null)
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
@@ -9832,6 +9872,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.2</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Antecipação: o BRUTO da barra passou a somar só as operações em dia — as atrasadas contam apenas na coluna ATRASADOS. Cada coluna mostra sua própria contagem (ATRASADOS · n, BRUTO · n)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.1</span><span class="cl-ver-date">02/07/2026</span></div>
+      <div class="cl-item">Vendas com custo e identificação: novo card interno (não sai na foto compartilhada) com CUSTO, LUCRO calculado ao vivo (total − custo, em vermelho se negativo) e campo IDENTIFICAÇÃO (nº de série, IMEI, placa). Tudo salva no Supabase, carrega do Histórico, entra na busca (achar a venda pelo nº de série) e aparece nos detalhes da operação no Histórico. Requer SQL: alter table vendas add column if not exists custo numeric; alter table vendas add column if not exists identificacao text;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.37.0</span><span class="cl-ver-date">02/07/2026</span></div>
