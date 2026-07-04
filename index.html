@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.48.0</title>
+<title>VB - v1.48.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.48.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.48.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1347,9 +1347,10 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-soc" class="vb-screen">
 <div class="card">
-  <div style="margin-bottom:2px;">
+  <div style="margin-bottom:2px;position:relative;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <div class="simulacao-label">SÓCIOS</div>
+    <button id="soc-form-open" onclick="SOC_toggleForm()" style="position:absolute;top:0;right:0;width:36px;height:36px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:20px;font-weight:300;color:#555;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;">+</button>
   </div>
   <hr class="divider">
 
@@ -1357,13 +1358,9 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">NOME</div>
     <input id="soc-nome" type="text" placeholder="NOME DO SÓCIO" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
     <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin:8px 0 2px;text-align:center;">TELEFONE</div>
-    <input id="soc-tel" type="text" inputmode="tel" placeholder="(00) 00000-0000" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;">
+    <input id="soc-tel" type="text" inputmode="tel" placeholder="(85) 99113-3331" onclick="if(!this.value)this.select()" oninput="SOC_maskTel(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#111;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;">
     <button id="soc-add-btn" onclick="SOC_salvar(this)" style="width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:10px;">+ ADICIONAR SÓCIO</button>
     <button id="soc-cancel-btn" onclick="SOC_cancelEdit()" style="display:none;width:100%;padding:8px;border:0.5px dashed #ddd;border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-top:6px;">CANCELAR EDIÇÃO</button>
-  </div>
-
-  <div style="display:flex;justify-content:center;margin-bottom:8px;">
-    <button id="soc-form-open" onclick="SOC_toggleForm()" style="width:44px;height:44px;border:0.5px solid #ddd;border-radius:50%;background:#fff;font-size:24px;font-weight:300;color:#555;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;">+</button>
   </div>
 
   <div id="soc-lista"><div style="text-align:center;color:#ccc;font-size:12px;margin-top:24px;">Carregando...</div></div>
@@ -9116,6 +9113,14 @@ function MER_limparBusca(){
   MER_render(); inp && inp.focus();
 }
 var SOC_rows=[], SOC_editId=null;
+function SOC_maskTel(el){
+  var d=(el.value||'').replace(/\D/g,'').slice(0,11);
+  var out='';
+  if(d.length>0) out='('+d.slice(0,2);
+  if(d.length>=3) out+=') '+d.slice(2, d.length>=8?7:d.length);
+  if(d.length>=8) out+='-'+d.slice(7);
+  el.value=out;
+}
 function SOC_load(){
   var lista=document.getElementById('soc-lista');
   sb.from('socios').select('*').order('nome',{ascending:true}).then(function(res){
@@ -9135,7 +9140,7 @@ function SOC_render(){
         +'<div style="font-size:14px;font-weight:700;color:#111;">'+SOC_esc(r.nome)+'</div>'
         +(r.telefone?('<div style="font-size:11px;color:#999;margin-top:1px;">'+SOC_esc(r.telefone)+'</div>'):'')
       +'</div>'
-      +'<button data-socdel="'+r.id+'" onclick="SOC_delArm(this,\''+r.id+'\')" style="border:0.5px solid #eee;border-radius:8px;background:#fff;color:#c0392b;font-size:15px;cursor:pointer;width:26px;height:26px;flex-shrink:0;line-height:1;padding:0;">×</button>'
+      +'<button data-socdel="'+r.id+'" onclick="SOC_delArm(this,\''+r.id+'\')" style="border:none;border-radius:8px;background:#111;color:#fff;font-size:14px;font-weight:700;cursor:pointer;width:24px;height:24px;flex-shrink:0;line-height:1;padding:0;">×</button>'
     +'</div>';
   });
   lista.innerHTML=html;
@@ -9181,7 +9186,7 @@ function SOC_updateAddBtn(){
   if(c) c.style.display = SOC_editId ? 'block' : 'none';
 }
 function SOC_delArm(btn,id){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='✓'; btn.style.background='#111'; btn.style.color='#fff'; btn.style.borderColor='#111'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='×'; btn.style.background='#fff'; btn.style.color='#c0392b'; btn.style.borderColor='#eee'; } },2500); return; }
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='✓'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='×'; } },2500); return; }
   sb.from('socios').delete().eq('id',id).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     VB_toast('Sócio removido.'); SOC_load();
@@ -10591,6 +10596,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.48.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Sócios: telefone com máscara automática no padrão (85) 99113-3331; botão de apagar preto igual ao do Histórico (× branco no quadrado preto, com ✓ de confirmação); o + de adicionar virou um quadrado no topo da tela, à direita, oposto ao VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.48.0</span><span class="cl-ver-date">03/07/2026</span></div>
