@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.48.1</title>
+<title>VB - v1.49.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -294,6 +294,18 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="soc-pick-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;">
+  <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:16px 16px 26px;width:100%;max-width:520px;max-height:70vh;overflow:auto;">
+    <div style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin-bottom:10px;">ESCOLHER SÓCIO</div>
+    <div id="soc-pick-lista"></div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <input id="soc-pick-novo" type="text" placeholder="NOVO SÓCIO..." style="flex:1;border:0.5px solid #ddd;border-radius:10px;background:#fff;outline:none;font-size:13px;font-weight:600;color:#111;text-align:center;padding:9px 8px;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+      <button onclick="SOC_pickAddNovo()" style="border:none;border-radius:10px;background:#111;color:#fff;font-size:11px;letter-spacing:1px;font-weight:600;padding:0 16px;cursor:pointer;font-family:-apple-system,sans-serif;">ADD</button>
+    </div>
+    <button onclick="SOC_pickFechar()" style="width:100%;margin-top:10px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>
+  </div>
+</div>
+
 <div id="vb-c2-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100003;align-items:center;justify-content:center;padding:24px;">
   <div style="background:#f5f5f3;border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
     <div id="vb-c2-msg" style="font-size:13px;color:#555;font-weight:400;margin-bottom:16px;text-align:center;line-height:1.4;font-family:-apple-system,sans-serif;"></div>
@@ -366,7 +378,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.48.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.49.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -537,7 +549,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="field-card" style="margin-top:3px;">
       <div style="margin-bottom:10px;">
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">INVESTIDOR</div>
-        <input id="inv-nome" type="text" placeholder="ADRIANO" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+        <input id="inv-nome" type="text" placeholder="ESCOLHER" readonly onclick="SOC_openPicker(function(n){document.getElementById('inv-nome').value=n;})" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#111;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;cursor:pointer;">
       </div>
       <div style="margin-bottom:10px;">
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DESCRIÇÃO (INVESTIDOR)</div>
@@ -1310,7 +1322,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
       <div class="two-col" style="margin-top:6px;">
         <div style="padding-right:12px;text-align:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">SÓCIO</div>
-          <input id="mer-socio" type="text" placeholder="—" style="width:100%;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:13px;font-weight:600;color:#111;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+          <input id="mer-socio" type="text" placeholder="—" readonly onclick="SOC_openPicker(function(n){document.getElementById('mer-socio').value=n;})" style="width:100%;border:none;border-bottom:0.5px solid #eee;background:transparent;outline:none;font-size:13px;font-weight:600;color:#111;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;cursor:pointer;">
         </div>
         <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO</div>
@@ -9113,6 +9125,44 @@ function MER_limparBusca(){
   MER_render(); inp && inp.focus();
 }
 var SOC_rows=[], SOC_editId=null;
+var SOC_pickCb=null;
+function SOC_openPicker(cb){
+  SOC_pickCb=cb;
+  var ov=document.getElementById('soc-pick-overlay'); if(!ov) return;
+  ov.style.display='flex';
+  var l=document.getElementById('soc-pick-lista');
+  l.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;padding:12px;">Carregando...</div>';
+  sb.from('socios').select('*').order('nome',{ascending:true}).then(function(res){
+    var rows=(res.error?[]:(res.data||[]));
+    SOC_rows=rows;
+    var html='<button onclick="SOC_pickSel(\'\')" style="display:block;width:100%;text-align:center;padding:9px;margin-bottom:8px;border:0.5px dashed #ccc;border-radius:12px;background:transparent;font-size:11px;letter-spacing:1px;font-weight:600;color:#999;cursor:pointer;font-family:-apple-system,sans-serif;">SEM SÓCIO (LIMPAR)</button>';
+    if(!rows.length){ l.innerHTML=html+'<div style="text-align:center;color:#ccc;font-size:12px;padding:12px;">Nenhum sócio cadastrado. Adicione abaixo.</div>'; return; }
+    rows.forEach(function(r){
+      html+='<button onclick="SOC_pickSel(\''+String(r.nome).replace(/'/g,"\\'")+'\')" style="display:block;width:100%;text-align:center;padding:11px;margin-bottom:5px;border:0.5px solid #e0e0e0;border-radius:12px;background:#fff;font-size:14px;font-weight:700;color:#111;cursor:pointer;font-family:-apple-system,sans-serif;">'+SOC_esc(r.nome)+(r.telefone?('<span style="font-weight:400;color:#999;font-size:11px;"> · '+SOC_esc(r.telefone)+'</span>'):'')+'</button>';
+    });
+    l.innerHTML=html;
+  });
+}
+function SOC_pickSel(nome){
+  var cb=SOC_pickCb; SOC_pickFechar();
+  if(cb) cb(nome);
+}
+function SOC_pickFechar(){
+  SOC_pickCb=null;
+  var ov=document.getElementById('soc-pick-overlay'); if(ov) ov.style.display='none';
+  var n=document.getElementById('soc-pick-novo'); if(n) n.value='';
+}
+function SOC_pickAddNovo(){
+  var n=document.getElementById('soc-pick-novo');
+  var nome=((n&&n.value)||'').trim().toUpperCase();
+  if(!nome){ VB_toast('Digite o nome.'); return; }
+  sb.from('socios').insert({nome:nome}).select().then(function(res){
+    if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+    VB_toast('Sócio cadastrado.');
+    var cb=SOC_pickCb; SOC_pickFechar();
+    if(cb) cb(nome);
+  });
+}
 function SOC_maskTel(el){
   var d=(el.value||'').replace(/\D/g,'').slice(0,11);
   var out='';
@@ -10596,6 +10646,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.49.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Parte 2 dos Sócios: o campo SÓCIO do Estoque e o nome do INVESTIDOR no Financiamento agora abrem a lista de sócios cadastrados (toca no campo → escolhe), garantindo que é sempre a mesma pessoa pros relatórios. Dá pra cadastrar um sócio novo ali mesmo (campo NOVO SÓCIO + ADD) e limpar com SEM SÓCIO. Migração dos nomes já usados: insert into socios (nome) select x.nome from (select distinct upper(trim(socio)) as nome from vendas where socio is not null and trim(socio) &lt;&gt; '' union select distinct upper(trim(investidor_nome)) from financiamentos_hist where investidor_nome is not null and trim(investidor_nome) &lt;&gt; '') x where not exists (select 1 from socios s where upper(s.nome)=x.nome);</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.48.1</span><span class="cl-ver-date">03/07/2026</span></div>
