@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.46.6</title>
+<title>VB - v1.47.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -366,7 +366,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.46.6<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.47.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1225,6 +1225,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
     <button id="hist-tab-pag" onclick="HIST_loadTab('pag')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PAGAMENTOS</button>
     <button id="hist-tab-ven" onclick="HIST_loadTab('ven')" style="padding:10px 4px;border:0.5px solid #ddd;border-radius:12px;background:#fff;color:#aaa;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDAS</button>
+  </div>
+
+  <div id="hist-ant-sub" style="display:none;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+    <button id="hist-ant-ops" onclick="HIST_setAntSub('ops')" style="padding:8px 0;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERAÇÕES</button>
+    <button id="hist-ant-atr" onclick="HIST_setAntSub('atr')" style="padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ATRASADOS</button>
   </div>
 
   <div id="hist-search-wrap" style="margin-bottom:8px;position:relative;display:none;">
@@ -5359,10 +5364,26 @@ function HIST_styleSortChips(){
   });
 }
 
+var HIST_antSub='ops';
+function HIST_setAntSub(s){
+  HIST_antSub=s;
+  var bO=document.getElementById('hist-ant-ops'), bA=document.getElementById('hist-ant-atr');
+  var on='padding:8px 0;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+  var off='padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+  if(bO&&bA){ if(s==='ops'){ bO.style.cssText=on; bA.style.cssText=off; } else { bA.style.cssText=on; bO.style.cssText=off; } }
+  HIST_fetch(HIST_searchTerm||'');
+}
 function HIST_loadTab(tab){
   var keep=HIST_searchTerm||'';
   HIST_tabAtual=tab;
   HIST_setTabStyle(tab);
+  var sub=document.getElementById('hist-ant-sub'); if(sub) sub.style.display=(tab==='ant')?'grid':'none';
+  if(tab==='ant'){ HIST_antSub='ops';
+    var bO=document.getElementById('hist-ant-ops'), bA=document.getElementById('hist-ant-atr');
+    var on='padding:8px 0;border:0.5px solid #111;border-radius:10px;background:#111;color:#fff;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+    var off='padding:8px 0;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#888;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+    if(bO&&bA){ bO.style.cssText=on; bA.style.cssText=off; }
+  }
   HIST_searchTerm=keep;
   HIST_searchGlobal=false; // aba marcada = busca só nessa aba
   HIST_resetFilter();
@@ -5502,6 +5523,12 @@ function HIST_fetch(term){
     var rows=res.data||[];
     HIST_allRows=rows.slice();
     rows=HIST_filterRows(tab, rows);
+    if(tab==='ant'){
+      rows=rows.filter(function(r){
+        var atrasado=(Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0);
+        return HIST_antSub==='atr' ? atrasado : !atrasado;
+      });
+    }
     if(rows.length===0){
       var msg = (term||HIST_hasActiveFilter()) ? 'Nada encontrado.' : 'Nada confirmado ainda.';
       listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">'+msg+'</div>';
@@ -5520,20 +5547,23 @@ function HIST_fetch(term){
       var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
       var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
       if(tab==='ant'){
-        var atr=0, nAtr=0, bruto=0, nOk=0, lucro=0, temL=false;
-        rows.forEach(function(r){
-          var b=Number(r.valor_bruto)||0, l=Number(r.valor_liquido)||0;
-          if(l>b){ atr+=b; nAtr++; }
-          else {
-            bruto+=b; nOk++;
+        if(HIST_antSub==='atr'){
+          var atrA=0, nAtrA=0;
+          rows.forEach(function(r){ atrA+=Number(r.valor_bruto)||0; nAtrA++; });
+          totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
+            +'<div>'+lbl('ATRASADOS · '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'—', nAtrA?'#ff6b6b':null)+'</div>'
+            +'</div>';
+        } else {
+          var bruto=0, nOk=0, lucro=0, temL=false;
+          rows.forEach(function(r){
+            bruto+=Number(r.valor_bruto)||0; nOk++;
             var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; }
-          }
-        });
-        totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;text-align:center;">'
-          +'<div>'+lbl('ATRASADOS'+(nAtr?' · '+nAtr:''))+val(nAtr?HIST_fmtMoeda(atr):'—', nAtr?'#ff6b6b':null)+'</div>'
-          +'<div>'+lbl('BRUTO · '+nOk)+val(HIST_fmtMoeda(bruto))+'</div>'
-          +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'—')+'</div>'
-          +'</div>';
+          });
+          totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+            +'<div>'+lbl('BRUTO · '+nOk)+val(HIST_fmtMoeda(bruto))+'</div>'
+            +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'—')+'</div>'
+            +'</div>';
+        }
       } else if(tab==='fin' || tab==='ven'){
         var lucro2=0, temL2=false, minha2=0;
         rows.forEach(function(r){
@@ -10460,6 +10490,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.47.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Antecipação no Histórico ganhou duas sub-abas: OPERAÇÕES (as antecipações em dia) e ATRASADOS, separando o que é operação saudável do que virou cobrança. Abre sempre em OPERAÇÕES. A barra de totais acompanha: em OPERAÇÕES mostra BRUTO e LUCRO; em ATRASADOS mostra o total a cobrar. As sub-abas só aparecem na aba Antecipação</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.46.6</span><span class="cl-ver-date">03/07/2026</span></div>
