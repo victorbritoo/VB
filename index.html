@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.49.0</title>
+<title>VB - v1.50.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -294,6 +294,15 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="soc-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)SOC_viewFechar()">
+  <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;">
+    <div id="soc-view-nome" style="font-size:17px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;"></div>
+    <div id="soc-view-tel" style="font-size:12px;color:#999;text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;"></div>
+    <div id="soc-view-body" style="margin-top:14px;font-family:-apple-system,sans-serif;"></div>
+    <button onclick="SOC_viewFechar()" style="width:100%;margin-top:14px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+  </div>
+</div>
+
 <div id="soc-pick-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;">
   <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:16px 16px 26px;width:100%;max-width:520px;max-height:70vh;overflow:auto;">
     <div style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin-bottom:10px;">ESCOLHER SÓCIO</div>
@@ -378,7 +387,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.49.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.50.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -9185,16 +9194,69 @@ function SOC_render(){
   if(!SOC_rows.length){ lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:24px;">Nenhum sócio cadastrado.</div>'; return; }
   var html='';
   SOC_rows.forEach(function(r){
-    html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
-      +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="SOC_editar(\''+r.id+'\')">'
+    html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:8px;">'
+      +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="SOC_abrir(\''+r.id+'\')">'
         +'<div style="font-size:14px;font-weight:700;color:#111;">'+SOC_esc(r.nome)+'</div>'
         +(r.telefone?('<div style="font-size:11px;color:#999;margin-top:1px;">'+SOC_esc(r.telefone)+'</div>'):'')
       +'</div>'
+      +'<button onclick="SOC_editar(\''+r.id+'\')" title="Editar" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;width:24px;height:24px;flex-shrink:0;padding:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>'
       +'<button data-socdel="'+r.id+'" onclick="SOC_delArm(this,\''+r.id+'\')" style="border:none;border-radius:8px;background:#111;color:#fff;font-size:14px;font-weight:700;cursor:pointer;width:24px;height:24px;flex-shrink:0;line-height:1;padding:0;">×</button>'
     +'</div>';
   });
   lista.innerHTML=html;
 }
+function SOC_abrir(id){
+  var r=SOC_rows.find(function(x){return String(x.id)===String(id);}); if(!r) return;
+  var ov=document.getElementById('soc-view-overlay');
+  document.getElementById('soc-view-nome').textContent=r.nome||'';
+  document.getElementById('soc-view-tel').textContent=r.telefone||'';
+  var body=document.getElementById('soc-view-body');
+  body.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;padding:16px;">Carregando...</div>';
+  ov.style.display='flex';
+  var nome=(r.nome||'').trim();
+  Promise.all([
+    sb.from('vendas').select('*').ilike('socio', nome),
+    sb.from('financiamentos_hist').select('*').eq('tem_investidor', true).ilike('investidor_nome', nome)
+  ]).then(function(res){
+    var vendas=(res[0].error?[]:(res[0].data||[]));
+    var fins=(res[1].error?[]:(res[1].data||[]));
+    var nV=vendas.length, totV=0, lucroS=0;
+    vendas.forEach(function(v){
+      totV+=Number(v.valor_total)||0;
+      if(v.custo!=null){
+        var l=(Number(v.valor_total)||0)-(Number(v.custo)||0);
+        var pVB=(v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50;
+        lucroS += l*((100-pVB)/100);
+      }
+    });
+    var nF=fins.length, aporte=0, retorno=0;
+    fins.forEach(function(f){
+      aporte+=Number(f.investidor_aporte)||0;
+      retorno+=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
+    });
+    var lucroF=retorno-aporte;
+    function bloco(t,linhas){
+      var s='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
+        +'<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;margin-bottom:6px;">'+t+'</div>';
+      linhas.forEach(function(x){ s+='<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:3px;"><span style="color:#888;">'+x[0]+'</span><span style="font-weight:700;color:#111;">'+x[1]+'</span></div>'; });
+      return s+'</div>';
+    }
+    var hh='';
+    hh+=bloco('VENDAS EM SOCIEDADE', nV? [
+      ['Operações', String(nV)],
+      ['Total vendido', HIST_fmtMoeda(totV)],
+      ['Lucro do sócio', HIST_fmtMoeda(lucroS)]
+    ] : [['Operações','0']]);
+    hh+=bloco('FINANCIAMENTOS (INVESTIDOR)', nF? [
+      ['Operações', String(nF)],
+      ['Aporte total', HIST_fmtMoeda(aporte)],
+      ['Retorno total', HIST_fmtMoeda(retorno)],
+      ['Lucro', HIST_fmtMoeda(lucroF)]
+    ] : [['Operações','0']]);
+    body.innerHTML=hh;
+  });
+}
+function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
 function SOC_toggleForm(force){
   var f=document.getElementById('soc-form'), b=document.getElementById('soc-form-open');
   var abrir = (force===true) ? true : (force===false) ? false : (f.style.display==='none');
@@ -10646,6 +10708,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.50.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Parte 3 dos Sócios — o extrato do sócio: tocar num sócio abre um painel com os números dele. VENDAS EM SOCIEDADE: nº de operações, total vendido e o lucro que cabe a ele (pela divisão de lucro de cada venda). FINANCIAMENTOS (INVESTIDOR): nº de operações, aporte total, retorno total (parcela × prazo) e lucro. A edição do cadastro foi pro lápis ao lado do ×</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.49.0</span><span class="cl-ver-date">03/07/2026</span></div>
