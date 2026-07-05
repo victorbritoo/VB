@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.50.0</title>
+<title>VB - v1.50.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -387,7 +387,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.50.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.50.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -5922,6 +5922,26 @@ function VB_sairSalvar(){
 
 var VB_telaAnterior = 'home';
 var VB_telaAtual = 'home';
+// Gesto de voltar: deslizar da borda esquerda pra direita = mesmo que tocar no VB
+(function(){
+  var x0=null, y0=null, armado=false;
+  document.addEventListener('touchstart', function(e){
+    if(!e.touches || e.touches.length!==1) return;
+    var t=e.touches[0];
+    armado = (t.clientX<=25 && VB_telaAtual!=='home');
+    x0=t.clientX; y0=t.clientY;
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!armado || !e.touches || e.touches.length!==1) return;
+    var t=e.touches[0];
+    var dx=t.clientX-x0, dy=Math.abs(t.clientY-y0);
+    if(dx>70 && dx>dy*2){
+      armado=false;
+      VB_voltarDeTela();
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', function(){ armado=false; }, {passive:true});
+})();
 function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
@@ -10708,6 +10728,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.50.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Gesto de voltar: deslizar o dedo da borda esquerda pra direita agora volta a tela — exatamente a mesma função de tocar no VB, incluindo o aviso de salvar quando há alteração pendente. Só age quando o toque começa colado na borda (25px), então não atrapalha rolagem nem toques normais; na home não faz nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.50.0</span><span class="cl-ver-date">03/07/2026</span></div>
