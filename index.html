@@ -82,7 +82,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
-<title>VB - v1.50.1</title>
+<title>VB - v1.50.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -387,7 +387,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.50.1<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.50.2<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#111;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -5922,25 +5922,58 @@ function VB_sairSalvar(){
 
 var VB_telaAnterior = 'home';
 var VB_telaAtual = 'home';
-// Gesto de voltar: deslizar da borda esquerda pra direita = mesmo que tocar no VB
+// Gesto de voltar (estilo iOS): a tela acompanha o dedo; soltou além do ponto, desliza e volta
 (function(){
-  var x0=null, y0=null, armado=false;
+  var x0=null, y0=null, armado=false, seguindo=false, el=null;
+  function tela(){ return document.getElementById('screen-'+VB_telaAtual); }
   document.addEventListener('touchstart', function(e){
     if(!e.touches || e.touches.length!==1) return;
     var t=e.touches[0];
     armado = (t.clientX<=25 && VB_telaAtual!=='home');
+    seguindo=false; el=null;
     x0=t.clientX; y0=t.clientY;
   }, {passive:true});
   document.addEventListener('touchmove', function(e){
     if(!armado || !e.touches || e.touches.length!==1) return;
     var t=e.touches[0];
     var dx=t.clientX-x0, dy=Math.abs(t.clientY-y0);
-    if(dx>70 && dx>dy*2){
-      armado=false;
-      VB_voltarDeTela();
+    if(!seguindo){
+      if(dx>12 && dx>dy*1.5){ seguindo=true; el=tela(); if(el){ el.style.transition='none'; el.style.willChange='transform'; } }
+      else if(dy>16){ armado=false; } // virou rolagem
+      return;
     }
+    if(el && dx>0){ el.style.transform='translateX('+dx+'px)'; }
   }, {passive:true});
-  document.addEventListener('touchend', function(){ armado=false; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if(!armado){ return; }
+    armado=false;
+    if(!seguindo || !el){ return; }
+    var dx=(e.changedTouches && e.changedTouches[0]) ? (e.changedTouches[0].clientX-x0) : 0;
+    var commit = dx>90;
+    var dirty = commit && (typeof VB_temAlteracaoManual==='function') && VB_temAlteracaoManual(VB_telaAtual);
+    if(commit && !dirty){
+      // desliza pra fora e volta
+      el.style.transition='transform .22s ease-out';
+      el.style.transform='translateX(100%)';
+      (function(elc){
+        setTimeout(function(){
+          VB_voltarDeTela();
+          elc.style.transition='none'; elc.style.transform=''; elc.style.willChange='';
+        }, 225);
+      })(el);
+    } else {
+      // volta pro lugar (mola); se estava sujo, chama o voltar pra abrir o diálogo de salvar
+      el.style.transition='transform .2s ease-out';
+      el.style.transform='translateX(0)';
+      (function(elc, chamaDialogo){
+        setTimeout(function(){
+          elc.style.transition='none'; elc.style.willChange='';
+          if(chamaDialogo) VB_voltarDeTela();
+        }, 205);
+      })(el, commit && dirty);
+    }
+    el=null; seguindo=false;
+  }, {passive:true});
 })();
 function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
@@ -10728,6 +10761,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.50.2</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Gesto de voltar refinado, estilo iOS: a tela acompanha o dedo durante o arrasto; soltando além do ponto ela desliza pra fora e volta, soltando antes ela retorna ao lugar com suavidade. Se houver alteração pendente, a tela volta ao lugar e o aviso de salvar aparece. Movimento vertical vira rolagem normal, sem conflito</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.50.1</span><span class="cl-ver-date">03/07/2026</span></div>
