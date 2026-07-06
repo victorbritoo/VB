@@ -48,7 +48,7 @@
     disparar no 'touchend' (com preventDefault). NÃO usar
     'pointerdown'+preventDefault (bloqueia o teclado no iPhone).
   - clipboard.readText() é bloqueado no PWA standalone -> sempre ter
-    caixa de colar (fallback) no CARREGAR.
+    caixa de colar (fallback) se algum recurso precisar ler o clipboard.
   - Campos de DESCRIÇÃO: selecionar tudo só quando vazios
     (onclick="if(!this.value)this.select()") para permitir
     complementar/colar. Campos numéricos podem manter this.select().
@@ -59,10 +59,10 @@
     no canto superior esquerdo.
   - Rodapé da tela após gerar: só "↑ SEGURE A IMAGEM PARA SALVAR"
     e botão FECHAR.
-  - QR/transferência: Pagamentos e Vendas. Encode: base32 via
-    _b32enc/_b32dec para o QR (à prova de OCR) com prefixo VBxxx2;
-    base64 (VBxxx1) para o código de clipboard. O CARREGAR aceita
-    os dois formatos. O código é copiado ao gerar a foto.
+  - QR/CARREGAR REMOVIDOS (v1.60.0): fotos sem QR, sem cópia de código
+    pro clipboard, sem botões CARREGAR e sem overlays de código.
+    Funções _b32enc/_b32dec, *_codeStr, *_carregar, *_cod* e a lib
+    qrcode seguem no arquivo, dormentes (nada as chama).
 
 [8] WORKFLOW COM O VICTOR
   - "Explicar e confirmar antes de executar" em mudanças não triviais.
@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.59.3</title>
+<title>VB - v1.60.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -415,7 +415,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.59.3<br>06/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.60.0<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -695,8 +695,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
   </div>
 
-  <!-- CARREGAR -->
-  <button onclick="QUIT_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;margin-top:2px;margin-bottom:6px;font-family:-apple-system,sans-serif;">CARREGAR</button>
 
   <!-- LIMPAR + COMPARTILHAR -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -922,7 +920,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
       </div>
     </div>
-    <button onclick="VEN_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin-bottom:10px;">CARREGAR</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button onclick="VEN_limpar()" style="padding:9px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
       <button onclick="VEN_gerarTabela()" style="padding:9px;border:none;border-radius:14px;background:#111;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">GERAR TABELA</button>
@@ -953,19 +950,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
-<!-- Overlay código CARREGAR (Vendas) -->
-<div id="ven-overlayCodigo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10001;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;padding:20px;font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
-    <div style="font-size:13px;letter-spacing:2px;color:#4a4a4a;font-weight:700;text-align:center;margin-bottom:4px;">CARREGAR</div>
-    <div style="font-size:11px;color:#4a4a4a;text-align:center;margin-bottom:12px;line-height:1.4;">Cole o código salvo e toque em CARREGAR</div>
-    <input id="ven-cod-texto" type="text" placeholder="Cole o código aqui" style="width:100%;height:44px;border:0.5px solid #ddd;border-radius:10px;padding:0 12px;font-size:12px;font-family:-apple-system,sans-serif;color:#4a4a4a;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
-    <div id="ven-cod-msg" style="font-size:11px;text-align:center;margin-top:8px;min-height:14px;color:#888;">&nbsp;</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-      <button onclick="VEN_codFechar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
-      <button onclick="VEN_codAcao()" style="padding:9px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CARREGAR</button>
-    </div>
-  </div>
-</div>
 
 </div>
 <!-- OVERLAY TABELA (foto Quitação) -->
@@ -978,19 +962,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
-<!-- Overlay código CARREGAR (Quitação) -->
-<div id="quit-overlayCodigo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10001;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;padding:20px;font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
-    <div style="font-size:13px;letter-spacing:2px;color:#4a4a4a;font-weight:700;text-align:center;margin-bottom:4px;">CARREGAR</div>
-    <div style="font-size:11px;color:#4a4a4a;text-align:center;margin-bottom:12px;line-height:1.4;">Cole o código salvo e toque em CARREGAR</div>
-    <input id="quit-cod-texto" type="text" placeholder="Cole o código aqui" style="width:100%;height:44px;border:0.5px solid #ddd;border-radius:10px;padding:0 12px;font-size:12px;font-family:-apple-system,sans-serif;color:#4a4a4a;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
-    <div id="quit-cod-msg" style="font-size:11px;text-align:center;margin-top:8px;min-height:14px;color:#888;">&nbsp;</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-      <button onclick="QUIT_codFechar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
-      <button onclick="QUIT_codAcao()" style="padding:9px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CARREGAR</button>
-    </div>
-  </div>
-</div>
 
 <div id="screen-ant" class="vb-screen">
 <div class="card">
@@ -1118,7 +1089,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="mc"><div class="ml">JUROS + TARIFA</div><div class="mv" id="ant-totDesc">---</div></div>
   </div>
 
-  <button onclick="ANT_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;margin-bottom:6px;">CARREGAR</button>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
     <button onclick="ANT_limpar()" style="padding:9px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
     <button onclick="ANT_gerarResumoFoto()" style="padding:9px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:2px;color:#fff;font-weight:500;cursor:pointer;">COMPARTILHAR</button>
@@ -1176,18 +1146,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 </div>
 
 <!-- Overlay código CARREGAR (Antecipação) -->
-<div id="ant-overlayCodigo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10001;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;padding:20px;font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
-    <div style="font-size:13px;letter-spacing:2px;color:#4a4a4a;font-weight:700;text-align:center;margin-bottom:4px;">CARREGAR</div>
-    <div style="font-size:11px;color:#4a4a4a;text-align:center;margin-bottom:12px;line-height:1.4;">Cole o código salvo e toque em CARREGAR</div>
-    <input id="ant-cod-texto" type="text" placeholder="Cole o código aqui" style="width:100%;height:44px;border:0.5px solid #ddd;border-radius:10px;padding:0 12px;font-size:12px;font-family:-apple-system,sans-serif;color:#4a4a4a;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
-    <div id="ant-cod-msg" style="font-size:11px;text-align:center;margin-top:8px;min-height:14px;color:#888;">&nbsp;</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-      <button onclick="ANT_codFechar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
-      <button onclick="ANT_codAcao()" style="padding:9px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CARREGAR</button>
-    </div>
-  </div>
-</div>
 
 
 </div>
@@ -1230,7 +1188,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <!-- Botão CARREGAR -->
   <div style="margin-bottom:6px;">
-    <button onclick="PAG_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CARREGAR</button>
   </div>
 
   <!-- Botões -->
@@ -1241,19 +1198,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <button id="pag-btnConfirmar" onclick="PAG_confirmarOperacao(this)" style="width:100%;padding:9px;border:0.5px solid #111;border-radius:14px;background:#fff;font-size:12px;letter-spacing:2px;color:#4a4a4a;font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
 </div>
 
-<!-- Overlay código SALVAR/CARREGAR -->
-<div id="pag-overlayCodigo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10001;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;padding:20px;font-family:-apple-system,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
-    <div id="pag-cod-titulo" style="font-size:13px;letter-spacing:2px;color:#4a4a4a;font-weight:700;text-align:center;margin-bottom:4px;">CÓDIGO</div>
-    <div id="pag-cod-sub" style="font-size:11px;color:#4a4a4a;text-align:center;margin-bottom:12px;line-height:1.4;">&nbsp;</div>
-    <input id="pag-cod-texto" type="text" placeholder="Cole o código aqui" style="width:100%;height:44px;border:0.5px solid #ddd;border-radius:10px;padding:0 12px;font-size:12px;font-family:-apple-system,sans-serif;color:#4a4a4a;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
-    <div id="pag-cod-msg" style="font-size:11px;text-align:center;margin-top:8px;min-height:14px;color:#888;">&nbsp;</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-      <button onclick="PAG_codFechar()" style="padding:12px;border:0.5px solid #e0e0e0;border-radius:14px;background:#fff;font-size:12px;letter-spacing:1px;color:#aaa;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
-      <button id="pag-cod-acao" onclick="PAG_codAcao()" style="padding:9px;border:none;border-radius:14px;background:#111;font-size:12px;letter-spacing:1px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OK</button>
-    </div>
-  </div>
-</div>
 
 <!-- Overlay pagamentos -->
 <div id="pag-overlayTabela" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f5f3;z-index:10000;overflow-y:auto;padding:32px 16px 40px;">
@@ -7066,16 +7010,8 @@ function VEN_gerarTabela(){
   var totalRowH = linhas.reduce(function(a,l){ return a+(l.obs&&l.obs.trim()?altRow+altObs:altRow); },0);
   var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
 
-  // Código + QR (para carregar em outro aparelho)
-  var ven_codeStr = VEN_codeB32();
-  var ven_qr=null, ven_qn=0, ven_mA=3, ven_qpx=0, ven_qrCss=0, ven_codeBlockH=0;
-  try{
-    ven_qr = qrcode(0,'M'); ven_qr.addData(ven_codeStr); ven_qr.make();
-    ven_qn = ven_qr.getModuleCount();
-    ven_qpx = (ven_qn+8)*ven_mA;
-    ven_qrCss = ven_qpx/esc;
-    ven_codeBlockH = 10 + ven_qrCss + 8;
-  }catch(e){ ven_qr=null; ven_codeBlockH=0; }
+  // QR removido das fotos (v1.60.0)
+  var ven_qr=null, ven_codeBlockH=0;
   H += ven_codeBlockH;
   var c1 = padH + (W/3-padH)/2;
   var c2 = W/2;
@@ -7163,11 +7099,6 @@ function VEN_gerarTabela(){
   VB_carimboData(ctx, W);
   img.src = cv.toDataURL('image/png');
   img.style.display = 'block';
-  // copia o código (útil pra colar no CARREGAR)
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ven_codeStr).catch(function(){ _pagCopyFallback(ven_codeStr); }); }
-    else { _pagCopyFallback(ven_codeStr); }
-  }catch(e){}
   if(!VB_silentGen){
     document.getElementById('ven-tabelaImagemDica').style.display = 'block';
     document.getElementById('ven-overlayTabela').style.display = 'block';
@@ -7938,11 +7869,8 @@ function ANT_gerarTabela(){
   var W=700, pad=24;
   var fs=11, fsB=11, lineH=14, headH=18;
 
-  // Código + QR (rodapé) — com fallback se a operação for grande demais pro QR
-  var codeStr=ANT_codeStr();
-  var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
-  try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrCss=qpx/esc; qrOk=true; }catch(e){ qrOk=false; }
-  var secQrTop=10, secQr=qrOk?qrCss:14, secQrBottom=10;
+  // QR removido das fotos (v1.60.0)
+  var secQrTop=0, secQr=0, secQrBottom=0;
   var secQrBlock=secQrTop+secQr+secQrBottom;
 
   // Calcular altura exata do conteúdo
@@ -8067,29 +7995,11 @@ function ANT_gerarTabela(){
 
   VB_drawWatermark(ctx, W, H);
 
-  // Código + QR (rodapé, fundo limpo pra leitura)
-  y+=secQrTop;
-  ctx.fillStyle='#fff'; ctx.fillRect(0,y-4,W,H-(y-4));
-  if(qrOk){
-    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
-    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
-    ctx.fillStyle='#000';
-    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
-    ctx.restore();
-  } else {
-    ctx.font='600 8px Helvetica,Arial,sans-serif'; ctx.fillStyle='#999'; ctx.textAlign='center';
-    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO, COLE NO CARREGAR',W/2,y+9);
-  }
-
   // Mostrar
   VB_carimboData(ctx, W);
   var dataURL=cv.toDataURL('image/png');
   var img=document.getElementById('ant-tabelaImagem');
   img.src=dataURL; img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -8254,11 +8164,8 @@ function ANT_gerarResumoFoto(){
   valVals.push('R$ '+ANT_formatBR(VB), 'R$ '+ANT_formatBR(tj), 'R$ '+ANT_formatBR(tar));
   var card2H = 12 + valRows.length*rowH + 2 + rowH + 6;
 
-  // Código + QR (cartão final) — com fallback se a operação for grande demais pro QR
-  var codeStr=ANT_codeStr();
-  var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
-  try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrCss=qpx/esc; qrOk=true; }catch(e){ qrOk=false; }
-  var qrCardH=qrOk?(18+qrCss):32;
+  // QR removido das fotos (v1.60.0)
+  var qrCardH=0;
 
   var H = headerH + card1H + cardGap + (temTit?titCardH+cardGap:0) + card2H + cardGap + qrCardH + bottomPad;
 
@@ -8327,28 +8234,10 @@ function ANT_gerarResumoFoto(){
   olk('VALOR LÍQUIDO',cardL+18,lqBy,'left'); ov('R$ '+ANT_formatBR(tl),cardR-18,lqBy,'right');
   y+=card2H+cardGap;
 
-  // CARD QR (carregar)
-  card(y,qrCardH);
-  if(qrOk){
-    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+9)*esc);
-    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
-    ctx.fillStyle='#000';
-    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
-    ctx.restore();
-  } else {
-    ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
-    ctx.fillText('OPERAÇÃO GRANDE — CÓDIGO COPIADO',W/2,y+14);
-    ctx.fillText('COLE NO CARREGAR',W/2,y+27); setLS('0px');
-  }
-  y+=qrCardH;
 
   var img=document.getElementById('ant-tabelaImagem');
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -8943,19 +8832,8 @@ function PAG_compartilhar(){
   var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
   var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
   var secRow=lineH,secTotLine=22,secSaldoH=20,secSaldoV=34,secBottom=20;
-  // código + QR (canto superior direito, espelhando o logo)
-  var totalStr=(document.getElementById('pag-total').value||'').trim();
-  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
-  var payloadObj={t:totalStr,p:itens};
-  if(PAG_currentOperationId) payloadObj.id=PAG_currentOperationId;
-  var payload=_b32enc(JSON.stringify(payloadObj));
-  var codeStr='VBPAG2:'+payload;
-  var qr=qrcode(0,'M'); qr.addData(codeStr); qr.make();
-  var qn=qr.getModuleCount();
-  var mA=3;                       // px reais por módulo (mínimo pra ler sempre)
-  var qpx=(qn+8)*mA;              // largura do QR em px reais (já com quiet zone)
-  var qrCss=qpx/esc;
-  var codeBlockH=10+qrCss+8;
+  // QR removido das fotos (v1.60.0)
+  var codeBlockH=0;
 
   var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
   var cv=document.createElement('canvas');
@@ -9006,28 +8884,11 @@ function PAG_compartilhar(){
   ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
   VB_drawWatermark(ctx,W,H);
 
-  // bloco do QR centralizado embaixo, sobre fundo branco limpo (nítido)
-  var yCode=y+secSep;
-  ctx.fillStyle='#fff'; ctx.fillRect(0,yCode-4,W,H-(yCode-4));
-  ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(pad,yCode); ctx.lineTo(W-pad,yCode); ctx.stroke();
-  var yy=yCode+10;
-  ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-  var qX=Math.round((W*esc - qpx)/2), qY=Math.round(yy*esc);
-  ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
-  ctx.fillStyle='#000';
-  for(var r=0;r<qn;r++){ for(var c=0;c<qn;c++){ if(qr.isDark(r,c)){ ctx.fillRect(qX+(c+4)*mA, qY+(r+4)*mA, mA, mA); } } }
-  ctx.restore();
 
   var img=document.getElementById('pag-tabelaImagem');
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
-  // copia o código (útil pra colar no Safari)
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){ _pagCopyFallback(codeStr); }); }
-    else { _pagCopyFallback(codeStr); }
-  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -9058,23 +8919,13 @@ function PAG_salvarFoto(){
   var saldo=total-soma;
   var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
 
-  // código base32 (à prova de OCR)
-  var totalStr=(document.getElementById('pag-total').value||'').trim();
-  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
-  var payload=_b32enc(JSON.stringify({t:totalStr,p:itens}));
-  var codeStr='VBPAG2:'+payload;
+  // QR removido das fotos (v1.60.0)
 
   var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
   var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
   var secRow=lineH,secTotLine=22,secSaldoH=20,secBottom=16;
 
-  // QR com o código puro (correção de erro embutida — sem perda de leitura)
-  var qr=qrcode(0,'M'); qr.addData(codeStr); qr.make();
-  var qn=qr.getModuleCount();
-  var usable=W-pad*2;
-  var ms=Math.max(2, Math.floor(usable/(qn+8)));   // 4 módulos de margem de cada lado
-  var qrPx=(qn+8)*ms;
-  var codeHdrH=24, codeBlockH=codeHdrH+qrPx+14;
+  var codeBlockH=0;
 
   var H=16+secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
 
@@ -9126,35 +8977,11 @@ function PAG_salvarFoto(){
   // marca d'água ANTES do código
   VB_drawWatermark(ctx,W,H);
 
-  // bloco do QR sobre fundo branco limpo
-  var yCode=y+secSep;
-  ctx.fillStyle='#fff'; ctx.fillRect(0,yCode-4,W,H-(yCode-4));
-  ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
-  ctx.beginPath(); ctx.moveTo(pad,yCode); ctx.lineTo(W-pad,yCode); ctx.stroke();
-  var yy=yCode+14;
-  ctx.fillStyle='#bbb'; ctx.font='600 8px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('LEIA O QR NA FOTO PARA CARREGAR',W/2,yy); yy+=12;
-  // desenha o QR centralizado, com quiet zone de 4 módulos
-  var qx=Math.round((W-qrPx)/2), qy=yy;
-  ctx.fillStyle='#fff'; ctx.fillRect(qx,qy,qrPx,qrPx);
-  ctx.fillStyle='#000';
-  for(var r=0;r<qn;r++){
-    for(var c=0;c<qn;c++){
-      if(qr.isDark(r,c)){ ctx.fillRect(qx+(c+4)*ms, qy+(r+4)*ms, ms, ms); }
-    }
-  }
 
   var img=document.getElementById('pag-tabelaImagem');
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
-  // copia o mesmo código (puro) que está no QR
-  var clip=codeStr;
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(clip).catch(function(){ _pagCopyFallback(clip); });
-    } else { _pagCopyFallback(clip); }
-  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -10219,16 +10046,12 @@ function QUIT_compartilhar(){
   var dpStr=String(r.dateProx.getDate()).padStart(2,'0')+'/'+String(r.dateProx.getMonth()+1).padStart(2,'0')+'/'+r.dateProx.getFullYear();
   var taxaStr=r.taxa.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
 
-  // Código + QR
-  var codeStr=QUIT_codeStr();
-  var qr=null, qn=0, mA=3, qpx=0, qrOk=false;
-  try{ qr=qrcode(0,'M'); qr.addData(codeStr); qr.make(); qn=qr.getModuleCount(); qpx=(qn+8)*mA; qrOk=true; }catch(e){ qrOk=false; }
+  // QR removido das fotos (v1.60.0)
+  var qrOk=false;
 
   var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
-  var qrCss=qpx/esc;
   var headerH=68, card1H=88, card2H=76, card3H=78, cardGap=5, bottomPad=12;
-  var qrTopPad=10, qrBottomPad=8;
-  var qrBlockH = qrOk ? (qrTopPad+qrCss+qrBottomPad) : 26;
+  var qrBlockH = 0;
   var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + qrBlockH + bottomPad;
 
   var cv=document.createElement('canvas');
@@ -10279,28 +10102,11 @@ function QUIT_compartilhar(){
   olk('DESCONTO OBTIDO',cardR-18,vy+12,'right'); ov('R$ '+QUIT_formatBR(r.desc),cardR-18,vy+30,'right');
   y+=card3H+cardGap;
 
-  // QR solto no rodapé, sem card e sem legenda
-  if(qrOk){
-    y+=qrTopPad;
-    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-    var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
-    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
-    ctx.fillStyle='#000';
-    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
-    ctx.restore();
-  } else {
-    ctx.textAlign='center'; ctx.fillStyle='#aaa'; ctx.font='500 9px Helvetica,Arial,sans-serif'; setLS('2px');
-    ctx.fillText('CÓDIGO COPIADO — COLE NO CARREGAR',W/2,y+16); setLS('0px');
-  }
-
   var img=document.getElementById('quit-tabelaImagem');
   var _tsKeep=VB_carimboTS; VB_carimboTS=null; // Quitação é calculadora → carimbo = agora
   VB_carimboData(ctx, W);
   VB_carimboTS=_tsKeep;
   img.src=cv.toDataURL('image/png'); img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('quit-tabelaImagemDica').style.display='block';
   document.getElementById('quit-overlayTabela').style.display='block';
   document.getElementById('quit-overlayTabela').scrollTop=0;
@@ -11148,6 +10954,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.60.0</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">QR codes e CARREGAR removidos: as fotos dos quatro módulos (Antecipação, Vendas, Pagamentos e Quitação) saem sem o bloco do QR — mais curtas e limpas —, o app parou de copiar códigos pro clipboard ao gerar foto, e os botões CARREGAR com seus overlays de "cole o código" saíram das quatro telas. O recurso era da era pré-Supabase; o Histórico o aposentou. O código interno fica dormente no arquivo caso um dia volte</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.59.3</span><span class="cl-ver-date">06/07/2026</span></div>
