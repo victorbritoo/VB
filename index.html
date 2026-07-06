@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.57.0</title>
+<title>VB - v1.58.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -312,6 +312,15 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
+  <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
+    <div id="mer-view-titulo" style="font-size:16px;font-weight:700;color:#111;text-align:center;"></div>
+    <div id="mer-view-body" style="margin-top:12px;"></div>
+    <button id="mer-view-editar" style="width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:#111;font-size:11px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
+    <button onclick="MER_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+  </div>
+</div>
+
 <div id="soc-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)SOC_viewFechar()">
   <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;">
     <div id="soc-view-nome" style="font-size:17px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;"></div>
@@ -406,7 +415,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.57.0<br>06/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.58.0<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1330,8 +1339,18 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
   <!-- ADICIONAR COMPRA -->
   <div id="mer-form" class="field-card" style="padding:8px 16px;margin-bottom:4px;display:none;">
-    <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
-    <input id="mer-desc" type="text" placeholder="ROLEX SUBMARINER 128610 SÉRIE X1Y2" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:14px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">MARCA</div><input id="mer-marca" type="text" placeholder="ROLEX" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
+      <div><div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">MODELO</div><input id="mer-modelo" type="text" placeholder="SUBMARINER 126610" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;">
+      <div><div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">ANO</div><input id="mer-ano" type="text" placeholder="2021 ou 03/2021" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
+      <div><div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">SN</div><input id="mer-sn" type="text" placeholder="3Y166494" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
+    </div>
+    <div style="margin-top:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">ACOMPANHA</div>
+      <input id="mer-infos" type="text" placeholder="CAIXA, DOCUMENTOS, CERTIFICADO..." onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+    </div>
     <div class="two-col" style="margin-top:6px;">
       <div style="padding-right:12px;text-align:center;">
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">CUSTO</div>
@@ -9219,12 +9238,31 @@ function VB_c2Pick(v){
   var cb=VB_c2Cb; VB_c2Cb=null;
   if(cb) cb(v);
 }
+function MER_compor(){
+  var m=(document.getElementById('mer-marca').value||'').trim();
+  var mo=(document.getElementById('mer-modelo').value||'').trim();
+  var an=(document.getElementById('mer-ano').value||'').trim();
+  var sn=(document.getElementById('mer-sn').value||'').trim();
+  var d=[m,mo,an].filter(function(x){return x;}).join(' ');
+  if(sn) d+=(d?' ':'')+'SN: '+sn;
+  return d.toUpperCase();
+}
+function MER_desmontar(desc){
+  var d=String(desc||'').trim(), sn='', ano='', marca='', modelo='';
+  var mSN=d.match(/\bSN\s*:?\s*([A-Za-z0-9-]+)?/i);
+  if(mSN){ sn=mSN[1]||''; d=d.replace(mSN[0],'').trim(); }
+  var mAno=d.match(/\b((?:19|20)\d{2})\b/);
+  if(mAno){ ano=mAno[1]; d=d.replace(mAno[0],'').replace(/\s{2,}/g,' ').trim(); }
+  var partes=d.split(/\s+/).filter(function(x){return x;});
+  if(partes.length){ marca=partes.shift(); modelo=partes.join(' '); }
+  return {marca:marca, modelo:modelo, ano:ano, sn:sn};
+}
 function MER_dirtyGuard(next){
   if(!MER_editId) { next(); return; }
   // compara valores atuais com o registro em edição
   var r=MER_rows.find(function(x){return String(x.id)===String(MER_editId);});
   var atual={
-    descricao:(document.getElementById('mer-desc').value||'').trim(),
+    descricao:MER_compor(), infos:(document.getElementById('mer-infos').value||'').trim().toUpperCase(),
     custo:VEN_parseBR(document.getElementById('mer-custo').value)||0,
     data:(document.getElementById('mer-data').value||''),
     fornecedor:(document.getElementById('mer-fornecedor').value||'').trim(),
@@ -9233,7 +9271,7 @@ function MER_dirtyGuard(next){
     vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0
   };
   var orig= r ? {
-    descricao:(r.descricao||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
+    descricao:(r.descricao||''), infos:(r.infos||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
     fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0
   } : null;
   var mudou = !orig || JSON.stringify(atual)!==JSON.stringify(orig);
@@ -9666,7 +9704,7 @@ function MER_render(){
     var html='';
     rows.forEach(function(r){
       html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
-        +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_editar(\''+r.id+'\')">'
+        +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +'<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
         +'<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)
           +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
@@ -9705,12 +9743,42 @@ function MER_toggleForm(force){
   if(b){ b.textContent = abrir ? '×' : '+'; b.style.fontSize = abrir ? '22px' : '24px'; }
   if(!abrir && MER_editId) MER_cancelEdit();
 }
+function MER_abrir(id){
+  var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
+  if(!r) return;
+  var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:r.modelo||'',ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
+  document.getElementById('mer-view-titulo').textContent=r.descricao||'(sem descrição)';
+  function lin(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:#888;white-space:nowrap;">'+l+'</span><span style="font-weight:700;color:#4a4a4a;text-align:right;">'+HIST_esc(v)+'</span></div>'):''; }
+  var hh='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
+  hh+=lin('Marca',cx.marca)+lin('Modelo',cx.modelo)+lin('Ano',cx.ano)+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
+  hh+='</div><div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-top:8px;">';
+  hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
+  hh+=lin('Data da compra', MER_fmtData(r.data_compra)||'');
+  if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em estoque', MER_dias(r.data_compra)+'d');
+  if(r.status==='vendida'){
+    hh+=lin('Vendido em', MER_fmtData(r.data_venda)||'');
+    if(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null) hh+=lin('Giro', MER_diasEntre(r.data_compra,r.data_venda)+'d');
+  }
+  hh+=lin('De quem comprei', r.fornecedor||'')+lin('Pagamento', r.pagamento||'');
+  hh+=lin('Sócio', r.socio||'');
+  if(r.valor_socio!=null && Number(r.valor_socio)>0) hh+=lin('Parte do sócio', 'R$ '+MER_fmtBR(r.valor_socio));
+  hh+='</div>';
+  document.getElementById('mer-view-body').innerHTML=hh;
+  document.getElementById('mer-view-editar').onclick=function(){ MER_viewFechar(); MER_editar(id); };
+  document.getElementById('mer-view-overlay').style.display='flex';
+}
+function MER_viewFechar(){ var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none'; }
 function MER_editar(id){
   if(MER_editId && String(MER_editId)!==String(id)){ MER_dirtyGuard(function(){ MER_editar(id); }); return; }
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
   MER_editId=r.id;
-  document.getElementById('mer-desc').value=r.descricao||'';
+  var _cx = (r.marca||r.modelo||r.ano||r.sn) ? {marca:r.marca||'', modelo:r.modelo||'', ano:r.ano||'', sn:r.sn||''} : MER_desmontar(r.descricao);
+  document.getElementById('mer-marca').value=_cx.marca||'';
+  document.getElementById('mer-modelo').value=_cx.modelo||'';
+  document.getElementById('mer-ano').value=_cx.ano||'';
+  document.getElementById('mer-sn').value=_cx.sn||'';
+  document.getElementById('mer-infos').value=r.infos||'';
   document.getElementById('mer-custo').value=r.custo!=null?MER_fmtBR(r.custo):'';
   document.getElementById('mer-data').value=MER_fmtData(r.data_compra)||'';
   document.getElementById('mer-fornecedor').value=r.fornecedor||'';
@@ -9728,7 +9796,7 @@ function MER_editar(id){
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['mer-marca','mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -9762,10 +9830,10 @@ function MER_toggleDetalhes(){
   if(t) t.textContent = aberto ? '+ DETALHES (FORNECEDOR, PAGAMENTO, SÓCIO)' : '− OCULTAR DETALHES';
 }
 function MER_add(btn){
-  var desc=(document.getElementById('mer-desc').value||'').trim();
+  var desc=MER_compor();
   var custo=VEN_parseBR(document.getElementById('mer-custo').value);
   var dataStr=(document.getElementById('mer-data').value||'');
-  if(!desc){ VB_toast('Preencha a descrição.'); return; }
+  if(!desc){ VB_toast('Preencha marca/modelo.'); return; }
   if(isNaN(custo)||custo<=0){ VB_toast('Preencha o custo.'); return; }
   var iso=null, pp=dataStr.split('/');
   if(pp.length===3){ var y=pp[2]; if(y.length===2) y='20'+y; iso=y+'-'+('0'+pp[1]).slice(-2)+'-'+('0'+pp[0]).slice(-2); }
@@ -9775,6 +9843,11 @@ function MER_add(btn){
   var vSocio=VEN_parseBR(document.getElementById('mer-valorSocio').value);
   var payload={
     descricao:desc, custo:custo, data_compra:iso,
+    marca:(document.getElementById('mer-marca').value||'').trim().toUpperCase()||null,
+    modelo:(document.getElementById('mer-modelo').value||'').trim().toUpperCase()||null,
+    ano:(document.getElementById('mer-ano').value||'').trim()||null,
+    sn:(document.getElementById('mer-sn').value||'').trim().toUpperCase()||null,
+    infos:(document.getElementById('mer-infos').value||'').trim().toUpperCase()||null,
     fornecedor: forn||null, pagamento: pgto||null,
     socio: socio||null, valor_socio: (!isNaN(vSocio)&&vSocio>0)?vSocio:null
   };
@@ -9787,7 +9860,7 @@ function MER_add(btn){
     if(res.error){ MER_updateAddBtn(); VB_toast('Não salvou: '+(res.error.message||res.error.code||'erro desconhecido')); console.log('MER_add error:', res.error); return; }
     var editava=!!MER_editId;
     MER_editId=null;
-    ['mer-desc','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    ['mer-marca','mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     MER_updateAddBtn();
     MER_toggleForm(false);
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
@@ -11040,6 +11113,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.58.0</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">Estoque estruturado: a descrição virou quatro campos (MARCA, MODELO, ANO livre — aceita 2021 ou 03/2021 — e SN) mais o campo ACOMPANHA (caixa, documentos, certificado...). O app monta a descrição sozinho, então a lista, a venda que puxa do estoque, a busca e tudo mais continuam iguais. Itens antigos são desmontados automaticamente ao editar (marca, ano e SN extraídos da descrição). E tocar num item agora abre a FICHA do relógio (todas as infos + botão EDITAR) em vez de ir direto pra edição. Requer SQL: alter table mercadorias add column if not exists marca text, add column if not exists modelo text, add column if not exists ano text, add column if not exists sn text, add column if not exists infos text;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.57.0</span><span class="cl-ver-date">06/07/2026</span></div>
