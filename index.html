@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.55.0</title>
+<title>VB - v1.55.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -406,7 +406,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.55.0<br>05/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.55.1<br>05/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -9404,11 +9404,20 @@ function FM_load(){
     var ant=filtra(res[0].data,'ant'), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
-    var dAnt={n:ant.length, tot:soma(ant,function(r){return Number(r.valor_bruto);}), luc:lucroDe(ant,'ant')};
+    var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
+    var dAnt={n:antOp.length, tot:soma(antOp,function(r){return Number(r.valor_bruto);}), luc:lucroDe(antOp,'ant')};
     var dFin={n:fin.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), luc:lucroDe(fin,'fin')};
-    var dVen={n:ven.length, tot:soma(ven,function(r){return Number(r.valor_total);}), luc:lucroDe(ven,'ven')};
+    var venLucVB=0;
+    ven.forEach(function(v){
+      if(v.custo==null) return;
+      var l=(Number(v.valor_total)||0)-(Number(v.custo)||0);
+      var temSocio=v.socio && Number(v.valor_socio)>0;
+      var pVB=temSocio ? ((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50) : 100;
+      venLucVB += l*(pVB/100);
+    });
+    var dVen={n:ven.length, tot:soma(ven,function(r){return Number(r.valor_total);}), luc:lucroDe(ven,'ven'), lucVB:venLucVB};
     var dPag={n:pag.length, tot:soma(pag,function(r){return Number(r.valor_total);})};
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:dAnt.luc+dFin.luc+dVen.luc};
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:dAnt.luc+dFin.luc+venLucVB};
     function bloco(t,linhas){
       var s='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:#bbb;font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -9418,7 +9427,7 @@ function FM_load(){
     var hh='';
     hh+=bloco('ANTECIPAÇÕES · '+dAnt.n, [['Bruto operado',HIST_fmtMoeda(dAnt.tot)],['Lucro',HIST_fmtMoeda(dAnt.luc)]]);
     hh+=bloco('FINANCIAMENTOS · '+dFin.n, [['Financiado',HIST_fmtMoeda(dFin.tot)],['Lucro',HIST_fmtMoeda(dFin.luc)]]);
-    hh+=bloco('VENDAS · '+dVen.n, [['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro',HIST_fmtMoeda(dVen.luc)]]);
+    hh+=bloco('VENDAS · '+dVen.n, [['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro total',HIST_fmtMoeda(dVen.luc)],['Lucro VB',HIST_fmtMoeda(dVen.lucVB)]]);
     hh+=bloco('PAGAMENTOS · '+dPag.n, [['Total',HIST_fmtMoeda(dPag.tot)]]);
     hh+='<div style="background:#111;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:#fff;">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>';
     body.innerHTML=hh;
@@ -9426,7 +9435,7 @@ function FM_load(){
 }
 function FM_foto(){
   var d=FM_dados; if(!d){ VB_toast('Carregando ainda...'); return; }
-  var W=820, PAD=40, CW=W-PAD*2, H=640;
+  var W=820, PAD=40, CW=W-PAD*2, H=670;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -9453,7 +9462,7 @@ function FM_foto(){
   }
   selo('ANTECIPAÇÕES · '+d.ant.n, [['Bruto operado',HIST_fmtMoeda(d.ant.tot)],['Lucro',HIST_fmtMoeda(d.ant.luc)]]);
   selo('FINANCIAMENTOS · '+d.fin.n, [['Financiado',HIST_fmtMoeda(d.fin.tot)],['Lucro',HIST_fmtMoeda(d.fin.luc)]]);
-  selo('VENDAS · '+d.ven.n, [['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro',HIST_fmtMoeda(d.ven.luc)]]);
+  selo('VENDAS · '+d.ven.n, [['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro total',HIST_fmtMoeda(d.ven.luc)],['Lucro VB',HIST_fmtMoeda(d.ven.lucVB)]]);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
@@ -10995,6 +11004,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.55.1</span><span class="cl-ver-date">05/07/2026</span></div>
+      <div class="cl-item">Fechamento do mês ajustado: o bruto operado das Antecipações não inclui mais os atrasados (só o que realmente foi operado — a contagem também), e Vendas passou a mostrar Lucro total e Lucro VB (sua parte pela divisão de cada venda; venda sem sócio conta inteira pra você). O LUCRO DO MÊS consolidado usa o Lucro VB — é o seu dinheiro de fato</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.55.0</span><span class="cl-ver-date">05/07/2026</span></div>
