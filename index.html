@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.56.0</title>
+<title>VB - v1.57.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -406,7 +406,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.56.0<br>05/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.57.0<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -906,6 +906,10 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div id="ven-secTabelaData" style="margin-bottom:8px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
       <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DATA DA VENDA</div>
+      <input id="ven-dataVenda" type="text" inputmode="numeric" placeholder="DD/MM/AAAA (vazio = hoje)" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
     </div>
     <button onclick="VEN_carregar(this)" style="width:100%;padding:11px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-size:11px;letter-spacing:2px;color:#aaa;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin-bottom:10px;">CARREGAR</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -3908,6 +3912,8 @@ function HIST_carregarVen(r){
     if(r.quantidade_parcelas) document.getElementById('ven-qtd').value=String(r.quantidade_parcelas);
     if(r.valor_parcela){ document.getElementById('ven-parcela').value=VEN_formatBR(Number(r.valor_parcela)); }
     if(r.data_primeira_parcela){ var pp=r.data_primeira_parcela.split('-'); document.getElementById('ven-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
+    var _dvEl=document.getElementById('ven-dataVenda');
+    if(_dvEl){ if(r.data_venda){ var dv=String(r.data_venda).split('-'); _dvEl.value=dv[2]+'/'+dv[1]+'/'+dv[0]; } else { _dvEl.value=''; } }
     VEN_update && VEN_update();
     VEN_autoLista();
   }
@@ -5214,7 +5220,7 @@ function HIST_imgFin(r){
   return _vbimg;
 }
 function HIST_imgVen(r){
-  var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
+  var snap={ d:_histGetVal('ven-tabelaDesc'), pa:_histGetVal('ven-parcela'), q:_histGetVal('ven-qtd'), dt:_histGetVal('ven-tabelaData'), dv:_histGetVal('ven-dataVenda'), t:_histGetVal('ven-total'), mp:VEN_modoPersonalizado, arr:VEN_parcelas, cnt:VEN_parcelaCounter };
   _histSetVal('ven-tabelaDesc', (r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
@@ -5813,9 +5819,24 @@ function HIST_renderRows(tab, rows){
           campos.push({l:'Custo '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
         }
       }
+      if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
       if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
-      if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
+      (function(){
+        var arr=r.parcelas;
+        if(arr && arr.length){
+          var vals=arr.map(function(p){ return Number(String(p.v||'0').replace(/\./g,'').replace(',','.'))||0; }).filter(function(x){return x>0;});
+          if(vals.length){
+            var todasIguais=vals.every(function(x){return Math.abs(x-vals[0])<0.005;});
+            var restoIgual=vals.length>2 && vals.slice(1).every(function(x){return Math.abs(x-vals[1])<0.005;}) && Math.abs(vals[0]-vals[1])>=0.005;
+            if(todasIguais){ campos.push({l:'Valor parcela', v:HIST_fmtMoeda(vals[0])}); }
+            else if(restoIgual){ campos.push({l:'Parcelas (valores)', v:HIST_fmtMoeda(vals[0])+' + '+(vals.length-1)+'\u00d7 '+HIST_fmtMoeda(vals[1])}); }
+            else { var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals); campos.push({l:'Parcelas (valores)', v:'Variadas ('+HIST_fmtMoeda(mn)+' a '+HIST_fmtMoeda(mx)+')'}); }
+            return;
+          }
+        }
+        if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
+      })();
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
       if(!_temSocio && r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); }
 
@@ -7172,6 +7193,7 @@ function VEN_confirmarOperacao(btn){
     quantidade_parcelas: qtd>0?qtd:null,
     valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
     parcelas: parcelasPayload,
+    data_venda: (function(){ var v=(document.getElementById('ven-dataVenda').value||'').trim(); var iso=v?toISO(v):null; if(iso) return iso; var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })(),
     custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })(),
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
@@ -7184,7 +7206,7 @@ function VEN_confirmarOperacao(btn){
 
   var query = ehAtualizacao
     ? sb.from('vendas').update(row).eq('id', VEN_currentOperationId).select()
-    : sb.from('vendas').insert(Object.assign({data_venda:(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})()}, row)).select();
+    : sb.from('vendas').insert(row).select();
 
   query.then(function(res){
     if(btn) btn.disabled=false;
@@ -11018,6 +11040,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.57.0</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">Vendas: novo campo DATA DA VENDA no formulário (abaixo do primeiro vencimento) — vazio grava hoje, editável nas antigas pra corrigir o mês do fechamento; aparece no expandir do Histórico. E o VALOR PARCELA do expandir parou de mostrar média falsa em vendas com parcelas diferentes: agora descreve a operação real — todas iguais mostra o valor, entrada + resto igual mostra "R$ 20.000,00 + 5× R$ 7.400,00", e tudo variado mostra a faixa (menor a maior)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.56.0</span><span class="cl-ver-date">05/07/2026</span></div>
