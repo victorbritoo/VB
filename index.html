@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.53.0</title>
+<title>VB - v1.54.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -304,7 +304,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div id="soc-view-nome" style="font-size:17px;font-weight:700;color:#111;text-align:center;font-family:-apple-system,sans-serif;"></div>
     <div id="soc-view-tel" style="font-size:12px;color:#4a4a4a;text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;"></div>
     <div id="soc-view-body" style="margin-top:14px;font-family:-apple-system,sans-serif;"></div>
-    <button onclick="SOC_viewFechar()" style="width:100%;margin-top:14px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+    <button onclick="SOC_extratoFoto()" style="width:100%;margin-top:14px;padding:11px;border:none;border-radius:12px;background:#111;font-size:11px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">GERAR EXTRATO (FOTO)</button>
+    <button onclick="SOC_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
   </div>
 </div>
 
@@ -392,7 +393,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.53.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.54.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -420,6 +421,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <button onclick="PIN_request('soc')" style="display:block;width:100%;padding:9px;border:none;background:transparent;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">
       <span style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;">SÓCIOS</span>
     </button>
+    <div id="home-bkp-aviso" style="display:none;text-align:center;margin-top:4px;font-size:10px;letter-spacing:1px;color:#c0392b;font-weight:600;font-family:-apple-system,sans-serif;"></div>
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:#c0392b;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
     <div onclick="VB_logout()" style="text-align:center;margin-top:14px;font-size:10px;color:#ccc;letter-spacing:1px;cursor:pointer;font-family:-apple-system,sans-serif;">SAIR</div>
   </div>
@@ -4231,6 +4233,16 @@ function HIST_exportarPDF(){
 
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
+function VB_checkBackupAviso(){
+  var el=document.getElementById('home-bkp-aviso'); if(!el) return;
+  var g=null; try{ g=localStorage.getItem(VB_BACKUP_LS); }catch(e){}
+  var dias=null;
+  if(g){ var d=new Date(g); if(!isNaN(d)) dias=Math.floor((Date.now()-d.getTime())/86400000); }
+  if(dias==null){ el.style.display='block'; el.textContent='SEM BACKUP NESTE APARELHO — FAÇA UM BACKUP'; }
+  else if(dias>=5){ el.style.display='block'; el.textContent='ÚLTIMO BACKUP HÁ '+dias+' DIAS — FAÇA UM BACKUP'; }
+  else { el.style.display='none'; }
+}
+setTimeout(function(){ try{ VB_checkBackupAviso(); }catch(e){} }, 400);
 function VB_fmtBackupRel(iso){
   if(!iso) return '—';
   var d=new Date(iso); if(isNaN(d.getTime())) return '—';
@@ -5530,6 +5542,17 @@ function HIST_setSort(col){
   HIST_fetch(HIST_searchTerm);
 }
 
+// Valor de cobrança de hoje pra atrasado: líquido salvo corrigido pela taxa a.m.
+// desde a data do último salvamento (created_at, que é reescrito a cada save).
+function HIST_atrHoje(r){
+  var liq=Number(r.valor_liquido)||0, tx=Number(r.taxa)||0;
+  if(!tx || !r.created_at) return liq;
+  var base=new Date(String(r.created_at).split('T')[0]+'T00:00:00');
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var dias=Math.floor((hoje-base)/86400000);
+  if(dias<=0) return liq;
+  return liq*Math.pow(1+tx/100, dias/30);
+}
 // Lucro por operação: ant = juros (bruto − líquido − tarifa; atrasados fora),
 // fin = juros totais ou spread do investidor, ven = total − custo (quando houver custo)
 function HIST_lucroRow(tab, r){
@@ -5603,7 +5626,8 @@ function HIST_fetch(term){
       HIST_setCount(term ? ('Encontrado: '+capped+' '+(n===1?'Operação':'Operações')) : '');
     }
     // total
-    if(totalEl){
+    if(totalEl && rows.length===0){ totalEl.style.display='none'; }
+    else if(totalEl){
       var soma=rows.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
       var nOps=rows.length, opsTxt=nOps+' '+(nOps===1?'OPERAÇÃO':'OPERAÇÕES');
       var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
@@ -5611,7 +5635,7 @@ function HIST_fetch(term){
       if(tab==='ant'){
         if(HIST_antSub==='atr'){
           var atrA=0, nAtrA=0;
-          rows.forEach(function(r){ atrA+=Number(r.valor_bruto)||0; nAtrA++; });
+          rows.forEach(function(r){ atrA+=HIST_atrHoje(r); nAtrA++; });
           totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
             +'<div>'+lbl('ATRASADOS · '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'—', nAtrA?'#ff6b6b':null)+'</div>'
             +'</div>';
@@ -5716,11 +5740,13 @@ function HIST_renderRows(tab, rows){
       var _bru=Number(r.valor_bruto)||0, _liq=Number(r.valor_liquido)||0;
       var _atrasado=(_liq>_bru);
       if(_atrasado){
-        valor=HIST_fmtMoeda(_liq);
-        var _jr=_liq-_bru-(Number(r.tarifa)||0), _pjr=_bru>0?Math.round(_jr/_bru*100):0;
+        var _hj=HIST_atrHoje(r);
+        valor=HIST_fmtMoeda(_hj);
+        var _jrH=_hj-_bru-(Number(r.tarifa)||0), _pjrH=_bru>0?Math.round(_jrH/_bru*100):0;
         campos.push({l:'Principal', v:HIST_fmtMoeda(_bru)});
-        campos.push({l:'Juros', v:HIST_fmtMoeda(_jr)+' ('+_pjr+'%)'});
-        campos.push({l:'Total', v:HIST_fmtMoeda(_liq)});
+        campos.push({l:'Juros (hoje)', v:HIST_fmtMoeda(_jrH)+' ('+_pjrH+'%)'});
+        campos.push({l:'Salvo em '+HIST_fmtData(String(r.created_at||'').split('T')[0]), v:HIST_fmtMoeda(_liq)});
+        campos.push({l:'Cobrar hoje', v:HIST_fmtMoeda(_hj)});
       } else {
         valor='';
         var _laN=HIST_lucroRow('ant', r);
@@ -6008,6 +6034,7 @@ function showScreen(name){
   if(name==='soc'){ SOC_load(); }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
+  if(name==='home'){ try{ VB_checkBackupAviso(); }catch(e){} }
   var _elEnt=document.getElementById('screen-'+name);
   if(_elEnt){ _elEnt.classList.remove('vb-enter'); void _elEnt.offsetWidth; _elEnt.classList.add('vb-enter'); }
   window.scrollTo(0,0);
@@ -9308,6 +9335,7 @@ function SOC_abrir(id){
       retorno+=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
     });
     var lucroF=retorno-aporte;
+    SOC_viewData={nome:r.nome||'', tel:r.telefone||'', nV:nV, totV:totV, lucroS:lucroS, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF};
     function bloco(t,linhas){
       var s='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -9328,6 +9356,56 @@ function SOC_abrir(id){
     ] : [['Operações','0']]);
     body.innerHTML=hh;
   });
+}
+var SOC_viewData=null;
+function SOC_extratoFoto(){
+  var d=SOC_viewData; if(!d){ VB_toast('Abra um sócio primeiro.'); return; }
+  var W=820, H=560, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var c=cv.getContext('2d');
+  c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
+  c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', 40, 70);
+  c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
+  c.fillText('E X T R A T O   D O   S Ó C I O', 40, 96);
+  c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
+  c.fillText((d.nome||'').toUpperCase(), 40, 146);
+  if(d.tel){ c.fillStyle='#777'; c.font='500 15px -apple-system, Helvetica, sans-serif'; c.fillText(d.tel, 40, 170); }
+  function selo(x,y,w,hh,titulo,linhas){
+    c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
+    c.beginPath(); c.roundRect(x,y,w,hh,14); c.fill(); c.stroke();
+    c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif';
+    c.fillText(titulo, x+22, y+30);
+    var yy=y+62;
+    linhas.forEach(function(li){
+      c.fillStyle='#888'; c.font='500 14px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+      c.fillText(li[0], x+22, yy);
+      c.fillStyle='#111'; c.font='700 16px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
+      c.fillText(li[1], x+w-22, yy);
+      c.textAlign='left'; yy+=34;
+    });
+  }
+  selo(40, 196, W-80, 168, 'VENDAS EM SOCIEDADE', [
+    ['Operações', String(d.nV)],
+    ['Total vendido', HIST_fmtMoeda(d.totV)],
+    ['Lucro do sócio', HIST_fmtMoeda(d.lucroS)]
+  ]);
+  selo(40, 380, W-80, 134, 'FINANCIAMENTOS (INVESTIDOR)', [
+    ['Operações · Aporte', d.nF+' · '+HIST_fmtMoeda(d.aporte)],
+    ['Retorno · Lucro', HIST_fmtMoeda(d.retorno)+' · '+HIST_fmtMoeda(d.lucroF)]
+  ]);
+  var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+  c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
+  c.fillText('Gerado em '+ds, W-40, H-24); c.textAlign='left';
+  cv.toBlob(function(blob){
+    if(!blob){ VB_toast('Erro ao gerar imagem.'); return; }
+    var fname='VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg';
+    var file=new File([blob], fname, {type:'image/jpeg'});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      navigator.share({files:[file]}).catch(function(){});
+    } else {
+      var url=URL.createObjectURL(blob); var aEl=document.createElement('a'); aEl.href=url; aEl.download=fname;
+      document.body.appendChild(aEl); aEl.click(); setTimeout(function(){ URL.revokeObjectURL(url); aEl.remove(); }, 500);
+    }
+  }, 'image/jpeg', 0.92);
 }
 function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
 function SOC_toggleForm(force){
@@ -10781,6 +10859,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.54.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Quatro melhorias: (1) ATRASADOS agora mostram o valor de cobrança de HOJE — o líquido salvo corrigido pela taxa a.m. da operação desde o último salvamento, no card, no expandir (Juros hoje, Salvo em, Cobrar hoje) e na barra de totais; (2) extrato do sócio em foto — botão GERAR EXTRATO no painel do sócio cria a imagem no padrão dos comprovantes pra mandar no WhatsApp; (3) aviso de backup na home — aparece em vermelho discreto quando o último backup deste aparelho tem 5+ dias (ou não existe); (4) a barra de totais do Histórico some quando a aba está vazia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.53.0</span><span class="cl-ver-date">03/07/2026</span></div>
