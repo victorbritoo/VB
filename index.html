@@ -48,7 +48,7 @@
     disparar no 'touchend' (com preventDefault). NÃO usar
     'pointerdown'+preventDefault (bloqueia o teclado no iPhone).
   - clipboard.readText() é bloqueado no PWA standalone -> sempre ter
-    caixa de colar (fallback) se algum recurso precisar ler o clipboard.
+    caixa de colar (fallback) no CARREGAR.
   - Campos de DESCRIÇÃO: selecionar tudo só quando vazios
     (onclick="if(!this.value)this.select()") para permitir
     complementar/colar. Campos numéricos podem manter this.select().
@@ -59,10 +59,10 @@
     no canto superior esquerdo.
   - Rodapé da tela após gerar: só "↑ SEGURE A IMAGEM PARA SALVAR"
     e botão FECHAR.
-  - QR/CARREGAR REMOVIDOS (v1.60.0): fotos sem QR, sem cópia de código
-    pro clipboard, sem botões CARREGAR e sem overlays de código.
-    Funções _b32enc/_b32dec, *_codeStr, *_carregar, *_cod* e a lib
-    qrcode seguem no arquivo, dormentes (nada as chama).
+  - QR/transferência: Pagamentos e Vendas. Encode: base32 via
+    _b32enc/_b32dec para o QR (à prova de OCR) com prefixo VBxxx2;
+    base64 (VBxxx1) para o código de clipboard. O CARREGAR aceita
+    os dois formatos. O código é copiado ao gerar a foto.
 
 [8] WORKFLOW COM O VICTOR
   - "Explicar e confirmar antes de executar" em mudanças não triviais.
@@ -913,11 +913,11 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div id="ven-secTabelaData" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
       <div>
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DATA DA VENDA</div>
-        <input id="ven-dataVenda" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+        <input id="ven-dataVenda" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" oninput="REC_maskData(this)" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
       </div>
       <div>
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
-        <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+        <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" oninput="REC_maskData(this)" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1145,7 +1145,6 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
-<!-- Overlay código CARREGAR (Antecipação) -->
 
 
 </div>
@@ -1186,9 +1185,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <span id="pag-saldo" style="font-size:18px;font-weight:700;color:#4a4a4a;">R$ ---</span><button class="copy-btn" onclick="copyValue('pag-saldo',this)" title="Copiar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
   </div>
 
-  <!-- Botão CARREGAR -->
-  <div style="margin-bottom:6px;">
-  </div>
+  <!-- CARREGAR (leitor de código) removido na v1.60.0 junto com os QR das fotos.
+       Pra reativar: <button onclick="PAG_carregar(this)">CARREGAR</button> -->
 
   <!-- Botões -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
@@ -7010,8 +7008,16 @@ function VEN_gerarTabela(){
   var totalRowH = linhas.reduce(function(a,l){ return a+(l.obs&&l.obs.trim()?altRow+altObs:altRow); },0);
   var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
 
-  // QR removido das fotos (v1.60.0)
-  var ven_qr=null, ven_codeBlockH=0;
+  // Código + QR (para carregar em outro aparelho)
+  var ven_codeStr = VEN_codeB32();
+  var ven_qr=null, ven_qn=0, ven_mA=3, ven_qpx=0, ven_qrCss=0, ven_codeBlockH=0;
+  try{
+    throw 0; // QR removido das fotos (v1.60.0)
+    ven_qn = ven_qr.getModuleCount();
+    ven_qpx = (ven_qn+8)*ven_mA;
+    ven_qrCss = ven_qpx/esc;
+    ven_codeBlockH = 10 + ven_qrCss + 8;
+  }catch(e){ ven_qr=null; ven_codeBlockH=0; }
   H += ven_codeBlockH;
   var c1 = padH + (W/3-padH)/2;
   var c2 = W/2;
@@ -7099,6 +7105,11 @@ function VEN_gerarTabela(){
   VB_carimboData(ctx, W);
   img.src = cv.toDataURL('image/png');
   img.style.display = 'block';
+  // copia o código (útil pra colar no CARREGAR)
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ven_codeStr).catch(function(){ _pagCopyFallback(ven_codeStr); }); }
+    else { _pagCopyFallback(ven_codeStr); }
+  }catch(e){}
   if(!VB_silentGen){
     document.getElementById('ven-tabelaImagemDica').style.display = 'block';
     document.getElementById('ven-overlayTabela').style.display = 'block';
@@ -7869,8 +7880,11 @@ function ANT_gerarTabela(){
   var W=700, pad=24;
   var fs=11, fsB=11, lineH=14, headH=18;
 
-  // QR removido das fotos (v1.60.0)
-  var secQrTop=0, secQr=0, secQrBottom=0;
+  // Código + QR (rodapé) — com fallback se a operação for grande demais pro QR
+  var codeStr=ANT_codeStr();
+  var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
+  qrOk=false; // QR removido das fotos (v1.60.0)
+  var secQrTop=10, secQr=qrOk?qrCss:14, secQrBottom=10;
   var secQrBlock=secQrTop+secQr+secQrBottom;
 
   // Calcular altura exata do conteúdo
@@ -7995,11 +8009,26 @@ function ANT_gerarTabela(){
 
   VB_drawWatermark(ctx, W, H);
 
+  // Código + QR (rodapé, fundo limpo pra leitura)
+  y+=secQrTop;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,y-4,W,H-(y-4));
+  if(qrOk){
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
+    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
+    ctx.fillStyle='#000';
+    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
+    ctx.restore();
+  }
+
   // Mostrar
   VB_carimboData(ctx, W);
   var dataURL=cv.toDataURL('image/png');
   var img=document.getElementById('ant-tabelaImagem');
   img.src=dataURL; img.style.display='block';
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
+  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -8164,8 +8193,11 @@ function ANT_gerarResumoFoto(){
   valVals.push('R$ '+ANT_formatBR(VB), 'R$ '+ANT_formatBR(tj), 'R$ '+ANT_formatBR(tar));
   var card2H = 12 + valRows.length*rowH + 2 + rowH + 6;
 
-  // QR removido das fotos (v1.60.0)
-  var qrCardH=0;
+  // Código + QR (cartão final) — com fallback se a operação for grande demais pro QR
+  var codeStr=ANT_codeStr();
+  var qr=null, qn=0, mA=3, qpx=0, qrCss=0, qrOk=false;
+  qrOk=false; // QR removido das fotos (v1.60.0)
+  var qrCardH=0; // QR removido (v1.60.0)
 
   var H = headerH + card1H + cardGap + (temTit?titCardH+cardGap:0) + card2H + cardGap + qrCardH + bottomPad;
 
@@ -8234,10 +8266,24 @@ function ANT_gerarResumoFoto(){
   olk('VALOR LÍQUIDO',cardL+18,lqBy,'left'); ov('R$ '+ANT_formatBR(tl),cardR-18,lqBy,'right');
   y+=card2H+cardGap;
 
+  // CARD QR (carregar)
+  // card do QR removido (v1.60.0)
+  if(qrOk){
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round((y+9)*esc);
+    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
+    ctx.fillStyle='#000';
+    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
+    ctx.restore();
+  }
+  y+=qrCardH;
 
   var img=document.getElementById('ant-tabelaImagem');
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
+  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -8832,8 +8878,14 @@ function PAG_compartilhar(){
   var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
   var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
   var secRow=lineH,secTotLine=22,secSaldoH=20,secSaldoV=34,secBottom=20;
-  // QR removido das fotos (v1.60.0)
-  var codeBlockH=0;
+  // código + QR (canto superior direito, espelhando o logo)
+  var totalStr=(document.getElementById('pag-total').value||'').trim();
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
+  var payloadObj={t:totalStr,p:itens};
+  if(PAG_currentOperationId) payloadObj.id=PAG_currentOperationId;
+  var payload=_b32enc(JSON.stringify(payloadObj));
+  var codeStr='VBPAG2:'+payload;
+  var codeBlockH=0; // QR removido (v1.60.0)
 
   var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
   var cv=document.createElement('canvas');
@@ -8889,6 +8941,11 @@ function PAG_compartilhar(){
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
+  // copia o código (útil pra colar no Safari)
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){ _pagCopyFallback(codeStr); }); }
+    else { _pagCopyFallback(codeStr); }
+  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -8919,13 +8976,18 @@ function PAG_salvarFoto(){
   var saldo=total-soma;
   var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
 
-  // QR removido das fotos (v1.60.0)
+  // código base32 (à prova de OCR)
+  var totalStr=(document.getElementById('pag-total').value||'').trim();
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
+  var payload=_b32enc(JSON.stringify({t:totalStr,p:itens}));
+  var codeStr='VBPAG2:'+payload;
 
   var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
   var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
   var secRow=lineH,secTotLine=22,secSaldoH=20,secBottom=16;
 
-  var codeBlockH=0;
+  // QR com o código puro (correção de erro embutida — sem perda de leitura)
+  var codeBlockH=0; // QR removido (v1.60.0)
 
   var H=16+secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
 
@@ -8982,6 +9044,13 @@ function PAG_salvarFoto(){
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
+  // copia o mesmo código (puro) que está no QR
+  var clip=codeStr;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(clip).catch(function(){ _pagCopyFallback(clip); });
+    } else { _pagCopyFallback(clip); }
+  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -10046,12 +10115,16 @@ function QUIT_compartilhar(){
   var dpStr=String(r.dateProx.getDate()).padStart(2,'0')+'/'+String(r.dateProx.getMonth()+1).padStart(2,'0')+'/'+r.dateProx.getFullYear();
   var taxaStr=r.taxa.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
 
-  // QR removido das fotos (v1.60.0)
-  var qrOk=false;
+  // Código + QR
+  var codeStr=QUIT_codeStr();
+  var qr=null, qn=0, mA=3, qpx=0, qrOk=false;
+  qrOk=false; // QR removido das fotos (v1.60.0)
 
   var W=390, esc=3, sideM=16, cardL=sideM, cardW=W-sideM*2, cardR=W-sideM, headLeft=sideM+4;
+  var qrCss=qpx/esc;
   var headerH=68, card1H=88, card2H=76, card3H=78, cardGap=5, bottomPad=12;
-  var qrBlockH = 0;
+  var qrTopPad=10, qrBottomPad=8;
+  var qrBlockH = 0; // QR removido (v1.60.0)
   var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + qrBlockH + bottomPad;
 
   var cv=document.createElement('canvas');
@@ -10102,11 +10175,25 @@ function QUIT_compartilhar(){
   olk('DESCONTO OBTIDO',cardR-18,vy+12,'right'); ov('R$ '+QUIT_formatBR(r.desc),cardR-18,vy+30,'right');
   y+=card3H+cardGap;
 
+  // QR solto no rodapé, sem card e sem legenda
+  if(qrOk){
+    y+=qrTopPad;
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    var qX=Math.round((W*esc - qpx)/2), qY=Math.round(y*esc);
+    ctx.fillStyle='#fff'; ctx.fillRect(qX,qY,qpx,qpx);
+    ctx.fillStyle='#000';
+    for(var rr=0;rr<qn;rr++){ for(var cc=0;cc<qn;cc++){ if(qr.isDark(rr,cc)){ ctx.fillRect(qX+(cc+4)*mA, qY+(rr+4)*mA, mA, mA); } } }
+    ctx.restore();
+  }
+
   var img=document.getElementById('quit-tabelaImagem');
   var _tsKeep=VB_carimboTS; VB_carimboTS=null; // Quitação é calculadora → carimbo = agora
   VB_carimboData(ctx, W);
   VB_carimboTS=_tsKeep;
   img.src=cv.toDataURL('image/png'); img.style.display='block';
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
+  }catch(e){}
   document.getElementById('quit-tabelaImagemDica').style.display='block';
   document.getElementById('quit-overlayTabela').style.display='block';
   document.getElementById('quit-overlayTabela').scrollTop=0;
@@ -10957,7 +11044,7 @@ function REC_excluir(btn){
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.60.0</span><span class="cl-ver-date">06/07/2026</span></div>
-      <div class="cl-item">QR codes e CARREGAR removidos: as fotos dos quatro módulos (Antecipação, Vendas, Pagamentos e Quitação) saem sem o bloco do QR — mais curtas e limpas —, o app parou de copiar códigos pro clipboard ao gerar foto, e os botões CARREGAR com seus overlays de "cole o código" saíram das quatro telas. O recurso era da era pré-Supabase; o Histórico o aposentou. O código interno fica dormente no arquivo caso um dia volte</div>
+      <div class="cl-item">QR codes removidos: as fotos/comprovantes dos quatro módulos (Antecipação, Vendas, Pagamentos e Quitação) não trazem mais o QR no rodapé — ficam mais curtas e limpas — e o botão CARREGAR do Pagamentos (leitor de código) saiu junto, já que o Histórico aposentou esse recurso. Tudo guardado em comentário pra reativar se um dia precisar. E as datas do Vendas (DATA DA VENDA e PRIMEIRO VENCIMENTO) ganharam a máscara progressiva do padrão do app: as barras entram sozinhas enquanto digita</div>
     </div>
 
     <div class="cl-version">
