@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.52.5</title>
+<title>VB - v1.53.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -392,7 +392,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.52.5<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.53.0<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -3972,13 +3972,16 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
       h += '<div><div style="font-size:9px;letter-spacing:0.5px;color:#bbb;font-weight:700;text-transform:uppercase;">'+HIST_esc(c.l)+'</div>'+
            '<div style="font-size:13px;color:#4a4a4a;font-weight:600;margin-top:1px;">'+HIST_esc(c.v)+'</div></div>';
     });
-    h += '</div></div>';
+    h += '</div>';
+    h += '<button onclick="event.stopPropagation();HIST_abrirOperacao('+idx+')" style="width:100%;margin-top:8px;padding:8px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:10px;letter-spacing:2px;color:#4a4a4a;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR OPERAÇÃO</button>';
+    h += '</div>';
   }
   h += '</div>';
   return h;
 }
 function HIST_toggleExp(idx, event){
   event.stopPropagation();
+  if(Date.now()-VB_screenTs<450) return; // ignora clique-fantasma logo após entrar na tela
   var d=document.getElementById('hist-exp-'+idx);
   var chev=document.getElementById('hist-chev-'+idx);
   if(!d) return;
@@ -3987,9 +3990,16 @@ function HIST_toggleExp(idx, event){
   if(chev) chev.style.transform = aberto ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 function HIST_clickItem(el){
-  var tab=el.getAttribute('data-tab');
+  if(Date.now()-VB_screenTs<450) return; // ignora clique-fantasma logo após entrar na tela
   var idx=parseInt(el.getAttribute('data-idx'));
+  // tocar no card expande/recolhe; entrar na operação é só pelo lápis
+  var d=document.getElementById('hist-exp-'+idx);
+  if(d){ HIST_toggleExp(idx, {stopPropagation:function(){}}); }
+  else { HIST_abrirOperacao(idx); }
+}
+function HIST_abrirOperacao(idx){
   var r=HIST_rowsCache[idx]; if(!r) return;
+  var tab=HIST_tabAtual;
   if(tab==='ant') HIST_carregarAnt(r);
   else if(tab==='fin') HIST_carregarFin(r);
   else if(tab==='ven') HIST_carregarVen(r);
@@ -5928,6 +5938,7 @@ function VB_sairSalvar(){
 
 var VB_telaAnterior = 'home';
 var VB_telaAtual = 'home';
+var VB_screenTs = 0;
 // Gesto de voltar (estilo iOS): a tela acompanha o dedo; soltou além do ponto, desliza e volta
 (function(){
   var x0=null, y0=null, armado=false, seguindo=false, el=null;
@@ -5996,6 +6007,7 @@ function showScreen(name){
   if(name==='mer'){ MER_load(); }
   if(name==='soc'){ SOC_load(); }
   VB_telaAtual = name;
+  VB_screenTs = Date.now();
   var _elEnt=document.getElementById('screen-'+name);
   if(_elEnt){ _elEnt.classList.remove('vb-enter'); void _elEnt.offsetWidth; _elEnt.classList.add('vb-enter'); }
   window.scrollTo(0,0);
@@ -10769,6 +10781,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.53.0</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Histórico mais fácil de expandir: tocar em qualquer lugar do card agora expande/recolhe os detalhes (antes o alvo era só o chevron de 14px, e errar por milímetros abria a operação sem querer). Entrar na operação virou um botão ABRIR OPERAÇÃO dentro do card expandido — primeiro você vê os detalhes, depois decide entrar. Cards sem detalhes continuam abrindo direto no toque</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.52.6</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Histórico: consertado o card que às vezes já entrava expandido (ou abria sozinho) ao entrar na tela — era o clique-fantasma do iOS, o toque que abriu o Histórico caía atrasado em cima de um card. Agora toques nos primeiros 450ms após a troca de tela são ignorados no expandir e no abrir operação</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.52.5</span><span class="cl-ver-date">03/07/2026</span></div>
