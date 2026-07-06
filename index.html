@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.54.0</title>
+<title>VB - v1.54.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -393,7 +393,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.54.0<br>03/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.54.1<br>03/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -9335,7 +9335,16 @@ function SOC_abrir(id){
       retorno+=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
     });
     var lucroF=retorno-aporte;
-    SOC_viewData={nome:r.nome||'', tel:r.telefone||'', nV:nV, totV:totV, lucroS:lucroS, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF};
+    var vOps=vendas.map(function(v){
+      var t=Number(v.valor_total)||0, ls=null;
+      if(v.custo!=null){ var l=t-(Number(v.custo)||0); var pVB=(v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50; ls=l*((100-pVB)/100); }
+      return {nome:(v.nome||v.descricao||'—'), data:HIST_fmtData(v.data_primeira_parcela||String(v.created_at||'').split('T')[0]), total:t, lucro:ls};
+    });
+    var fOps=fins.map(function(f){
+      var ap=Number(f.investidor_aporte)||0, rt=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
+      return {nome:(f.nome||f.descricao||'—'), data:HIST_fmtData(f.data_inicio||String(f.created_at||'').split('T')[0]), aporte:ap, retorno:rt, lucro:rt-ap};
+    });
+    SOC_viewData={nome:r.nome||'', nV:nV, totV:totV, lucroS:lucroS, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
     function bloco(t,linhas){
       var s='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -9360,41 +9369,60 @@ function SOC_abrir(id){
 var SOC_viewData=null;
 function SOC_extratoFoto(){
   var d=SOC_viewData; if(!d){ VB_toast('Abra um sócio primeiro.'); return; }
-  var W=820, H=560, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var W=820, PAD=40, CW=W-PAD*2;
+  var temV=d.vOps&&d.vOps.length>0, temF=d.fOps&&d.fOps.length>0;
+  function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
+  var H=170 + (temV?secH(d.vOps.length):0) + (temF?secH(d.fOps.length):0) + ((!temV&&!temF)?60:0) + 50;
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
-  c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', 40, 70);
+  c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', PAD, 70);
   c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
-  c.fillText('E X T R A T O   D O   S Ó C I O', 40, 96);
+  c.fillText('E X T R A T O   D O   S Ó C I O', PAD, 96);
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
-  c.fillText((d.nome||'').toUpperCase(), 40, 146);
-  if(d.tel){ c.fillStyle='#777'; c.font='500 15px -apple-system, Helvetica, sans-serif'; c.fillText(d.tel, 40, 170); }
-  function selo(x,y,w,hh,titulo,linhas){
+  c.fillText((d.nome||'').toUpperCase(), PAD, 146);
+  function trunc(t,maxW,font){ c.font=font; if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'…').width>maxW){ t=t.slice(0,-1); } return t+'…'; }
+  var y=170;
+  function secao(titulo, linhas, totais){
+    var hh=secH(linhas.length)-18;
     c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
-    c.beginPath(); c.roundRect(x,y,w,hh,14); c.fill(); c.stroke();
-    c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif';
-    c.fillText(titulo, x+22, y+30);
-    var yy=y+62;
+    c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
+    c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+    c.fillText(titulo, PAD+22, y+32);
+    var yy=y+58;
     linhas.forEach(function(li){
-      c.fillStyle='#888'; c.font='500 14px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
-      c.fillText(li[0], x+22, yy);
-      c.fillStyle='#111'; c.font='700 16px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-      c.fillText(li[1], x+w-22, yy);
-      c.textAlign='left'; yy+=34;
+      c.fillStyle='#111'; c.font='700 15px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+      c.fillText(trunc(li.nome, 380, '700 15px -apple-system, Helvetica, sans-serif'), PAD+22, yy+8);
+      c.fillStyle='#aaa'; c.font='500 12px -apple-system, Helvetica, sans-serif';
+      c.fillText(li.data||'', PAD+22, yy+27);
+      c.fillStyle='#4a4a4a'; c.font='700 15px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
+      c.fillText(li.dir, PAD+CW-22, yy+8);
+      if(li.dir2){ c.fillStyle='#888'; c.font='600 12px -apple-system, Helvetica, sans-serif'; c.fillText(li.dir2, PAD+CW-22, yy+27); }
+      c.textAlign='left'; yy+=46;
     });
+    c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-2); c.lineTo(PAD+CW-22, yy-2); c.stroke();
+    c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+    c.fillText(totais[0], PAD+22, yy+24);
+    c.textAlign='right'; c.fillText(totais[1], PAD+CW-22, yy+24); c.textAlign='left';
+    y += hh + 18;
   }
-  selo(40, 196, W-80, 168, 'VENDAS EM SOCIEDADE', [
-    ['Operações', String(d.nV)],
-    ['Total vendido', HIST_fmtMoeda(d.totV)],
-    ['Lucro do sócio', HIST_fmtMoeda(d.lucroS)]
-  ]);
-  selo(40, 380, W-80, 134, 'FINANCIAMENTOS (INVESTIDOR)', [
-    ['Operações · Aporte', d.nF+' · '+HIST_fmtMoeda(d.aporte)],
-    ['Retorno · Lucro', HIST_fmtMoeda(d.retorno)+' · '+HIST_fmtMoeda(d.lucroF)]
-  ]);
+  if(temV){
+    secao('VENDAS EM SOCIEDADE · '+d.nV+(d.nV===1?' OPERAÇÃO':' OPERAÇÕES'),
+      d.vOps.map(function(o){ return {nome:o.nome, data:o.data, dir:HIST_fmtMoeda(o.total), dir2:(o.lucro!=null?('Lucro sócio '+HIST_fmtMoeda(o.lucro)):null)}; }),
+      ['TOTAL', HIST_fmtMoeda(d.totV)+'  ·  Lucro sócio '+HIST_fmtMoeda(d.lucroS)]);
+  }
+  if(temF){
+    secao('FINANCIAMENTOS (INVESTIDOR) · '+d.nF+(d.nF===1?' OPERAÇÃO':' OPERAÇÕES'),
+      d.fOps.map(function(o){ return {nome:o.nome, data:o.data, dir:'Aporte '+HIST_fmtMoeda(o.aporte), dir2:'Retorno '+HIST_fmtMoeda(o.retorno)+'  ·  Lucro '+HIST_fmtMoeda(o.lucro)}; }),
+      ['TOTAL', 'Aporte '+HIST_fmtMoeda(d.aporte)+'  ·  Retorno '+HIST_fmtMoeda(d.retorno)+'  ·  Lucro '+HIST_fmtMoeda(d.lucroF)]);
+  }
+  if(!temV && !temF){
+    c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
+    c.fillText('Sem operações registradas.', PAD, y+30); y+=60;
+  }
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-  c.fillText('Gerado em '+ds, W-40, H-24); c.textAlign='left';
+  c.fillText('Gerado em '+ds, W-PAD, H-20); c.textAlign='left';
   cv.toBlob(function(blob){
     if(!blob){ VB_toast('Erro ao gerar imagem.'); return; }
     var fname='VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg';
@@ -10859,6 +10887,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.54.1</span><span class="cl-ver-date">03/07/2026</span></div>
+      <div class="cl-item">Extrato do sócio analítico: a foto agora lista operação por operação — nas vendas, cada uma com nome, data, valor e lucro do sócio; nos financiamentos, aporte, retorno e lucro de cada — com linha de TOTAL por seção. O telefone saiu, e a seção de financiamentos (ou de vendas) só aparece quando o sócio tem operações daquele tipo. A altura da imagem se ajusta à quantidade de operações</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.54.0</span><span class="cl-ver-date">03/07/2026</span></div>
