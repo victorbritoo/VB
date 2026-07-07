@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.66.0</title>
+<title>VB - v1.66.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.0<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.1<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1539,6 +1539,7 @@ function HIST_esc(s){
 }
 
 function HIST_carregarFin(r){
+  try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   FIN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   // Set all fields before triggering recalc
@@ -1560,6 +1561,7 @@ function HIST_carregarFin(r){
   showScreen('fin');
 }
 function HIST_carregarAnt(r){
+  try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   ANT_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   // Fill all fields first, then recalc once at the end
@@ -1590,6 +1592,7 @@ function HIST_carregarAnt(r){
   showScreen('ant');
 }
 function HIST_carregarVen(r){
+  try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   VEN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   document.getElementById('ven-custo').value = r.custo!=null ? VEN_formatBR(Number(r.custo)) : '';
@@ -1624,6 +1627,7 @@ function HIST_carregarVen(r){
   showScreen('ven');
 }
 function HIST_carregarPag(r){
+  try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   PAG_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   if(r.valor_total) document.getElementById('pag-total').value = PAG_formatBR(Number(r.valor_total));
@@ -1956,6 +1960,39 @@ function HIST_exportarPDF(){
 
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
+var VB_logPrev=null;
+var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',
+  valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
+  taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
+  data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d']};
+function VB_logFmtV(v, tp){
+  if(v==null||v==='') return '—';
+  if(tp==='$'){ try{ return HIST_fmtMoeda(Number(v)); }catch(e){ return 'R$ '+v; } }
+  if(tp==='d'){ var s=String(v); return s.indexOf('-')>0 ? s.split('T')[0].split('-').reverse().join('/') : s; }
+  return String(v);
+}
+function VB_logDiff(prev, row){
+  if(!prev||!row) return '';
+  var p=[];
+  for(var k in row){
+    if(!Object.prototype.hasOwnProperty.call(row,k)) continue;
+    var cfg=VB_LOG_CAMPOS[k];
+    var antes=prev[k], depois=row[k];
+    var a=JSON.stringify(antes===undefined?null:antes), b=JSON.stringify(depois===undefined?null:depois);
+    if(a===b) continue;
+    if(k==='parcelas'||k==='titulos'){
+      var la=antes?(typeof antes==='string'?JSON.parse(antes):antes).length:0;
+      var lb=depois?(typeof depois==='string'?JSON.parse(depois):depois).length:0;
+      p.push('Parcelas/títulos: '+la+' → '+lb+(la===lb?' (valores alterados)':''));
+      continue;
+    }
+    if(!cfg) continue; // campo técnico: fora do log
+    var nomeC=Array.isArray(cfg)?cfg[0]:cfg;
+    var tp=Array.isArray(cfg)?cfg[1]:'';
+    p.push(nomeC+': '+VB_logFmtV(antes,tp)+' → '+VB_logFmtV(depois,tp));
+  }
+  return p.join(' · ');
+}
 function VB_logDet(r){
   if(!r) return '';
   function m(v){ try{ return HIST_fmtMoeda(Number(v)); }catch(e){ return 'R$ '+v; } }
@@ -4282,7 +4319,14 @@ function FIN_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ FIN_currentOperationId = res.data[0].id; }
     FIN_updateConfirmarBtnLabel();
     FIN_snapshot = FIN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
+    try{
+      var _lr=(typeof row!=='undefined'&&row)?row:{};
+      var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
+      var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
+      var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
+      VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
+    }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -4953,7 +4997,14 @@ function VEN_confirmarOperacao(btn){
     })();
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('VENDA', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
+    try{
+      var _lr=(typeof row!=='undefined'&&row)?row:{};
+      var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
+      var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
+      var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
+      VB_log('VENDA', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
+    }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -5893,7 +5944,14 @@ function ANT_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
     ANT_updateConfirmarBtnLabel();
     ANT_snapshot = ANT_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
+    try{
+      var _lr=(typeof row!=='undefined'&&row)?row:{};
+      var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
+      var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
+      var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
+      VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
+    }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -6481,7 +6539,14 @@ function PAG_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
     PAG_updateConfirmarBtnLabel();
     PAG_snapshot = PAG_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
+    try{
+      var _lr=(typeof row!=='undefined'&&row)?row:{};
+      var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
+      var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
+      var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
+      VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
+    }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -9068,6 +9133,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.1</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Log com diff campo a campo: editar uma operação agora registra exatamente o que mudou, no formato antes → depois ("1ª parcela: 02/07/2026 → 05/07/2026 · Bruto: R$ 103.175,00 → R$ 98.000,00"); mudança nas parcelas/títulos aparece como contagem (e aviso de valores alterados); o nome da operação vem do estado anterior mesmo quando o salvamento não o reenvia (acabou o "(sem nome)"); criação segue registrando o resumo dos valores</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.0</span><span class="cl-ver-date">07/07/2026</span></div>
