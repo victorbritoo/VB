@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.66.8</title>
+<title>VB - v1.67.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.8<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.67.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -942,6 +942,10 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div style="margin-bottom:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">DESCRIÇÃO</div>
       <input id="ven-tabelaDesc" type="text" placeholder="ROLEX SUBMARINER 2024" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">CLIENTE</div>
+      <input id="ven-cliente" type="text" placeholder="NOME DE QUEM COMPROU" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
     </div>
     <div id="ven-secTabelaData" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
       <div>
@@ -1602,6 +1606,7 @@ function HIST_carregarVen(r){
   var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value=(VEN_lucroVBpct!=null?String(VEN_lucroVBpct):'');
   VEN_updateLucro();
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
+  document.getElementById('ven-cliente').value = r.cliente||'';
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true;
@@ -1961,7 +1966,7 @@ function HIST_exportarPDF(){
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
 var VB_logPrev=null;
-var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',
+var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',
   valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
   taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
   data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d']};
@@ -3589,6 +3594,8 @@ function HIST_renderRows(tab, rows){
         var _pct=Math.round(_lvL/_c*100);
         linha2='<span style="color:#4a4a4a;font-weight:700;">Lucro: '+HIST_fmtMoeda(_lvL)+'</span> <span style="color:#bbb;">('+_pct+'%)</span>';
       }
+      if(r.cliente){ linha2=(linha2?linha2+'<span style="color:#ccc;"> · </span>':'')+'<span style="color:#bbb;">'+HIST_esc(r.cliente)+'</span>'; }
+      if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
       if(r.quantidade_parcelas) campos.push({l:'Parcelas', v:r.quantidade_parcelas+'x'});
@@ -3746,7 +3753,7 @@ function ANT_assinatura(){
     (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[])]);
 }
 function VEN_assinatura(){
-  return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-total'),VB_val('ven-qtd'),
+  return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-cliente'),VB_val('ven-total'),VB_val('ven-qtd'),
     VB_val('ven-parcela'),VB_val('ven-tabelaData'),VB_val('ven-custo'),VB_val('ven-lucroPct'),
     (typeof VEN_socioNome!=='undefined'?(VEN_socioNome||''):''),
     (typeof VEN_socioValor!=='undefined'?VEN_socioValor:0),
@@ -4525,7 +4532,7 @@ function VEN_limpar(){
   VEN_parcelaManual = false;
   VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value='';
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
-  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-custo'].forEach(function(id){
+  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-cliente','ven-custo'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
   VEN_currentOperationId = null;
@@ -4987,6 +4994,7 @@ function VEN_confirmarOperacao(btn){
     parcelas: parcelasPayload,
     data_venda: (function(){ var v=(document.getElementById('ven-dataVenda').value||'').trim(); var iso=v?toISO(v):null; if(iso) return iso; var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })(),
     custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })(),
+    cliente: (document.getElementById('ven-cliente').value||'').trim().toUpperCase()||null,
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
     lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null
@@ -7282,7 +7290,7 @@ function GLB_buscar(){
   Promise.all([
     sb.from('antecipacoes').select('*').ilike('nome', q).limit(8),
     sb.from('financiamentos_hist').select('*').or('descricao.ilike.'+q+',investidor_nome.ilike.'+q).limit(8),
-    sb.from('vendas').select('*').or('descricao.ilike.'+q+',nome.ilike.'+q+',socio.ilike.'+q).limit(8),
+    sb.from('vendas').select('*').or('descricao.ilike.'+q+',nome.ilike.'+q+',socio.ilike.'+q+',cliente.ilike.'+q).limit(8),
     sb.from('pagamentos').select('*').ilike('nome', q).limit(8),
     sb.from('mercadorias').select('*').or('descricao.ilike.'+q+',fornecedor.ilike.'+q+',socio.ilike.'+q+',sn.ilike.'+q).limit(8),
     sb.from('socios').select('*').ilike('nome', q).limit(8)
@@ -7731,7 +7739,7 @@ function MER_abrir(id){
         if(!v){ alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Venda vinculada não encontrada.</div>'; return; }
         var vh='<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin:12px 0 6px;">VENDA</div>';
         vh+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
-        vh+=lin('Cliente', v.nome||v.descricao||'');
+        vh+=lin('Cliente', v.cliente||v.nome||'');
         var _dv=v.data_venda?v.data_venda.split('-'):null;
         vh+=lin('Data da venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]):'');
         vh+=lin('Valor total', v.valor_total!=null?('R$ '+MER_fmtBR(v.valor_total)):'');
@@ -9172,6 +9180,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.67.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Campo CLIENTE nas Vendas (abaixo da descrição, opcional): fica salvo na venda e aparece no card do Histórico (linha de baixo, discreto), no expandir (linha Cliente no topo), na ficha do relógio VENDIDO (seção VENDA) e na Busca Geral (digite o nome do cliente e ache a venda). O nome do cliente NÃO entra na foto/comprovante. Requer SQL: alter table vendas add column if not exists cliente text;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.8</span><span class="cl-ver-date">07/07/2026</span></div>
