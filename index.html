@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.66.1</title>
+<title>VB - v1.66.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.1<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.2<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1971,6 +1971,33 @@ function VB_logFmtV(v, tp){
   if(tp==='d'){ var s=String(v); return s.indexOf('-')>0 ? s.split('T')[0].split('-').reverse().join('/') : s; }
   return String(v);
 }
+function VB_logDiffArr(nome, A, B){
+  var pa, pb;
+  try{
+    pa=A?(typeof A==='string'?JSON.parse(A):A):[];
+    pb=B?(typeof B==='string'?JSON.parse(B):B):[];
+    if(!Array.isArray(pa)) pa=[]; if(!Array.isArray(pb)) pb=[];
+  }catch(e){ return nome+' alterados'; }
+  var out=[];
+  if(pa.length!==pb.length) out.push(nome+': '+pa.length+' → '+pb.length);
+  function cv(x,i){ if(x==null) return ''; if(Array.isArray(x)) return x[i]!=null?String(x[i]):''; var ks=[['v','valor'],['d','data'],['tp','tipo']][i]; return x[ks[0]]!==undefined?String(x[ks[0]]):(x[ks[1]]!==undefined?String(x[ks[1]]):''); }
+  var n=Math.min(pa.length,pb.length), mud=[];
+  for(var i=0;i<n;i++){
+    var m=[];
+    var av=cv(pa[i],0), bv=cv(pb[i],0);
+    var ad=cv(pa[i],1), bd=cv(pb[i],1);
+    var at=cv(pa[i],2), bt=cv(pb[i],2);
+    if(av!==bv) m.push('valor '+(av||'—')+' → '+(bv||'—'));
+    if(ad!==bd) m.push('data '+(ad||'—')+' → '+(bd||'—'));
+    if(at!==bt) m.push('tipo '+(at||'—')+' → '+(bt||'—'));
+    if(m.length) mud.push((i+1)+'º título: '+m.join(', '));
+  }
+  if(mud.length){
+    var mostra=mud.slice(0,6);
+    out.push(mostra.join(' · ')+(mud.length>6?(' · e mais '+(mud.length-6)+' títulos alterados'):''));
+  }
+  return out.join(' · ');
+}
 function VB_logDiff(prev, row){
   if(!prev||!row) return '';
   var p=[];
@@ -1981,9 +2008,8 @@ function VB_logDiff(prev, row){
     var a=JSON.stringify(antes===undefined?null:antes), b=JSON.stringify(depois===undefined?null:depois);
     if(a===b) continue;
     if(k==='parcelas'||k==='titulos'){
-      var la=antes?(typeof antes==='string'?JSON.parse(antes):antes).length:0;
-      var lb=depois?(typeof depois==='string'?JSON.parse(depois):depois).length:0;
-      p.push('Parcelas/títulos: '+la+' → '+lb+(la===lb?' (valores alterados)':''));
+      var _d=VB_logDiffArr(k==='titulos'?'Títulos':'Parcelas', antes, depois);
+      if(_d) p.push(_d);
       continue;
     }
     if(!cfg) continue; // campo técnico: fora do log
@@ -9133,6 +9159,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.2</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Log preciso nos títulos e parcelas: em vez do genérico "valores alterados", o diff agora entra item a item e diz exatamente o que mudou — "1º título: data 02/07/2026 → 05/07/2026", valor e tipo idem; muitos itens alterados mostram os 6 primeiros + contagem do resto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.1</span><span class="cl-ver-date">07/07/2026</span></div>
