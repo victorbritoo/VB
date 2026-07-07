@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.63.0</title>
+<title>VB - v1.64.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -444,7 +444,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.63.0<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.64.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -9496,7 +9496,9 @@ function GLB_buscar(){
         var nome=g[3](r)||'';
         var nl=nome.toLowerCase();
         var score = nl.indexOf(tl)===0 ? 0 : (nl.indexOf(tl)>=0 ? 1 : 2);
-        itens.push({tipo:g[1], rot:g[0], r:r, nome:nome, score:score, ts:(r.created_at||'')});
+        var rot=g[0];
+        if(g[1]==='mer' && (r.status||'estoque')==='vendida') rot='VENDIDO';
+        itens.push({tipo:g[1], rot:rot, r:r, nome:nome, score:score, ts:(r.created_at||'')});
       });
     });
     itens.sort(function(a,b){ if(a.score!==b.score) return a.score-b.score; return a.ts<b.ts?1:a.ts>b.ts?-1:0; });
@@ -9892,11 +9894,41 @@ function MER_abrir(id){
     hh+=lin('Parte do sócio', 'R$ '+MER_fmtBR(r.valor_socio)+_pS);
   }
   hh+='</div>';
+  if(r.status==='vendida'){ hh+='<div id="mer-view-venda"></div>'; }
   document.getElementById('mer-view-body').innerHTML=hh;
+  if(r.status==='vendida'){
+    var alvo=document.getElementById('mer-view-venda');
+    if(r.venda_id){
+      alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Buscando a venda...</div>';
+      sb.from('vendas').select('*').eq('id', r.venda_id).then(function(res){
+        var v=(res.data&&res.data[0])||null;
+        if(!v){ alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Venda vinculada não encontrada.</div>'; return; }
+        var vh='<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin:12px 0 6px;">VENDA</div>';
+        vh+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
+        vh+=lin('Cliente', v.nome||v.descricao||'');
+        var _dv=v.data_venda?v.data_venda.split('-'):null;
+        vh+=lin('Data da venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]):'');
+        vh+=lin('Valor total', v.valor_total!=null?('R$ '+MER_fmtBR(v.valor_total)):'');
+        var _lu=(v.valor_total!=null&&v.custo!=null)?(Number(v.valor_total)-Number(v.custo)):null;
+        if(_lu!=null){
+          var _lp=(Number(v.custo)>0)?(' ('+Math.round(_lu/Number(v.custo)*100)+'%)'):'';
+          vh+=lin('Lucro', 'R$ '+MER_fmtBR(_lu)+_lp);
+        }
+        var _ps=[]; try{ _ps=v.parcelas?(typeof v.parcelas==='string'?JSON.parse(v.parcelas):v.parcelas):[]; }catch(e){ _ps=[]; }
+        if(_ps&&_ps.length){ vh+=lin('Parcelas', _ps.length+'x'); }
+        vh+='</div>';
+        vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:10px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:10px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
+        MER_vendaCache=v;
+        alvo.innerHTML=vh;
+      });
+    } else {
+      alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Baixa manual — sem venda vinculada.</div>';
+    }
+  }
   document.getElementById('mer-view-editar').onclick=function(){
+    var _daBusca=GLB_fichaDaBusca;
     MER_viewFechar();
-    if(GLB_fichaDaBusca){
-      GLB_fichaDaBusca=false;
+    if(_daBusca){
       GLB_reabrir=false;
       document.getElementById('glb-overlay').style.display='none';
       showScreen('mer');
@@ -9911,6 +9943,15 @@ function MER_abrir(id){
     MER_editar(id);
   };
   document.getElementById('mer-view-overlay').style.display='flex';
+}
+var MER_vendaCache=null;
+function MER_abrirVenda(id){
+  var v=MER_vendaCache; if(!v||String(v.id)!==String(id)) return;
+  var _daBusca=GLB_fichaDaBusca;
+  MER_viewFechar();
+  if(_daBusca){ GLB_reabrir=true; document.getElementById('glb-overlay').style.display='none'; }
+  HIST_carregarVen(v);
+  if(_daBusca){ VB_telaAnterior='home'; HIST_voltaParaHist=false; }
 }
 function MER_viewFechar(){ GLB_fichaDaBusca=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none'; }
 function MER_editar(id){
@@ -11273,6 +11314,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.64.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Ficha dos VENDIDOS com o histórico da venda: além dos dados do relógio, a ficha busca a venda vinculada e mostra a seção VENDA — cliente, data, valor total, lucro (com %) e parcelas — mais o botão ABRIR VENDA que leva direto pra operação (respeitando a volta pra busca quando a ficha veio de lá). Itens baixados manualmente, sem venda vinculada, mostram o aviso no lugar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.63.1</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Correção: o EDITAR da ficha aberta pela Busca Geral não navegava pro Estoque (a marca de origem era apagada antes da checagem — ordem invertida). E na Busca Geral, item já vendido aparece com a etiqueta VENDIDO em vez de ESTOQUE</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.63.0</span><span class="cl-ver-date">07/07/2026</span></div>
