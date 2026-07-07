@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.61.0</title>
+<title>VB - v1.61.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -423,7 +423,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.61.0<br>06/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.61.2<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -9678,18 +9678,19 @@ function MER_render(){
         +(MER_tab==='estoque'
           ? '<button data-merid="'+r.id+'" onclick="MER_baixa(this)" title="Dar baixa (vendida)" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:13px;color:#111;cursor:pointer;width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">✓</button>'
             +'<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;border-radius:8px;background:#111;font-size:14px;font-weight:700;color:#fff;cursor:pointer;width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;">×</button>'
-          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;font-size:13px;color:#111;cursor:pointer;width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;font-weight:700;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;">↩</button>')
+          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid #ddd;border-radius:8px;background:#fff;color:#111;cursor:pointer;width:24px;height:24px;padding:0;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></button>')
         +'</div>';
     });
     lista.innerHTML=html;
   }
-  // total em estoque
-  var est=MER_rows.filter(function(r){ return (r.status||'estoque')==='estoque'; });
+  // total da aba ativa (obedece à busca)
+  var est=rows;
   var soma=est.reduce(function(a,r){ return a+(Number(r.custo)||0); },0);
   var socios=est.reduce(function(a,r){ return a+(Number(r.valor_socio)||0); },0);
+  var totLabel=(MER_tab==='estoque')?'ESTOQUE TOTAL':'VENDIDOS';
   var tot=document.getElementById('mer-total');
   if(tot){
-    tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">ESTOQUE TOTAL · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+    tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
       +'<span style="text-align:right;"><span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
       +(socios>0?('<br><span style="font-size:10px;color:#bbb;font-weight:600;">VB: R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
       +'</span>';
@@ -11088,6 +11089,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.2</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">A barra de totais do Estoque agora reflete a aba ativa: em ESTOQUE mostra o capital parado (como sempre), e em VENDIDOS mostra a soma e a contagem dos vendidos, com o VB: R$ da sua parte. E passou a obedecer à busca — filtrou, a barra soma só o que está na tela</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.1</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">O botão de retornar ao estoque (nos VENDIDOS) estava fora do padrão porque o iOS transformava o caractere ↩ em emoji azul — virou ícone SVG preto no quadrado de 24px, igual aos demais; o toque de confirmação (inverte pra preto) continua</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.0</span><span class="cl-ver-date">06/07/2026</span></div>
