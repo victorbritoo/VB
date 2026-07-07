@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.60.0</title>
+<title>VB - v1.61.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -312,6 +312,14 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<div id="mer-ord-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_ordFechar()">
+  <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:16px 16px 26px;width:100%;max-width:520px;font-family:-apple-system,sans-serif;">
+    <div style="font-size:10px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin-bottom:10px;">ORDENAR POR</div>
+    <div id="mer-ord-lista"></div>
+    <button onclick="MER_ordFechar()" style="width:100%;margin-top:10px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+  </div>
+</div>
+
 <div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
   <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
     <div id="mer-view-titulo" style="font-size:16px;font-weight:700;color:#111;text-align:center;"></div>
@@ -415,7 +423,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.60.0<br>06/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.61.0<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -1275,6 +1283,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
     <div class="simulacao-label">ESTOQUE</div>
     <div style="position:absolute;top:0;right:0;display:flex;gap:6px;">
+      <button id="mer-ord-toggle" onclick="MER_ordAbrir()" style="width:36px;height:36px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#4a4a4a;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"/><path d="M4 7l3-3 3 3"/><path d="M17 20V4"/><path d="M14 17l3 3 3-3"/></svg></button>
       <button id="mer-busca-toggle" onclick="MER_toggleBusca()" style="width:36px;height:36px;border:0.5px solid #ddd;border-radius:10px;background:#fff;color:#4a4a4a;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button>
       <button id="mer-form-open" onclick="MER_toggleForm()" style="width:36px;height:36px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:20px;font-weight:300;color:#555;cursor:pointer;font-family:-apple-system,sans-serif;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;">+</button>
     </div>
@@ -6035,6 +6044,7 @@ function showScreen(name){
   if(name==='rec'){ REC_load(); }
   if(name==='mer'){ MER_load(); }
   if(name==='soc'){ SOC_load(); }
+  if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='#fff'; _ob.style.color='#4a4a4a'; _ob.style.borderColor='#ddd'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
   if(name==='home'){ try{ VB_checkBackupAviso(); }catch(e){} }
@@ -9222,6 +9232,42 @@ function MER_limparBusca(){
   var inp=document.getElementById('mer-busca'); if(inp) inp.value='';
   MER_render(); inp && inp.focus();
 }
+var MER_ord='data_desc';
+var MER_ORD_OPCOES=[
+  ['data_desc','Data de compra (recente primeiro)'],
+  ['data_asc','Mais tempo em estoque'],
+  ['preco_desc','Preço (maior primeiro)'],
+  ['preco_asc','Preço (menor primeiro)'],
+  ['modelo','Modelo (A–Z)']
+];
+function MER_ordAbrir(){
+  var l=document.getElementById('mer-ord-lista'); if(!l) return;
+  var html='';
+  MER_ORD_OPCOES.forEach(function(o){
+    var ativo=(MER_ord===o[0]);
+    html+='<button onclick="MER_ordSet(\''+o[0]+'\')" style="display:block;width:100%;text-align:center;padding:11px;margin-bottom:5px;border:0.5px solid '+(ativo?'#111':'#e0e0e0')+';border-radius:12px;background:'+(ativo?'#111':'#fff')+';font-size:12px;letter-spacing:1px;font-weight:600;color:'+(ativo?'#fff':'#4a4a4a')+';cursor:pointer;font-family:-apple-system,sans-serif;">'+o[1]+'</button>';
+  });
+  l.innerHTML=html;
+  document.getElementById('mer-ord-overlay').style.display='flex';
+}
+function MER_ordFechar(){ var ov=document.getElementById('mer-ord-overlay'); if(ov) ov.style.display='none'; }
+function MER_ordSet(k){
+  MER_ord=k;
+  var bt=document.getElementById('mer-ord-toggle');
+  if(bt){ var pad=(k==='data_desc'); bt.style.background=pad?'#fff':'#111'; bt.style.color=pad?'#4a4a4a':'#fff'; bt.style.borderColor=pad?'#ddd':'#111'; }
+  MER_ordFechar(); MER_render();
+}
+function MER_ordena(rows){
+  var r=rows.slice();
+  function d(x){ return x.data_compra?String(x.data_compra):''; }
+  function c(x){ return Number(x.custo)||0; }
+  if(MER_ord==='data_asc'){ r.sort(function(a,b){ return d(a)<d(b)?-1:d(a)>d(b)?1:0; }); }
+  else if(MER_ord==='preco_desc'){ r.sort(function(a,b){ return c(b)-c(a); }); }
+  else if(MER_ord==='preco_asc'){ r.sort(function(a,b){ return c(a)-c(b); }); }
+  else if(MER_ord==='modelo'){ r.sort(function(a,b){ return String(a.descricao||'').localeCompare(String(b.descricao||''),'pt'); }); }
+  else { r.sort(function(a,b){ return d(a)<d(b)?1:d(a)>d(b)?-1:0; }); }
+  return r;
+}
 var SOC_rows=[], SOC_editId=null;
 var SOC_pickCb=null;
 function SOC_openPicker(cb){
@@ -9607,6 +9653,7 @@ function MER_render(){
   var lista=document.getElementById('mer-lista'); if(!lista) return;
   var termo=((document.getElementById('mer-busca')||{}).value||'').trim().toLowerCase();
   var rows=MER_rows.filter(function(r){ return (r.status||'estoque')===MER_tab; });
+  rows=MER_ordena(rows);
   if(termo){
     rows=rows.filter(function(r){
       return [r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; });
@@ -11041,6 +11088,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.0</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">Ordenar no Estoque: novo botão ↑↓ ao lado da lupa abre as opções — Data de compra (recente primeiro, o padrão), Mais tempo em estoque, Preço maior, Preço menor e Modelo (A–Z). Vale pras duas abas, funciona junto com a busca, o botão fica preto quando uma ordenação diferente do padrão está ativa, e ao sair da tela volta pro padrão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.60.0</span><span class="cl-ver-date">06/07/2026</span></div>
