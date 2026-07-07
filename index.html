@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.66.2</title>
+<title>VB - v1.66.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.2<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.3<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7787,6 +7787,11 @@ function MER_venderItem(id){
   if(!descVen) descVen=(r.descricao||'');
   document.getElementById('ven-tabelaDesc').value=descVen.toUpperCase();
   document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_socioNome = r.socio||null;
+  VEN_socioValor = Number(r.valor_socio)||0;
+  VEN_lucroVBpct = (r.socio && Number(r.valor_socio)>0) ? 50 : null;
+  var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value=(VEN_lucroVBpct!=null?String(VEN_lucroVBpct):'');
+  VEN_updateLucro();
   VEN_merVinculo=r.id;
   VB_toast('Item na venda. Ao salvar, baixa automática no estoque.');
 }
@@ -7919,7 +7924,7 @@ function VEN_abrirEstoque(){
   ov.style.display='flex';
   var lista=document.getElementById('ven-estoqueLista');
   lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;">Carregando...</div>';
-  sb.from('mercadorias').select('*').eq('status','estoque').order('created_at',{ascending:false}).then(function(res){
+  sb.from('mercadorias').select('*').eq('status','estoque').order('data_compra',{ascending:false,nullsFirst:false}).then(function(res){
     if(res.error){ lista.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;">Erro (tabela mercadorias existe?).</div>'; return; }
     var rows=res.data||[];
     if(!rows.length){ lista.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;">Nada em estoque.</div>'; return; }
@@ -9159,6 +9164,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.3</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Correções: a lista do PUXAR DO ESTOQUE agora vem em ordem de data de compra (recente primeiro, itens sem data no fim); e o botão VENDER da ficha passou a levar o sócio do item pra venda (nome, parte do custo e divisão de lucro em 50%, ajustável) — antes a venda nascia sem o rateio e o Histórico não mostrava as porcentagens</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.2</span><span class="cl-ver-date">07/07/2026</span></div>
