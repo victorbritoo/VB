@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.66.5</title>
+<title>VB - v1.66.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.5<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.7<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7102,6 +7102,11 @@ function MER_ordena(rows){
   else if(MER_ord==='preco_desc'){ r.sort(function(a,b){ return c(b)-c(a); }); }
   else if(MER_ord==='preco_asc'){ r.sort(function(a,b){ return c(a)-c(b); }); }
   else if(MER_ord==='modelo'){ r.sort(function(a,b){ return String(a.descricao||'').localeCompare(String(b.descricao||''),'pt'); }); }
+  else if(MER_tab==='vendida'){
+    // padrão dos VENDIDOS: data da venda, do último vendido pro mais antigo
+    var dv=function(x){ return x.data_venda?String(x.data_venda):(x.data_compra?String(x.data_compra):''); };
+    r.sort(function(a,b){ return dv(a)<dv(b)?1:dv(a)>dv(b)?-1:0; });
+  }
   else { r.sort(function(a,b){ return d(a)<d(b)?1:d(a)>d(b)?-1:0; }); }
   return r;
 }
@@ -7654,7 +7659,10 @@ function MER_render(){
         +'<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)
           +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
           +((MER_tab==='estoque'&&r.data_compra&&MER_dias(r.data_compra)!=null)?(' <span style="color:#bbb;">('+MER_dias(r.data_compra)+'d em estoque)</span>'):'')
-          +((MER_tab==='vendida'&&r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' · <span style="color:#111;font-weight:700;">Vendido em '+MER_diasEntre(r.data_compra,r.data_venda)+'d</span>'):(MER_tab==='vendida'?' · <span style="color:#111;font-weight:700;">VENDIDO</span>':''))
+          +((MER_tab==='vendida'&&r.data_venda)?(function(){
+              var g=(r.data_compra&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' ('+MER_diasEntre(r.data_compra,r.data_venda)+'d)'):'';
+              return ' · <span style="color:#111;font-weight:700;">Vendido em '+MER_fmtData(r.data_venda)+g+'</span>';
+            })():(MER_tab==='vendida'?' · <span style="color:#111;font-weight:700;">VENDIDO</span>':''))
           +'</div>'
         +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
         +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((Number(r.custo)>0)?(' ('+Math.round((Number(r.valor_socio)||0)/Number(r.custo)*100)+'%)'):'')):'')+'</div>'):'')
@@ -9164,6 +9172,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.7</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Lista dos VENDIDOS mostra a data da venda com o giro entre parênteses: "Vendido em 02/07/2026 (16d)"; item sem data de compra mostra só a data da venda, e sem data de venda segue como VENDIDO</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.6</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Ordenação padrão da aba VENDIDOS corrigida: agora é pela data da venda — vendido por último no topo, mais antigo embaixo (item sem data de venda usa a de compra); a aba EM ESTOQUE segue por data de compra, e as opções do botão ↑↓ continuam valendo pras duas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.5</span><span class="cl-ver-date">07/07/2026</span></div>
