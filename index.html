@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.67.0</title>
+<title>VB - v1.68.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.67.0<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.68.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7078,6 +7078,7 @@ function MER_limparBusca(){
   MER_render(); inp && inp.focus();
 }
 var MER_ord='data_desc';
+var MER_vendasMap={}, MER_vendasBusy=false;
 var MER_ORD_OPCOES=[
   ['data_desc','Data de compra (recente primeiro)'],
   ['data_asc','Mais tempo em estoque'],
@@ -7648,6 +7649,19 @@ function MER_diasEntre(a,b){
 }
 function MER_render(){
   var lista=document.getElementById('mer-lista'); if(!lista) return;
+  // vendas vinculadas dos VENDIDOS (pra lucro/cliente no card e na barra)
+  if(MER_tab==='vendida'){
+    var _falta=MER_rows.filter(function(r){ return (r.status||'estoque')==='vendida' && r.venda_id && !(r.venda_id in MER_vendasMap); }).map(function(r){ return r.venda_id; });
+    if(_falta.length && !MER_vendasBusy){
+      MER_vendasBusy=true;
+      sb.from('vendas').select('*').in('id', _falta).then(function(res){
+        MER_vendasBusy=false;
+        _falta.forEach(function(id){ MER_vendasMap[id]=null; });
+        (res.data||[]).forEach(function(v){ MER_vendasMap[v.id]=v; });
+        MER_render();
+      });
+    }
+  }
   var termo=((document.getElementById('mer-busca')||{}).value||'').trim().toLowerCase();
   var rows=MER_rows.filter(function(r){ return (r.status||'estoque')===MER_tab; });
   rows=MER_ordena(rows);
@@ -7668,10 +7682,21 @@ function MER_render(){
           +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
           +((MER_tab==='estoque'&&r.data_compra&&MER_dias(r.data_compra)!=null)?(' <span style="color:#bbb;">('+MER_dias(r.data_compra)+'d em estoque)</span>'):'')
           +((MER_tab==='vendida'&&r.data_venda)?(function(){
-              var g=(r.data_compra&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' ('+MER_diasEntre(r.data_compra,r.data_venda)+'d)'):'';
-              return ' · <span style="color:#111;font-weight:700;">Venda: '+MER_fmtData(r.data_venda)+g+'</span>';
+              var g=(r.data_compra&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?('&nbsp;('+MER_diasEntre(r.data_compra,r.data_venda)+'d)'):'';
+              return ' · <span style="color:#111;font-weight:700;white-space:nowrap;">Venda: '+MER_fmtData(r.data_venda)+g+'</span>';
             })():(MER_tab==='vendida'?' · <span style="color:#111;font-weight:700;">VENDIDO</span>':''))
           +'</div>'
+        +((MER_tab==='vendida'&&r.venda_id&&MER_vendasMap[r.venda_id])?(function(){
+            var v=MER_vendasMap[r.venda_id];
+            var t=Number(v.valor_total)||0, c=Number(v.custo!=null?v.custo:r.custo)||0;
+            var l=(t>0&&c>0)?(t-c):null;
+            var s='<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">'
+              +(t>0?('Venda R$ '+MER_fmtBR(t)):'')
+              +(l!=null?(' · <span style="font-weight:700;color:#111;">Lucro R$ '+MER_fmtBR(l)+' ('+Math.round(l/c*100)+'%)</span>'):'')
+              +(v.cliente?(' · '+HIST_esc(v.cliente)):'')
+              +'</div>';
+            return (t>0||v.cliente)?s:'';
+          })():'')
         +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
         +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((Number(r.custo)>0)?(' ('+Math.round((Number(r.valor_socio)||0)/Number(r.custo)*100)+'%)'):'')):'')+'</div>'):'')
         +'</div>'
@@ -7690,10 +7715,29 @@ function MER_render(){
   var totLabel=(MER_tab==='estoque')?'ESTOQUE TOTAL':'VENDIDOS';
   var tot=document.getElementById('mer-total');
   if(tot){
-    tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
-      +'<span style="text-align:right;"><span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
-      +(socios>0?('<br><span style="font-size:10px;color:#bbb;font-weight:600;">VB: R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
-      +'</span>';
+    if(MER_tab==='vendida'){
+      var lucroTot=0, lucroVB=0, temLucro=false;
+      est.forEach(function(r){
+        var v=r.venda_id?MER_vendasMap[r.venda_id]:null;
+        if(!v) return;
+        var t=Number(v.valor_total)||0, c=Number(v.custo!=null?v.custo:r.custo)||0;
+        if(t>0&&c>0){
+          var l=t-c; lucroTot+=l; temLucro=true;
+          var vs=Number(v.valor_socio)||0;
+          var pVB=(v.socio&&vs>0)?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
+          lucroVB+=l*(pVB/100);
+        }
+      });
+      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+        +'<span style="text-align:right;"><span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
+        +(temLucro?('<br><span style="font-size:10px;color:#fff;font-weight:700;">LUCRO: R$ '+MER_fmtBR(lucroTot)+'</span><span style="font-size:10px;color:#bbb;font-weight:600;"> · VB: R$ '+MER_fmtBR(lucroVB)+'</span>'):'')
+        +'</span>';
+    } else {
+      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+        +'<span style="text-align:right;"><span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
+        +(socios>0?('<br><span style="font-size:10px;color:#bbb;font-weight:600;">VB: R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
+        +'</span>';
+    }
     tot.style.display='flex';
   }
 }
@@ -9180,6 +9224,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.68.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Aba VENDIDOS com o resultado na cara: cada card com venda vinculada mostra Venda R$ X · Lucro R$ Y (%) · CLIENTE (buscados pelo vínculo, uma consulta só pra aba inteira); a barra preta ganhou o LUCRO total dos vendidos e o VB: passou a ser a sua fatia do lucro (respeitando o % de cada sócio); e a data "Venda: 07/07/2026 (63d)" não quebra mais no meio. Itens de baixa manual, sem venda vinculada, seguem como estavam</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.67.0</span><span class="cl-ver-date">07/07/2026</span></div>
