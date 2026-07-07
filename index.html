@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.68.1</title>
+<title>VB - v1.69.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.68.1<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.69.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7750,10 +7750,7 @@ function MER_abrir(id){
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
   hh+=lin('Data da compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em estoque', MER_dias(r.data_compra)+'d');
-  if(r.status==='vendida'){
-    hh+=lin('Vendido em', MER_fmtData(r.data_venda)||'');
-    if(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null) hh+=lin('Giro', MER_diasEntre(r.data_compra,r.data_venda)+'d');
-  }
+
   hh+=lin('De quem comprei', r.fornecedor||'')+lin('Pagamento', r.pagamento||'');
   hh+=lin('Sócio', r.socio||'');
   if(r.valor_socio!=null && Number(r.valor_socio)>0){
@@ -7773,16 +7770,23 @@ function MER_abrir(id){
         var vh='<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin:12px 0 6px;">VENDA</div>';
         vh+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
         vh+=lin('Cliente', v.cliente||v.nome||'');
-        var _dv=v.data_venda?v.data_venda.split('-'):null;
-        vh+=lin('Data da venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]):'');
+        var _dvd=v.data_venda||r.data_venda||null;
+        var _dv=_dvd?String(_dvd).split('-'):null;
+        var _giro=(r.data_compra&&_dvd&&MER_diasEntre(r.data_compra,_dvd)!=null)?(' ('+MER_diasEntre(r.data_compra,_dvd)+'d)'):'';
+        vh+=lin('Data da venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]+_giro):'');
         vh+=lin('Valor total', v.valor_total!=null?('R$ '+MER_fmtBR(v.valor_total)):'');
         var _lu=(v.valor_total!=null&&v.custo!=null)?(Number(v.valor_total)-Number(v.custo)):null;
         if(_lu!=null){
           var _lp=(Number(v.custo)>0)?(' ('+Math.round(_lu/Number(v.custo)*100)+'%)'):'';
           vh+=lin('Lucro', 'R$ '+MER_fmtBR(_lu)+_lp);
         }
-        var _ps=[]; try{ _ps=v.parcelas?(typeof v.parcelas==='string'?JSON.parse(v.parcelas):v.parcelas):[]; }catch(e){ _ps=[]; }
-        if(_ps&&_ps.length){ vh+=lin('Parcelas', _ps.length+'x'); }
+        var _vs2=Number(v.valor_socio)||0;
+        if(_lu!=null && v.socio && _vs2>0){
+          var _pV2=(v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50;
+          vh+=lin('Lucro VB ('+_pV2+'%)', 'R$ '+MER_fmtBR(_lu*(_pV2/100)));
+          vh+=lin('Lucro '+String(v.socio).toUpperCase()+' ('+(100-_pV2)+'%)', 'R$ '+MER_fmtBR(_lu*((100-_pV2)/100)));
+        }
+        vh+=lin('Pagamento', MER_resumoParcelas(v));
         vh+='</div>';
         vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:10px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:10px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
         MER_vendaCache=v;
@@ -7820,6 +7824,28 @@ function MER_abrir(id){
     MER_editar(id);
   };
   document.getElementById('mer-view-overlay').style.display='flex';
+}
+function MER_resumoParcelas(v){
+  var ps=[];
+  try{ ps=v.parcelas?(typeof v.parcelas==='string'?JSON.parse(v.parcelas):v.parcelas):[]; }catch(e){ ps=[]; }
+  function num(x){ var n=VEN_parseBR(String(x||'')); return isNaN(n)?0:n; }
+  if(ps&&ps.length){
+    var vals=ps.map(function(p){ return num(p.v!==undefined?p.v:p.valor); }).filter(function(x){ return x>0; });
+    if(vals.length){
+      var todasIguais=vals.every(function(x){ return Math.abs(x-vals[0])<0.005; });
+      if(vals.length===1) return 'À vista R$ '+MER_fmtBR(vals[0]);
+      if(todasIguais) return vals.length+'× R$ '+MER_fmtBR(vals[0]);
+      var resto=vals.slice(1);
+      var restoIgual=resto.every(function(x){ return Math.abs(x-resto[0])<0.005; });
+      if(restoIgual) return 'R$ '+MER_fmtBR(vals[0])+' + '+resto.length+'× R$ '+MER_fmtBR(resto[0]);
+      var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+      return vals.length+' parcelas de R$ '+MER_fmtBR(mn)+' a R$ '+MER_fmtBR(mx);
+    }
+  }
+  var q=Number(v.quantidade_parcelas)||0, vp=Number(v.valor_parcela)||0;
+  if(q===1 && (vp>0||Number(v.valor_total)>0)) return 'À vista R$ '+MER_fmtBR(vp>0?vp:Number(v.valor_total));
+  if(q>1 && vp>0) return q+'× R$ '+MER_fmtBR(vp);
+  return '';
 }
 var MER_vendaCache=null;
 function MER_venderItem(id){
@@ -9213,6 +9239,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.69.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Ficha do relógio VENDIDO reorganizada: o card da compra ficou só com o que é compra (custo, data, de quem comprei, pagamento, sócio e parte), e a seção VENDA concentra a saída — Cliente, Data da venda com o giro entre parênteses, Valor total, Lucro, Lucro VB e do sócio (com %) quando tem sociedade, e Pagamento por extenso ("R$ 130.000,00 + 2× R$ 50.000,00", "5× R$ 46.000,00", "À vista R$ X")</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.68.1</span><span class="cl-ver-date">07/07/2026</span></div>
