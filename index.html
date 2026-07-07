@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.62.2</title>
+<title>VB - v1.63.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -340,7 +340,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
-<div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
+<div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100005;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
   <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
     <div id="mer-view-titulo" style="font-size:16px;font-weight:700;color:#111;text-align:center;"></div>
     <div id="mer-view-body" style="margin-top:12px;"></div>
@@ -444,7 +444,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.62.2<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.63.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -9438,7 +9438,24 @@ function SOC_abrir(id){
 var FM_ref=new Date(), FM_dados=null;
 var FM_MESES=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
 var GLB_timer=null, GLB_cache={};
+var GLB_tchInit=false;
 function GLB_abrir(){
+  if(!GLB_tchInit){
+    GLB_tchInit=true;
+    var cont=document.getElementById('glb-res');
+    if(cont && VB_temToque){
+      var sx=0, sy=0;
+      cont.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; }, {passive:true});
+      cont.addEventListener('touchend', function(e){
+        var t=e.changedTouches[0];
+        if(Math.abs(t.clientX-sx)>10 || Math.abs(t.clientY-sy)>10) return; // era rolagem
+        var b=e.target && e.target.closest ? e.target.closest('button[data-gt]') : null;
+        if(!b) return;
+        e.preventDefault(); // impede o toque de ser engolido pelo fechar do teclado
+        GLB_ir(b.getAttribute('data-gt'), b.getAttribute('data-gi'));
+      }, {passive:false});
+    }
+  }
   document.getElementById('glb-overlay').style.display='flex';
   var t=document.getElementById('glb-termo'); if(t){ t.value=''; setTimeout(function(){ t.focus(); },60); }
   document.getElementById('glb-res').innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;padding:10px;">Digite pelo menos 2 letras.</div>';
@@ -9487,7 +9504,7 @@ function GLB_buscar(){
     itens.forEach(function(it){
       var key=it.tipo+'_'+it.r.id;
       GLB_cache[key]=it.r;
-      html+='<button onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
+      html+='<button data-gt="'+it.tipo+'" data-gi="'+String(it.r.id)+'" onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'
           +'<span style="font-size:13px;font-weight:700;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+'</span>'
           +'<span style="font-size:9px;letter-spacing:1px;color:#bbb;font-weight:700;white-space:nowrap;">'+it.rot+'</span>'
@@ -9498,10 +9515,18 @@ function GLB_buscar(){
   });
 }
 var GLB_reabrir=false;
+var GLB_fichaDaBusca=false;
 function GLB_ir(tipo, id){
   var r=GLB_cache[tipo+'_'+id]; if(!r) return;
   var t=document.getElementById('glb-termo'); if(t) t.blur();
   setTimeout(function(){
+    if(tipo==='mer'){
+      // ficha instantânea por cima da busca: consulta em 1 toque
+      if(!MER_rows.some(function(x){ return String(x.id)===String(id); })) MER_rows=MER_rows.concat([r]);
+      GLB_fichaDaBusca=true;
+      MER_abrir(id);
+      return;
+    }
     document.getElementById('glb-overlay').style.display='none';
     if(tipo!=='soc') GLB_reabrir=true; // voltar reabre a busca como estava
     HIST_voltaParaHist=false; // veio da busca: volta direto pra ela, sem parar no Histórico
@@ -9511,16 +9536,7 @@ function GLB_ir(tipo, id){
     else if(tipo==='pag'){ HIST_carregarPag(r); }
     if(tipo==='ant'||tipo==='fin'||tipo==='ven'||tipo==='pag'){ VB_telaAnterior='home'; } // veio da busca: voltar vai direto pra ela
     else if(tipo==='soc'){ SOC_rows=[r]; SOC_abrir(r.id); }
-    else if(tipo==='mer'){
-      showScreen('mer');
-      var tent=0;
-      (function espera(){
-        tent++;
-        var ok = MER_rows && MER_rows.some(function(x){ return String(x.id)===String(id); });
-        if(ok){ MER_abrir(id); return; }
-        if(tent<15) setTimeout(espera, 200);
-      })();
-    }
+
   }, 120);
 }
 function LOG_abrir(){
@@ -9877,10 +9893,26 @@ function MER_abrir(id){
   }
   hh+='</div>';
   document.getElementById('mer-view-body').innerHTML=hh;
-  document.getElementById('mer-view-editar').onclick=function(){ MER_viewFechar(); MER_editar(id); };
+  document.getElementById('mer-view-editar').onclick=function(){
+    MER_viewFechar();
+    if(GLB_fichaDaBusca){
+      GLB_fichaDaBusca=false;
+      GLB_reabrir=false;
+      document.getElementById('glb-overlay').style.display='none';
+      showScreen('mer');
+      var tent=0;
+      (function espera(){
+        tent++;
+        if(MER_rows && MER_rows.some(function(x){ return String(x.id)===String(id); })){ MER_editar(id); return; }
+        if(tent<15) setTimeout(espera, 200);
+      })();
+      return;
+    }
+    MER_editar(id);
+  };
   document.getElementById('mer-view-overlay').style.display='flex';
 }
-function MER_viewFechar(){ var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none'; }
+function MER_viewFechar(){ GLB_fichaDaBusca=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none'; }
 function MER_editar(id){
   if(MER_editId && String(MER_editId)!==String(id)){ MER_dirtyGuard(function(){ MER_editar(id); }); return; }
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
@@ -11241,6 +11273,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.63.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Busca Geral com resposta direta: tocar num item do ESTOQUE abre a ficha do relógio na hora, por cima da própria busca — sem navegar pro módulo. Fechou a ficha, a busca continua ali atrás com os resultados; tocou em EDITAR, aí sim vai pro Estoque com o item carregado pra edição. Consulta virou 1 toque</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.62.3</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Busca Geral: com o teclado aberto, o toque num resultado agora abre o item de primeira — antes o primeiro toque era engolido pelo fechamento do teclado e precisava tocar duas vezes. Rolar a lista continua fechando o teclado sem disparar nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.62.2</span><span class="cl-ver-date">07/07/2026</span></div>
