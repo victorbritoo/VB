@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.65.0</title>
+<title>VB - v1.66.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -344,7 +344,8 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   <div style="background:#f5f5f3;border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
     <div id="mer-view-titulo" style="font-size:16px;font-weight:700;color:#111;text-align:center;"></div>
     <div id="mer-view-body" style="margin-top:12px;"></div>
-    <button id="mer-view-editar" style="width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:#111;font-size:11px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
+    <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:#111;font-size:11px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
+    <button id="mer-view-editar" style="width:100%;margin-top:8px;padding:11px;border:none;border-radius:12px;background:#111;font-size:11px;letter-spacing:2px;color:#fff;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
     <button onclick="MER_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:11px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
   </div>
 </div>
@@ -444,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.65.0<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.66.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1737,7 +1738,7 @@ function HIST_clickDelete(el, event){
   sb.from(tabela).delete().eq('id',r.id).then(function(res){
     if(res.error){ VB_toast('Não conseguiu excluir.'); return; }
     VB_toast('Excluído.');
-    try{ VB_log(tab.toUpperCase(), 'apagou', r.nome||r.descricao||r.investidor_nome||'', 'Total R$ '+(r.valor_total!=null?r.valor_total:(r.valor_bruto!=null?r.valor_bruto:(r.valor_financiado||'')))); }catch(e){}
+    try{ var _map={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDA',pag:'PAGAMENTO'}; VB_log(_map[tab]||tab.toUpperCase(), 'apagou', r.nome||r.descricao||r.investidor_nome||'(sem nome)', VB_logDet(r)); }catch(e){}
     if(tab==='ven'){ sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null}).eq('venda_id', r.id).then(function(){}); }
     HIST_reload(tab);
   });
@@ -1955,6 +1956,18 @@ function HIST_exportarPDF(){
 
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
+function VB_logDet(r){
+  if(!r) return '';
+  function m(v){ try{ return HIST_fmtMoeda(Number(v)); }catch(e){ return 'R$ '+v; } }
+  var p=[];
+  if(r.valor_total!=null) p.push('Total '+m(r.valor_total));
+  if(r.valor_bruto!=null) p.push('Bruto '+m(r.valor_bruto));
+  if(r.valor_liquido!=null) p.push('Líquido '+m(r.valor_liquido));
+  if(r.valor_financiado!=null) p.push('Financiado '+m(r.valor_financiado));
+  if(r.custo!=null) p.push('Custo '+m(r.custo));
+  if(r.data_venda) p.push('Venda '+String(r.data_venda).split('-').reverse().join('/'));
+  return p.join(' · ');
+}
 function VB_log(modulo, acao, registro, detalhe){
   try{
     sb.from('log').insert({modulo:modulo, acao:acao, registro:String(registro||'').slice(0,120), detalhe:String(detalhe||'').slice(0,300)}).then(function(){});
@@ -4269,7 +4282,7 @@ function FIN_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ FIN_currentOperationId = res.data[0].id; }
     FIN_updateConfirmarBtnLabel();
     FIN_snapshot = FIN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log(VB_telaAtual.toUpperCase(), ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'', (_lr.valor_total!=null?('Total R$ '+_lr.valor_total):'')+(_lr.valor_bruto!=null?(' Bruto R$ '+_lr.valor_bruto):'')+(_lr.valor_financiado!=null?(' Financiado R$ '+_lr.valor_financiado):'')+(_lr.custo!=null?(' Custo R$ '+_lr.custo):'')); }catch(e){}
+    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -4940,7 +4953,7 @@ function VEN_confirmarOperacao(btn){
     })();
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log(VB_telaAtual.toUpperCase(), ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'', (_lr.valor_total!=null?('Total R$ '+_lr.valor_total):'')+(_lr.valor_bruto!=null?(' Bruto R$ '+_lr.valor_bruto):'')+(_lr.valor_financiado!=null?(' Financiado R$ '+_lr.valor_financiado):'')+(_lr.custo!=null?(' Custo R$ '+_lr.custo):'')); }catch(e){}
+    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('VENDA', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -5880,7 +5893,7 @@ function ANT_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
     ANT_updateConfirmarBtnLabel();
     ANT_snapshot = ANT_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log(VB_telaAtual.toUpperCase(), ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'', (_lr.valor_total!=null?('Total R$ '+_lr.valor_total):'')+(_lr.valor_bruto!=null?(' Bruto R$ '+_lr.valor_bruto):'')+(_lr.valor_financiado!=null?(' Financiado R$ '+_lr.valor_financiado):'')+(_lr.custo!=null?(' Custo R$ '+_lr.custo):'')); }catch(e){}
+    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -6468,7 +6481,7 @@ function PAG_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
     PAG_updateConfirmarBtnLabel();
     PAG_snapshot = PAG_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
-    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log(VB_telaAtual.toUpperCase(), ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'', (_lr.valor_total!=null?('Total R$ '+_lr.valor_total):'')+(_lr.valor_bruto!=null?(' Bruto R$ '+_lr.valor_bruto):'')+(_lr.valor_financiado!=null?(' Financiado R$ '+_lr.valor_financiado):'')+(_lr.custo!=null?(' Custo R$ '+_lr.custo):'')); }catch(e){}
+    try{ var _lr=(typeof row!=='undefined'&&row)?row:{}; VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _lr.nome||_lr.descricao||_lr.investidor_nome||'(sem nome)', VB_logDet(_lr)); }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -7255,7 +7268,7 @@ function LOG_abrir(){
       var ds=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
       html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:8px 12px;margin-bottom:5px;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;">'
-          +'<span style="font-size:11px;font-weight:700;color:#111;">'+HIST_esc(r.modulo||'')+' · '+HIST_esc(r.acao||'')+'</span>'
+          +'<span style="font-size:11px;font-weight:700;color:#111;">'+HIST_esc(LOG_frase(r.modulo,r.acao))+'</span>'
           +'<span style="font-size:10px;color:#bbb;font-weight:600;white-space:nowrap;">'+ds+'</span>'
         +'</div>'
         +(r.registro?('<div style="font-size:12px;font-weight:600;color:#4a4a4a;margin-top:2px;">'+HIST_esc(r.registro)+'</div>'):'')
@@ -7264,6 +7277,20 @@ function LOG_abrir(){
     });
     l.innerHTML=html;
   });
+}
+function LOG_frase(mod, acao){
+  mod=(mod||'').toUpperCase();
+  var fem=(mod==='ANTECIPAÇÃO'||mod==='VENDA'||mod==='BAIXA');
+  var nomes={'ANTECIPAÇÃO':'Antecipação','FINANCIAMENTO':'Financiamento','VENDA':'Venda','PAGAMENTO':'Pagamento','ESTOQUE':'Item do estoque','SÓCIOS':'Sócio'};
+  var n=nomes[mod]||mod;
+  var verbos={
+    'criou': fem?'criada':'criado',
+    'editou': fem?'editada':'editado',
+    'apagou': fem?'apagada':'apagado',
+    'baixa (vendido)': 'baixado (vendido)',
+    'voltou ao estoque': 'de volta ao estoque'
+  };
+  return n+' '+(verbos[acao]||acao);
 }
 function LOG_fechar(){ document.getElementById('log-overlay').style.display='none'; }
 function FM_abrir(){ FM_ref=new Date(); document.getElementById('fm-overlay').style.display='flex'; FM_load(); }
@@ -7625,6 +7652,16 @@ function MER_abrir(id){
       alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Baixa manual — sem venda vinculada.</div>';
     }
   }
+  var _bv=document.getElementById('mer-view-vender');
+  var _be=document.getElementById('mer-view-editar');
+  if(r.status!=='vendida'){
+    _bv.style.display='block';
+    _bv.onclick=function(){ MER_venderItem(id); };
+    _be.style.background='#fff'; _be.style.color='#555'; _be.style.border='0.5px solid #ddd';
+  } else {
+    _bv.style.display='none';
+    _be.style.background='#111'; _be.style.color='#fff'; _be.style.border='none';
+  }
   document.getElementById('mer-view-editar').onclick=function(){
     var _daBusca=GLB_fichaDaBusca;
     MER_viewFechar();
@@ -7645,6 +7682,23 @@ function MER_abrir(id){
   document.getElementById('mer-view-overlay').style.display='flex';
 }
 var MER_vendaCache=null;
+function MER_venderItem(id){
+  var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
+  if(!r) return;
+  GLB_fichaDaBusca=false; GLB_reabrir=false;
+  MER_viewFechar();
+  var g=document.getElementById('glb-overlay'); if(g) g.style.display='none';
+  showScreen('ven');
+  VEN_limpar();
+  var cx=(r.marca||r.modelo||r.ano||r.sn)?{modelo:((r.marca?r.marca+' ':'')+(r.modelo||'')).trim(),ano:r.ano||'',sn:r.sn||''}:(function(){var q=MER_desmontar(r.descricao);return {modelo:q.modelo,ano:q.ano,sn:q.sn};})();
+  var descVen=[cx.modelo,cx.ano].filter(function(x){return x;}).join(' ');
+  if(cx.sn) descVen+=(descVen?' ':'')+'SN: '+cx.sn;
+  if(!descVen) descVen=(r.descricao||'');
+  document.getElementById('ven-tabelaDesc').value=descVen.toUpperCase();
+  document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_merVinculo=r.id;
+  VB_toast('Item na venda. Ao salvar, baixa automática no estoque.');
+}
 function MER_abrirVenda(id){
   var v=MER_vendaCache; if(!v||String(v.id)!==String(id)) return;
   var _daBusca=GLB_fichaDaBusca;
@@ -7752,7 +7806,7 @@ function MER_add(btn){
     ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     MER_updateAddBtn();
     MER_toggleForm(false);
-    VB_log('ESTOQUE', editava?'editou':'criou', desc, 'Custo R$ '+(custo||0));
+    VB_log('ESTOQUE', editava?'editou':'criou', desc, VB_logDet({custo:custo||0}));
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
     MER_load();
   });
@@ -7762,7 +7816,7 @@ function MER_del(btn){
   var id=btn.dataset.merdel;
   sb.from('mercadorias').delete().eq('id',id).then(function(res){
     if(res.error){ VB_toast('Não excluiu.'); return; }
-    try{ var _md=MER_rows.find(function(x){return String(x.id)===String(id);}); VB_log('ESTOQUE','apagou', (_md&&_md.descricao)||'', 'Custo R$ '+((_md&&_md.custo)!=null?_md.custo:'')); }catch(e){}
+    try{ var _md=MER_rows.find(function(x){return String(x.id)===String(id);}); VB_log('ESTOQUE','apagou', (_md&&_md.descricao)||'', VB_logDet(_md)); }catch(e){}
     VB_toast('Excluída.');
     MER_load();
   });
@@ -9014,6 +9068,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.66.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Botão VENDER na ficha do relógio (só nos itens EM ESTOQUE): abre a tela de Vendas já limpa e com o item aplicado — descrição MODELO ANO SN, custo e vínculo pra baixa automática ao salvar; o EDITAR vira botão secundário quando o VENDER está presente. E o Log de Alterações ficou claro: frases por extenso ("Antecipação editada", "Venda criada", "Item do estoque baixado"), nome sempre presente e valores formatados em moeda (Total, Bruto, Líquido, Financiado, Custo)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.65.0</span><span class="cl-ver-date">07/07/2026</span></div>
