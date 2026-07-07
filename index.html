@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.61.2</title>
+<title>VB - v1.61.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -423,7 +423,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 
 <div id="screen-home">
   <div class="card">
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.61.2<br>06/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.61.3<br>06/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;margin:0 4px 8px;font-family:-apple-system,sans-serif;">OPERAÇÕES</div>
@@ -5782,18 +5782,6 @@ function HIST_renderRows(tab, rows){
       if(_lvL!=null && _c>0){
         var _pct=Math.round(_lvL/_c*100);
         linha2='<span style="color:#4a4a4a;font-weight:700;">Lucro: '+HIST_fmtMoeda(_lvL)+'</span> <span style="color:#bbb;">('+_pct+'%)</span>';
-        if(_temSocio){
-          var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
-          var _pS=100-_pVB;
-          var _lVB=_lvL*(_pVB/100), _lS=_lvL*(_pS/100);
-          var _cVB=_c-_vs;
-          campos.push({l:'Custo total', v:HIST_fmtMoeda(_c)});
-          campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)+' ('+_pct+'%)'});
-          campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
-          campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
-          campos.push({l:'Custo VB', v:HIST_fmtMoeda(_cVB)});
-          campos.push({l:'Custo '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
-        }
       }
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
@@ -5813,8 +5801,18 @@ function HIST_renderRows(tab, rows){
         }
         if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       })();
+      if(r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); }
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
-      if(!_temSocio && r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); }
+      if(_temSocio && _lvL!=null && _c>0){
+        var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
+        var _pS=100-_pVB;
+        var _lVB=_lvL*(_pVB/100), _lS=_lvL*(_pS/100);
+        var _cVB=_c-_vs;
+        campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
+        campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
+        campos.push({l:'Custo VB', v:HIST_fmtMoeda(_cVB)});
+        campos.push({l:'Custo '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
+      }
 
     } else {
       var qtd=(r.pagamentos||[]).length;
@@ -11089,6 +11087,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.3</span><span class="cl-ver-date">06/07/2026</span></div>
+      <div class="cl-item">Expandir das vendas com ordem única pra todos os cards: Data da venda → 1ª parcela → Parcelas → Valor(es) → Custo → Identificação — e o rateio do sócio entra sempre no fim (Lucro VB, Lucro do sócio, Custo VB, Custo do sócio), sem repetir Custo total e Lucro total, que já aparecem no Custo e na linha do card</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.61.2</span><span class="cl-ver-date">06/07/2026</span></div>
