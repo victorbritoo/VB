@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.70.2</title>
+<title>VB - v1.70.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.70.2<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.70.6<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1608,6 +1608,15 @@ function HIST_carregarVen(r){
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   document.getElementById('ven-cliente').value = r.cliente||'';
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
+  // datas SEMPRE definidas nos dois modos — sem herdar valor da venda aberta antes
+  var _tdEl=document.getElementById('ven-tabelaData');
+  if(_tdEl){
+    if(r.data_primeira_parcela){ var pp=r.data_primeira_parcela.split('-'); _tdEl.value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
+    else if(r.modo==='personalizado'&&r.parcelas&&r.parcelas.length&&r.parcelas[0].d){ _tdEl.value=r.parcelas[0].d; }
+    else { _tdEl.value=''; }
+  }
+  var _dvEl=document.getElementById('ven-dataVenda');
+  if(_dvEl){ if(r.data_venda){ var dv=String(r.data_venda).split('-'); _dvEl.value=dv[2]+'/'+dv[1]+'/'+dv[0]; } else { _dvEl.value=''; } }
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true;
     VEN_parcelas=[]; VEN_parcelaCounter=0;
@@ -1619,9 +1628,6 @@ function HIST_carregarVen(r){
     if(r.quantidade_parcelas) document.getElementById('ven-qtd').value=String(r.quantidade_parcelas);
     if(r.valor_parcela){ document.getElementById('ven-parcela').value=VEN_formatBR(Number(r.valor_parcela)); }
     VEN_merVinculo=null;
-    if(r.data_primeira_parcela){ var pp=r.data_primeira_parcela.split('-'); document.getElementById('ven-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
-    var _dvEl=document.getElementById('ven-dataVenda');
-    if(_dvEl){ if(r.data_venda){ var dv=String(r.data_venda).split('-'); _dvEl.value=dv[2]+'/'+dv[1]+'/'+dv[0]; } else { _dvEl.value=''; } }
     VEN_update && VEN_update();
     VEN_autoLista();
   }
@@ -7696,7 +7702,7 @@ function MER_render(){
               }
               return s;
             }
-            return '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Venda: <span style="font-weight:700;color:#111;">'+(r.data_venda?MER_fmtData(r.data_venda):'VENDIDO')+'</span>'+g+'</div>';
+            return '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Saída: <span style="font-weight:700;color:#111;">'+(r.data_venda?MER_fmtData(r.data_venda):'VENDIDO')+'</span>'+g+'</div>';
           })() : (
           '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)
           +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
@@ -7729,11 +7735,12 @@ function MER_render(){
   var tot=document.getElementById('mer-total');
   if(tot){
     if(MER_tab==='vendida'){
-      var lucroTot=0, lucroVB=0, temLucro=false;
+      var vendaTot=0, lucroTot=0, lucroVB=0, temLucro=false;
       est.forEach(function(r){
         var v=r.venda_id?MER_vendasMap[r.venda_id]:null;
         if(!v) return;
         var t=Number(v.valor_total)||0, c=Number(v.custo!=null?v.custo:r.custo)||0;
+        if(t>0){ vendaTot+=t; }
         if(t>0&&c>0){
           var l=t-c; lucroTot+=l; temLucro=true;
           var vs=Number(v.valor_socio)||0;
@@ -7743,7 +7750,7 @@ function MER_render(){
       });
       tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
         +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
-          +'<span style="color:#bbb;font-weight:600;">CUSTO: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
+          +'<span style="color:#bbb;font-weight:600;">TOTAL: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(vendaTot)+'</span>'
           +(temLucro?('<br><span style="color:#bbb;font-weight:600;">LUCRO: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(lucroTot)+'</span>'
             +'<br><span style="color:#bbb;font-weight:600;">VB: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span>'):'')
         +'</span>';
@@ -7821,7 +7828,13 @@ function MER_abrir(id){
         alvo.innerHTML=vh;
       });
     } else {
-      alvo.innerHTML='<div style="text-align:center;color:#ccc;font-size:11px;padding:8px;">Baixa manual — sem venda vinculada.</div>';
+      var sh='<div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:600;text-align:center;margin:12px 0 6px;">SAÍDA</div>';
+      sh+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
+      var _gs=(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' ('+MER_diasEntre(r.data_compra,r.data_venda)+'d)'):'';
+      sh+=(r.data_venda?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:#888;white-space:nowrap;">Data da Saída:</span><span style="font-weight:700;color:#4a4a4a;text-align:right;">'+MER_fmtData(r.data_venda)+_gs+'</span></div>'):'');
+      sh+='<div style="text-align:center;color:#ccc;font-size:11px;padding-top:6px;">Baixa manual — sem venda vinculada.</div>';
+      sh+='</div>';
+      alvo.innerHTML=sh;
     }
   }
   var _bv=document.getElementById('mer-view-vender');
@@ -9268,6 +9281,26 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.6</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Correção do vazamento de datas ao abrir vendas em sequência pelo Histórico: os campos Data da Venda e Primeiro Vencimento agora são sempre redefinidos a cada abertura — vêm do registro, ou da 1ª parcela (personalizado sem data salva), ou limpos; nunca mais herdam o valor da venda aberta antes</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.5</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Correção: abrir uma venda com parcelas personalizadas pelo Histórico agora traz a Data da Venda e o Primeiro Vencimento salvos — antes esses campos só eram preenchidos no modo simples e a venda personalizada abria com a data de hoje</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.4</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Item baixado sem venda vinculada (consignado devolvido ou vendido pelo dono) agora fala a verdade: no card dos VENDIDOS o rótulo é "Saída:" (em vez de "Venda:"), e a ficha ganhou o bloco SAÍDA com "Data da Saída:" e o giro — no lugar do aviso solto. Vendas suas seguem como "Venda: R$ X / Lucro: R$ Y"</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.3</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Barra dos VENDIDOS na língua dos cards: TOTAL (soma dos valores de venda), LUCRO e VB — o CUSTO saiu da barra (segue na ficha de cada item). Baixa manual sem valor de venda não entra no total</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.2</span><span class="cl-ver-date">07/07/2026</span></div>
