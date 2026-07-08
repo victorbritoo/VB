@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.69.5</title>
+<title>VB - v1.70.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.69.5<br>07/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.70.0<br>07/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7698,12 +7698,20 @@ function MER_render(){
             }
             return '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Venda: <span style="font-weight:700;color:#111;">'+(r.data_venda?MER_fmtData(r.data_venda):'VENDIDO')+'</span>'+g+'</div>';
           })() : (
-          '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Custo R$ '+MER_fmtBR(r.custo||0)
-          +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
-          +((r.data_compra&&MER_dias(r.data_compra)!=null)?(' <span style="color:#bbb;">('+MER_dias(r.data_compra)+'d em estoque)</span>'):'')
+          '<div style="font-size:11px;color:#4a4a4a;margin-top:1px;">Custo: <span style="font-weight:700;color:#111;">R$ '+MER_fmtBR(r.custo||0)+'</span>'
+          +(r.data_compra?(' · Data da Compra: <span style="font-weight:700;color:#111;">'+MER_fmtData(r.data_compra)+'</span>'):'')
+          +((r.data_compra&&MER_dias(r.data_compra)!=null)?(function(){
+              var dd=MER_dias(r.data_compra);
+              var forte=dd>=60;
+              return ' <span style="color:'+(forte?'#111':'#bbb')+';'+(forte?'font-weight:700;':'')+'white-space:nowrap;">('+dd+'d em estoque)</span>';
+            })():'')
           +'</div>'
           +((r.fornecedor||r.pagamento)?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+(r.fornecedor?('De: '+HIST_esc(r.fornecedor)):'')+(r.fornecedor&&r.pagamento?' · ':'')+(r.pagamento?HIST_esc(r.pagamento):'')+'</div>'):'')
-          +(r.socio?('<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((Number(r.custo)>0)?(' ('+Math.round(Number(r.valor_socio)/Number(r.custo)*100)+'%)'):'')):'')+'</div>'):'')
+          +(r.socio?(function(){
+              var pctS=(Number(r.custo)>0&&r.valor_socio)?Math.round(Number(r.valor_socio)/Number(r.custo)*100):null;
+              if(pctS===100) return '<div style="font-size:10px;color:#bbb;margin-top:1px;">Consignado: '+HIST_esc(r.socio)+'</div>';
+              return '<div style="font-size:10px;color:#bbb;margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((pctS!=null)?(' ('+pctS+'%)'):'')):'')+'</div>';
+            })():'')
           ))
         +'</div>'
         +(MER_tab==='estoque'
@@ -7742,8 +7750,10 @@ function MER_render(){
         +'</span>';
     } else {
       tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:#bbb;font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
-        +'<span style="text-align:right;"><span style="font-size:15px;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
-        +(socios>0?('<br><span style="font-size:10px;color:#bbb;font-weight:600;">VB: R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
+        +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
+          +'<span style="color:#bbb;font-weight:600;">TOTAL: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
+          +(socios>0?('<br><span style="color:#bbb;font-weight:600;">SÓCIOS: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(socios)+'</span>'
+            +'<br><span style="color:#bbb;font-weight:600;">VB: </span><span style="color:#fff;font-weight:700;">R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
         +'</span>';
     }
     tot.style.display='flex';
@@ -7767,14 +7777,14 @@ function MER_abrir(id){
   hh+=lin('Marca',cx.marca)+lin('Modelo',cx.modelo)+lin('Ano',cx.ano)+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
   hh+='</div><div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-top:8px;">';
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
-  hh+=lin('Data da compra', MER_fmtData(r.data_compra)||'');
-  if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em estoque', MER_dias(r.data_compra)+'d');
+  hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
+  if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
 
-  hh+=lin('De quem comprei', r.fornecedor||'')+lin('Pagamento', r.pagamento||'');
+  hh+=lin('De Quem Comprei', r.fornecedor||'')+lin('Pagamento', r.pagamento||'');
   hh+=lin('Sócio', r.socio||'');
   if(r.valor_socio!=null && Number(r.valor_socio)>0){
     var _pS=(Number(r.custo)>0)?(' ('+Math.round(Number(r.valor_socio)/Number(r.custo)*100)+'%)'):'';
-    hh+=lin('Parte do sócio', 'R$ '+MER_fmtBR(r.valor_socio)+_pS);
+    hh+=lin('Parte do Sócio', 'R$ '+MER_fmtBR(r.valor_socio)+_pS);
   }
   hh+='</div>';
   if(r.status==='vendida'){ hh+='<div id="mer-view-venda"></div>'; }
@@ -7792,8 +7802,8 @@ function MER_abrir(id){
         var _dvd=v.data_venda||r.data_venda||null;
         var _dv=_dvd?String(_dvd).split('-'):null;
         var _giro=(r.data_compra&&_dvd&&MER_diasEntre(r.data_compra,_dvd)!=null)?(' ('+MER_diasEntre(r.data_compra,_dvd)+'d)'):'';
-        vh+=lin('Data da venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]+_giro):'');
-        vh+=lin('Valor total', v.valor_total!=null?('R$ '+MER_fmtBR(v.valor_total)):'');
+        vh+=lin('Data da Venda', _dv?(_dv[2]+'/'+_dv[1]+'/'+_dv[0]+_giro):'');
+        vh+=lin('Valor Total', v.valor_total!=null?('R$ '+MER_fmtBR(v.valor_total)):'');
         var _lu=(v.valor_total!=null&&v.custo!=null)?(Number(v.valor_total)-Number(v.custo)):null;
         if(_lu!=null){
           var _lp=(Number(v.custo)>0)?(' ('+Math.round(_lu/Number(v.custo)*100)+'%)'):'';
@@ -9259,6 +9269,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.70.0</span><span class="cl-ver-date">07/07/2026</span></div>
+      <div class="cl-item">Estoque com o padrão novo de rótulos: tudo com dois-pontos e Primeira Letra Maiúscula — "Custo: R$ 100.000,00 · Data da Compra: 29/06/2026" — nos cards e na ficha (Data da Compra, De Quem Comprei, Parte do Sócio, Data da Venda, Valor Total). Sócio com 100% do custo vira "Consignado: NOME" no card (padrão da consignação). Itens parados há 60 dias ou mais mostram os dias em preto. E a barra preta do ESTOQUE ficou em três linhas alinhadas: TOTAL, SÓCIOS e VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.69.5</span><span class="cl-ver-date">07/07/2026</span></div>
