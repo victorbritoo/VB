@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.71.0</title>
+<title>VB - v1.71.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.71.0<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.71.1<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1332,7 +1332,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
     </div>
     <div style="margin-top:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;text-align:center;">ACOMPANHA</div>
-      <input id="mer-infos" type="text" placeholder="CAIXA, DOCUMENTOS, CERTIFICADO..." onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+      <textarea id="mer-infos" rows="1" placeholder="CAIXA, DOCUMENTOS, CERTIFICADO..." oninput="VB_autoGrow(this)" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;overflow:hidden;line-height:1.4;"></textarea>
     </div>
     <div class="two-col" style="margin-top:6px;">
       <div style="padding-right:12px;text-align:center;">
@@ -1356,7 +1356,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
         </div>
         <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PAGAMENTO</div>
-          <input id="mer-pagamento" type="text" placeholder="PIX, dinheiro, troca..." style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+          <textarea id="mer-pagamento" rows="1" placeholder="PIX, dinheiro, troca..." oninput="VB_autoGrow(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;overflow:hidden;line-height:1.4;"></textarea>
         </div>
       </div>
       <div class="two-col" style="margin-top:6px;">
@@ -7089,6 +7089,7 @@ function MER_limparBusca(){
   var inp=document.getElementById('mer-busca'); if(inp) inp.value='';
   MER_render(); inp && inp.focus();
 }
+function VB_autoGrow(el){ if(!el) return; el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 var MER_ord='data_desc';
 var MER_vendasMap={}, MER_vendasBusy=false;
 var MER_ORD_OPCOES=[
@@ -7937,10 +7938,12 @@ function MER_editar(id){
   document.getElementById('mer-ano').value=_cx.ano||'';
   document.getElementById('mer-sn').value=_cx.sn||'';
   document.getElementById('mer-infos').value=r.infos||'';
+  VB_autoGrow(document.getElementById('mer-infos'));
   document.getElementById('mer-custo').value=r.custo!=null?MER_fmtBR(r.custo):'';
   document.getElementById('mer-data').value=MER_fmtData(r.data_compra)||'';
   document.getElementById('mer-fornecedor').value=r.fornecedor||'';
   document.getElementById('mer-pagamento').value=r.pagamento||'';
+  VB_autoGrow(document.getElementById('mer-pagamento'));
   document.getElementById('mer-socio').value=r.socio||'';
   document.getElementById('mer-valorSocio').value=r.valor_socio!=null?MER_fmtBR(r.valor_socio):'';
   if(r.fornecedor||r.pagamento||r.socio||r.valor_socio){
@@ -7954,7 +7957,7 @@ function MER_editar(id){
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento'));
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -8023,7 +8026,7 @@ function MER_add(btn){
     var editava=!!MER_editId;
     var _mid=MER_editId;
     MER_editId=null;
-    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento'));
     MER_updateAddBtn();
     MER_toggleForm(false);
     VB_log('ESTOQUE', editava?'editou':'criou', desc, VB_logDet({custo:custo||0}));
@@ -9301,6 +9304,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.71.1</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Campos ACOMPANHA e PAGAMENTO do Estoque agora crescem com o texto (1 linha vira 2, 3...) em vez de cortar — mesmo visual, altura automática, no preenchimento e na edição. Card e ficha seguem iguais</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.71.0</span><span class="cl-ver-date">08/07/2026</span></div>
