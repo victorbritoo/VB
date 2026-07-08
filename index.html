@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.71.1</title>
+<title>VB - v1.72.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.71.1<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.72.0<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1972,7 +1972,7 @@ function HIST_exportarPDF(){
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
 var VB_logPrev=null;
-var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',
+var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',modelo:'Modelo',ano:'Ano',sn:'SN',infos:'Acompanha',
   valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
   taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
   data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d']};
@@ -2044,7 +2044,7 @@ function VB_logDet(r){
 }
 function VB_log(modulo, acao, registro, detalhe){
   try{
-    sb.from('log').insert({modulo:modulo, acao:acao, registro:String(registro||'').slice(0,120), detalhe:String(detalhe||'').slice(0,300)}).then(function(){});
+    sb.from('log').insert({modulo:modulo, acao:acao, registro:String(registro||'').slice(0,120), detalhe:String(detalhe||'').slice(0,500)}).then(function(){});
   }catch(e){}
 }
 function VB_checkBackupAviso(){
@@ -5033,12 +5033,16 @@ function VEN_confirmarOperacao(btn){
         VEN_merVinculo=null;
       } else {
         // sincronia venda -> estoque: custo/sócio acompanham (descrição fica: no estoque ela nasce de MODELO/ANO/SN)
-        sb.from('mercadorias').update({data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null}).eq('venda_id', vendaId).select()
-          .then(function(rm){
+        var _novoM={data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
+        sb.from('mercadorias').select('*').eq('venda_id', vendaId).then(function(rq){
+          var _mOld=(rq.data&&rq.data[0])||null;
+          sb.from('mercadorias').update(_novoM).eq('venda_id', vendaId).select().then(function(rm){
             if(!rm.error && rm.data && rm.data.length){
-              VB_log('ESTOQUE','editou', rm.data[0].descricao||'', 'Atualizado pela venda — custo e sócio sincronizados');
+              var _dm2=_mOld?VB_logDiff(_mOld,_novoM):'';
+              if(_dm2) VB_log('ESTOQUE','editou', rm.data[0].descricao||'', 'Atualizado pela venda · '+_dm2);
             }
           });
+        });
       }
     })();
     VEN_updateConfirmarBtnLabel();
@@ -7384,17 +7388,41 @@ function LOG_abrir(){
     rows.forEach(function(r){
       var d=new Date(r.created_at);
       var ds=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-      html+='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:8px 12px;margin-bottom:5px;">'
+      var det=r.detalhe||'';
+      var temDiff=det.indexOf('→')>-1;
+      var detHtml='';
+      if(temDiff){
+        var segs=det.split(' · ');
+        var nomes=[]; segs.forEach(function(s){
+          var n=(s.split(':')[0]||'').trim(); if(!n) return;
+          if(/º título/i.test(n)) n='Títulos';
+          if(/º parcela|ª parcela/i.test(n)) n='Parcelas';
+          if(nomes.indexOf(n)===-1) nomes.push(n);
+        });
+        var linhas=segs.map(function(s){ return '<div style="margin-top:2px;">'+HIST_esc(s)+'</div>'; }).join('');
+        detHtml='<div class="log-resumo" style="font-size:10px;color:#bbb;margin-top:1px;">Mexeu em: '+HIST_esc(nomes.join(', '))+' <span style="color:#ccc;">· toque para ver</span></div>'
+          +'<div class="log-full" style="display:none;font-size:10px;color:#888;margin-top:2px;">'+linhas+'</div>';
+      } else if(det){
+        detHtml='<div style="font-size:10px;color:#bbb;margin-top:1px;">'+HIST_esc(det)+'</div>';
+      }
+      html+='<div '+(temDiff?'onclick="LOG_toggle(this)" style="cursor:pointer;':'style="')+'background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:8px 12px;margin-bottom:5px;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;">'
           +'<span style="font-size:11px;font-weight:700;color:#111;">'+HIST_esc(LOG_frase(r.modulo,r.acao))+'</span>'
           +'<span style="font-size:10px;color:#bbb;font-weight:600;white-space:nowrap;">'+ds+'</span>'
         +'</div>'
         +(r.registro?('<div style="font-size:12px;font-weight:600;color:#4a4a4a;margin-top:2px;">'+HIST_esc(r.registro)+'</div>'):'')
-        +(r.detalhe?('<div style="font-size:10px;color:#bbb;margin-top:1px;">'+HIST_esc(r.detalhe)+'</div>'):'')
+        +detHtml
       +'</div>';
     });
     l.innerHTML=html;
   });
+}
+function LOG_toggle(card){
+  var res=card.querySelector('.log-resumo'), full=card.querySelector('.log-full');
+  if(!res||!full) return;
+  var aberto=full.style.display!=='none';
+  full.style.display=aberto?'none':'block';
+  res.style.display=aberto?'block':'none';
 }
 function LOG_frase(mod, acao){
   mod=(mod||'').toUpperCase();
@@ -8025,23 +8053,26 @@ function MER_add(btn){
     if(res.error){ MER_updateAddBtn(); VB_toast('Não salvou: '+(res.error.message||res.error.code||'erro desconhecido')); console.log('MER_add error:', res.error); return; }
     var editava=!!MER_editId;
     var _mid=MER_editId;
+    var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
     MER_editId=null;
     ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento'));
     MER_updateAddBtn();
     MER_toggleForm(false);
-    VB_log('ESTOQUE', editava?'editou':'criou', desc, VB_logDet({custo:custo||0}));
-    // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio
-    if(editava && _mid){
-      var _r0=(MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0];
-      if(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
-        sb.from('vendas').update({custo:custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio}).eq('id', _r0.venda_id).select()
-          .then(function(rv){
-            if(!rv.error && rv.data && rv.data.length){
-              VB_log('VENDA','editou', desc, 'Atualizada pelo estoque — custo, descrição e sócio sincronizados');
-              VB_toast('Venda vinculada atualizada.');
-            }
-          });
-      }
+    var _detEd = editava&&_r0 ? VB_logDiff(_r0, payload) : '';
+    VB_log('ESTOQUE', editava?'editou':'criou', desc, editava?(_detEd||VB_logDet({custo:custo||0})):VB_logDet({custo:custo||0}));
+    // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
+    if(editava && _r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
+      var _novoV={custo:custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
+      sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
+        var _vOld=(rq.data&&rq.data[0])||null;
+        sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
+          if(!rv.error && rv.data && rv.data.length){
+            var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
+            VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' · '+_dv2):''));
+            VB_toast('Venda vinculada atualizada.');
+          }
+        });
+      });
     }
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
     MER_load();
@@ -9304,6 +9335,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.72.0</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Log em camadas: card fechado diz só onde mexeu ("Mexeu em: Custo, Sócio · toque para ver") e o toque expande o era → virou campo a campo, cada um na sua linha. Pra isso, as edições do ESTOQUE agora gravam o diff completo (antes só registravam o valor novo) — incluindo Modelo, Ano, SN e Acompanha — e as sincronizações relógio↔venda leem o valor antigo antes de atualizar e registram o diff real. Detalhe do log ampliado pra 500 caracteres</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.71.1</span><span class="cl-ver-date">08/07/2026</span></div>
