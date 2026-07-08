@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.72.1</title>
+<title>VB - v1.73.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.72.1<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.73.0<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3072,11 +3072,21 @@ var HIST_exporting=false;
 function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
 function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
 function HIST_valCol(tab){ return tab==='ant'?'valor_bruto':tab==='fin'?'valor_financiado':'valor_total'; }
-function HIST_dateCol(tab){ return 'created_at'; } // ordenar por Data = pelo carimbo de salvamento (mesmo exibido)
+function HIST_dateCol(tab){ return tab==='ant'?'data_operacao':tab==='fin'?'data_inicio':tab==='ven'?'data_venda':'created_at'; } // ordenar por Data = data de NEGÓCIO (pag segue no carimbo)
 function HIST_tabLabel(tab){ return tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'; }
 function HIST_tipoLabel(tab){ return tab==='ant'?'ANTEC':tab==='fin'?'FINANC':tab==='ven'?'VENDA':'PAGTO'; }
 function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
 function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
+// Data de NEGÓCIO da operação (eixo do tempo do Histórico): ant=data da operação, fin=início, ven=data da venda (fallback 1ª parcela), pag=carimbo
+function HIST_dataNeg(tab,r){
+  var v = tab==='ant' ? r.data_operacao
+        : tab==='fin' ? r.data_inicio
+        : tab==='ven' ? (r.data_venda||r.data_primeira_parcela)
+        : null;
+  if(v) return String(v).slice(0,10);
+  return r.created_at ? _localYMD(r.created_at) : '';
+}
+function HIST_dataNegDate(ymd){ if(!ymd) return null; var p=String(ymd).slice(0,10).split('-'); if(p.length<3) return null; var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)); return isNaN(d.getTime())?null:d; }
 // Converte "12.500,00" / "R$ 1.234" / "125" em número (ou null se não tiver dígito)
 function HIST_parseNum(s){
   if(!s) return null;
@@ -3111,24 +3121,25 @@ function HIST_filterRows(tab, rows){
   var f=HIST_filter, valCol=HIST_valCol(tab), range=HIST_periodoRange();
   var vmin=HIST_parseNum(f.valMin), vmax=HIST_parseNum(f.valMax);
   return rows.filter(function(r){
+    var _dn=HIST_dataNeg(r._tab||tab, r);
     if(range){
-      var d=r.created_at?new Date(r.created_at):null;
-      if(!d||isNaN(d.getTime())) return false;
+      var d=HIST_dataNegDate(_dn);
+      if(!d) return false;
       if(range.ini && d<range.ini) return false;
       if(range.fim && d>range.fim) return false;
     }
-    if(f.meses&&f.meses.length){ if(f.meses.indexOf(_ymOf(r.created_at))<0) return false; }
-    if(f.de || f.ate){ var ld=_localYMD(r.created_at); var dde=_brToYMD(f.de), dat=_brToYMD(f.ate); if(dde && ld<dde) return false; if(dat && ld>dat) return false; }
+    if(f.meses&&f.meses.length){ if(f.meses.indexOf(_dn.slice(0,7))<0) return false; }
+    if(f.de || f.ate){ var ld=_dn; var dde=_brToYMD(f.de), dat=_brToYMD(f.ate); if(dde && ld<dde) return false; if(dat && ld>dat) return false; }
     if(f.modo!=='todos' && (tab==='ant'||tab==='ven')){ if((r.modo||'')!==f.modo) return false; }
     if(vmin!=null && !(Number(r[valCol])>=vmin)) return false;
     if(vmax!=null && !(Number(r[valCol])<=vmax)) return false;
     return true;
   });
 }
-// Rótulo de seção pela data de salvamento (created_at)
+// Rótulo de seção pela data de NEGÓCIO da operação
 function HIST_bucketLabel(iso){
   if(!iso) return 'Sem data';
-  var d=new Date(iso); if(isNaN(d.getTime())) return 'Sem data';
+  var d=(String(iso).length===10)?HIST_dataNegDate(iso):new Date(iso); if(!d||isNaN(d.getTime())) return 'Sem data';
   var now=new Date();
   var diff=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000);
   if(diff<=0) return 'Hoje';
@@ -3416,12 +3427,20 @@ function HIST_fetch(term){
   }
   var asc = (HIST_sortDir==='asc');
   if(HIST_sortCol==='valor') q=q.order(valCol,{ascending:asc}).order('created_at',{ascending:asc});
-  else q=q.order(HIST_dateCol(tab),{ascending:asc}).order('created_at',{ascending:asc});
+  else q=q.order(HIST_dateCol(tab),{ascending:asc, nullsFirst:asc}).order('created_at',{ascending:asc});
   q.limit(500).then(function(res){
     if(res.error){ listaEl.innerHTML='<div style="text-align:center;color:#e05252;font-size:12px;margin-top:40px;">Erro ao carregar.</div>'; return; }
     var rows=res.data||[];
     HIST_allRows=rows.slice();
     rows=HIST_filterRows(tab, rows);
+    if(HIST_sortCol!=='valor'){
+      rows.sort(function(a,b){
+        var da=HIST_dataNeg(tab,a), db=HIST_dataNeg(tab,b);
+        if(da!==db) return (da<db?-1:1)*(asc?1:-1);
+        var ca=String(a.created_at||''), cb=String(b.created_at||'');
+        return ca===cb?0:(ca<cb?-1:1)*(asc?1:-1);
+      });
+    }
     if(tab==='ant'){
       rows=rows.filter(function(r){
         var atrasado=(Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0);
@@ -3517,7 +3536,7 @@ function HIST_fetchGlobal(term){
     var all=[];
     parts.forEach(function(pt){ (pt.rows||[]).forEach(function(r){ r._tab=pt.tb; all.push(r); }); });
     var asc=(HIST_sortDir==='asc');
-    all.sort(function(a,b){ var x=a.created_at||'', y=b.created_at||''; if(x===y) return 0; return asc?(x<y?-1:1):(x<y?1:-1); });
+    all.sort(function(a,b){ var da=HIST_dataNeg(a._tab,a), db=HIST_dataNeg(b._tab,b); if(da!==db) return (da<db?-1:1)*(asc?1:-1); var x=a.created_at||'', y=b.created_at||''; if(x===y) return 0; return asc?(x<y?-1:1):(x<y?1:-1); });
     if(all.length>500) all=all.slice(0,500);
     if(!all.length){
       listaEl.innerHTML='<div style="text-align:center;color:#ccc;font-size:12px;margin-top:40px;">Nada encontrado em tudo.</div>';
@@ -3544,10 +3563,10 @@ function HIST_renderRows(tab, rows){
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   var bucketCount={};
-  if(grouping){ rows.forEach(function(r){ var bk=HIST_bucketLabel(r.created_at); bucketCount[bk]=(bucketCount[bk]||0)+1; }); }
+  if(grouping){ rows.forEach(function(r){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); bucketCount[bk]=(bucketCount[bk]||0)+1; }); }
   rows.forEach(function(r,idx){
     var rtab=r._tab||tab;
-    if(grouping){ var bk=HIST_bucketLabel(r.created_at); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk]); lastBucket=bk; } }
+    if(grouping){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk]); lastBucket=bk; } }
     var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', linha2='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
     if(rtab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
@@ -9336,6 +9355,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.73.0</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Histórico pela data do NEGÓCIO: a ordenação, as seções (Hoje / Últimos 7 Dias / mês) e os filtros de período, mês e de/até passam a usar a data da operação (Antecipação), data de início (Financiamento) e data da venda (Vendas — antigas caem pra 1ª parcela). Editar um registro não muda mais a posição dele na lista. Pagamentos segue pelo carimbo (não tem data própria), e o carimbo de salvamento continua exibido no card como auditoria — quem responde "o que mexi por último" é o Log. Desempate fixo pelo carimbo, ordem estável. Histórico e Fechamento do Mês agora contam a mesma história</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.72.1</span><span class="cl-ver-date">08/07/2026</span></div>
