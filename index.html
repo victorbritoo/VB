@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.73.1</title>
+<title>VB - v1.74.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -442,10 +442,16 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
   </div>
 </div>
 
+<style>
+/* PRÉVIA do modo escuro (inversão) — remoção limpa: apagar este bloco + botão ☾ + funções VB_dark* */
+html.vb-dark { filter: invert(1) hue-rotate(180deg); background:#0e0e0e; }
+html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hue-rotate(180deg); }
+</style>
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.73.1<br>08/07/2026</div>
+    <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:12px;left:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;font-family:-apple-system,sans-serif;">☾</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.74.0<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3718,6 +3724,17 @@ function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
   }catch(e){ VB_toast('Não consegui compartilhar.'); }
 }
 
+// PRÉVIA modo escuro (inversão). Escolha salva no aparelho.
+function VB_darkApply(on){
+  document.documentElement.classList.toggle('vb-dark', !!on);
+  var b=document.getElementById('vb-dark-btn'); if(b) b.textContent=on?'\u2600\uFE0E':'\u263E';
+}
+function VB_darkToggle(){
+  var on=!document.documentElement.classList.contains('vb-dark');
+  try{ localStorage.setItem('vb_dark', on?'1':'0'); }catch(e){}
+  VB_darkApply(on);
+}
+try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
 function VB_toast(msg){
   try{
     var t=document.getElementById('vb-toast');
@@ -9337,6 +9354,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.74.0</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Prévia do modo escuro: botão ☾ no canto esquerdo da Home inverte as cores do app inteiro num toque (☀ volta ao claro). Escolha fica salva no aparelho. Fotos, ícones e comprovantes compartilhados não mudam — continuam saindo no claro. É uma prévia por inversão pra testar a sensação no dia a dia; se aprovar, o tema escuro definitivo é desenhado à mão depois</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.73.1</span><span class="cl-ver-date">08/07/2026</span></div>
