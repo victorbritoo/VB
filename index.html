@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.72.0</title>
+<title>VB - v1.72.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -445,7 +445,7 @@ input::placeholder{color:#ccc} input[type="text"]:not([inputmode="numeric"]):not
 <div id="screen-home">
   <div class="card">
 
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.72.0<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.72.1<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1754,7 +1754,7 @@ function HIST_clickDelete(el, event){
     if(res.error){ VB_toast('Não conseguiu excluir.'); return; }
     VB_toast('Excluído.');
     try{ var _map={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDA',pag:'PAGAMENTO'}; VB_log(_map[tab]||tab.toUpperCase(), 'apagou', r.nome||r.descricao||r.investidor_nome||'(sem nome)', VB_logDet(r)); }catch(e){}
-    if(tab==='ven'){ sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null}).eq('venda_id', r.id).then(function(){}); }
+    if(tab==='ven'){ sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null}).eq('venda_id', r.id).then(function(){}); }
     HIST_reload(tab);
   });
 }
@@ -5028,7 +5028,7 @@ function VEN_confirmarOperacao(btn){
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var dv=row.data_venda;
       if(VEN_merVinculo){
-        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv}).eq('id', VEN_merVinculo)
+        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv, baixa_em:new Date().toISOString()}).eq('id', VEN_merVinculo)
           .then(function(r2){ if(!r2.error){ VB_toast('Item baixado no estoque.'); } });
         VEN_merVinculo=null;
       } else {
@@ -7130,8 +7130,9 @@ function MER_ordena(rows){
   else if(MER_ord==='modelo'){ r.sort(function(a,b){ return String(a.descricao||'').localeCompare(String(b.descricao||''),'pt'); }); }
   else if(MER_tab==='vendida'){
     // padrão dos VENDIDOS: data da venda, do último vendido pro mais antigo
-    var dv=function(x){ return x.data_venda?String(x.data_venda):(x.data_compra?String(x.data_compra):''); };
-    r.sort(function(a,b){ return dv(a)<dv(b)?1:dv(a)>dv(b)?-1:0; });
+    var dv=function(x){ return x.baixa_em?String(x.baixa_em):(x.data_venda?String(x.data_venda):(x.data_compra?String(x.data_compra):'')); };
+    var ca=function(x){ return String(x.created_at||''); };
+    r.sort(function(a,b){ return dv(a)<dv(b)?1:dv(a)>dv(b)?-1:(ca(a)<ca(b)?1:ca(a)>ca(b)?-1:0); });
   }
   else { r.sort(function(a,b){ return d(a)<d(b)?1:d(a)>d(b)?-1:0; }); }
   return r;
@@ -8000,7 +8001,7 @@ function MER_updateAddBtn(){
 function MER_baixa(btn){
   if(MER_editId){ var _id=btn.dataset.merid; MER_dirtyGuard(function(){ MER_load(); }); return; }
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='#111'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; },2500); return; }
-  sb.from('mercadorias').update({status:'vendida', data_venda:(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})()}).eq('id',btn.dataset.merid).then(function(res){
+  sb.from('mercadorias').update({status:'vendida', data_venda:(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(), baixa_em:new Date().toISOString()}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não deu baixa: '+(res.error.message||'')); return; }
     try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(btn.dataset.merid);}); VB_log('ESTOQUE','baixa (vendido)', (_mb&&_mb.descricao)||'', ''); }catch(e){}
     VB_toast('Baixa dada: VENDIDA.');
@@ -8009,7 +8010,7 @@ function MER_baixa(btn){
 }
 function MER_voltar(btn){
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='#111'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; },2500); return; }
-  sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null}).eq('id',btn.dataset.merid).then(function(res){
+  sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null}).eq('id',btn.dataset.merid).then(function(res){
     if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
     try{ var _mv=MER_rows.find(function(x){return String(x.id)===String(btn.dataset.merid);}); VB_log('ESTOQUE','voltou ao estoque', (_mv&&_mv.descricao)||'', ''); }catch(e){}
     VB_toast('De volta ao estoque.');
@@ -9335,6 +9336,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.72.1</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">VENDIDOS: ordenação padrão agora é pelo momento exato da baixa (mais recente primeiro) — antes, itens do mesmo dia ficavam em ordem indefinida. O app grava o instante da baixa (venda vinculada e baixa manual ✓) e limpa ao voltar pro estoque. Itens antigos seguem pela data da venda, com desempate fixo pelo cadastro. Requer SQL: alter table mercadorias add column if not exists baixa_em timestamptz;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.72.0</span><span class="cl-ver-date">08/07/2026</span></div>
