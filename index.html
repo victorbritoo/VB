@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.74.1</title>
+<title>VB - v1.75.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.74.1<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.75.0<br>08/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1371,7 +1371,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
           <input id="mer-socio" type="text" placeholder="—" readonly onclick="SOC_openPicker(function(n){document.getElementById('mer-socio').value=n;})" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;cursor:pointer;">
         </div>
         <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
-          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO</div>
+          <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO<span id="mer-vsocio-pct"></span></div>
           <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
             <span style="font-size:11px;color:#aaa;">R$</span>
             <input id="mer-valorSocio" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:14px;font-weight:700;color:#4a4a4a;width:100px;text-align:center;font-family:-apple-system,sans-serif;">
@@ -4537,8 +4537,8 @@ function VEN_update(){
 
 VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_modoPersonalizado=false; VEN_update(); VEN_updateLucro(); VEN_autoLista(); });
 VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
-VEN_maskVal(document.getElementById('mer-custo'), function(){});
-VEN_maskVal(document.getElementById('mer-valorSocio'), function(){});
+VEN_maskVal(document.getElementById('mer-custo'), function(){ MER_pctLive(); });
+VEN_maskVal(document.getElementById('mer-valorSocio'), function(){ MER_pctLive(); });
 (function(){
   var md=document.getElementById('mer-data');
   if(md) md.addEventListener('input',function(){
@@ -7035,6 +7035,13 @@ var PIN_unlockedUntil = 0;
 // ══════════ MERCADORIAS ══════════
 var MER_rows=[], MER_tab='estoque';
 function MER_fmtBR(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function MER_hojeBR(){ var d=new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+function MER_pctLive(){
+  var sp=document.getElementById('mer-vsocio-pct'); if(!sp) return;
+  var c=VEN_parseBR((document.getElementById('mer-custo')||{}).value||'');
+  var v=VEN_parseBR((document.getElementById('mer-valorSocio')||{}).value||'');
+  sp.textContent = (c>0 && v>0) ? ' ('+Math.round(v/c*100)+'%)' : '';
+}
 function MER_load(){
   var hoje=new Date();
   var el=document.getElementById('mer-data');
@@ -8011,6 +8018,7 @@ function MER_editar(id){
   VB_autoGrow(document.getElementById('mer-pagamento'));
   document.getElementById('mer-socio').value=r.socio||'';
   document.getElementById('mer-valorSocio').value=r.valor_socio!=null?MER_fmtBR(r.valor_socio):'';
+  MER_pctLive();
   if(r.fornecedor||r.pagamento||r.socio||r.valor_socio){
     var d=document.getElementById('mer-detalhes');
     if(d && d.style.display==='none') MER_toggleDetalhes();
@@ -8022,7 +8030,7 @@ function MER_editar(id){
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento'));
+  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive();
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -8092,7 +8100,7 @@ function MER_add(btn){
     var _mid=MER_editId;
     var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
     MER_editId=null;
-    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento'));
+    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive();
     MER_updateAddBtn();
     MER_toggleForm(false);
     var _detEd = editava&&_r0 ? VB_logDiff(_r0, payload) : '';
@@ -9354,6 +9362,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.75.0</span><span class="cl-ver-date">08/07/2026</span></div>
+      <div class="cl-item">Cadastro do Estoque: PARTE DO SÓCIO mostra o percentual vivo no título — "PARTE DO SÓCIO (50%)" — calculado do custo enquanto você digita o valor em reais (mesma conta da ficha). E DATA DA COMPRA agora volta pra HOJE depois de cada cadastro (antes ficava presa na data do item anterior) — segue editável, e a edição de item existente continua trazendo a data dele</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.74.1</span><span class="cl-ver-date">08/07/2026</span></div>
