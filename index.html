@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.79.2</title>
+<title>VB - v1.79.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.79.2<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.79.3<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7846,10 +7846,18 @@ function MER_render(){
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +((MER_tab==='vendida'&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
-              +'<span style="font-size:13px;font-weight:700;color:#111;min-width:0;">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+'</span>'
+              +'<span style="font-size:13px;font-weight:700;color:#111;min-width:0;">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+(function(){
+            if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
+            var pctB=Math.round(Number(r.valor_socio)/Number(r.custo)*100);
+            return ' <span style=\"display:inline-block;background:#111;color:#fff;font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(pctB===100?'C':'S')+'</span>';
+          })()+'</span>'
               +'<span style="font-size:10px;color:#bbb;font-weight:600;white-space:nowrap;">'+MER_fmtData(r.data_venda)+'</span>'
             +'</div>')
-          : ('<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+'</div>'))
+          : ('<div style="font-size:13px;font-weight:700;color:#111;">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+(function(){
+            if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
+            var pctB=Math.round(Number(r.valor_socio)/Number(r.custo)*100);
+            return ' <span style=\"display:inline-block;background:#111;color:#fff;font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(pctB===100?'C':'S')+'</span>';
+          })()+'</div>'))
         +(MER_tab==='vendida' ? (function(){
             var g=(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' <span style="color:#bbb;font-weight:600;">('+MER_diasEntre(r.data_compra,r.data_venda)+'d)</span>'):'';
             var v=r.venda_id?MER_vendasMap[r.venda_id]:null;
@@ -7939,7 +7947,7 @@ function MER_abrir(id){
   if(!r) return;
   var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:r.modelo||'',ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
   document.getElementById('mer-view-titulo').textContent=r.descricao||'(sem descrição)';
-  function lin(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:#888;white-space:nowrap;">'+l+':</span><span style="font-weight:700;color:#4a4a4a;text-align:right;">'+HIST_esc(v)+'</span></div>'):''; }
+  function lin(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:#888;white-space:nowrap;">'+l+':</span><span style="font-weight:700;color:#4a4a4a;text-align:right;text-transform:uppercase;">'+HIST_esc(v)+'</span></div>'):''; }
   var hh='<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;">';
   hh+=lin('Marca',cx.marca)+lin('Modelo',cx.modelo)+lin('Ano',cx.ano)+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
   hh+='</div><div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:10px 14px;margin-top:8px;">';
@@ -8163,9 +8171,9 @@ function MER_add(btn){
   if(isNaN(custo)||custo<=0){ VB_toast('Preencha o custo.'); return; }
   var iso=null, pp=dataStr.split('/');
   if(pp.length===3){ var y=pp[2]; if(y.length===2) y='20'+y; iso=y+'-'+('0'+pp[1]).slice(-2)+'-'+('0'+pp[0]).slice(-2); }
-  var forn=(document.getElementById('mer-fornecedor').value||'').trim();
-  var pgto=(document.getElementById('mer-pagamento').value||'').trim();
-  var socio=(document.getElementById('mer-socio').value||'').trim();
+  var forn=(document.getElementById('mer-fornecedor').value||'').trim().toUpperCase();
+  var pgto=(document.getElementById('mer-pagamento').value||'').trim().toUpperCase();
+  var socio=(document.getElementById('mer-socio').value||'').trim().toUpperCase();
   var vSocio=VEN_parseBR(document.getElementById('mer-valorSocio').value);
   var payload={
     descricao:desc, custo:custo, data_compra:iso,
@@ -9450,6 +9458,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.79.3</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Estoque: badge S/C ao lado do título dos cards (ESTOQUE e VENDIDOS), mesmo critério do Histórico — e a linha Sócio:/Consignado: fica, como VB prefere. Corrigido o maiúsculo que não chegava no banco: FORNECEDOR, PAGAMENTO e SÓCIO agora gravam em maiúsculas (o campo só mostrava), e a ficha exibe todos os valores em maiúsculas — o que cobre também registros antigos gravados em minúsculas, como o "Troca daytona chocolate"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.79.2</span><span class="cl-ver-date">09/07/2026</span></div>
