@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.78.4</title>
+<title>VB - v1.78.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.78.4<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.78.6<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1662,7 +1662,13 @@ function HIST_carregarPag(r){
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
-function HIST_valCurto(n){ return HIST_fmtMoeda(n).replace('R$ ','').replace(/,00$/,''); }
+function HIST_valCurto(n){ return HIST_fmtMoeda(n); }
+// Nome encolhe conforme cresce (com chão de legibilidade); acima disso, desce inteiro
+function HIST_nomeFit(n){
+  var t=HIST_abrevNome(n), c=t.length;
+  var fs = c<=11 ? '' : (c<=15 ? 'font-size:9.5px;' : (c<=19 ? 'font-size:8.5px;' : 'font-size:8px;'));
+  return '<span style="color:#bbb;display:inline-block;white-space:nowrap;'+fs+'">'+HIST_esc(t)+'</span>';
+}
 function HIST_abrevNome(n){
   var ps=String(n||'').trim().split(/\s+/).filter(Boolean);
   if(ps.length<=1) return ps.join('');
@@ -3619,7 +3625,7 @@ function HIST_renderRows(tab, rows){
         var _laN=HIST_lucroRow('ant', r);
         var _la=[];
         _la.push('<span style="color:#4a4a4a;">Líq: '+HIST_esc(HIST_valCurto(_liq))+'</span>');
-        if(_laN!=null && _laN>0 && _liq>0){ var _pN=Math.round(_laN/_liq*100); _la.push('<span style="color:#4a4a4a;font-weight:700;">Luc: '+HIST_esc(HIST_valCurto(_laN))+'</span> <span style="color:#bbb;">('+_pN+'%)</span>'); }
+        if(_laN!=null && _laN>0 && _liq>0){ var _pN=Math.round(_laN/_liq*100); _la.push('<span style="color:#4a4a4a;font-weight:700;">L: '+HIST_esc(HIST_valCurto(_laN))+'</span> <span style="color:#bbb;">('+_pN+'%)</span>'); }
         linha2=_la.join('<span style="color:#ccc;"> · </span>');
         campos.push({l:'Bruto', v:HIST_fmtMoeda(_bru)});
       }
@@ -3654,8 +3660,8 @@ function HIST_renderRows(tab, rows){
       if(_temSocio) rowBadge='S';
       var _l2=[];
       if(r.valor_total!=null) _l2.push('<span style="color:#4a4a4a;">'+HIST_esc(HIST_valCurto(r.valor_total))+'</span>');
-      if(_lvL!=null){ var _pctS=(_c>0)?(' <span style="color:#bbb;">('+Math.round(_lvL/_c*100)+'%)</span>'):''; _l2.push('<span style="color:#4a4a4a;font-weight:700;">Luc: '+HIST_esc(HIST_valCurto(_lvL))+'</span>'+_pctS); }
-      if(r.cliente) _l2.push('<span style="color:#bbb;display:inline-block;white-space:nowrap;">'+HIST_esc(HIST_abrevNome(r.cliente))+'</span>');
+      if(_lvL!=null){ var _pctS=(_c>0)?(' <span style="color:#bbb;">('+Math.round(_lvL/_c*100)+'%)</span>'):''; _l2.push('<span style="color:#4a4a4a;font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lvL))+'</span>'+_pctS); }
+      if(r.cliente) _l2.push(HIST_nomeFit(r.cliente));
       if(_l2.length) linha2=_l2.join('<span style="color:#ccc;"> · </span>');
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
@@ -9434,6 +9440,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.78.6</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">R$ de volta nos valores da linha do card (Vendas e Antecipação): "R$ 275.000,00 · L: R$ 70.000,00 (34%) · CLEVERSON". Nomes longos compensam pelo encolhimento adaptativo da 1.78.5 e, no limite, descem inteiros</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.78.5</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Linha do card, fórmula final: ",00" de volta (padrão contábil), R$ segue fora da superfície, "Luc:" virou "L:" (Vendas e Antecipação; "Líq:" fica), e o nome do cliente encolhe conforme cresce — 4 degraus de tamanho com chão de legibilidade; passou do chão, desce inteiro pra linha de baixo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.78.4</span><span class="cl-ver-date">09/07/2026</span></div>
