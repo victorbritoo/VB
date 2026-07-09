@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.80.1</title>
+<title>VB - v1.80.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.80.1<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.80.3<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -2834,11 +2834,24 @@ function VB_relatorioPDF(dados, total, returnImages){
              {h:'A cobrar', x:620, w:160, r:1, get:function(r){return money(r.valor_liquido);}} ],
       somaLabel:'TOTAL A COBRAR (LÍQUIDO)', soma:function(r){return Number(r.valor_liquido)||0;} },
     { key:'financiamentos_hist', titulo:'FINANCIAMENTOS', date:'data_inicio',
-      cols:[ {h:'Nome', x:pad, w:240, get:function(r){return (r.nome||r.descricao||'—')+(r.tem_investidor?'  · INV':'');}},
-             {h:'Início', x:320, w:90, get:function(r){return dt(r.data_inicio);}},
-             {h:'Financiado', x:430, w:160, r:1, get:function(r){return money(r.valor_financiado);}},
-             {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' x '+r.qtd_parcelas):'');}} ],
-      somaLabel:'TOTAL FINANCIADO', soma:function(r){return Number(r.valor_financiado)||0;} },
+      cols:[ {h:'Nome', x:pad, w:150, get:function(r){return (r.nome||r.descricao||'—')+(r.tem_investidor?'  · INV':'');}},
+             {h:'Início', x:195, w:62, get:function(r){return dt(r.data_inicio);}},
+             {h:'Financiado', x:262, w:96, r:1, get:function(r){return money(r.valor_financiado);}},
+             {h:'Parcela', x:362, w:120, r:1, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' \u00d7 '+r.qtd_parcelas):'');}},
+             {h:'Total', x:486, w:94, r:1, get:function(r){return (r.valor_total!=null)?money(r.valor_total):'—';}},
+             {h:'Lucro VB', x:584, w:92, r:1, get:function(r){var l=HIST_lucroRow('fin', r); return (l!=null)?money(l):'—';}},
+             {h:'Lucro Inv', x:680, w:100, r:1, get:function(r){ if(!r.tem_investidor) return '—'; var nf=Number(r.qtd_parcelas)||0; if(r.investidor_parcela==null||r.valor_financiado==null||!nf) return '—'; var li=Number(r.investidor_parcela)*nf-Number(r.valor_financiado); return isFinite(li)?money(li):'—'; }} ],
+      somaLabel:'TOTAL FINANCIADO', soma:function(r){return Number(r.valor_financiado)||0;},
+      extraSelos:function(rows){
+        var lvb=0, linv=0;
+        (rows||[]).forEach(function(r){
+          var l=HIST_lucroRow('fin', r); if(l!=null) lvb+=l;
+          if(r.tem_investidor){ var nf=Number(r.qtd_parcelas)||0; if(r.investidor_parcela!=null&&r.valor_financiado!=null&&nf){ var li=Number(r.investidor_parcela)*nf-Number(r.valor_financiado); if(isFinite(li)) linv+=li; } }
+        });
+        var out=[{label:'LUCRO VB', valor:lvb}];
+        if(linv>0) out.unshift({label:'LUCRO INVESTIDOR', valor:linv});
+        return out;
+      } },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:148, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
              {h:'Cliente', x:193, w:76, get:function(r){return r.cliente?HIST_abrevNome(r.cliente):'—';}},
@@ -7696,8 +7709,14 @@ function FM_load(){
 function FM_foto(){
   var d=FM_dados; if(!d){ VB_toast('Carregando ainda...'); return; }
   var W=820, PAD=40, CW=W-PAD*2;
-  var nPartes=(d.ven.partes||[]).length;
-  var H=670 + Math.max(0,(nPartes-1))*30;
+  // conteúdo primeiro, pra medir a altura real
+  var linAnt=[['Disponibilizado (líquido)',HIST_fmtMoeda(d.ant.tot)],['Lucro',HIST_fmtMoeda(d.ant.luc)]];
+  var linFin=[['Financiado',HIST_fmtMoeda(d.fin.tot)],['Lucro VB',HIST_fmtMoeda(d.fin.luc)]];
+  if(d.fin.lucInv>0) linFin.push(['Lucro investidor',HIST_fmtMoeda(d.fin.lucInv)]);
+  var linVen=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
+  (d.ven.partes||[]).forEach(function(pp){ linVen.push([pp[0], HIST_fmtMoeda(pp[1])]); });
+  function boxH(l){ return 40+14+l.reduce(function(acc,x){ return acc+(x[0]==='—div—'?6:30); },0); }
+  var H=176 + (boxH(linAnt)+12) + (boxH(linFin)+12) + (boxH(linVen)+12) + 64 + 52;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -7708,7 +7727,7 @@ function FM_foto(){
   c.fillText(d.titulo, PAD, 146);
   var y=176;
   function selo(titulo, linhas){
-    var hh=40+linhas.length*30+14;
+    var hh=boxH(linhas);
     c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
     c.beginPath(); c.roundRect(PAD,y,CW,hh,14); c.fill(); c.stroke();
     c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
@@ -7723,13 +7742,9 @@ function FM_foto(){
     });
     y+=hh+12;
   }
-  selo('ANTECIPAÇÕES · '+d.ant.n, [['Disponibilizado (líquido)',HIST_fmtMoeda(d.ant.tot)],['Lucro',HIST_fmtMoeda(d.ant.luc)]]);
-  var _flinF=[['Financiado',HIST_fmtMoeda(d.fin.tot)],['Lucro VB',HIST_fmtMoeda(d.fin.luc)]];
-  if(d.fin.lucInv>0) _flinF.push(['Lucro investidor',HIST_fmtMoeda(d.fin.lucInv)]);
-  selo('FINANCIAMENTOS · '+d.fin.n, _flinF);
-  var vfoto=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
-  (d.ven.partes||[]).forEach(function(pp){ vfoto.push([pp[0], HIST_fmtMoeda(pp[1])]); });
-  selo('VENDAS · '+d.ven.n, vfoto);
+  selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
+  selo('FINANCIAMENTOS · '+d.fin.n, linFin);
+  selo('VENDAS · '+d.ven.n, linVen);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
@@ -9535,6 +9550,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.80.3</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Foto do Fechamento equalizada: a altura da imagem agora é medida do conteúdo real (a fórmula fixa antiga não sabia da linha Lucro investidor e estourava — a faixa LUCRO DO MÊS atropelava o "Gerado em"), e a caixa de VENDAS parou de reservar espaço fantasma pela linha divisória (o vazio no fundo do card). Cada bloco fecha justo no seu conteúdo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.80.2</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Relatório: seção FINANCIAMENTOS alinhada ao resto — linhas com NOME (· INV) · INÍCIO · FINANCIADO · PARCELA × N · TOTAL · LUCRO VB · LUCRO INV, e selos de rodapé LUCRO INVESTIDOR (quando houver) e LUCRO VB ao lado do TOTAL FINANCIADO. Mesma matemática canônica do expandir e do Fechamento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.80.1</span><span class="cl-ver-date">09/07/2026</span></div>
