@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.80.3</title>
+<title>VB - v1.81.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.80.3<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.81.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -651,6 +651,10 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
       <input id="fin-tabelaDesc" type="text" placeholder="TOYOTA SW4 2026 FKX5J04" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;text-transform:uppercase;">
     </div>
 
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">DATA DA OPERAÇÃO</div>
+      <input id="fin-dataOp" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+    </div>
     <div style="margin-bottom:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
       <input id="fin-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
@@ -1563,6 +1567,7 @@ function HIST_carregarFin(r){
   if(r.taxa){ document.getElementById('fin-taxa').value = FIN_formatBR(Number(r.taxa)); }
   if(r.valor_parcela){ document.getElementById('fin-parcela').value = FIN_formatBR(Number(r.valor_parcela)); }
   if(r.data_inicio){ var pp=r.data_inicio.split('-'); document.getElementById('fin-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
+  (function(){ var el=document.getElementById('fin-dataOp'); if(!el) return; var v=r.data_operacao||r.data_inicio; if(v){ var q=String(v).slice(0,10).split('-'); el.value=q[2]+'/'+q[1]+'/'+q[0]; } else el.value=''; })();
   FIN_lastEdited='valor'; FIN_lastSolved='parcela'; FIN_update();
   if(r.tem_investidor){
     if(r.investidor_nome) document.getElementById('inv-nome').value=r.investidor_nome;
@@ -2429,8 +2434,8 @@ function VB_fetchTudo(onOk, onErr){
 function VB_passaFiltro(tab, r){
   var range=VB_relPeriodoRange();
   if(range){
-    var d=r.created_at?new Date(r.created_at):null;
-    if(!d||isNaN(d.getTime())) return false;
+    var d=HIST_dataNegDate(HIST_dataNeg(tab, r));
+    if(!d) return false;
     if(range.ini && d<range.ini) return false;
     if(range.fim && d>range.fim) return false;
   }
@@ -2835,7 +2840,7 @@ function VB_relatorioPDF(dados, total, returnImages){
       somaLabel:'TOTAL A COBRAR (LÍQUIDO)', soma:function(r){return Number(r.valor_liquido)||0;} },
     { key:'financiamentos_hist', titulo:'FINANCIAMENTOS', date:'data_inicio',
       cols:[ {h:'Nome', x:pad, w:150, get:function(r){return (r.nome||r.descricao||'—')+(r.tem_investidor?'  · INV':'');}},
-             {h:'Início', x:195, w:62, get:function(r){return dt(r.data_inicio);}},
+             {h:'Data', x:195, w:62, get:function(r){return dt(String(r.data_operacao||r.data_inicio||'').slice(0,10));}},
              {h:'Financiado', x:262, w:96, r:1, get:function(r){return money(r.valor_financiado);}},
              {h:'Parcela', x:362, w:120, r:1, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' \u00d7 '+r.qtd_parcelas):'');}},
              {h:'Total', x:486, w:94, r:1, get:function(r){return (r.valor_total!=null)?money(r.valor_total):'—';}},
@@ -3175,7 +3180,7 @@ function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.da
 // Data de NEGÓCIO da operação (eixo do tempo do Histórico): ant=data da operação, fin=início, ven=data da venda (fallback 1ª parcela), pag=carimbo
 function HIST_dataNeg(tab,r){
   var v = tab==='ant' ? r.data_operacao
-        : tab==='fin' ? r.data_inicio
+        : tab==='fin' ? (r.data_operacao||r.data_inicio)
         : tab==='ven' ? (r.data_venda||r.data_primeira_parcela)
         : null;
   if(v) return String(v).slice(0,10);
@@ -3237,7 +3242,8 @@ function HIST_bucketLabel(iso){
   var d=(String(iso).length===10)?HIST_dataNegDate(iso):new Date(iso); if(!d||isNaN(d.getTime())) return 'Sem data';
   var now=new Date();
   var diff=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000);
-  if(diff<=0) return 'Hoje';
+  if(diff<0) return 'A iniciar';
+  if(diff===0) return 'Hoje';
   if(diff<=7) return 'Últimos 7 Dias';
   if(diff<=30) return 'Últimos 30 Dias';
   var m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -3713,20 +3719,22 @@ function HIST_renderRows(tab, rows){
     } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
-      if(dataOp && dataOp!=='--') campos.push({l:'Data início', v:dataOp});
+      var _dopF=String(r.data_operacao||r.data_inicio||'').slice(0,10);
+      if(_dopF) campos.push({l:'Data da operação', v:HIST_fmtData(_dopF)});
+      if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
       if(r.qtd_parcelas) campos.push({l:'Parcelas', v:r.qtd_parcelas+'x'});
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
       if(r.tem_investidor){
         rowBadge='INVESTIDOR';
-        if(r.investidor_nome) campos.push({l:'Investidor', v:r.investidor_nome});
-        if(r.investidor_parcela!=null) campos.push({l:'Parcela investidor', v:HIST_fmtMoeda(r.investidor_parcela)});
+        var _nomeI=(r.investidor_nome||'INVESTIDOR').toUpperCase();
+        if(r.investidor_parcela!=null) campos.push({l:'Parcela '+_nomeI, v:HIST_fmtMoeda(r.investidor_parcela)});
         if(r.vb_parcela!=null) campos.push({l:'Parcela VB', v:HIST_fmtMoeda(r.vb_parcela)});
         var _nF=Number(r.qtd_parcelas)||0;
         var _lInv=(r.investidor_parcela!=null && r.valor_financiado!=null && _nF>0)?(Number(r.investidor_parcela)*_nF-Number(r.valor_financiado)):null;
         var _lVBf=HIST_lucroRow('fin', r);
-        if(_lInv!=null && isFinite(_lInv)) campos.push({l:'Lucro investidor', v:HIST_fmtMoeda(_lInv)});
+        if(_lInv!=null && isFinite(_lInv)) campos.push({l:'Lucro '+_nomeI, v:HIST_fmtMoeda(_lInv)});
         if(_lVBf!=null) campos.push({l:'Lucro VB', v:HIST_fmtMoeda(_lVBf)});
       }
     } else if(rtab==='ven'){
@@ -3873,6 +3881,7 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
+(function(){ var el=document.getElementById('fin-dataOp'); if(el && !el.value) el.value=MER_hojeBR(); })();
 function VB_toast(msg){
   try{
     var t=document.getElementById('vb-toast');
@@ -3923,7 +3932,7 @@ function VB_nameSkip(){
 var FIN_snapshot=null, ANT_snapshot=null, VEN_snapshot=null, PAG_snapshot=null;
 function VB_val(id){ var e=document.getElementById(id); return e?(e.value||''):''; }
 function FIN_assinatura(){
-  return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-valor'),VB_val('fin-prazo'),
+  return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
     VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData')]);
 }
 function ANT_assinatura(){
@@ -4502,9 +4511,11 @@ function FIN_confirmarOperacao(btn){
   var _invNome = _invOn ? ((document.getElementById('inv-nome').value||'').trim().toUpperCase()||null) : null;
   var _invD = (_invOn && typeof INV_getDados==='function') ? INV_getDados() : null;
   var _invPct = _invOn ? (FIN_parseBR(document.getElementById('inv-pctInv').value)||null) : null;
+  var _dopV=(document.getElementById('fin-dataOp')||{}).value||'';
   var row={
     descricao: desc||null,
     data_inicio: toISO(dataStr),
+    data_operacao: toISO(_dopV) || (function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(),
     valor_financiado: (!isNaN(valor)&&valor>0)?valor:null,
     valor_parcela: (!isNaN(parcela)&&parcela>0)?parcela:null,
     qtd_parcelas: prazo>0?prazo:null,
@@ -4565,6 +4576,7 @@ function FIN_limpar(){
    'fin-tabelaDesc'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
+  (function(){ var el=document.getElementById('fin-dataOp'); if(el) el.value=MER_hojeBR(); })();
   document.getElementById('fin-total').textContent='';
   document.getElementById('fin-totalJuros').textContent='---';
   var _tb=document.getElementById('fin-tabelaBox'); if(_tb) _tb.style.display='none';
@@ -7648,7 +7660,7 @@ function FM_abrir(){ FM_ref=new Date(); document.getElementById('fm-overlay').st
 function FM_fechar(){ document.getElementById('fm-overlay').style.display='none'; }
 function FM_nav(dir){ FM_ref=new Date(FM_ref.getFullYear(), FM_ref.getMonth()+dir, 1); FM_load(); }
 function FM_mesDe(r, tab){
-  var v = tab==='ant'?r.data_operacao : tab==='fin'?r.data_inicio : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
+  var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
 function FM_load(){
@@ -9550,6 +9562,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.81.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Financiamento no modelo do Vendas: novo campo DATA DA OPERAÇÃO (quando o negócio fechou; nasce em hoje, editável) separado do PRIMEIRO VENCIMENTO. Histórico, Fechamento do Mês e Relatório passam a alocar pelo fechamento do contrato — financiamento fechado em julho com 1ª parcela em agosto conta em JULHO. Antigos sem a data nova seguem pelo vencimento. No expandir: par DATA DA OPERAÇÃO | 1º VENCIMENTO, e o investidor entrou nos rótulos (Parcela/Lucro FULANO). Nova seção "A iniciar" no Histórico pra operações com data futura (corrige o "Hoje" com 09/08). E o período do Relatório também passou pra data do negócio. Requer SQL: alter table financiamentos_hist add column if not exists data_operacao date;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.80.3</span><span class="cl-ver-date">09/07/2026</span></div>
