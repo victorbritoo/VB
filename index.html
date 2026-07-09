@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.77.3</title>
+<title>VB - v1.78.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.77.3<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.78.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1674,12 +1674,12 @@ function HIST_fmtDataLocal(iso){
   if(isNaN(d.getTime())) return '--';
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
 }
-function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, badge, linha2){
-  var cls = 'position:relative;background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:5px 12px;margin-bottom:3px;cursor:pointer;';
+function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, badge, linha2, temRelogio){
+  var cls = 'position:relative;background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:4px 10px;margin-bottom:2px;cursor:pointer;';
   var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
   // título (flui com espaço reservado pros botões absolutos)
-  h += '<div style="display:flex;align-items:flex-start;gap:6px;padding-right:82px;">';
+  h += '<div style="display:flex;align-items:flex-start;gap:6px;padding-right:72px;">';
   if(temExp){
     h += '<button id="hist-chev-'+idx+'" onclick="HIST_toggleExp('+idx+',event)" style="border:none;background:none;padding:0;margin-top:0;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:14px;height:16px;transition:transform .15s ease;">';
     h += '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M9 6l6 6-6 6"/></svg></button>';
@@ -1690,28 +1690,16 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   if(badge){ h += ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:#fff;background:#111;border-radius:6px;padding:2px 6px;margin-left:4px;white-space:nowrap;">'+HIST_esc(badge)+'</span>'; }
   h += '</div>';
   h += '</div>';
-  // ações absolutas topo-direito
-  h += '<div style="position:absolute;top:6px;right:12px;display:flex;align-items:center;gap:4px;">';
-  h += '<button data-shr-tab="'+tab+'" data-shr-idx="'+idx+'" onclick="HIST_clickShare(this,event)" ';
-  h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
-  h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>';
-  h += '<button data-ren-tab="'+tab+'" data-ren-idx="'+idx+'" onclick="HIST_clickRename(this,event)" ';
-  h += 'style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
-  h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
-  h += '<button data-del-tab="'+tab+'" data-del-idx="'+idx+'" onclick="HIST_clickDelete(this,event)" ';
-  h += 'style="border:none;background:#111;border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
-  h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
-  h += '</div>';
   // linha resumo (sempre): valor + data (+ extra). Alinhada sob o nome (pula a setinha).
   var valLabel = tab==='ant'?'Bruto: ':tab==='fin'?'Financiado: ':tab==='ven'?'Venda: ':'';
   var parts=[];
   if(valor){ parts.push('<span style="color:#4a4a4a;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
   if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
-  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:88px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
-  if(linha2) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:88px;">'+linha2+'</div>';
+  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:72px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  if(linha2) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:72px;">'+linha2+'</div>';
   // carimbo data/hora: absoluto, centralizado verticalmente entre os botões e o fim, à direita
   if(dataStr && dataStr!=='--'){
-    h += '<div id="hist-stamp-'+idx+'" style="position:absolute;right:12px;top:calc(50% + 14px);transform:translateY(-50%);font-size:9px;color:#4a4a4a;font-weight:600;white-space:nowrap;text-transform:uppercase;">'+HIST_esc(dataStr)+(horaStr?(' <span style="color:#888;">'+HIST_esc(horaStr)+'</span>'):'')+'</div>';
+    h += '<div id="hist-stamp-'+idx+'" style="position:absolute;right:10px;top:7px;font-size:9px;color:#4a4a4a;font-weight:600;white-space:nowrap;text-transform:uppercase;">'+HIST_esc(dataStr)+'</div>';
   }
   // detalhe expandível: grade 2 colunas (rótulo em cima, valor embaixo)
   if(temExp){
@@ -1722,7 +1710,17 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
            '<div style="font-size:13px;color:#4a4a4a;font-weight:600;margin-top:1px;">'+HIST_esc(c.v)+'</div></div>';
     });
     h += '</div>';
-    h += '<button onclick="event.stopPropagation();HIST_abrirOperacao('+idx+')" style="width:100%;margin-top:8px;padding:8px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:10px;letter-spacing:2px;color:#4a4a4a;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR OPERAÇÃO</button>';
+    h += '<div style="display:flex;gap:6px;margin-top:8px;align-items:stretch;">';
+    h += '<button onclick="event.stopPropagation();HIST_abrirOperacao('+idx+')" style="flex:1;padding:8px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:10px;letter-spacing:2px;color:#4a4a4a;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR OPERAÇÃO</button>';
+    if(temRelogio){ h += '<button onclick="event.stopPropagation();HIST_abrirRelogio('+idx+')" style="padding:8px 12px;border:0.5px solid #ddd;border-radius:10px;background:#fff;font-size:10px;letter-spacing:2px;color:#4a4a4a;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">RELÓGIO</button>'; }
+    h += '<span style="display:inline-flex;align-items:center;gap:4px;">';
+    h += '<button data-shr-tab="'+tab+'" data-shr-idx="'+idx+'" onclick="HIST_clickShare(this,event)" style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:30px;height:100%;min-height:30px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
+    h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+    h += '<button data-ren-tab="'+tab+'" data-ren-idx="'+idx+'" onclick="HIST_clickRename(this,event)" style="border:0.5px solid #ddd;background:#fff;border-radius:8px;width:30px;height:100%;min-height:30px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
+    h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+    h += '<button data-del-tab="'+tab+'" data-del-idx="'+idx+'" onclick="HIST_clickDelete(this,event)" style="border:none;background:#111;border-radius:8px;width:30px;height:100%;min-height:30px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
+    h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+    h += '</span></div>';
     h += '</div>';
   }
   h += '</div>';
@@ -1745,6 +1743,15 @@ function HIST_clickItem(el){
   var d=document.getElementById('hist-exp-'+idx);
   if(d){ HIST_toggleExp(idx, {stopPropagation:function(){}}); }
   else { HIST_abrirOperacao(idx); }
+}
+function HIST_abrirRelogio(idx){
+  var r=HIST_rowsCache[idx]; if(!r||!r.id) return;
+  sb.from('mercadorias').select('*').eq('venda_id', r.id).limit(1).then(function(res){
+    var m=(res.data&&res.data[0])||null;
+    if(!m){ VB_toast('Sem relógio vinculado a esta venda.'); return; }
+    if(!MER_rows.some(function(x){ return String(x.id)===String(m.id); })) MER_rows=MER_rows.concat([m]);
+    MER_abrir(m.id);
+  });
 }
 function HIST_abrirOperacao(idx){
   var r=HIST_rowsCache[idx]; if(!r) return;
@@ -3578,7 +3585,9 @@ function HIST_renderRows(tab, rows){
   rows.forEach(function(r,idx){
     var rtab=r._tab||tab;
     if(grouping){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk]); lastBucket=bk; } }
-    var titulo, valor, dataStr=HIST_fmtDataLocal(r.created_at), horaStr=HIST_fmtHora(r.created_at), resumoExtra='', campos=[], rowBadge='', linha2='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
+    var titulo, valor, dataStr=(HIST_fmtData(HIST_dataNeg(rtab,r))||'--'), horaStr='', resumoExtra='', campos=[], rowBadge='', linha2='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
+    var _hCar=HIST_fmtHora(r.created_at);
+    var carimboStr=HIST_fmtDataLocal(r.created_at)+(_hCar?(' '+_hCar):'');
     if(rtab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
       var _bru=Number(r.valor_bruto)||0, _liq=Number(r.valor_liquido)||0;
@@ -3622,15 +3631,18 @@ function HIST_renderRows(tab, rows){
       }
     } else if(rtab==='ven'){
       titulo=r.nome||r.descricao||'(sem descrição)';
-      valor=HIST_fmtMoeda(r.valor_total);
+      var _snM=String(titulo).match(/\bSN\s*:?\s*([A-Za-z0-9-]+)/i);
+      if(_snM){ titulo=titulo.replace(_snM[0],'').replace(/\s{2,}/g,' ').trim()||'(sem descrição)'; }
+      valor='';
       var _lvL=HIST_lucroRow('ven', r), _c=Number(r.custo)||0, _vs=Number(r.valor_socio)||0;
       var _temSocio=(r.socio && _vs>0 && _c>0 && _vs<=_c);
       if(_temSocio) rowBadge='SÓCIO';
-      if(_lvL!=null && _c>0){
-        var _pct=Math.round(_lvL/_c*100);
-        linha2='<span style="color:#4a4a4a;font-weight:700;">Lucro: '+HIST_fmtMoeda(_lvL)+'</span> <span style="color:#bbb;">('+_pct+'%)</span>';
-      }
-      if(r.cliente){ linha2=(linha2?linha2+'<span style="color:#ccc;"> · </span>':'')+'<span style="color:#bbb;">'+HIST_esc(r.cliente)+'</span>'; }
+      var _l2=[];
+      if(r.valor_total!=null) _l2.push('<span style="color:#4a4a4a;">Ven: '+HIST_esc(HIST_fmtMoeda(r.valor_total).replace('R$ ',''))+'</span>');
+      if(_lvL!=null){ var _pctS=(_c>0)?(' <span style="color:#bbb;">('+Math.round(_lvL/_c*100)+'%)</span>'):''; _l2.push('<span style="color:#4a4a4a;font-weight:700;">Luc: '+HIST_esc(HIST_fmtMoeda(_lvL).replace('R$ ',''))+'</span>'+_pctS); }
+      if(r.cliente) _l2.push('<span style="color:#bbb;">'+HIST_esc(r.cliente)+'</span>');
+      if(_l2.length) linha2='<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_l2.join('<span style="color:#ccc;"> · </span>')+'</div>';
+      if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
@@ -3672,7 +3684,8 @@ function HIST_renderRows(tab, rows){
       // Pagamentos sem detalhe extra -> sem setinha
     }
     if(r._tab) rowBadge=HIST_tipoLabel(rtab);
-    html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2);
+    if(campos.length) campos.push({l:'Salvo', v:carimboStr});
+    html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2, (rtab==='ven' && typeof _snM!=='undefined' && !!_snM));
   });
   listaEl.innerHTML=html;
   listaEl.style.minHeight='auto';
@@ -9395,6 +9408,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.78.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Cards do Histórico afinados: os três botões (foto, renomear, apagar) saíram da superfície e moram no card expandido, numa barra com o ABRIR OPERAÇÃO — e vendas com relógio vinculado ganham o botão RELÓGIO, que abre direto a ficha do Estoque. Na aba Vendas o SN saiu do título (virou campo do expandido) e Venda/Lucro/cliente viraram linha única "Ven: · Luc: (%) · CLIENTE", sem R$. A data da superfície agora é a data do NEGÓCIO (a mesma das seções — acabou card de junho com data de julho do lado) e a hora foi pro expandido no campo "Salvo". Respiro dos cards aparado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.77.3</span><span class="cl-ver-date">09/07/2026</span></div>
