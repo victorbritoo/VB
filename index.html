@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.75.0</title>
+<title>VB - v1.76.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.75.0<br>08/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.76.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1368,7 +1368,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
       <div class="two-col" style="margin-top:6px;">
         <div style="padding-right:12px;text-align:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">SÓCIO</div>
-          <input id="mer-socio" type="text" placeholder="—" readonly onclick="SOC_openPicker(function(n){document.getElementById('mer-socio').value=n;})" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;cursor:pointer;">
+          <input id="mer-socio" type="text" placeholder="—" readonly onclick="SOC_openPicker(function(n){document.getElementById('mer-socio').value=n; MER_dirtyPaint();})" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;cursor:pointer;">
         </div>
         <div style="padding-left:12px;border-left:0.5px solid #e0e0e0;text-align:center;">
           <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO<span id="mer-vsocio-pct"></span></div>
@@ -3884,6 +3884,11 @@ var VB_screenTs = 0;
   }, {passive:true});
 })();
 function showScreen(name){
+  // Saindo do Estoque no meio de uma edição: mudou → pergunta; não mudou → fecha em silêncio
+  if(name!=='mer' && typeof MER_editId!=='undefined' && MER_editId){
+    var _sm=document.getElementById('screen-mer');
+    if(_sm && _sm.style.display==='block'){ MER_dirtyGuard(function(){ showScreen(name); }); return; }
+  }
   if(name==='home' && GLB_reabrir){ GLB_reabrir=false; setTimeout(function(){ var ov=document.getElementById('glb-overlay'); if(ov) ov.style.display='flex'; },260); }
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
@@ -4537,8 +4542,9 @@ function VEN_update(){
 
 VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=false; VEN_modoPersonalizado=false; VEN_update(); VEN_updateLucro(); VEN_autoLista(); });
 VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
-VEN_maskVal(document.getElementById('mer-custo'), function(){ MER_pctLive(); });
-VEN_maskVal(document.getElementById('mer-valorSocio'), function(){ MER_pctLive(); });
+VEN_maskVal(document.getElementById('mer-custo'), function(){ MER_pctLive(); MER_dirtyPaint(); });
+VEN_maskVal(document.getElementById('mer-valorSocio'), function(){ MER_pctLive(); MER_dirtyPaint(); });
+(function(){ var f=document.getElementById('mer-form'); if(f) f.addEventListener('input', function(){ if(typeof MER_editId!=='undefined' && MER_editId) MER_dirtyPaint(); }); })();
 (function(){
   var md=document.getElementById('mer-data');
   if(md) md.addEventListener('input',function(){
@@ -7085,9 +7091,8 @@ function MER_desmontar(desc){
   modelo=d.replace(/\s{2,}/g,' ').trim();
   return {marca:'', modelo:modelo, ano:ano, sn:sn};
 }
-function MER_dirtyGuard(next){
-  if(!MER_editId) { next(); return; }
-  // compara valores atuais com o registro em edição
+function MER_isDirty(){
+  if(!MER_editId) return false;
   var r=MER_rows.find(function(x){return String(x.id)===String(MER_editId);});
   var atual={
     descricao:MER_compor(), infos:(document.getElementById('mer-infos').value||'').trim().toUpperCase(),
@@ -7102,12 +7107,22 @@ function MER_dirtyGuard(next){
     descricao:(r.descricao||''), infos:(r.infos||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
     fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0
   } : null;
-  var mudou = !orig || JSON.stringify(atual)!==JSON.stringify(orig);
-  if(!mudou){ MER_cancelEdit(); next(); return; }
+  return !orig || JSON.stringify(atual)!==JSON.stringify(orig);
+}
+function MER_dirtyGuard(next){
+  if(!MER_editId) { next(); return; }
+  if(!MER_isDirty()){ MER_cancelEdit(); next(); return; }
   VB_confirm2('Você alterou este item. Salvar as alterações?', 'SALVAR', 'DESCARTAR', function(salvar){
     if(salvar){ MER_add(document.getElementById('mer-add-btn')); }
     else { MER_cancelEdit(); next(); }
   });
+}
+// Botão SALVAR ALTERAÇÕES: apagado sem mudança, preto sólido quando há mudança
+function MER_dirtyPaint(){
+  var b=document.getElementById('mer-add-btn'); if(!b) return;
+  var on = MER_editId ? MER_isDirty() : false;
+  if(on){ b.style.border='0.5px solid #111'; b.style.background='#111'; b.style.color='#fff'; b.style.fontWeight='600'; }
+  else  { b.style.border='0.5px dashed #ddd'; b.style.background='transparent'; b.style.color='#aaa'; b.style.fontWeight='500'; }
 }
 function MER_setTab(t){
   if(MER_editId){ MER_dirtyGuard(function(){ MER_setTab(t); }); return; }
@@ -8025,12 +8040,15 @@ function MER_editar(id){
   }
   MER_updateAddBtn();
   MER_toggleForm(true);
+  VB_autoGrow(document.getElementById('mer-infos'));
+  VB_autoGrow(document.getElementById('mer-pagamento'));
+  MER_dirtyPaint();
   window.scrollTo(0,0);
   VB_toast('Editando. Salve ou cancele.');
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive();
+  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive(); MER_dirtyPaint();
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -8100,7 +8118,7 @@ function MER_add(btn){
     var _mid=MER_editId;
     var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
     MER_editId=null;
-    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive();
+    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive(); MER_dirtyPaint();
     MER_updateAddBtn();
     MER_toggleForm(false);
     var _detEd = editava&&_r0 ? VB_logDiff(_r0, payload) : '';
@@ -9362,6 +9380,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.76.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Edição do Estoque em três frentes: (1) ACOMPANHA e PAGAMENTO voltaram a aparecer ao editar — a altura dos campos era medida com o formulário ainda escondido e zerava, deixando o texto invisível; agora é recalculada depois que o formulário abre. (2) Sair da tela no meio de uma edição: se mudou algo, pergunta SALVAR/DESCARTAR; se não mudou, fecha a edição em silêncio — voltar pro Estoque abre limpo. (3) SALVAR ALTERAÇÕES fica preto sólido no instante em que qualquer campo diverge do original, e volta ao apagado se desfizer — padrão validado aqui pra depois replicar nos outros editores</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.75.0</span><span class="cl-ver-date">08/07/2026</span></div>
