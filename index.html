@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.78.6</title>
+<title>VB - v1.79.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.78.6<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.79.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3657,7 +3657,8 @@ function HIST_renderRows(tab, rows){
       valor='';
       var _lvL=HIST_lucroRow('ven', r), _c=Number(r.custo)||0, _vs=Number(r.valor_socio)||0;
       var _temSocio=(r.socio && _vs>0 && _c>0 && _vs<=_c);
-      if(_temSocio) rowBadge='S';
+      var _consig=_temSocio && Math.round(_vs/_c*100)===100;
+      if(_temSocio) rowBadge=_consig?'C':'S';
       var _l2=[];
       if(r.valor_total!=null) _l2.push('<span style="color:#4a4a4a;">'+HIST_esc(HIST_valCurto(r.valor_total))+'</span>');
       if(_lvL!=null){ var _pctS=(_c>0)?(' <span style="color:#bbb;">('+Math.round(_lvL/_c*100)+'%)</span>'):''; _l2.push('<span style="color:#4a4a4a;font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lvL))+'</span>'+_pctS); }
@@ -3688,14 +3689,19 @@ function HIST_renderRows(tab, rows){
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
       if(r.notas) campos.push({l:'Notas', v:r.notas});
       if(_temSocio && _lvL!=null && _c>0){
-        var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
-        var _pS=100-_pVB;
-        var _lVB=_lvL*(_pVB/100), _lS=_lvL*(_pS/100);
-        var _cVB=_c-_vs;
-        campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
-        campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
-        campos.push({l:'Custo VB', v:HIST_fmtMoeda(_cVB)});
-        campos.push({l:'Custo '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
+        if(_consig){
+          campos.push({l:'Consignação', v:(r.socio||'')});
+          campos.push({l:'Repasse '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
+        } else {
+          var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
+          var _pS=100-_pVB;
+          var _lVB=_lvL*(_pVB/100), _lS=_lvL*(_pS/100);
+          var _cVB=_c-_vs;
+          campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
+          campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
+          campos.push({l:'Custo VB', v:HIST_fmtMoeda(_cVB)});
+          campos.push({l:'Custo '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
+        }
       }
 
     } else {
@@ -9440,6 +9446,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.79.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Histórico distingue consignação de sociedade: quando a parte do sócio é 100% do custo (a convenção do consignado), o badge vira C — S fica só pra sociedade com lucro rachado. No expandido, a venda consignada mostra "Consignação: DONO" e "Repasse DONO: R$ X" no lugar do racha Lucro VB/Lucro sócio (que não existe nesse caso). Números e fluxo de pagamento intocados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.78.6</span><span class="cl-ver-date">09/07/2026</span></div>
