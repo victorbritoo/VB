@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.76.1</title>
+<title>VB - v1.77.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.76.1<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.77.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -962,6 +962,10 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
         <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
         <input id="ven-tabelaData" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" oninput="REC_maskData(this)" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:15px;color:#4a4a4a;padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
       </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:9px;letter-spacing:2px;color:#aaa;font-weight:500;margin-bottom:4px;text-align:center;">NOTAS</div>
+      <textarea id="ven-notas" rows="1" placeholder="CHEQUE, CONTRATO, NA PALAVRA, PENDÊNCIAS..." oninput="VB_autoGrow(this)" style="width:100%;border:none;border-bottom:0.5px solid #ddd;background:transparent;outline:none;font-size:13px;font-weight:600;color:#4a4a4a;text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;resize:none;overflow:hidden;line-height:1.4;"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button onclick="VEN_limpar()" style="padding:9px;border:0.5px solid #ddd;border-radius:14px;background:#fff;font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:#aaa;font-weight:500;cursor:pointer;">LIMPAR</button>
@@ -1613,6 +1617,7 @@ function HIST_carregarVen(r){
   VEN_updateLucro();
   if(r.descricao) document.getElementById('ven-tabelaDesc').value = r.descricao;
   document.getElementById('ven-cliente').value = r.cliente||'';
+  var _ntEl=document.getElementById('ven-notas'); if(_ntEl){ _ntEl.value=r.notas||''; setTimeout(function(){ VB_autoGrow(_ntEl); },0); }
   if(r.valor_total){ document.getElementById('ven-total').value = VEN_formatBR(Number(r.valor_total)); }
   // datas SEMPRE definidas nos dois modos — sem herdar valor da venda aberta antes
   var _tdEl=document.getElementById('ven-tabelaData');
@@ -1978,7 +1983,7 @@ function HIST_exportarPDF(){
 // ===== Backup completo (todas as tabelas) em JSON pro iCloud =====
 var VB_BACKUP_LS='vb_last_backup';
 var VB_logPrev=null;
-var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',modelo:'Modelo',ano:'Ano',sn:'SN',infos:'Acompanha',
+var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',notas:'Notas',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',modelo:'Modelo',ano:'Ano',sn:'SN',infos:'Acompanha',
   valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
   taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
   data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d']};
@@ -3647,6 +3652,7 @@ function HIST_renderRows(tab, rows){
       })();
       if(r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); }
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
+      if(r.notas) campos.push({l:'Notas', v:r.notas});
       if(_temSocio && _lvL!=null && _c>0){
         var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
         var _pS=100-_pVB;
@@ -3795,7 +3801,7 @@ function ANT_assinatura(){
     (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[])]);
 }
 function VEN_assinatura(){
-  return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-cliente'),VB_val('ven-total'),VB_val('ven-qtd'),
+  return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-cliente'),VB_val('ven-notas'),VB_val('ven-total'),VB_val('ven-qtd'),
     VB_val('ven-parcela'),VB_val('ven-tabelaData'),VB_val('ven-custo'),VB_val('ven-lucroPct'),
     (typeof VEN_socioNome!=='undefined'?(VEN_socioNome||''):''),
     (typeof VEN_socioValor!=='undefined'?VEN_socioValor:0),
@@ -4580,9 +4586,10 @@ function VEN_limpar(){
   VEN_parcelaManual = false;
   VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value='';
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
-  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-cliente','ven-custo'].forEach(function(id){
+  ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-cliente','ven-custo','ven-notas'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
   });
+  VB_autoGrow(document.getElementById('ven-notas'));
   VEN_currentOperationId = null;
   VEN_merVinculo = null;
   VEN_dataVendaHoje();
@@ -5045,7 +5052,8 @@ function VEN_confirmarOperacao(btn){
     cliente: (document.getElementById('ven-cliente').value||'').trim().toUpperCase()||null,
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
-    lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null
+    lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null,
+    notas: (document.getElementById('ven-notas').value||'').trim()||null
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
@@ -7922,6 +7930,7 @@ function MER_abrir(id){
           vh+=lin('Lucro '+String(v.socio).toUpperCase()+' ('+(100-_pV2)+'%)', 'R$ '+MER_fmtBR(_lu*((100-_pV2)/100)));
         }
         vh+=lin('Pagamento', MER_resumoParcelas(v));
+        vh+=lin('Notas', v.notas||'');
         vh+='</div>';
         vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:10px;border:0.5px solid #ddd;border-radius:12px;background:#fff;font-size:10px;letter-spacing:2px;color:#555;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
         MER_vendaCache=v;
@@ -9386,6 +9395,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.77.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Vendas: novo campo NOTAS (abaixo das datas) pra registrar como foi vendido — cheque, contrato, na palavra, pendências. Opcional, cresce com o texto. Aparece no expandir da venda no Histórico e na ficha do relógio vendido (seção VENDA), só quando preenchido; fica FORA da foto compartilhada (anotação interna). Edições em NOTAS entram no diff do Log. Requer SQL: alter table vendas add column if not exists notas text;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.76.1</span><span class="cl-ver-date">09/07/2026</span></div>
