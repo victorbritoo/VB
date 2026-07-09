@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.79.7</title>
+<title>VB - v1.80.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -451,7 +451,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.79.7<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.80.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -2452,6 +2452,7 @@ function VB_fetchFiltrado(onOk, onErr){
     var soTab = ((typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos') || (HIST_searchGlobal && HIST_searchTerm)) ? null : HIST_tabAtual; // escopo do menu (Aba/Todos); busca ativa = todos
     var out={}, tot=0;
     Object.keys(dados).forEach(function(tname){
+      if(tname==='mercadorias'){ out[tname]=dados[tname]||[]; return; } // referência p/ giro no relatório; não conta como operação
       var tab=mapa[tname]||'ant';
       if(soTab && tab!==soTab){ out[tname]=[]; return; }
       var rows=(dados[tname]||[]).filter(function(r){ return VB_passaFiltro(tab,r); });
@@ -2795,6 +2796,12 @@ function VB_relatorioPDF(dados, total, returnImages){
   }
 
   var ant=dados['antecipacoes']||[], fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
+  var merMap={}; (dados['mercadorias']||[]).forEach(function(m){ if(m.venda_id) merMap[m.venda_id]=m; });
+  function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
+  function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
+  function vPctVB(r){ var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0; if(!(r.socio&&vs>0&&c>0)) return 100; if(Math.round(vs/c*100)===100) return 100; return (r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; }
+  function vSufixo(r){ var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0; if(!(r.socio&&vs>0&&c>0)) return ''; return Math.round(vs/c*100)===100?'  · C':'  · S'; }
+  function vSemSN(t){ return String(t||'').replace(/\bSN\s*:?\s*[A-Za-z0-9-]+/i,'').replace(/\s{2,}/g,' ').trim(); }
   var tAnt=sum(ant.filter(function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); }),function(r){return r.valor_bruto;});
   var tFin=sum(fin,function(r){return r.valor_financiado;});
   var tVen=sum(ven,function(r){return r.valor_total;});
@@ -2833,12 +2840,14 @@ function VB_relatorioPDF(dados, total, returnImages){
              {h:'Parcela', x:620, w:160, get:function(r){return money(r.valor_parcela)+(r.qtd_parcelas?(' x '+r.qtd_parcelas):'');}} ],
       somaLabel:'TOTAL FINANCIADO', soma:function(r){return Number(r.valor_financiado)||0;} },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
-      cols:[ {h:'Nome', x:pad, w:200, get:function(r){return (r.nome||r.descricao||'—')+((r.socio&&Number(r.valor_socio)>0)?'  · SÓCIO':'');}},
-             {h:'Data', x:250, w:80, get:function(r){return r.created_at?dt(_localYMD(r.created_at)):'—';}},
-             {h:'Venda', x:330, w:120, r:1, get:function(r){return money(r.valor_total);}},
-             {h:'Custo', x:456, w:110, r:1, get:function(r){return (r.custo!=null)?money(r.custo):'—';}},
-             {h:'Lucro', x:572, w:100, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return money(l); }},
-             {h:'Lucro VB', x:678, w:102, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0; if(r.socio&&vs>0&&c>0){ var pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; return money(l*(pVB/100)); } return money(l); }} ],
+      cols:[ {h:'Nome', x:pad, w:148, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
+             {h:'Cliente', x:193, w:76, get:function(r){return r.cliente?HIST_abrevNome(r.cliente):'—';}},
+             {h:'Data', x:273, w:60, get:function(r){var d=vDataNeg(r); return d?dt(d):'—';}},
+             {h:'Giro', x:337, w:34, r:1, get:function(r){var g=vGiro(r); return g!=null?(g+'d'):'—';}},
+             {h:'Venda', x:375, w:100, r:1, get:function(r){return money(r.valor_total);}},
+             {h:'Custo', x:479, w:96, r:1, get:function(r){return (r.custo!=null)?money(r.custo):'—';}},
+             {h:'Lucro', x:579, w:118, r:1, get:function(r){ if(r.custo==null) return '—'; var c=Number(r.custo)||0; var l=Number(r.valor_total||0)-c; return money(l)+(c>0?(' ('+Math.round(l/c*100)+'%)'):''); }},
+                          {h:'Lucro VB', x:701, w:79, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return money(l*vPctVB(r)/100); }} ],
       somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;},
       extraSelos:function(rows){
         var lucroTot=0, lucroVB=0;
@@ -2851,6 +2860,24 @@ function VB_relatorioPDF(dados, total, returnImages){
           else { lucroVB+=l; }
         });
         return [ {label:'LUCRO TOTAL', valor:lucroTot}, {label:'LUCRO VB', valor:lucroVB} ];
+      },
+      selos2:function(rows){
+        var lt=0, ct=0, gs=[], rep=0;
+        (rows||[]).forEach(function(r){
+          if(r.custo==null) return;
+          var c=Number(r.custo)||0;
+          lt+=Number(r.valor_total||0)-c; ct+=c;
+          var g=vGiro(r); if(g!=null) gs.push(g);
+          var vs=Number(r.valor_socio)||0;
+          if(r.socio&&vs>0&&c>0&&Math.round(vs/c*100)===100) rep+=vs;
+        });
+        var tk=(rows&&rows.length)?(sum(rows,function(r){return r.valor_total;})/rows.length):0;
+        return [
+          {label:'MARGEM MÉDIA', texto: ct>0?(Math.round(lt/ct*100)+'%'):'—'},
+          {label:'TICKET MÉDIO', texto: (rows&&rows.length)?('R$ '+_num(tk)):'—'},
+          {label:'GIRO MÉDIO', texto: gs.length?(Math.round(gs.reduce(function(a,b){return a+b;},0)/gs.length)+' dias'):'—'},
+          {label:'REPASSES (C)', texto: 'R$ '+_num(rep)}
+        ];
       } },
     { key:'pagamentos', titulo:'PAGAMENTOS', date:'created_at',
       cols:[ {h:'Data', x:pad, w:150, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
@@ -2941,7 +2968,7 @@ function VB_relatorioPDF(dados, total, returnImages){
       if(sec.soma) soma+=sec.soma(r);
     });
     // selo de subtotal (com borda, sem cor)
-    ensure(46);
+    ensure(sec.selos2?90:46);
     var c3=cur.ctx; cur.y+=10;
     var boxW=300, boxH=34, bx=W-pad-boxW, by=cur.y;
     var _ac=sec.atraso?'#c0392b':'#111';
@@ -2963,7 +2990,24 @@ function VB_relatorioPDF(dados, total, returnImages){
         ex -= (ew+gap);
       });
     }
-    cur.y+=boxH+10;
+    var _selo2H=0;
+    if(sec.selos2){
+      var s2=sec.selos2(rows)||[];
+      if(s2.length){
+        var by2=by+boxH+8, gap2=10;
+        var ew2=Math.floor((W-2*pad-(s2.length-1)*gap2)/s2.length), ex2=pad;
+        s2.forEach(function(s){
+          c3.strokeStyle='#ccc'; c3.lineWidth=1; c3.strokeRect(ex2, by2, ew2, boxH);
+          c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
+          c3.fillText(s.label, ex2+12, by2+14);
+          c3.fillStyle='#111'; c3.font='700 14px -apple-system,Arial,sans-serif'; c3.textAlign='right';
+          c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex2+ew2-12, by2+23);
+          ex2+=ew2+gap2;
+        });
+        _selo2H=boxH+8;
+      }
+    }
+    cur.y+=boxH+_selo2H+10;
     cur.y+=16;
   });
 
@@ -9481,6 +9525,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.80.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Relatório de Vendas completo: linhas com NOME (sem SN, com marca · S/C) · CLIENTE (abreviado) · DATA (do negócio) · GIRO (dias compra→venda) · VENDA · CUSTO · LUCRO (com %) · LUCRO VB. E segunda linha de selos com os indicadores do período: MARGEM MÉDIA, TICKET MÉDIO, GIRO MÉDIO e REPASSES (C). Datas das linhas passaram do carimbo pra data da venda, alinhando com o Fechamento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.79.7</span><span class="cl-ver-date">09/07/2026</span></div>
