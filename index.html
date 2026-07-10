@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.88.1</title>
+<title>VB - v1.89.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -466,7 +466,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.87.2<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.88.2<br>10/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3994,6 +3994,13 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
+(function(){ // badge de versão deriva do <title> — fonte única, sem corrente de substituições
+  try{
+    var mv=(document.title||'').match(/v([0-9.]+)/i);
+    var el=document.getElementById('vb-versao-badge');
+    if(mv && el){ var dt=el.innerHTML.split('<br>')[1]||''; el.innerHTML='V: '+mv[1]+'<br>'+dt; }
+  }catch(e){}
+})();
 (function(){ var el=document.getElementById('fin-dataOp'); if(el && !el.value) el.value=MER_hojeBR(); })();
 function VB_toast(msg){
   try{
@@ -8232,24 +8239,31 @@ function MER_abrir(id){
     outros.forEach(function(o,oi){
       var vo=o.venda_id?MER_vendasMap[o.venda_id]:null;
       var giro=(o.data_compra&&o.data_venda)?MER_diasEntre(o.data_compra,o.data_venda):null;
-      var per=(MER_fmtData(o.data_compra)||'?')+' \u2192 '+(MER_fmtData(o.data_venda)||(o.status==='vendida'?'?':'em estoque'));
-      var l1='<span style="font-weight:700;">'+per+'</span><span style="color:var(--mu);">'
-        +((giro!=null&&giro>=0)?(' \u00b7 '+giro+'d giro'):'')
-        +(vo&&vo.cliente?(' \u00b7 '+HIST_esc(HIST_abrevNome(vo.cliente))):'')+'</span>';
-      var l2='';
       var cst=(o.custo!=null)?Number(o.custo):null;
-      if(vo && vo.valor_total!=null){
-        var vt=Number(vo.valor_total)||0, luc=(cst!=null)?(vt-cst):null;
-        l2='Custo <b>R$ '+MER_fmtBR(cst!=null?cst:0)+'</b> \u2192 Venda <b>R$ '+MER_fmtBR(vt)+'</b>'
-          +((luc!=null&&cst>0)?(' \u00b7 Lucro <b>R$ '+MER_fmtBR(luc)+'</b> <span style="color:var(--so);">('+Math.round(luc/cst*100)+'%)</span>'):'');
-      } else if(cst!=null){
-        l2='Custo <b>R$ '+MER_fmtBR(cst)+'</b>'+(o.status==='vendida'?' \u00b7 sa\u00edda manual':'');
+      // superfície: 1 linha — compra → venda · valor
+      var resumo=(MER_fmtData(o.data_compra)||'?')+' \u2192 '+(MER_fmtData(o.data_venda)||(o.status==='vendida'?'?':'em estoque'));
+      if(vo&&vo.valor_total!=null) resumo+=' \u00b7 R$ '+MER_fmtBR(Number(vo.valor_total)||0);
+      // detalhe: a história completa, linha a linha
+      var det='';
+      det+=lin('Compra', MER_fmtData(o.data_compra)||'');
+      det+=lin('Venda', MER_fmtData(o.data_venda)||(o.status==='vendida'?'':'Em estoque'));
+      if(giro!=null&&giro>=0) det+=lin('Giro', giro+'d');
+      if(vo&&vo.cliente) det+=lin('Cliente', vo.cliente);
+      if(cst!=null) det+=lin('Custo', 'R$ '+MER_fmtBR(cst));
+      if(vo&&vo.valor_total!=null){
+        var vt=Number(vo.valor_total)||0;
+        det+=lin('Valor da Venda', 'R$ '+MER_fmtBR(vt));
+        if(cst!=null&&cst>0) det+=lin('Lucro', 'R$ '+MER_fmtBR(vt-cst)+' ('+Math.round((vt-cst)/cst*100)+'%)');
+      } else if(o.status==='vendida'){
+        det+=lin('Saída', 'Manual');
       }
-      var l3=(o.fornecedor?('De: '+HIST_esc(o.fornecedor)):'');
-      hh+='<div style="margin-top:'+(oi?'8px':'3px')+';">'
-        +'<div style="font-size:11px;color:var(--tx);">'+l1+'</div>'
-        +(l2?('<div style="font-size:11px;color:var(--mu);margin-top:1px;">'+l2+'</div>'):'')
-        +(l3?('<div style="font-size:10px;color:var(--so);margin-top:1px;">'+l3+'</div>'):'')
+      det+=lin('De Quem Comprei', o.fornecedor||'');
+      hh+='<div onclick="MER_passToggle(this,event)" style="cursor:pointer;'+(oi?'margin-top:6px;':'margin-top:2px;')+'">'
+        +'<div style="display:flex;align-items:center;gap:5px;">'
+        +'<span class="mer-pass-chev" style="font-size:9px;color:var(--mu2);transition:transform .15s ease;display:inline-block;">\u25B8</span>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+resumo+'</span>'
+        +'</div>'
+        +'<div class="mer-pass-det" style="display:none;padding:2px 0 4px 14px;">'+det+'</div>'
         +'</div>';
     });
     hh+='</div>';
@@ -8448,19 +8462,20 @@ function MER_voltar(btn){
 }
 function MER_voltarConfirm(m){
   var v=MER_vendasMap[m.venda_id]||null;
-  var valTxt=v&&v.valor_total?(' de R$ '+MER_fmtBR(v.valor_total)):'';
+  var valTxt=v&&v.valor_total?('R$ '+MER_fmtBR(v.valor_total)):'';
   var ov=document.getElementById('mer-voltar-overlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='mer-voltar-overlay';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100011;display:none;align-items:flex-end;justify-content:center;';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100011;display:none;align-items:flex-end;justify-content:center;-webkit-text-size-adjust:100%;';
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     document.body.appendChild(ov);
   }
-  var bs='display:block;width:100%;padding:12px;border-radius:14px;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin-bottom:8px;';
-  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="font-size:12px;color:var(--tx);line-height:1.5;margin-bottom:12px;text-align:center;">Este relógio tem uma <b>venda'+valTxt+'</b> vinculada no Histórico.<br>O que fazer com ela?</div>'
-    +'<button onclick="MER_voltarExec(\''+m.id+'\', true, \''+m.venda_id+'\')" style="'+bs+'border:none;background:var(--acc);color:var(--acc-tx);">APAGAR VENDA E VOLTAR AO ESTOQUE</button>'
-    +'<button onclick="MER_voltarExec(\''+m.id+'\', false, null)" style="'+bs+'border:0.5px solid var(--ln);background:var(--sf);color:var(--tx);">SÓ VOLTAR (mantém a venda no Histórico)</button>'
+  var bs='display:block;width:100%;padding:11px;border-radius:12px;font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,\'Helvetica Neue\',sans-serif;margin-bottom:8px;text-align:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,\'Helvetica Neue\',sans-serif;-webkit-text-size-adjust:100%;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">VENDA VINCULADA</div>'
+    +'<div style="font-size:12px;color:var(--mu);line-height:1.5;margin-bottom:14px;text-align:center;">Este rel\u00f3gio tem uma venda'+(valTxt?(' de <span style=\"font-weight:700;color:var(--tx);\">'+valTxt+'</span>'):'')+' no Hist\u00f3rico.</div>'
+    +'<button onclick="MER_voltarExec(\''+m.id+'\', true, \''+m.venda_id+'\')" style="'+bs+'border:none;background:var(--acc);color:var(--acc-tx);">APAGAR VENDA E VOLTAR</button>'
+    +'<button onclick="MER_voltarExec(\''+m.id+'\', false, null)" style="'+bs+'border:0.5px solid var(--ln);background:var(--sf);color:var(--tx);">S\u00d3 VOLTAR \u00b7 VENDA FICA</button>'
     +'<button onclick="document.getElementById(\'mer-voltar-overlay\').style.display=\'none\'" style="'+bs+'border:0.5px dashed var(--ln0);background:transparent;color:var(--mu);margin-bottom:0;">CANCELAR</button>'
     +'</div>';
   ov.style.display='flex';
@@ -8489,6 +8504,14 @@ function MER_toggleDetalhes(){
   if(t) t.textContent = aberto ? '+ DETALHES (FORNECEDOR, PAGAMENTO, SÓCIO)' : '− OCULTAR DETALHES';
 }
 // Recompra: SN que já passou pela casa é reconhecido — aviso + pré-preenchimento do que não muda
+function MER_passToggle(el,ev){
+  if(ev) ev.stopPropagation();
+  var d=el.querySelector('.mer-pass-det'), c=el.querySelector('.mer-pass-chev');
+  if(!d) return;
+  var aberto=d.style.display!=='none';
+  d.style.display=aberto?'none':'block';
+  if(c) c.style.transform=aberto?'':'rotate(90deg)';
+}
 function MER_snReconhece(el){
   if(MER_editId) return; // só no cadastro novo
   var sn=(el.value||'').trim().toUpperCase(); if(!sn) return;
@@ -9799,6 +9822,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.89.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">PASSAGENS ANTERIORES em camadas: cada passagem é um mini-card de uma linha (compra → venda · valor) com setinha; o toque expande a história completa daquela passagem (giro, cliente, custo, lucro, origem) e recolhe de novo — mesma mecânica do expandir do Histórico. Relógio que passou 3 vezes pela casa vira 3 linhas, não 24</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.88.3</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Folha "venda vinculada" no padrão VB/iOS: título em caps espaçado, mensagem discreta, botões idênticos aos da ficha (preto / borda / tracejado), fundo e cantos da casa — e travado o auto-inflar de fonte do Safari que deixava o texto gigante</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.88.2</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">PASSAGENS ANTERIORES no padrão da ficha: linha a linha com rótulo e valor (Compra, Venda, Giro, Cliente, Custo, Valor da Venda, Lucro com %, De Quem Comprei), divisória entre passagens. E corrigido o V: da Home que travou na 1.87.2 — o badge agora deriva a versão do título do app sozinho na abertura (fonte única, impossível dessincronizar de novo)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.88.1</span><span class="cl-ver-date">10/07/2026</span></div>
