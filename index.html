@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.89.1</title>
+<title>VB - v1.90.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8233,6 +8233,7 @@ function MER_abrir(id){
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
   hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
+  hh+=lin('Nota da Sa\u00edda', r.baixa_nota||'');
 
   hh+=lin('De Quem Comprei', r.fornecedor||'')+lin('Pagamento', r.pagamento||'');
   hh+=lin('Sócio', r.socio||'');
@@ -8270,6 +8271,7 @@ function MER_abrir(id){
       } else if(o.status==='vendida'){
         det+=lin('Saída', o.venda_id ? (MER_vendasMap[o.venda_id]===null ? 'Venda excluída do Histórico' : 'Carregando venda...') : 'Manual');
       }
+      det+=lin('Nota da Sa\u00edda', o.baixa_nota||'');
       det+=lin('De Quem Comprei', o.fornecedor||'');
       hh+='<div onclick="MER_passToggle(this,event)" style="cursor:pointer;'+(oi?'margin-top:6px;':'margin-top:2px;')+'">'
         +'<div style="display:flex;align-items:center;gap:5px;">'
@@ -8460,9 +8462,33 @@ function MER_updateAddBtn(){
 function MER_baixa(btn){
   if(MER_editId){ var _id=btn.dataset.merid; MER_dirtyGuard(function(){ MER_load(); }); return; }
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='#111'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; },2500); return; }
-  sb.from('mercadorias').update({status:'vendida', data_venda:(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(), baixa_em:new Date().toISOString()}).eq('id',btn.dataset.merid).then(function(res){
-    if(res.error){ VB_toast('Não deu baixa: '+(res.error.message||'')); return; }
-    try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(btn.dataset.merid);}); VB_log('ESTOQUE','baixa (vendido)', (_mb&&_mb.descricao)||'', ''); }catch(e){}
+  MER_baixaSheet(btn.dataset.merid);
+}
+function MER_baixaSheet(merId){
+  var ov=document.getElementById('mer-baixa-overlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='mer-baixa-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100011;display:none;align-items:flex-end;justify-content:center;-webkit-text-size-adjust:100%;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  var bs='display:block;width:100%;padding:11px;border-radius:12px;font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,\'Helvetica Neue\',sans-serif;text-align:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,\'Helvetica Neue\',sans-serif;-webkit-text-size-adjust:100%;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">BAIXA MANUAL</div>'
+    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">NOTA DA SA\u00cdDA (OPCIONAL)</div>'
+    +'<textarea id="mer-baixa-nota" rows="2" placeholder="EX: DEVOLVIDO AO DONO \u00b7 TROCA NO NEG\u00d3CIO X" style="width:100%;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);outline:none;font-size:13px;color:var(--tx);padding:10px 12px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;margin-bottom:12px;box-sizing:border-box;"></textarea>'
+    +'<button onclick="MER_baixaExec(\''+merId+'\')" style="'+bs+'border:none;background:var(--acc);color:var(--acc-tx);margin-bottom:8px;">DAR BAIXA</button>'
+    +'<button onclick="document.getElementById(\'mer-baixa-overlay\').style.display=\'none\'" style="'+bs+'border:0.5px dashed var(--ln0);background:transparent;color:var(--mu);">CANCELAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function MER_baixaExec(merId){
+  var ov=document.getElementById('mer-baixa-overlay'); if(ov) ov.style.display='none';
+  var nota=((document.getElementById('mer-baixa-nota')||{}).value||'').trim().toUpperCase()||null;
+  var hoje=(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})();
+  sb.from('mercadorias').update({status:'vendida', data_venda:hoje, baixa_em:new Date().toISOString(), baixa_nota:nota}).eq('id',merId).then(function(res){
+    if(res.error){ VB_toast('N\u00e3o deu baixa: '+(res.error.message||'')); return; }
+    try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(merId);}); VB_log('ESTOQUE','baixa (vendido)'+(nota?' \u00b7 '+nota:''), (_mb&&_mb.descricao)||'', ''); }catch(e){}
     VB_toast('Baixa dada: VENDIDA.');
     MER_load();
   });
@@ -9835,6 +9861,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.90.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Baixa manual com história: o segundo toque do ✓ abre a folha BAIXA MANUAL com NOTA DA SAÍDA opcional ("DEVOLVIDO AO DONO", "TROCA NO NEGÓCIO X") — vale pra qualquer baixa manual, consignado ou não. Vazio, baixa normal. A nota aparece na ficha e no detalhe das passagens, e vai junto no Log. Requer SQL: alter table mercadorias add column if not exists baixa_nota text;</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.89.1</span><span class="cl-ver-date">10/07/2026</span></div>
