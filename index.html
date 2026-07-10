@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.92.2</title>
+<title>VB - v1.93.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -7570,10 +7570,20 @@ function SOC_abrir(id){
   var nome=(r.nome||'').trim();
   Promise.all([
     sb.from('vendas').select('*').ilike('socio', nome),
-    sb.from('financiamentos_hist').select('*').eq('tem_investidor', true).ilike('investidor_nome', nome)
+    sb.from('financiamentos_hist').select('*').eq('tem_investidor', true).ilike('investidor_nome', nome),
+    sb.from('mercadorias').select('*').ilike('socio', nome)
   ]).then(function(res){
     var vendas=(res[0].error?[]:(res[0].data||[]));
     var fins=(res[1].error?[]:(res[1].data||[]));
+    var mers=(res[2]&&!res[2].error?(res[2].data||[]):[]).filter(function(m){ return (m.status||'estoque')==='estoque'; });
+    mers.sort(function(x,y){ var a2=String(x.data_compra||''), b2=String(y.data_compra||''); return a2===b2?0:(a2<b2?1:-1); });
+    var eOps=[], custoE=0, capE=0;
+    mers.forEach(function(m){
+      var c2=Number(m.custo)||0, vs2=Number(m.valor_socio)||0;
+      eOps.push({nome:(m.descricao||'—'), data:HIST_fmtData(String(m.data_compra||'').slice(0,10)), dias:(m.data_compra?MER_dias(m.data_compra):null), custo:c2, capital:vs2, consig:VB_consigVen(m.socio, m.valor_socio, m.custo, null)});
+      custoE+=c2; capE+=vs2;
+    });
+    var nE=eOps.length;
     function _dneg(v){ return String(v.data_venda||v.data_primeira_parcela||(v.created_at||'').split('T')[0]||'').slice(0,10); }
     vendas.sort(function(x,y){ var a=_dneg(x), b=_dneg(y); return a===b?0:(a<b?1:-1); }); // mais recentes primeiro
     fins.sort(function(x,y){ var a=String(x.data_operacao||x.data_inicio||''), b=String(y.data_operacao||y.data_inicio||''); return a===b?0:(a<b?1:-1); });
@@ -7602,7 +7612,7 @@ function SOC_abrir(id){
       var ap=Number(f.investidor_aporte)||0, rt=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
       return {nome:(f.nome||f.descricao||'—'), data:HIST_fmtData(String(f.data_operacao||f.data_inicio||(f.created_at||'').split('T')[0]).slice(0,10)), aporte:ap, retorno:rt, lucro:rt-ap};
     });
-    SOC_viewData={nome:r.nome||'', nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
+    SOC_viewData={nome:r.nome||'', nE:nE, custoE:custoE, capE:capE, eOps:eOps, nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -7627,6 +7637,11 @@ function SOC_abrir(id){
       ['Retorno total', HIST_fmtMoeda(retorno)],
       ['Lucro', HIST_fmtMoeda(lucroF)]
     ] : [['Operações','0']]);
+    if(nE) hh+=bloco('EM ESTOQUE', [
+      ['Relógios', String(nE)],
+      ['Custo Total', HIST_fmtMoeda(custoE)],
+      ['Capital do Sócio Parado', HIST_fmtMoeda(capE)]
+    ]);
     body.innerHTML=hh;
   });
 }
@@ -7928,9 +7943,9 @@ var SOC_viewData=null;
 function SOC_extratoFoto(){
   var d=SOC_viewData; if(!d){ VB_toast('Abra um sócio primeiro.'); return; }
   var W=820, PAD=40, CW=W-PAD*2;
-  var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0;
+  var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0, temE=d.eOps&&d.eOps.length>0;
   function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
-  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + ((!temV&&!temC&&!temF)?60:0) + 50;
+  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + (temE?(secH(d.eOps.length)+22):0) + ((!temV&&!temC&&!temF&&!temE)?60:0) + 50;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -7966,8 +7981,15 @@ function SOC_extratoFoto(){
     c.textAlign='left';
     y += hh + 18;
   }
+  function periodo(ops){
+    var ds=(ops||[]).map(function(o){ var m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(o.data||''); return m?(m[3]+m[2]+m[1]):null; }).filter(Boolean);
+    if(ds.length<2) return '';
+    ds.sort();
+    function br(s){ return s.slice(6,8)+'/'+s.slice(4,6)+'/'+s.slice(0,4); }
+    return ds[0]===ds[ds.length-1] ? (' · '+br(ds[0])) : (' · '+br(ds[0])+' – '+br(ds[ds.length-1]));
+  }
   if(temV){
-    secao('VENDAS EM SOCIEDADE · '+d.nV+(d.nV===1?' OPERAÇÃO':' OPERAÇÕES'),
+    secao('VENDAS EM SOCIEDADE · '+d.nV+(d.nV===1?' OPERAÇÃO':' OPERAÇÕES')+periodo(d.vOps),
       d.vOps.map(function(o){
         var pcap=(o.capital>0 && o.lucro!=null)?Math.round(o.lucro/o.capital*100):null;
         return {nome:o.nome, data:o.data+(o.custo!=null?('  ·  Custo '+HIST_fmtMoeda(o.custo)):'')+(o.capital?('  ·  Sócio '+HIST_fmtMoeda(o.capital)+((o.custo>0)?(' ('+Math.round(o.capital/o.custo*100)+'%)'):'')):''), dir:HIST_fmtMoeda(o.total), dir2:(o.lucro!=null?('Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pcap!=null?(' ('+pcap+'%)'):'')):null)};
@@ -7978,12 +8000,12 @@ function SOC_extratoFoto(){
         'Lucro '+nm+': '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]; })());
   }
   if(temC){
-    secao('CONSIGNAÇÕES · '+d.nC+(d.nC===1?' OPERAÇÃO':' OPERAÇÕES'),
+    secao('CONSIGNAÇÕES · '+d.nC+(d.nC===1?' OPERAÇÃO':' OPERAÇÕES')+periodo(d.cOps),
       d.cOps.map(function(o){ return {nome:o.nome, data:o.data, dir:HIST_fmtMoeda(o.total), dir2:'Repasse '+HIST_fmtMoeda(o.repasse)}; }),
       ['TOTAL', HIST_fmtMoeda(d.totC)+'  ·  Repasses '+HIST_fmtMoeda(d.repC)]);
   }
   if(temF){
-    secao('FINANCIAMENTOS (INVESTIDOR) · '+d.nF+(d.nF===1?' OPERAÇÃO':' OPERAÇÕES'),
+    secao('FINANCIAMENTOS (INVESTIDOR) · '+d.nF+(d.nF===1?' OPERAÇÃO':' OPERAÇÕES')+periodo(d.fOps),
       d.fOps.map(function(o){
         var pf=(o.aporte>0 && o.lucro!=null)?Math.round(o.lucro/o.aporte*100):null;
         return {nome:o.nome, data:o.data+'  ·  Aporte '+HIST_fmtMoeda(o.aporte), dir:HIST_fmtMoeda(o.retorno), dir2:'Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pf!=null?(' ('+pf+'%)'):'')};
@@ -7993,7 +8015,17 @@ function SOC_extratoFoto(){
         'Capital Investido '+nm+': '+HIST_fmtMoeda(d.aporte),
         'Lucro '+nm+': '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]; })());
   }
-  if(!temV && !temC && !temF){
+  if(temE){
+    secao('EM ESTOQUE · '+d.nE+(d.nE===1?' RELÓGIO':' RELÓGIOS')+periodo(d.eOps),
+      d.eOps.map(function(o){
+        var pct=(o.custo>0&&o.capital>0)?Math.round(o.capital/o.custo*100):null;
+        return {nome:o.nome, data:(o.data||'')+(o.dias!=null?('  ·  '+o.dias+'d em estoque'):''), dir:'Custo '+HIST_fmtMoeda(o.custo), dir2:(o.consig?'Consignado':(o.capital>0?('Sócio '+HIST_fmtMoeda(o.capital)+(pct!=null?(' ('+pct+'%)'):'')):null))};
+      }),
+      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+        'Custo em Estoque: '+HIST_fmtMoeda(d.custoE),
+        'Capital '+nm+' Parado: '+HIST_fmtMoeda(d.capE)]; })());
+  }
+  if(!temV && !temC && !temF && !temE){
     c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
     c.fillText('Sem operações registradas.', PAD, y+30); y+=60;
   }
@@ -9857,6 +9889,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.93.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio ganhou a seção EM ESTOQUE (painel e foto): relógios ainda não vendidos onde o sócio tem capital, com data da compra, dias parado, custo e a parte dele — "Consignado" quando é 100% do custo (mesma regra do app inteiro). No total, o número que faltava: Capital do Sócio Parado. A seção fecha o extrato, depois do realizado, e só aparece quando há relógio no estoque</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.92.3</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio com período: o título de cada seção mostra o intervalo da primeira à última operação listada (ex.: VENDAS EM SOCIEDADE · 3 OPERAÇÕES · 26/06/2026 – 08/07/2026). Com uma operação só, nada muda — a data já está na linha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.92.2</span><span class="cl-ver-date">10/07/2026</span></div>
