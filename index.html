@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.87.2</title>
+<title>VB - v1.88.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1359,7 +1359,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;">
       <div><div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">ANO</div><input id="mer-ano" type="text" inputmode="numeric" placeholder="2022" maxlength="4" onclick="if(!this.value)this.select()" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
-      <div><div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">SN</div><input id="mer-sn" type="text" placeholder="3Y166494" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
+      <div><div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">SN</div><input id="mer-sn" type="text" placeholder="3Y166494" onclick="if(!this.value)this.select()" onblur="MER_snReconhece(this)" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
     </div>
     <div style="margin-top:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">ACOMPANHA</div>
@@ -1728,6 +1728,14 @@ function HIST_fmtDataLocal(iso){
   if(isNaN(d.getTime())) return '--';
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
 }
+// Título + badge: o badge gruda na última palavra — se o título quebrar, descem juntos, nunca o badge órfão
+function VB_glueBadge(t, badgeHtml){
+  t=String(t||'');
+  if(!badgeHtml) return HIST_esc(t);
+  var i=t.lastIndexOf(' ');
+  if(i<0) return '<span style="white-space:nowrap;">'+HIST_esc(t)+badgeHtml+'</span>';
+  return HIST_esc(t.slice(0,i))+' <span style="white-space:nowrap;">'+HIST_esc(t.slice(i+1))+badgeHtml+'</span>';
+}
 function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, badge, linha2, temRelogio){
   var cls = 'position:relative;background:var(--sf);border:0.5px solid var(--ln2);border-radius:10px;padding:4px 10px;margin-bottom:2px;cursor:pointer;';
   var temExp = campos && campos.length>0;
@@ -1740,8 +1748,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   } else {
     h += '<span style="width:12px;flex-shrink:0;display:inline-block;"></span>';
   }
-  h += '<div style="font-size:13px;font-weight:700;color:var(--ink);flex:1;min-width:0;line-height:1.1;">'+HIST_esc(titulo);
-  if(badge){ h += ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:4px;white-space:nowrap;">'+HIST_esc(badge)+'</span>'; }
+  var _bdg = badge ? ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:4px;white-space:nowrap;">'+HIST_esc(badge)+'</span>' : '';
+  h += '<div style="font-size:13px;font-weight:700;color:var(--ink);flex:1;min-width:0;line-height:1.1;">'+VB_glueBadge(titulo, _bdg);
   h += '</div>';
   h += '</div>';
   // ações no topo direito
@@ -8086,22 +8094,22 @@ function MER_render(){
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +((MER_tab==='vendida'&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
-              +'<span style="font-size:13px;font-weight:700;color:var(--ink);min-width:0;">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+(function(){
+              +'<span style="font-size:13px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge(MER_tituloLista(r)||'(sem descrição)', (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
             var _isC=VB_consigVen(r.socio, r.valor_socio, r.custo, _pctL);
             return ' <span style=\"display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(_isC?'C':'S')+'</span>';
-          })()+'</span>'
+          })())+'</span>'
               +'<span style="font-size:10px;color:var(--so);font-weight:600;white-space:nowrap;">'+MER_fmtData(r.data_venda)+'</span>'
             +'</div>')
-          : ('<div style="font-size:13px;font-weight:700;color:var(--ink);">'+HIST_esc(MER_tituloLista(r)||'(sem descrição)')+(function(){
+          : ('<div style="font-size:13px;font-weight:700;color:var(--ink);">'+VB_glueBadge(MER_tituloLista(r)||'(sem descrição)', (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
             var _isC=VB_consigVen(r.socio, r.valor_socio, r.custo, _pctL);
             return ' <span style=\"display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(_isC?'C':'S')+'</span>';
-          })()+'</div>'))
+          })())+'</div>'))
         +(MER_tab==='vendida' ? (function(){
             var g=(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' <span style="color:var(--so);font-weight:600;">('+MER_diasEntre(r.data_compra,r.data_venda)+'d)</span>'):'';
             var v=r.venda_id?MER_vendasMap[r.venda_id]:null;
@@ -8213,6 +8221,23 @@ function MER_abrir(id){
     hh+=lin('Parte do Sócio', 'R$ '+MER_fmtBR(r.valor_socio)+_pS);
   }
   hh+='</div>';
+  // Passagens anteriores: outros registros do mesmo SN (recompras)
+  (function(){
+    var snB=(cx.sn||'').toUpperCase(); if(!snB) return;
+    var outros=(MER_rows||[]).filter(function(x){ return String(x.id)!==String(r.id) && (x.sn||'').toUpperCase()===snB; });
+    if(!outros.length) return;
+    outros.sort(function(x,y){ var a2=String(x.data_compra||''), b2=String(y.data_compra||''); return a2===b2?0:(a2<b2?1:-1); });
+    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
+    hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:4px;">PASSAGENS ANTERIORES</div>';
+    outros.forEach(function(o){
+      var vo=o.venda_id?MER_vendasMap[o.venda_id]:null;
+      var per=(MER_fmtData(o.data_compra)||'?')+' \u2192 '+(MER_fmtData(o.data_venda)||(o.status==='vendida'?'?':'em estoque'));
+      var det='';
+      if(vo){ det=(vo.cliente?(' \u00b7 '+HIST_esc(HIST_abrevNome(vo.cliente))):'')+(vo.valor_total?(' \u00b7 R$ '+MER_fmtBR(vo.valor_total)):''); }
+      hh+='<div style="font-size:11px;color:var(--tx);margin-top:3px;"><span style="font-weight:700;">'+per+'</span><span style="color:var(--mu);">'+det+'</span></div>';
+    });
+    hh+='</div>';
+  })();
   if(r.status==='vendida'){ hh+='<div id="mer-view-venda"></div>'; }
   document.getElementById('mer-view-body').innerHTML=hh;
   if(r.status==='vendida'){
@@ -8400,19 +8425,68 @@ function MER_baixa(btn){
   });
 }
 function MER_voltar(btn){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='#111'; btn.style.background='#fff'; btn.style.borderColor='#ddd'; },2500); return; }
-  sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null}).eq('id',btn.dataset.merid).then(function(res){
-    if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
-    try{ var _mv=MER_rows.find(function(x){return String(x.id)===String(btn.dataset.merid);}); VB_log('ESTOQUE','voltou ao estoque', (_mv&&_mv.descricao)||'', ''); }catch(e){}
-    VB_toast('De volta ao estoque.');
-    MER_load();
-  });
+  var m=MER_rows.find(function(x){ return String(x.id)===String(btn.dataset.merid); });
+  if(m && m.venda_id){ MER_voltarConfirm(m); return; } // baixa por venda: decidir o destino da venda vinculada
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='#fff'; btn.style.background='#111'; btn.style.borderColor='#111'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color=''; btn.style.background=''; btn.style.borderColor=''; }, 2200); return; }
+  MER_voltarExec(btn.dataset.merid, false, null);
+}
+function MER_voltarConfirm(m){
+  var v=MER_vendasMap[m.venda_id]||null;
+  var valTxt=v&&v.valor_total?(' de R$ '+MER_fmtBR(v.valor_total)):'';
+  var ov=document.getElementById('mer-voltar-overlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='mer-voltar-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100011;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  var bs='display:block;width:100%;padding:12px;border-radius:14px;font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin-bottom:8px;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="font-size:12px;color:var(--tx);line-height:1.5;margin-bottom:12px;text-align:center;">Este relógio tem uma <b>venda'+valTxt+'</b> vinculada no Histórico.<br>O que fazer com ela?</div>'
+    +'<button onclick="MER_voltarExec(\''+m.id+'\', true, \''+m.venda_id+'\')" style="'+bs+'border:none;background:var(--acc);color:var(--acc-tx);">APAGAR VENDA E VOLTAR AO ESTOQUE</button>'
+    +'<button onclick="MER_voltarExec(\''+m.id+'\', false, null)" style="'+bs+'border:0.5px solid var(--ln);background:var(--sf);color:var(--tx);">SÓ VOLTAR (mantém a venda no Histórico)</button>'
+    +'<button onclick="document.getElementById(\'mer-voltar-overlay\').style.display=\'none\'" style="'+bs+'border:0.5px dashed var(--ln0);background:transparent;color:var(--mu);margin-bottom:0;">CANCELAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function MER_voltarExec(merId, apagarVenda, vendaId){
+  var ov=document.getElementById('mer-voltar-overlay'); if(ov) ov.style.display='none';
+  function voltaMer(){
+    sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null}).eq('id',merId).then(function(res){
+      if(res.error){ VB_toast('Não voltou: '+(res.error.message||'')); return; }
+      try{ var _mv=MER_rows.find(function(x){return String(x.id)===String(merId);}); VB_log('ESTOQUE', apagarVenda?'voltou ao estoque (venda apagada)':'voltou ao estoque', (_mv&&_mv.descricao)||'', ''); }catch(e){}
+      VB_toast(apagarVenda?'Venda apagada. De volta ao estoque.':'De volta ao estoque.');
+      MER_load();
+    });
+  }
+  if(apagarVenda && vendaId){
+    sb.from('vendas').delete().eq('id', vendaId).then(function(res){
+      if(res.error){ VB_toast('Não apagou a venda: '+(res.error.message||'')); return; }
+      voltaMer();
+    });
+  } else voltaMer();
 }
 function MER_toggleDetalhes(){
   var d=document.getElementById('mer-detalhes'), t=document.getElementById('mer-det-toggle');
   var aberto = d.style.display!=='none';
   d.style.display = aberto ? 'none' : 'block';
   if(t) t.textContent = aberto ? '+ DETALHES (FORNECEDOR, PAGAMENTO, SÓCIO)' : '− OCULTAR DETALHES';
+}
+// Recompra: SN que já passou pela casa é reconhecido — aviso + pré-preenchimento do que não muda
+function MER_snReconhece(el){
+  if(MER_editId) return; // só no cadastro novo
+  var sn=(el.value||'').trim().toUpperCase(); if(!sn) return;
+  var antigos=(MER_rows||[]).filter(function(x){ return (x.sn||'').toUpperCase()===sn; });
+  if(!antigos.length) return;
+  var vendas=antigos.filter(function(x){ return x.status==='vendida'; }).length;
+  var ult=antigos[antigos.length-1];
+  var cx=(ult.marca||ult.modelo||ult.ano)?{marca:ult.marca||'',modelo:ult.modelo||'',ano:ult.ano||''}:MER_desmontar(ult.descricao||'');
+  var preencheu=[];
+  [['mer-modelo',cx.modelo],['mer-ano',cx.ano],['mer-infos',ult.infos||'']].forEach(function(par){
+    var f=document.getElementById(par[0]);
+    if(f && !f.value && par[1]){ f.value=par[1]; preencheu.push(par[0]); }
+  });
+  VB_toast('Este relógio já passou por você'+(vendas?(' — '+vendas+' venda'+(vendas>1?'s':'')+' anterior'+(vendas>1?'es':'')):'')+(preencheu.length?'. Detalhes preenchidos.':'.'));
 }
 function MER_add(btn){
   var desc=MER_compor();
@@ -9709,6 +9783,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.88.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Dinâmica de recompra + ↩ esperto: (1) o ↩ do VENDIDOS agora sabe a origem da baixa — relógio com venda vinculada abre a escolha "APAGAR VENDA E VOLTAR / SÓ VOLTAR / CANCELAR" (fim do fantasma: venda órfã somando lucro de venda desfeita); baixa manual segue direto como sempre. (2) Recompra: cadastrar um SN que já passou pela casa dispara aviso ("já passou por você — N vendas anteriores") e pré-preenche modelo, ano e acompanha; cada passagem é um ciclo próprio (custo novo, giro novo) e a venda antiga fica intocada. (3) Ficha ganhou a seção PASSAGENS ANTERIORES: compra → venda, cliente e valor de cada ciclo anterior do mesmo SN</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.87.3</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Badge S/C/I nunca mais órfão: ele agora é colado na última palavra do título (bloco inquebrável) — título comprido que quebra leva o badge junto com a última palavra, em vez de deixá-lo sozinho na linha de baixo. Vale pro Histórico e pro Estoque/VENDIDOS</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.87.2</span><span class="cl-ver-date">10/07/2026</span></div>
