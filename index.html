@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.84.3</title>
+<title>VB - v1.84.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -460,7 +460,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.84.3<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.84.6<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7839,7 +7839,7 @@ function SOC_extratoFoto(){
   var W=820, PAD=40, CW=W-PAD*2;
   var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0;
   function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
-  var H=170 + (temV?secH(d.vOps.length):0) + (temC?secH(d.cOps.length):0) + (temF?secH(d.fOps.length):0) + ((!temV&&!temC&&!temF)?60:0) + 50;
+  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?secH(d.fOps.length):0) + ((!temV&&!temC&&!temF)?60:0) + 50;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -7851,7 +7851,7 @@ function SOC_extratoFoto(){
   function trunc(t,maxW,font){ c.font=font; if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'…').width>maxW){ t=t.slice(0,-1); } return t+'…'; }
   var y=170;
   function secao(titulo, linhas, totais){
-    var hh=secH(linhas.length)-18;
+    var hh=secH(linhas.length)-18+Math.max(0,(totais.length-2))*22;
     c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
     c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
     c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
@@ -7870,7 +7870,9 @@ function SOC_extratoFoto(){
     c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-2); c.lineTo(PAD+CW-22, yy-2); c.stroke();
     c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
     c.fillText(totais[0], PAD+22, yy+24);
-    c.textAlign='right'; c.fillText(totais[1], PAD+CW-22, yy+24); c.textAlign='left';
+    c.textAlign='right';
+    for(var ti=1; ti<totais.length; ti++){ c.fillText(totais[ti], PAD+CW-22, yy+24+(ti-1)*22); }
+    c.textAlign='left';
     y += hh + 18;
   }
   if(temV){
@@ -7879,7 +7881,7 @@ function SOC_extratoFoto(){
         var pcap=(o.capital>0 && o.lucro!=null)?Math.round(o.lucro/o.capital*100):null;
         return {nome:o.nome, data:o.data+(o.custo!=null?('  ·  Custo '+HIST_fmtMoeda(o.custo)):'')+(o.capital?('  ·  Sócio '+HIST_fmtMoeda(o.capital)+((o.custo>0)?(' ('+Math.round(o.capital/o.custo*100)+'%)'):'')):''), dir:HIST_fmtMoeda(o.total), dir2:(o.lucro!=null?('Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pcap!=null?(' ('+pcap+'%)'):'')):null)};
       }),
-      ['TOTAL', 'Capital '+HIST_fmtMoeda(d.capV)+'  ·  Lucro Sócio '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]);
+      ['TOTAL', HIST_fmtMoeda(d.totV), 'Capital '+HIST_fmtMoeda(d.capV), 'Lucro Sócio '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]);
   }
   if(temC){
     secao('CONSIGNAÇÕES · '+d.nC+(d.nC===1?' OPERAÇÃO':' OPERAÇÕES'),
@@ -9621,6 +9623,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.6</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio: TOTAL em três linhas empilhadas — vendido, Capital, Lucro Sócio (%) — cada número na sua linha, alinhados à direita</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.5</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio: TOTAL empilhado em duas linhas — em cima o vendido e o Capital, embaixo o Lucro Sócio com o % — espelhando o desenho das linhas das operações. A caixa e a foto crescem os pixels necessários</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.4</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio, TOTAL completo: total vendido + Capital investido + Lucro Sócio com o % de retorno — "R$ 568.000,00 · Capital R$ 232.500,00 · Lucro Sócio R$ 51.500,00 (22%)"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.3</span><span class="cl-ver-date">09/07/2026</span></div>
