@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.86.0</title>
+<title>VB - v1.86.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -460,7 +460,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.86.0<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.86.4<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1692,13 +1692,17 @@ function HIST_fitNomes(){
     var nome=div.querySelector('.hist-l2nome');
     if(!nome){ div.style.whiteSpace=''; return; }
     div.style.whiteSpace='nowrap';
+    var cs=window.getComputedStyle(div);
+    var padR=parseFloat(cs.paddingRight)||0;
+    var limite=div.getBoundingClientRect().right - padR; // início da zona dos botões
+    function estourou(){ return nome.getBoundingClientRect().right > limite + 0.5; }
     // ordem de sacrifício: nome inteiro -> abreviado -> encolhe -> desce inteiro
     nome.style.fontSize='';
     nome.textContent=nome.getAttribute('data-full')||nome.textContent;
-    if(div.scrollWidth>div.clientWidth){ nome.textContent=nome.getAttribute('data-abrev')||nome.textContent; }
+    if(estourou()){ nome.textContent=nome.getAttribute('data-abrev')||nome.textContent; }
     var i=0;
-    while(div.scrollWidth>div.clientWidth && i<degraus.length-1){ i++; nome.style.fontSize=degraus[i]; }
-    if(div.scrollWidth>div.clientWidth){ div.style.whiteSpace=''; nome.style.fontSize='8.5px'; }
+    while(estourou() && i<degraus.length-1){ i++; nome.style.fontSize=degraus[i]; }
+    if(estourou()){ div.style.whiteSpace=''; nome.style.fontSize='8.5px'; }
   });
 }
 function HIST_abrevNome(n){
@@ -1748,8 +1752,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   var parts=[];
   if(valor){ parts.push('<span style="color:#4a4a4a;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
   if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
-  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:72px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
-  if(linha2) h += '<div class="hist-l2" style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:72px;">'+linha2+'</div>';
+  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:90px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  if(linha2) h += '<div class="hist-l2" style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:90px;">'+linha2+'</div>';
   // carimbo data/hora: absoluto, centralizado verticalmente entre os botões e o fim, à direita
   if(dataStr && dataStr!=='--'){
     h += '<div id="hist-stamp-'+idx+'" style="position:absolute;right:10px;top:28px;font-size:9px;color:#4a4a4a;font-weight:600;white-space:nowrap;text-transform:uppercase;">'+HIST_esc(dataStr)+'</div>';
@@ -2854,13 +2858,13 @@ function VB_relatorioPDF(dados, total, returnImages){
 
   var secoes=[
     { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
-      cols:[ {h:'Nome', x:pad, w:210, get:function(r){return (r.nome||r.cliente||'—');}},
-             {h:'Data', x:255, w:62, get:function(r){return dt(r.data_operacao);}},
-             {h:'Bruto', x:322, w:104, r:1, get:function(r){return money(r.valor_bruto);}},
-             {h:'Líquido', x:430, w:104, r:1, get:function(r){return money(r.valor_liquido);}},
-             {h:'Prazo', x:538, w:56, r:1, get:function(r){return r.prazo_medio!=null?(Number(r.prazo_medio).toLocaleString('pt-BR',{maximumFractionDigits:1})+'d'):'—';}},
-             {h:'Lucro', x:598, w:100, r:1, get:function(r){var l=HIST_lucroRow('ant', r); return (l!=null)?money(l):'—';}},
-             {h:'Taxa', x:702, w:78, r:1, get:function(r){return r.taxa?(String(r.taxa).replace('.',',')+'% a.m.'):'—';}} ],
+      cols:[ {h:'Nome', x:pad, w:198, get:function(r){return (r.nome||r.cliente||'—');}},
+             {h:'Data', x:243, w:70, get:function(r){return dt(r.data_operacao);}},
+             {h:'Bruto', x:318, w:102, r:1, get:function(r){return money(r.valor_bruto);}},
+             {h:'Líquido', x:424, w:102, r:1, get:function(r){return money(r.valor_liquido);}},
+             {h:'Prazo', x:530, w:56, r:1, get:function(r){return r.prazo_medio!=null?(Number(r.prazo_medio).toLocaleString('pt-BR',{maximumFractionDigits:1})+'d'):'—';}},
+             {h:'Lucro', x:590, w:104, r:1, get:function(r){var l=HIST_lucroRow('ant', r); return (l!=null)?money(l):'—';}},
+             {h:'Taxa', x:698, w:82, r:1, get:function(r){return r.taxa?(String(r.taxa).replace('.',',')+'% a.m.'):'—';}} ],
       somaLabel:'TOTAL BRUTO', soma:function(r){return Number(r.valor_bruto)||0;},
       selos2:function(rows){
         var luc=0, tar=0, txSoma=0, txPeso=0, przSoma=0, przPeso=0;
@@ -2918,10 +2922,10 @@ function VB_relatorioPDF(dados, total, returnImages){
       } },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:148, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
-             {h:'Cliente', x:193, w:76, get:function(r){return r.cliente?HIST_abrevNome(r.cliente):'—';}},
-             {h:'Data', x:273, w:60, get:function(r){var d=vDataNeg(r); return d?dt(d):'—';}},
-             {h:'Giro', x:337, w:34, r:1, get:function(r){var g=vGiro(r); return g!=null?(g+'d'):'—';}},
-             {h:'Venda', x:375, w:100, r:1, get:function(r){return money(r.valor_total);}},
+             {h:'Cliente', x:193, w:72, get:function(r){return r.cliente?HIST_abrevNome(r.cliente):'—';}},
+             {h:'Data', x:269, w:70, get:function(r){var d=vDataNeg(r); return d?dt(d):'—';}},
+             {h:'Giro', x:343, w:30, r:1, get:function(r){var g=vGiro(r); return g!=null?(g+'d'):'—';}},
+             {h:'Venda', x:377, w:98, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Custo', x:479, w:96, r:1, get:function(r){return (r.custo!=null)?money(r.custo):'—';}},
              {h:'Lucro', x:579, w:118, r:1, get:function(r){ if(r.custo==null) return '—'; var c=Number(r.custo)||0; var l=Number(r.valor_total||0)-c; return money(l)+(c>0?(' ('+Math.round(l/c*100)+'%)'):''); }},
                           {h:'Lucro VB', x:701, w:79, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return money(l*vPctVB(r)/100); }} ],
@@ -3012,7 +3016,10 @@ function VB_relatorioPDF(dados, total, returnImages){
 
   novaPagina(true);
   secoes.forEach(function(sec){
-    var rows=(dados[sec.key]||[]).slice().sort(byDate(sec.date));
+    var rows=(dados[sec.key]||[]).slice().sort(function(a,b){
+      function dv(r){ if(sec.key==='vendas') return vDataNeg(r)||''; if(sec.key==='financiamentos_hist') return String(r.data_operacao||r.data_inicio||''); return String(r[sec.date]||''); }
+      var x=dv(a), y=dv(b); return x===y?0:(x<y?1:-1); // mais recentes primeiro, pela data do negócio
+    });
     if(sec.filter) rows=rows.filter(sec.filter);
     if(rows.length===0) return;
     ensure(70);
@@ -3062,10 +3069,10 @@ function VB_relatorioPDF(dados, total, returnImages){
       var ex=bx-gap-ew;
       extras.slice().reverse().forEach(function(s){
         c3.strokeStyle='#ccc'; c3.lineWidth=1; c3.strokeRect(ex, by, ew, eh);
-        c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
-        c3.fillText(s.label, ex+12, by+14);
-        c3.fillStyle='#111'; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
-        c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex+ew-12, by+23);
+        c3.fillStyle='#999'; c3.font='700 8px -apple-system,Arial,sans-serif'; c3.textAlign='left';
+        c3.fillText(s.label, ex+12, by+12);
+        c3.fillStyle='#111'; c3.font='700 14px -apple-system,Arial,sans-serif'; c3.textAlign='right';
+        c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex+ew-12, by+28);
         ex -= (ew+gap);
       });
     }
@@ -3077,10 +3084,10 @@ function VB_relatorioPDF(dados, total, returnImages){
         var ew2=Math.floor((W-2*pad-(s2.length-1)*gap2)/s2.length), ex2=pad;
         s2.forEach(function(s){
           c3.strokeStyle='#ccc'; c3.lineWidth=1; c3.strokeRect(ex2, by2, ew2, boxH);
-          c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
-          c3.fillText(s.label, ex2+12, by2+14);
+          c3.fillStyle='#999'; c3.font='700 8px -apple-system,Arial,sans-serif'; c3.textAlign='left';
+          c3.fillText(s.label, ex2+12, by2+12);
           c3.fillStyle='#111'; c3.font='700 14px -apple-system,Arial,sans-serif'; c3.textAlign='right';
-          c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex2+ew2-12, by2+23);
+          c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex2+ew2-12, by2+28);
           ex2+=ew2+gap2;
         });
         _selo2H=boxH+8;
@@ -7944,7 +7951,10 @@ function SOC_extratoFoto(){
         var pcap=(o.capital>0 && o.lucro!=null)?Math.round(o.lucro/o.capital*100):null;
         return {nome:o.nome, data:o.data+(o.custo!=null?('  ·  Custo '+HIST_fmtMoeda(o.custo)):'')+(o.capital?('  ·  Sócio '+HIST_fmtMoeda(o.capital)+((o.custo>0)?(' ('+Math.round(o.capital/o.custo*100)+'%)'):'')):''), dir:HIST_fmtMoeda(o.total), dir2:(o.lucro!=null?('Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pcap!=null?(' ('+pcap+'%)'):'')):null)};
       }),
-      ['TOTAL', HIST_fmtMoeda(d.totV), 'Capital '+HIST_fmtMoeda(d.capV), 'Lucro Sócio '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]);
+      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+        'Total de Vendas '+HIST_fmtMoeda(d.totV),
+        'Capital Investido '+nm+' '+HIST_fmtMoeda(d.capV),
+        'Lucro '+nm+' '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]; })());
   }
   if(temC){
     secao('CONSIGNAÇÕES · '+d.nC+(d.nC===1?' OPERAÇÃO':' OPERAÇÕES'),
@@ -7957,7 +7967,10 @@ function SOC_extratoFoto(){
         var pf=(o.aporte>0 && o.lucro!=null)?Math.round(o.lucro/o.aporte*100):null;
         return {nome:o.nome, data:o.data+'  ·  Aporte '+HIST_fmtMoeda(o.aporte), dir:HIST_fmtMoeda(o.retorno), dir2:'Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pf!=null?(' ('+pf+'%)'):'')};
       }),
-      ['TOTAL', HIST_fmtMoeda(d.retorno), 'Aporte '+HIST_fmtMoeda(d.aporte), 'Lucro Sócio '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]);
+      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+        'Total de Retornos '+HIST_fmtMoeda(d.retorno),
+        'Capital Investido '+nm+' '+HIST_fmtMoeda(d.aporte),
+        'Lucro '+nm+' '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]; })());
   }
   if(!temV && !temC && !temF){
     c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
@@ -9689,6 +9702,26 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.4</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio: TOTAL nomeado — "Total de Vendas", "Capital Investido FULANO" e "Lucro FULANO (%)", com o nome do sócio no lugar do genérico. Mesmo padrão no total dos financiamentos como investidor (Total de Retornos / Capital Investido / Lucro)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.3</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Nome do cliente calibrado de verdade: a folga direita da linha subiu pra 90px (a zona dos botões 👁 ✎ ✕ mede 84px — a antiga de 72px deixava invadir) e a medição de estouro trocou de scrollWidth (que não enxerga o padding) pra geometria real: a borda do nome contra o início da zona dos botões. Nome expandido nunca mais passa por baixo do olhinho</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.2</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Relatório equalizado: selos com rótulo EM CIMA e valor EMBAIXO (acabou o "LUCRO TOTALR$ 167.750,00" atropelado), e coluna DATA alargada pra 70px nas Antecipações e Vendas — datas inteiras, sem "24/06/20..."</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.1</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Relatório: linhas das mais recentes pras mais antigas, pela data do negócio — a mesma regra do Histórico, VENDIDOS e Extrato do Sócio. Era o último documento em ordem crescente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.0</span><span class="cl-ver-date">09/07/2026</span></div>
