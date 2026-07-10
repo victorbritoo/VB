@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.84.9</title>
+<title>VB - v1.85.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -460,7 +460,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.84.9<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.85.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1586,7 +1586,7 @@ function HIST_carregarFin(r){
     FIN_enableInvestidor();
   } else { FIN_disableInvestidor(); }
   FIN_updateConfirmarBtnLabel();
-  FIN_snapshot = FIN_assinatura();
+  FIN_snapshot = FIN_assinatura(); VB_dirtyPaintTela('fin');
   VB_telaAnterior = 'hist';
   showScreen('fin');
 }
@@ -1617,7 +1617,7 @@ function HIST_carregarAnt(r){
     ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
-  ANT_snapshot = ANT_assinatura();
+  ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant');
   VB_telaAnterior = 'hist';
   showScreen('ant');
 }
@@ -1659,8 +1659,8 @@ function HIST_carregarVen(r){
     VEN_autoLista();
   }
   VEN_updateConfirmarBtnLabel();
-  VEN_snapshot = VEN_assinatura();
-  setTimeout(function(){ VEN_snapshot = VEN_assinatura(); }, 0);
+  VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven');
+  setTimeout(function(){ VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven'); }, 0);
   VB_telaAnterior = 'hist';
   showScreen('ven');
 }
@@ -1674,7 +1674,7 @@ function HIST_carregarPag(r){
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
   PAG_render(); PAG_update(); PAG_saveSession();
   PAG_updateConfirmarBtnLabel();
-  PAG_snapshot = PAG_assinatura();
+  PAG_snapshot = PAG_assinatura(); VB_dirtyPaintTela('pag');
   VB_telaAnterior = 'hist';
   showScreen('pag');
 }
@@ -3763,7 +3763,7 @@ function HIST_renderRows(tab, rows){
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
       if(r.tem_investidor){
-        rowBadge='INVESTIDOR';
+        rowBadge='I';
         var _nomeI=(r.investidor_nome||'INVESTIDOR').toUpperCase();
         if(r.investidor_parcela!=null) campos.push({l:'Parcela '+_nomeI, v:HIST_fmtMoeda(r.investidor_parcela)});
         if(r.vb_parcela!=null) campos.push({l:'Parcela VB', v:HIST_fmtMoeda(r.vb_parcela)});
@@ -4024,6 +4024,21 @@ function VB_temAlteracaoManual(tela){
   if(c.getSnap()===null) return false;  // sem foto de referência
   return c.sig() !== c.getSnap();
 }
+var VB_dirtyBtn={fin:'fin-btnConfirmar', ant:'ant-btnConfirmar', ven:'ven-btnConfirmar', pag:'pag-btnConfirmar'};
+function VB_dirtyPaintTela(tela){
+  var id=VB_dirtyBtn[tela]; if(!id) return;
+  var b=document.getElementById(id); if(!b) return;
+  if(VB_temAlteracaoManual(tela)){ b.style.background='#111'; b.style.color='#fff'; }
+  else { b.style.background='#fff'; b.style.color='#4a4a4a'; }
+}
+// qualquer digitação nas telas de edição repinta o botão (padrão do Estoque, 1.76.0)
+(function(){
+  ['fin','ant','ven','pag'].forEach(function(t){
+    var sc=document.getElementById('screen-'+t);
+    if(sc) sc.addEventListener('input', function(){ VB_dirtyPaintTela(t); });
+    if(sc) sc.addEventListener('change', function(){ VB_dirtyPaintTela(t); });
+  });
+})();
 var VB_sairCfg=null;
 function VB_sairCancelar(){ var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='none'; VB_sairCfg=null; }
 function VB_sairDescartar(){ var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='none'; VB_sairCfg=null; showScreen(VB_telaAnterior||'home'); }
@@ -4606,7 +4621,7 @@ function FIN_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ FIN_currentOperationId = res.data[0].id; }
     FIN_updateConfirmarBtnLabel();
-    FIN_snapshot = FIN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
+    FIN_snapshot = FIN_assinatura(); VB_dirtyPaintTela('fin'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
       var _lr=(typeof row!=='undefined'&&row)?row:{};
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
@@ -5299,7 +5314,7 @@ function VEN_confirmarOperacao(btn){
       }
     })();
     VEN_updateConfirmarBtnLabel();
-    VEN_snapshot = VEN_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
+    VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
       var _lr=(typeof row!=='undefined'&&row)?row:{};
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
@@ -6246,7 +6261,7 @@ function ANT_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
     ANT_updateConfirmarBtnLabel();
-    ANT_snapshot = ANT_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
+    ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
       var _lr=(typeof row!=='undefined'&&row)?row:{};
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
@@ -6841,7 +6856,7 @@ function PAG_confirmarOperacao(btn){
     }
     if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
     PAG_updateConfirmarBtnLabel();
-    PAG_snapshot = PAG_assinatura(); // foto atualizada: sem falso alarme ao voltar depois de salvar
+    PAG_snapshot = PAG_assinatura(); VB_dirtyPaintTela('pag'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
       var _lr=(typeof row!=='undefined'&&row)?row:{};
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
@@ -9640,6 +9655,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.85.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Padronizações: (1) botão CONFIRMAR OPERAÇÃO fica preto quando há alteração não salva também em Financiamento, Antecipação, Vendas e Pagamentos (padrão do Estoque, 1.76.0) — pinta ao digitar, despinta ao salvar/carregar; (2) badge INVESTIDOR virou I no Histórico — linguagem de uma letra fechada: S sociedade, C consignação, I investidor</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.9</span><span class="cl-ver-date">09/07/2026</span></div>
