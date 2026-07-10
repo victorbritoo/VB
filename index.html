@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.85.0</title>
+<title>VB - v1.86.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -460,7 +460,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.85.0<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.86.0<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -2854,11 +2854,30 @@ function VB_relatorioPDF(dados, total, returnImages){
 
   var secoes=[
     { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
-      cols:[ {h:'Nome', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
-             {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
-             {h:'Bruto', x:430, w:160, r:1, get:function(r){return money(r.valor_bruto);}},
-             {h:'Líquido', x:620, w:160, r:1, get:function(r){return money(r.valor_liquido);}} ],
-      somaLabel:'TOTAL BRUTO', soma:function(r){return Number(r.valor_bruto)||0;} },
+      cols:[ {h:'Nome', x:pad, w:210, get:function(r){return (r.nome||r.cliente||'—');}},
+             {h:'Data', x:255, w:62, get:function(r){return dt(r.data_operacao);}},
+             {h:'Bruto', x:322, w:104, r:1, get:function(r){return money(r.valor_bruto);}},
+             {h:'Líquido', x:430, w:104, r:1, get:function(r){return money(r.valor_liquido);}},
+             {h:'Prazo', x:538, w:56, r:1, get:function(r){return r.prazo_medio!=null?(Number(r.prazo_medio).toLocaleString('pt-BR',{maximumFractionDigits:1})+'d'):'—';}},
+             {h:'Lucro', x:598, w:100, r:1, get:function(r){var l=HIST_lucroRow('ant', r); return (l!=null)?money(l):'—';}},
+             {h:'Taxa', x:702, w:78, r:1, get:function(r){return r.taxa?(String(r.taxa).replace('.',',')+'% a.m.'):'—';}} ],
+      somaLabel:'TOTAL BRUTO', soma:function(r){return Number(r.valor_bruto)||0;},
+      selos2:function(rows){
+        var luc=0, tar=0, txSoma=0, txPeso=0, przSoma=0, przPeso=0;
+        (rows||[]).forEach(function(r){
+          var l=HIST_lucroRow('ant', r); if(l!=null) luc+=l;
+          tar+=Number(r.tarifa)||0;
+          var b=Number(r.valor_bruto)||0;
+          if(r.taxa && b>0){ txSoma+=Number(r.taxa)*b; txPeso+=b; }
+          if(r.prazo_medio!=null && b>0){ przSoma+=Number(r.prazo_medio)*b; przPeso+=b; }
+        });
+        return [
+          {label:'LUCRO', texto:'R$ '+_num(luc)},
+          {label:'TAXA MÉDIA', texto: txPeso>0?((txSoma/txPeso).toLocaleString('pt-BR',{maximumFractionDigits:2})+'% a.m.'):'—'},
+          {label:'PRAZO MÉDIO', texto: przPeso>0?((przSoma/przPeso).toLocaleString('pt-BR',{maximumFractionDigits:1})+' dias'):'—'},
+          {label:'TARIFAS', texto:'R$ '+_num(tar)}
+        ];
+      } },
     { key:'antecipacoes', titulo:'ATRASADOS (COBRANÇA)', date:'data_operacao', atraso:true, filter:function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
       cols:[ {h:'Cliente', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
@@ -2883,6 +2902,19 @@ function VB_relatorioPDF(dados, total, returnImages){
         var out=[{label:'LUCRO TOTAL', valor:lvb+linv},{label:'LUCRO VB', valor:lvb}];
         if(linv>0) out.push({label:'LUCRO INVESTIDOR', valor:linv});
         return out;
+      },
+      selos2:function(rows){
+        var pSoma=0, pN=0, przSoma=0, przN=0, txSoma=0, txN=0;
+        (rows||[]).forEach(function(r){
+          if(r.valor_parcela!=null){ pSoma+=Number(r.valor_parcela); pN++; }
+          if(r.qtd_parcelas){ przSoma+=Number(r.qtd_parcelas); przN++; }
+          if(r.taxa){ txSoma+=Number(r.taxa); txN++; }
+        });
+        return [
+          {label:'PARCELA MÉDIA', texto: pN?('R$ '+_num(pSoma/pN)):'—'},
+          {label:'PRAZO MÉDIO', texto: przN?((przSoma/przN).toLocaleString('pt-BR',{maximumFractionDigits:1})+' meses'):'—'},
+          {label:'TAXA MÉDIA', texto: txN?((txSoma/txN).toLocaleString('pt-BR',{maximumFractionDigits:2})+'% a.m.'):'—'}
+        ];
       } },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:148, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
@@ -3033,7 +3065,7 @@ function VB_relatorioPDF(dados, total, returnImages){
         c3.fillStyle='#999'; c3.font='700 9px -apple-system,Arial,sans-serif'; c3.textAlign='left';
         c3.fillText(s.label, ex+12, by+14);
         c3.fillStyle='#111'; c3.font='700 15px -apple-system,Arial,sans-serif'; c3.textAlign='right';
-        c3.fillText('R$ '+_num(s.valor), ex+ew-12, by+23);
+        c3.fillText(s.texto!=null?String(s.texto):('R$ '+_num(s.valor)), ex+ew-12, by+23);
         ex -= (ew+gap);
       });
     }
@@ -7807,7 +7839,6 @@ function FM_load(){
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     hh+=bloco('VENDAS · '+dVen.n, vlin);
-    hh+=bloco('PAGAMENTOS · '+dPag.n, [['Total',HIST_fmtMoeda(dPag.tot)]]);
     hh+='<div style="background:#111;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:#bbb;font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:#fff;">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>';
     body.innerHTML=hh;
   });
@@ -7871,7 +7902,7 @@ function SOC_extratoFoto(){
   var W=820, PAD=40, CW=W-PAD*2;
   var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0;
   function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
-  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?secH(d.fOps.length):0) + ((!temV&&!temC&&!temF)?60:0) + 50;
+  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + ((!temV&&!temC&&!temF)?60:0) + 50;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -7922,8 +7953,11 @@ function SOC_extratoFoto(){
   }
   if(temF){
     secao('FINANCIAMENTOS (INVESTIDOR) · '+d.nF+(d.nF===1?' OPERAÇÃO':' OPERAÇÕES'),
-      d.fOps.map(function(o){ return {nome:o.nome, data:o.data, dir:'Aporte '+HIST_fmtMoeda(o.aporte), dir2:'Retorno '+HIST_fmtMoeda(o.retorno)+'  ·  Lucro '+HIST_fmtMoeda(o.lucro)}; }),
-      ['TOTAL', 'Aporte '+HIST_fmtMoeda(d.aporte)+'  ·  Retorno '+HIST_fmtMoeda(d.retorno)+'  ·  Lucro '+HIST_fmtMoeda(d.lucroF)]);
+      d.fOps.map(function(o){
+        var pf=(o.aporte>0 && o.lucro!=null)?Math.round(o.lucro/o.aporte*100):null;
+        return {nome:o.nome, data:o.data+'  ·  Aporte '+HIST_fmtMoeda(o.aporte), dir:HIST_fmtMoeda(o.retorno), dir2:'Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pf!=null?(' ('+pf+'%)'):'')};
+      }),
+      ['TOTAL', HIST_fmtMoeda(d.retorno), 'Aporte '+HIST_fmtMoeda(d.aporte), 'Lucro Sócio '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]);
   }
   if(!temV && !temC && !temF){
     c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
@@ -9655,6 +9689,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.86.0</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Relatório nivelado: ANTECIPAÇÕES ganhou colunas PRAZO, LUCRO e TAXA na linha e a fileira de indicadores LUCRO · TAXA MÉDIA (ponderada pelo bruto) · PRAZO MÉDIO (ponderado) · TARIFAS; FINANCIAMENTOS ganhou PARCELA MÉDIA · PRAZO MÉDIO · TAXA MÉDIA. E o Extrato do Sócio: seção de financiamentos no padrão novo — Aporte na linha da data, retorno à direita, Lucro Sócio com % sobre o aporte, e TOTAL empilhado em três linhas como o de Vendas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.85.1</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Fechamento do Mês sem o bloco PAGAMENTOS — decisão do VB: Pagamentos é ferramenta de trabalho (descriminar um pagamento), não resultado do mês. Tela e foto agora contam a mesma história: Antecipações, Financiamentos, Vendas e o Lucro do Mês</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.85.0</span><span class="cl-ver-date">09/07/2026</span></div>
