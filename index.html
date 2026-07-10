@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.89.0</title>
+<title>VB - v1.89.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8211,6 +8211,19 @@ function MER_toggleForm(force){
 function MER_abrir(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
+  // vendas das passagens deste SN: busca as que faltam no mapa e redesenha (uma vez)
+  (function(){
+    var snF=((r.marca||r.modelo||r.ano||r.sn)?(r.sn||''):(MER_desmontar(r.descricao||'').sn||'')).toUpperCase();
+    if(!snF) return;
+    var falta=(MER_rows||[]).filter(function(x){ return (x.sn||'').toUpperCase()===snF && x.venda_id && !(x.venda_id in MER_vendasMap); }).map(function(x){ return x.venda_id; });
+    if(!falta.length) return;
+    sb.from('vendas').select('*').in('id', falta).then(function(res){
+      falta.forEach(function(vid){ MER_vendasMap[vid]=null; });
+      (res.data||[]).forEach(function(v){ MER_vendasMap[v.id]=v; });
+      var ov=document.getElementById('mer-view-overlay');
+      if(ov && ov.style.display!=='none') MER_abrir(id); // redesenha com o mapa quente
+    });
+  })();
   var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:r.modelo||'',ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
   document.getElementById('mer-view-titulo').textContent=r.descricao||'(sem descrição)';
   function lin(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:var(--mu);white-space:nowrap;">'+l+':</span><span style="font-weight:700;color:var(--tx);text-align:right;text-transform:uppercase;">'+HIST_esc(v)+'</span></div>'):''; }
@@ -8255,7 +8268,7 @@ function MER_abrir(id){
         det+=lin('Valor da Venda', 'R$ '+MER_fmtBR(vt));
         if(cst!=null&&cst>0) det+=lin('Lucro', 'R$ '+MER_fmtBR(vt-cst)+' ('+Math.round((vt-cst)/cst*100)+'%)');
       } else if(o.status==='vendida'){
-        det+=lin('Saída', 'Manual');
+        det+=lin('Saída', o.venda_id ? (MER_vendasMap[o.venda_id]===null ? 'Venda excluída do Histórico' : 'Carregando venda...') : 'Manual');
       }
       det+=lin('De Quem Comprei', o.fornecedor||'');
       hh+='<div onclick="MER_passToggle(this,event)" style="cursor:pointer;'+(oi?'margin-top:6px;':'margin-top:2px;')+'">'
@@ -9822,6 +9835,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.89.1</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Passagens corrigidas: o mapa de vendas só era carregado ao visitar a aba VENDIDOS — ficha aberta direto do ESTOQUE mostrava passagem vendida como "saída manual" (o caso do SKY). Agora a ficha busca sozinha as vendas das passagens que faltam e redesenha. E os rótulos ficaram honestos: Manual só sem venda vinculada; venda apagada do Histórico é dita como tal</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.89.0</span><span class="cl-ver-date">10/07/2026</span></div>
