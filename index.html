@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.90.1</title>
+<title>VB - v1.91.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1243,7 +1243,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
     <hr style="border:none;border-top:0.5px solid var(--ln3);margin:8px 0 6px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;">
       <span style="font-size:10px;letter-spacing:2.5px;color:var(--tx);font-weight:500;">TOTAL</span>
-      <span id="pag-soma" style="font-size:14px;color:var(--tx);font-weight:700;">---</span>
+      <span id="pag-soma" onclick="PAG_copiaTotal()" title="Tocar: usar como Valor Total" style="font-size:14px;color:var(--tx);font-weight:700;cursor:pointer;">---</span>
     </div>
   </div>
 
@@ -1676,7 +1676,7 @@ function HIST_carregarPag(r){
   VB_carimboTS = r.created_at||null;
   if(r.valor_total) document.getElementById('pag-total').value = PAG_formatBR(Number(r.valor_total));
   PAG_pagamentos=[]; PAG_counter=0;
-  (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||'')}); });
+  (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||''),cr:!!it.cr}); });
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
   PAG_render(); PAG_update(); PAG_saveSession();
   PAG_updateConfirmarBtnLabel();
@@ -3234,7 +3234,7 @@ function HIST_imgPag(r){
   var snap={ t:_histGetVal('pag-total'), arr:PAG_pagamentos, cnt:PAG_counter, opId:PAG_currentOperationId };
   _histSetVal('pag-total', (r.valor_total!=null)?PAG_formatBR(Number(r.valor_total)):'');
   PAG_pagamentos=[]; PAG_counter=0;
-  (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||'')}); });
+  (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||''),cr:!!it.cr}); });
   PAG_currentOperationId=r.id||null;
   var img=document.getElementById('pag-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ PAG_compartilhar(); } finally { VB_silentGen=false; }
@@ -6782,7 +6782,7 @@ function PAG_update(){
   var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
   var soma=0;
   PAG_pagamentos.forEach(function(p){
-    soma+=PAG_parseBR(p.valor||'0')||0;
+    soma+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0);
   });
   var saldo=total-soma;
   document.getElementById('pag-saldo').textContent='R$ '+PAG_formatBR(saldo);
@@ -6802,6 +6802,19 @@ function PAG_addLinha(){
   if(ultimo){ try{ ultimo.focus(); }catch(e){} }
 }
 
+function PAG_copiaTotal(){
+  var soma=0;
+  PAG_pagamentos.forEach(function(p){ soma+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); });
+  if(!(soma>0)){ VB_toast('Total das linhas precisa ser maior que zero.'); return; }
+  document.getElementById('pag-total').value=PAG_formatBR(soma);
+  PAG_update(); PAG_saveSession();
+}
+function PAG_toggleTipo(id){
+  var p=PAG_pagamentos.find(function(x){return x.id===id;});
+  if(!p) return;
+  p.cr=!p.cr;
+  PAG_render(); PAG_update(); PAG_saveSession();
+}
 function PAG_removeLinha(id){
   PAG_pagamentos=PAG_pagamentos.filter(function(p){return p.id!==id;});
   PAG_render();
@@ -6814,7 +6827,7 @@ var PAG_LS_KEY='VB_PAG_SESSION';
 function PAG_saveSession(){
   try{
     var t=(document.getElementById('pag-total').value||'');
-    var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||'')}; });
+    var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||''), c:(p.cr?1:0)}; });
     localStorage.setItem(PAG_LS_KEY, JSON.stringify({t:t,p:itens}));
   }catch(e){}
 }
@@ -6828,7 +6841,7 @@ function PAG_restoreSession(){
     if(!temDado) return false;
     document.getElementById('pag-total').value=obj.t||'';
     PAG_pagamentos=[]; PAG_counter=0;
-    obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||'')}); });
+    obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||''),cr:!!it.c}); });
     if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
     PAG_render();
     PAG_update();
@@ -6843,12 +6856,12 @@ function PAG_render(){
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
     row.innerHTML=
-      '<span style="font-size:10px;color:var(--so);font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;">'+String(i+1).padStart(2,'0')+'</span>'+
+      '<span onclick="PAG_toggleTipo('+p.id+')" title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
       '<input type="text" placeholder="Descrição" onclick="if(!this.value)this.select()" data-pid="'+p.id+'" data-field="desc"'+
       ' style="min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:0;font-family:-apple-system,sans-serif;text-align:center;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
       '<div style="display:flex;align-items:baseline;gap:1px;width:110px;flex-shrink:0;border-bottom:0.5px solid var(--ln);">'+
-        '<span style="font-size:10px;color:var(--mu2);">R$</span>'+
+        '<span style="font-size:10px;color:var(--mu2);white-space:nowrap;">'+(p.cr?'\u2212 R$':'R$')+'</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
         ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--tx);width:88px;text-align:center;font-family:-apple-system,sans-serif;"'+
         (p.valor?' value="'+p.valor+'"':'')+'>'+
@@ -6893,7 +6906,7 @@ function PAG_updateConfirmarBtnLabel(){
 function PAG_confirmarOperacao(btn){
   VB_carimboTS = null;
   var total=PAG_parseBR(document.getElementById('pag-total').value);
-  var itens=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; }).map(function(p){ return {desc:(p.desc||''), valor:(p.valor||'')}; });
+  var itens=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; }).map(function(p){ var o={desc:(p.desc||''), valor:(p.valor||'')}; if(p.cr) o.cr=true; return o; });
 
   if(!(total>0)){ VB_toast('Preencha o total antes de confirmar.'); return; }
 
@@ -6968,7 +6981,7 @@ function _pagCopyFallback(code){
 
 function PAG_salvar(btn){
   var total=(document.getElementById('pag-total').value||'').trim();
-  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||'')}; });
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||''), c:(p.cr?1:0)}; });
   var code;
   try{
     code='VBPAG1:'+btoa(unescape(encodeURIComponent(JSON.stringify({t:total,p:itens}))));
@@ -7042,7 +7055,7 @@ function PAG_tentarCarregar(code){
   PAG_currentOperationId = obj.id || null;
   PAG_updateConfirmarBtnLabel();
   PAG_pagamentos=[]; PAG_counter=0;
-  obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||'')}); });
+  obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||''),cr:!!it.c}); });
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
   PAG_render();
   PAG_update();
@@ -7080,7 +7093,7 @@ function PAG_compartilhar(){
   var secRow=lineH,secTotLine=22,secSaldoH=20,secSaldoV=34,secBottom=20;
   // código + QR (canto superior direito, espelhando o logo)
   var totalStr=(document.getElementById('pag-total').value||'').trim();
-  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||''),c:(p.cr?1:0)}; });
   var payloadObj={t:totalStr,p:itens};
   if(PAG_currentOperationId) payloadObj.id=PAG_currentOperationId;
   var payload=_b32enc(JSON.stringify(payloadObj));
@@ -7117,7 +7130,7 @@ function PAG_compartilhar(){
       ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
       ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
       ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-      ctx.fillText('R$ '+(p.valor||'0,00'),W-pad,y+13);
+      ctx.fillText((p.cr?'\u2212 ':'')+'R$ '+(p.valor||'0,00'),W-pad,y+13);
       y+=secRow;
     });
   }
@@ -7178,7 +7191,7 @@ function PAG_salvarFoto(){
 
   // código base32 (à prova de OCR)
   var totalStr=(document.getElementById('pag-total').value||'').trim();
-  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||'')}; });
+  var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''),v:(p.valor||''),c:(p.cr?1:0)}; });
   var payload=_b32enc(JSON.stringify({t:totalStr,p:itens}));
   var codeStr='VBPAG2:'+payload;
 
@@ -7218,7 +7231,7 @@ function PAG_salvarFoto(){
       ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
       ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
       ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-      ctx.fillText('R$ '+(p.valor||'0,00'),W-pad,y+13);
+      ctx.fillText((p.cr?'\u2212 ':'')+'R$ '+(p.valor||'0,00'),W-pad,y+13);
       y+=secRow;
     });
   }
@@ -9861,6 +9874,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.91.1</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Pagamentos: tocar no TOTAL das linhas copia o valor pro VALOR TOTAL — no encontro de contas em que você paga o líquido exato, o saldo fecha em zero sem redigitar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.91.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Encontro de contas no Pagamentos: toque no NÚMERO da linha (01, 02...) e ela vira crédito — tag CR e valor com − na frente, mesma mecânica do débito/pagamento da Antecipação personalizada. O total soma com sinal, então pagar e receber na mesma operação fecha no zero. O sinal sai na foto compartilhada, salva no Histórico, recarrega e vai no código VBPAG. Sem tocar no número, tudo funciona exatamente como antes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.90.1</span><span class="cl-ver-date">10/07/2026</span></div>
