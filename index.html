@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.84.6</title>
+<title>VB - v1.84.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#f5f5f3;font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:#f5f5f3;width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -460,7 +460,7 @@ html.vb-dark img, html.vb-dark canvas, html.vb-dark video { filter: invert(1) hu
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:#ccc;cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.84.6<br>09/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:#ccc;font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;">V: 1.84.8<br>09/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:#4a4a4a;line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid #ccc;margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1681,9 +1681,21 @@ function HIST_carregarPag(r){
 function HIST_valCurto(n){ return HIST_fmtMoeda(n); }
 // Nome encolhe conforme cresce (com chão de legibilidade); acima disso, desce inteiro
 function HIST_nomeFit(n){
-  var t=HIST_abrevNome(n), c=t.length;
-  var fs = c<=11 ? '' : (c<=15 ? 'font-size:9.5px;' : (c<=19 ? 'font-size:8.5px;' : 'font-size:8px;'));
-  return '<span style="color:#bbb;display:inline-block;white-space:nowrap;'+fs+'">'+HIST_esc(t)+'</span>';
+  return '<span class="hist-l2nome" style="color:#bbb;display:inline-block;white-space:nowrap;">'+HIST_esc(HIST_abrevNome(n))+'</span>';
+}
+// Ajuste MEDIDO: depois de desenhar, desce o tamanho do nome degrau a degrau só onde a linha estourou;
+// se nem no menor degrau couber, libera a quebra e o nome desce inteiro (rede de segurança).
+function HIST_fitNomes(){
+  var degraus=['','9.5px','8.5px','8px'];
+  document.querySelectorAll('.hist-l2').forEach(function(div){
+    var nome=div.querySelector('.hist-l2nome');
+    if(!nome){ div.style.whiteSpace=''; return; }
+    div.style.whiteSpace='nowrap';
+    nome.style.fontSize='';
+    var i=0;
+    while(div.scrollWidth>div.clientWidth && i<degraus.length-1){ i++; nome.style.fontSize=degraus[i]; }
+    if(div.scrollWidth>div.clientWidth){ div.style.whiteSpace=''; nome.style.fontSize='8.5px'; }
+  });
 }
 function HIST_abrevNome(n){
   var ps=String(n||'').trim().split(/\s+/).filter(Boolean);
@@ -1707,12 +1719,12 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   var temExp = campos && campos.length>0;
   var h = '<div data-tab="'+tab+'" data-idx="'+idx+'" onclick="HIST_clickItem(this)" style="'+cls+'">';
   // título (flui com espaço reservado pros botões absolutos)
-  h += '<div style="display:flex;align-items:flex-start;gap:6px;padding-right:88px;">';
+  h += '<div style="display:flex;align-items:flex-start;gap:5px;padding-right:88px;">';
   if(temExp){
-    h += '<button id="hist-chev-'+idx+'" onclick="HIST_toggleExp('+idx+',event)" style="border:none;background:none;padding:0;margin-top:0;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:14px;height:16px;transition:transform .15s ease;">';
-    h += '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M9 6l6 6-6 6"/></svg></button>';
+    h += '<button id="hist-chev-'+idx+'" onclick="HIST_toggleExp('+idx+',event)" style="border:none;background:none;padding:0;margin-top:0;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:12px;height:16px;transition:transform .15s ease;">';
+    h += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M9 6l6 6-6 6"/></svg></button>';
   } else {
-    h += '<span style="width:14px;flex-shrink:0;display:inline-block;"></span>';
+    h += '<span style="width:12px;flex-shrink:0;display:inline-block;"></span>';
   }
   h += '<div style="font-size:13px;font-weight:700;color:#111;flex:1;min-width:0;line-height:1.1;">'+HIST_esc(titulo);
   if(badge){ h += ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:#fff;background:#111;border-radius:6px;padding:2px 6px;margin-left:4px;white-space:nowrap;">'+HIST_esc(badge)+'</span>'; }
@@ -1732,8 +1744,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   var parts=[];
   if(valor){ parts.push('<span style="color:#4a4a4a;font-weight:700;">'+HIST_esc(valLabel+valor)+'</span>'); }
   if(resumoExtra){ parts.push('<span style="color:#aaa;">'+HIST_esc(resumoExtra)+'</span>'); }
-  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:72px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
-  if(linha2) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-left:20px;padding-right:72px;">'+linha2+'</div>';
+  if(parts.length) h += '<div style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:72px;">'+parts.join('<span style="color:#ccc;"> · </span>')+'</div>';
+  if(linha2) h += '<div class="hist-l2" style="font-size:10.5px;margin-top:1px;line-height:1.25;padding-right:72px;">'+linha2+'</div>';
   // carimbo data/hora: absoluto, centralizado verticalmente entre os botões e o fim, à direita
   if(dataStr && dataStr!=='--'){
     h += '<div id="hist-stamp-'+idx+'" style="position:absolute;right:10px;top:28px;font-size:9px;color:#4a4a4a;font-weight:600;white-space:nowrap;text-transform:uppercase;">'+HIST_esc(dataStr)+'</div>';
@@ -3827,6 +3839,7 @@ function HIST_renderRows(tab, rows){
     html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2, (rtab==='ven' && typeof _snM!=='undefined' && !!_snM));
   });
   listaEl.innerHTML=html;
+  HIST_fitNomes();
   listaEl.style.minHeight='auto';
   HIST_rowsCache=rows; HIST_tabCache=tab;
   rows.forEach(function(r,idx){
@@ -9623,6 +9636,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.8</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Cards do Histórico: a seta de expandir fica (é ela que mostra que o card abre e qual está aberto), mas parou de custar espaço — a linha dos valores perdeu o recuo de 20px e começa na borda esquerda do card, e a coluna da seta emagreceu (12px, glifo menor, respiro 5px). Nomes de cliente ganham ~3 caracteres de folga antes de precisar encolher</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.7</span><span class="cl-ver-date">09/07/2026</span></div>
+      <div class="cl-item">Nome do cliente no card: o encolhimento deixou de adivinhar pelo tamanho do nome e passou a MEDIR a linha desenhada — estourou, desce um degrau de fonte (9.5 → 8.5 → 8px) só naquele card; coube, fica no tamanho cheio. Se nem no menor degrau couber, desce inteiro como antes. Resolve o CLEVERSON/TONY D. C. descendo enquanto GABRIEL E. T. cabia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.84.6</span><span class="cl-ver-date">09/07/2026</span></div>
