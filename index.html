@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.91.1</title>
+<title>VB - v1.92.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5269,11 +5269,6 @@ function VEN_gerarTabela(){
   VB_carimboData(ctx, W);
   img.src = cv.toDataURL('image/png');
   img.style.display = 'block';
-  // copia o código (útil pra colar no CARREGAR)
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ven_codeStr).catch(function(){ _pagCopyFallback(ven_codeStr); }); }
-    else { _pagCopyFallback(ven_codeStr); }
-  }catch(e){}
   if(!VB_silentGen){
     document.getElementById('ven-tabelaImagemDica').style.display = 'block';
     document.getElementById('ven-overlayTabela').style.display = 'block';
@@ -6210,9 +6205,6 @@ function ANT_gerarTabela(){
   var dataURL=cv.toDataURL('image/png');
   var img=document.getElementById('ant-tabelaImagem');
   img.src=dataURL; img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -6473,9 +6465,6 @@ function ANT_gerarResumoFoto(){
   var img=document.getElementById('ant-tabelaImagem');
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('ant-tabelaDica').style.display='block';
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
@@ -7088,6 +7077,7 @@ function PAG_compartilhar(){
   PAG_pagamentos.forEach(function(p){ soma+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); });
   var saldo=total-soma;
   var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
+  var modoEC=(total===0); // encontro de contas / sem valor de referência: o total das linhas é o resultado
   var W=390,esc=3,pad=24,fs=11,fsB=12,lineH=18;
   var secLogo=36,secSep=8,secTotalH=20,secTotalV=44,secPagHdr=20;
   var secRow=lineH,secTotLine=22,secSaldoH=20,secSaldoV=34,secBottom=20;
@@ -7100,7 +7090,7 @@ function PAG_compartilhar(){
   var codeStr='VBPAG2:'+payload;
   var codeBlockH=0; // QR removido (v1.60.0)
 
-  var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
+  var H=secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+(modoEC?0:secTotLine+secSep+secSaldoH+secSep)+codeBlockH+secBottom;
   var cv=document.createElement('canvas');
   cv.width=W*esc; cv.height=H*esc;
   var ctx=cv.getContext('2d');
@@ -7114,9 +7104,9 @@ function PAG_compartilhar(){
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('VALOR TOTAL',W/2,y+14); y+=secTotalH;
+  ctx.fillText(modoEC?'TOTAL':'VALOR TOTAL',W/2,y+14); y+=secTotalH;
   ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
+  ctx.fillText((modoEC&&soma<0?'\u2212 ':'')+'R$ '+PAG_formatBR(modoEC?Math.abs(soma):total),W/2,y+32); y+=secTotalV;
   ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText('PAGAMENTOS',W/2,y+14); y+=secPagHdr;
@@ -7137,6 +7127,7 @@ function PAG_compartilhar(){
   y+=4;
   ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  if(!modoEC){
   ctx.fillStyle='#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
   ctx.fillText('TOTAL PAGO',pad,y+14);
   ctx.fillStyle='#111'; ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
@@ -7147,6 +7138,7 @@ function PAG_compartilhar(){
   ctx.fillStyle=saldo<0?'#cc0000':'#111';
   ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
   ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
+  }
   VB_drawWatermark(ctx,W,H);
 
 
@@ -7154,11 +7146,6 @@ function PAG_compartilhar(){
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
-  // copia o código (útil pra colar no Safari)
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){ _pagCopyFallback(codeStr); }); }
-    else { _pagCopyFallback(codeStr); }
-  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -7188,6 +7175,7 @@ function PAG_salvarFoto(){
   var soma=0; PAG_pagamentos.forEach(function(p){ soma+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); });
   var saldo=total-soma;
   var rows=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; });
+  var modoEC=(total===0); // encontro de contas / sem valor de referência: o total das linhas é o resultado
 
   // código base32 (à prova de OCR)
   var totalStr=(document.getElementById('pag-total').value||'').trim();
@@ -7202,7 +7190,7 @@ function PAG_salvarFoto(){
   // QR com o código puro (correção de erro embutida — sem perda de leitura)
   var codeBlockH=0; // QR removido (v1.60.0)
 
-  var H=16+secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+secTotLine+secSep+secSaldoH+secSep+codeBlockH+secBottom;
+  var H=16+secLogo+secSep+secTotalH+secTotalV+secSep+secPagHdr+Math.max(rows.length,1)*secRow+4+(modoEC?0:secTotLine+secSep+secSaldoH+secSep)+codeBlockH+secBottom;
 
   var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
   var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
@@ -7215,9 +7203,9 @@ function PAG_salvarFoto(){
   ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('VALOR TOTAL',W/2,y+14); y+=secTotalH;
+  ctx.fillText(modoEC?'TOTAL':'VALOR TOTAL',W/2,y+14); y+=secTotalH;
   ctx.fillStyle='#111'; ctx.font='bold 28px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('R$ '+PAG_formatBR(total),W/2,y+32); y+=secTotalV;
+  ctx.fillText((modoEC&&soma<0?'\u2212 ':'')+'R$ '+PAG_formatBR(modoEC?Math.abs(soma):total),W/2,y+32); y+=secTotalV;
   ctx.strokeStyle='#ccc'; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); y+=secSep;
   ctx.fillStyle='#888'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText('PAGAMENTOS',W/2,y+14); y+=secPagHdr;
@@ -7238,6 +7226,7 @@ function PAG_salvarFoto(){
   y+=4;
   ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
   ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  if(!modoEC){
   ctx.fillStyle='#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
   ctx.fillText('TOTAL PAGO',pad,y+14);
   ctx.fillStyle='#111'; ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
@@ -7248,6 +7237,7 @@ function PAG_salvarFoto(){
   ctx.fillStyle=saldo<0?'#cc0000':'#111';
   ctx.font='700 '+fsB+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
   ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
+  }
 
   // marca d'água ANTES do código
   VB_drawWatermark(ctx,W,H);
@@ -7257,13 +7247,6 @@ function PAG_salvarFoto(){
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png');
   img.style.display='block';
-  // copia o mesmo código (puro) que está no QR
-  var clip=codeStr;
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(clip).catch(function(){ _pagCopyFallback(clip); });
-    } else { _pagCopyFallback(clip); }
-  }catch(e){}
   if(!VB_silentGen){
     var st=document.getElementById('pag-foto-status'); if(st) st.style.display='block';
     document.getElementById('pag-tabelaImagemDica').style.display='block';
@@ -9042,9 +9025,6 @@ function QUIT_compartilhar(){
   VB_carimboData(ctx, W);
   VB_carimboTS=_tsKeep;
   img.src=cv.toDataURL('image/png'); img.style.display='block';
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(codeStr).catch(function(){}); }
-  }catch(e){}
   document.getElementById('quit-tabelaImagemDica').style.display='block';
   document.getElementById('quit-overlayTabela').style.display='block';
   document.getElementById('quit-overlayTabela').scrollTop=0;
@@ -9874,6 +9854,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.92.0</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Foto do Pagamentos com VALOR TOTAL vazio (encontro de contas): o número grande do topo agora é o TOTAL das linhas — créditos abatidos — e some o "VALOR TOTAL R$ 0,00" com o SALDO vermelho enganoso. Se o resultado ficar a favor do outro lado, o − aparece na frente. Com VALOR TOTAL preenchido, a foto continua exatamente como era</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.91.2</span><span class="cl-ver-date">10/07/2026</span></div>
+      <div class="cl-item">Removida a cópia automática do código pro clipboard ao compartilhar (resquício do antigo QR/CARREGAR, aposentado na 1.60.0) — o código VBPAG segue existindo por trás, salvando e recarregando as operações normalmente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.91.1</span><span class="cl-ver-date">10/07/2026</span></div>
