@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.95.7</title>
+<title>VB - v1.96.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -470,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.7<br>11/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.96.0<br>11/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3580,6 +3580,11 @@ function VB_consigVen(socio, vs, c, pct){
   if(Math.round(vs/c*100)!==100) return false;
   return (pct==null) || (Number(pct)>=100);
 }
+function VB_termometro(lucro, capital, meses){
+  lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
+  if(!isFinite(lucro)||!isFinite(capital)||!isFinite(meses)||capital<=0||meses<=0) return null;
+  return lucro/capital/meses*100;
+}
 function VB_prazoMeses(d){ d=Number(d); if(!isFinite(d)||d<=0) return ''; return ' ('+(d/30).toLocaleString('pt-BR',{maximumFractionDigits:1})+'m)'; }
 function HIST_lucroRow(tab, r){
   if(tab==='ant'){
@@ -3802,7 +3807,12 @@ function HIST_renderRows(tab, rows){
         var _laN=HIST_lucroRow('ant', r);
         var _la=[];
         _la.push('<span style="color:var(--tx);">Líq: '+HIST_esc(HIST_valCurto(_liq))+'</span>');
-        if(_laN!=null && _laN>0 && _liq>0){ var _pN=Math.round(_laN/_liq*100); _la.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_laN))+'</span> <span style="color:var(--so);">('+_pN+'%)</span>'); }
+        if(_laN!=null && _laN>0 && _liq>0){
+          var _pN=Math.round(_laN/_liq*100);
+          var _tm=VB_termometro(_laN, _liq, (Number(r.prazo_medio)||0)/30);
+          var _tmS=(_tm!=null)?(' \u00b7 '+_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m.'):'';
+          _la.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_laN))+'</span> <span style="color:var(--so);">('+_pN+'%'+_tmS+')</span>');
+        }
         linha2=_la.join('<span style="color:var(--so2);"> · </span>');
         campos.push({l:'Bruto', v:HIST_fmtMoeda(_bru)});
       }
@@ -3817,7 +3827,14 @@ function HIST_renderRows(tab, rows){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
       var _lF=HIST_lucroRow('fin', r), _finV=Number(r.valor_financiado)||0;
-      if(_lF!=null){ var _pF=(!r.tem_investidor && _finV>0)?(' <span style="color:var(--so);">('+Math.round(_lF/_finV*100)+'%)</span>'):''; linha2='<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF; }
+      if(_lF!=null){
+        var _pF='';
+        if(!r.tem_investidor && _finV>0){
+          var _txF=(r.taxa!=null && Number(r.taxa)>0)?(' \u00b7 '+Number(r.taxa).toLocaleString('pt-BR',{maximumFractionDigits:2})+'% a.m.'):'';
+          _pF=' <span style="color:var(--so);">('+Math.round(_lF/_finV*100)+'%'+_txF+')</span>';
+        }
+        linha2='<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF;
+      }
       var _dopF=String(r.data_operacao||r.data_inicio||'').slice(0,10);
       if(_dopF) campos.push({l:'Data da operação', v:HIST_fmtData(_dopF)});
       if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
@@ -9634,6 +9651,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.96.0</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Termômetro de rendimento nos cards: a Antecipação mostra o % a.m. REAL do seu capital — lucro ÷ líquido ÷ prazo em meses, ex. "L: R$ 10.314,04 (11% · 3,5% a.m.)" — que difere da taxa contratada porque incide sobre o que você desembolsou e desconta a tarifa. Financiamento sem investidor traz a taxa a.m. pra linha do L:. Com investidor ou consignado, sem termômetro: capital seu zero. Vendas ficam pra fase 2 (o tempo em estoque mora na ficha da mercadoria)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.7</span><span class="cl-ver-date">11/07/2026</span></div>
