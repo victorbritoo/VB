@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.95.0</title>
+<title>VB - v1.95.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -470,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.0<br>11/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.3<br>11/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3769,7 +3769,13 @@ function HIST_renderRows(tab, rows){
       if(rt==='ant'){ mm.v += (HIST_antSub==='atr') ? HIST_atrHoje(r) : (Number(r.valor_bruto)||0); }
       else if(rt==='pag'){ var vt=Number(r.valor_total)||0; if(!vt){ (r.pagamentos||[]).forEach(function(p){ vt+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); }); } mm.v+=vt; }
       else { mm.v += Number(r[HIST_valCol(rt)])||0; }
-      var jj=HIST_lucroRow(rt, r); if(jj!=null){ mm.l+=jj; mm.temL=true; }
+      var jj=HIST_lucroRow(rt, r);
+      if(jj!=null){
+        var _vs=Number(r.valor_socio)||0, _c=Number(r.custo)||0;
+        if(rt==='ven' && r.socio && _vs>0 && _c>0 && _vs<=_c){ var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; mm.l += jj*(_pVB/100); }
+        else { mm.l += jj; }
+        mm.temL=true;
+      }
     }
   }); }
   rows.forEach(function(r,idx){
@@ -3838,9 +3844,12 @@ function HIST_renderRows(tab, rows){
       if(_temSocio) rowBadge=_consig?'C':'S';
       var _l2=[];
       if(r.valor_total!=null) _l2.push('<span style="color:var(--tx);">'+HIST_esc(HIST_valCurto(r.valor_total))+'</span>');
-      if(_lvL!=null){ var _pctS=(_c>0)?(' <span style="color:var(--so);">('+Math.round(_lvL/_c*100)+'%)</span>'):''; _l2.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lvL))+'</span>'+_pctS); }
+      var _meuL=_lvL, _meuCap=_c;
+      if(_lvL!=null && _temSocio){ var _pVBc=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; _meuL=_lvL*(_pVBc/100); _meuCap=_c-_vs; }
+      if(_meuL!=null){ var _pctS=(_meuCap>0)?(' <span style="color:var(--so);">('+Math.round(_meuL/_meuCap*100)+'%)</span>'):''; _l2.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_meuL))+'</span>'+_pctS); }
       if(r.cliente) _l2.push(HIST_nomeFit(r.cliente));
       if(_l2.length) linha2=_l2.join('<span style="color:var(--so2);"> · </span>');
+      if(_lvL!=null && _temSocio){ campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)}); campos.push({l:'Lucro sócio', v:HIST_fmtMoeda(_lvL-_meuL)}); }
       if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
@@ -9622,6 +9631,21 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.3</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">O % do card de Vendas virou retorno de verdade: seu lucro sobre o SEU capital na operação (custo menos a parte do sócio). Sociedade 50/50 volta a mostrar o percentual intuitivo; consignado (capital seu zero) fica sem % — retorno sobre zero não existe, e o L: sozinho já conta a história</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.2</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">O L: do card de cada venda agora é o SEU lucro: com sócio no custo, aplica sua parte da divisão (e o % acompanha, sobre o custo); sem sócio, segue o lucro cheio. Abrindo o card, vendas com sócio ganham as linhas Lucro total e Lucro sócio. Card, cabeçalho do mês e a linha VB: do rodapé contam o mesmo número</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.1</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">No cabeçalho do mês em Vendas, o L: passou a ser o SEU lucro — venda com sócio no custo aplica sua parte da divisão (mesma regra do "VB:" do rodapé); sem sócio, o lucro inteiro. O rodapé segue mostrando o total com a linha VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.0</span><span class="cl-ver-date">11/07/2026</span></div>
