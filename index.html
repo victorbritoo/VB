@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.94.4</title>
+<title>VB - v1.95.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -470,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.94.4<br>11/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.0<br>11/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3312,15 +3312,21 @@ function HIST_bucketLabel(iso){
   var now=new Date();
   var diff=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate()))/86400000);
   if(diff<0) return 'A iniciar';
-  if(diff===0) return 'Hoje';
-  if(diff<=7) return 'Últimos 7 Dias';
-  if(diff<=30) return 'Últimos 30 Dias';
   var m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   return m[d.getMonth()]+' '+d.getFullYear();
 }
-function HIST_sectionHeader(label, first, count){
-  var cnt = (count!=null) ? '<span style="font-size:11px;font-weight:600;letter-spacing:0.2px;color:var(--so);">'+count+' '+(count===1?'Operação':'Operações')+'</span>' : '';
-  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.4px;color:var(--mu2);margin:'+(first?'0':'10px')+' 2px 6px;"><span>'+HIST_esc(label)+'</span>'+cnt+'</div>';
+function HIST_sectionHeader(label, first, count, met){
+  var dir;
+  if(met){
+    dir='<span style="font-size:10px;font-weight:600;letter-spacing:0.2px;color:var(--so);white-space:nowrap;">'
+      +'<span style="color:var(--tx);font-weight:700;">'+HIST_fmtMoeda(met.v)+'</span>'
+      +(met.temL?(' · L: <span style="color:var(--tx);font-weight:700;">'+HIST_fmtMoeda(met.l)+'</span>'):'')
+      +'</span>';
+    label=label+(count!=null?(' · '+count):'');
+  } else {
+    dir=(count!=null) ? '<span style="font-size:11px;font-weight:600;letter-spacing:0.2px;color:var(--so);">'+count+' '+(count===1?'Operação':'Operações')+'</span>' : '';
+  }
+  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.4px;color:var(--mu2);margin:'+(first?'0':'10px')+' 2px 6px;"><span style="white-space:nowrap;">'+HIST_esc(label)+'</span>'+dir+'</div>';
 }
 function HIST_setCount(text){
   var inline=document.getElementById('hist-count-inline');
@@ -3756,11 +3762,19 @@ function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
-  var bucketCount={};
-  if(grouping){ rows.forEach(function(r){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); bucketCount[bk]=(bucketCount[bk]||0)+1; }); }
+  var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
+  if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r)); bucketCount[bk]=(bucketCount[bk]||0)+1;
+    if(!mixed){
+      var mm=bucketMet[bk]||(bucketMet[bk]={v:0,l:0,temL:false});
+      if(rt==='ant'){ mm.v += (HIST_antSub==='atr') ? HIST_atrHoje(r) : (Number(r.valor_bruto)||0); }
+      else if(rt==='pag'){ var vt=Number(r.valor_total)||0; if(!vt){ (r.pagamentos||[]).forEach(function(p){ vt+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); }); } mm.v+=vt; }
+      else { mm.v += Number(r[HIST_valCol(rt)])||0; }
+      var jj=HIST_lucroRow(rt, r); if(jj!=null){ mm.l+=jj; mm.temL=true; }
+    }
+  }); }
   rows.forEach(function(r,idx){
     var rtab=r._tab||tab;
-    if(grouping){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk]); lastBucket=bk; } }
+    if(grouping){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk], mixed?null:bucketMet[bk]); lastBucket=bk; } }
     var titulo, valor, dataStr=(HIST_fmtData(HIST_dataNeg(rtab,r))||'--'), horaStr='', resumoExtra='', campos=[], rowBadge='', linha2='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
     var _hCar=HIST_fmtHora(r.created_at);
     var carimboStr=HIST_fmtDataLocal(r.created_at)+(_hCar?(' '+_hCar):'');
@@ -9608,6 +9622,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.0</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Histórico com quebra mensal: as seções "Últimos 7/30 Dias" viraram meses (Julho 2026, Junho 2026...), e cada cabeçalho de mês traz o resumo à direita — total e lucro do mês na métrica de cada aba (Vendas: total + L; Antecipação: bruto + L, ou atrasados corrigidos na sub-aba; Pagamentos: soma, contando encontro de contas pelo líquido das linhas). Ordenar por Valor ou buscar em tudo continua em lista corrida, sem quebra. Cores todas nas variáveis do tema</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.94.4</span><span class="cl-ver-date">11/07/2026</span></div>
