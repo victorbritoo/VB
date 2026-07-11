@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.94.0</title>
+<title>VB - v1.94.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -363,6 +363,10 @@ input::placeholder{color:var(--so2)} input[type="text"]:not([inputmode="numeric"
   <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;">
     <div id="soc-view-nome" style="font-size:17px;font-weight:700;color:var(--ink);text-align:center;font-family:-apple-system,sans-serif;"></div>
     <div id="soc-view-tel" style="font-size:12px;color:var(--tx);text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;"></div>
+    <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-family:-apple-system,sans-serif;">
+      <div style="flex:1;max-width:140px;"><div style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:2px;">DE</div><input id="soc-filtro-de" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="autoCompleteDate(this);SOC_filtroChange()" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:2px 0;text-align:center;font-family:-apple-system,sans-serif;"></div>
+      <div style="flex:1;max-width:140px;"><div style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:2px;">ATÉ</div><input id="soc-filtro-ate" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="autoCompleteDate(this);SOC_filtroChange()" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:2px 0;text-align:center;font-family:-apple-system,sans-serif;"></div>
+    </div>
     <div id="soc-view-body" style="margin-top:14px;font-family:-apple-system,sans-serif;"></div>
     <button onclick="SOC_extratoFoto()" style="width:100%;margin-top:14px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">GERAR EXTRATO (FOTO)</button>
     <button onclick="SOC_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
@@ -4820,7 +4824,7 @@ VEN_maskVal(document.getElementById('ven-total'), function(){ VEN_parcelaManual=
 VEN_maskVal(document.getElementById('ven-custo'), VEN_updateLucro);
 VEN_maskVal(document.getElementById('mer-custo'), function(){ MER_pctLive(); MER_dirtyPaint(); });
 VEN_maskVal(document.getElementById('mer-valorSocio'), function(){ MER_pctLive(); MER_dirtyPaint(); });
-(function(){ var f=document.getElementById('mer-form'); if(f) f.addEventListener('input', function(){ if(typeof MER_editId!=='undefined' && MER_editId) MER_dirtyPaint(); }); })();
+(function(){ var f=document.getElementById('mer-form'); if(f) f.addEventListener('input', function(){ MER_dirtyPaint(); }); })();
 (function(){
   var md=document.getElementById('mer-data');
   if(md) md.addEventListener('input',function(){
@@ -7166,7 +7170,9 @@ function MER_dirtyGuard(next){
 // Botão SALVAR ALTERAÇÕES: apagado sem mudança, preto sólido quando há mudança
 function MER_dirtyPaint(){
   var b=document.getElementById('mer-add-btn'); if(!b) return;
-  var on = MER_editId ? MER_isDirty() : false;
+  var on;
+  if(MER_editId){ on=MER_isDirty(); }
+  else { on=['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].some(function(id){ var el=document.getElementById(id); return el && (el.value||'').trim()!==''; }); }
   if(on){ b.style.border='0.5px solid var(--lnk)'; b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; b.style.fontWeight='600'; }
   else  { b.style.border='0.5px dashed var(--ln)'; b.style.background='transparent'; b.style.color='var(--mu2)'; b.style.fontWeight='500'; }
 }
@@ -7313,8 +7319,15 @@ function SOC_render(){
   });
   lista.innerHTML=html;
 }
+var SOC_viewId=null;
+function SOC_brToISO(br){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((br||'').trim()); return m?(m[3]+'-'+m[2]+'-'+m[1]):null; }
+function SOC_filtroChange(){ if(SOC_viewId!=null) SOC_abrir(SOC_viewId); }
 function SOC_abrir(id){
   var r=SOC_rows.find(function(x){return String(x.id)===String(id);}); if(!r) return;
+  if(String(SOC_viewId)!==String(id)){ var _fd=document.getElementById('soc-filtro-de'), _fa=document.getElementById('soc-filtro-ate'); if(_fd)_fd.value=''; if(_fa)_fa.value=''; }
+  SOC_viewId=id;
+  var fDe=(document.getElementById('soc-filtro-de')||{}).value||'', fAte=(document.getElementById('soc-filtro-ate')||{}).value||'';
+  var isoDe=SOC_brToISO(fDe), isoAte=SOC_brToISO(fAte);
   var ov=document.getElementById('soc-view-overlay');
   document.getElementById('soc-view-nome').textContent=r.nome||'';
   document.getElementById('soc-view-tel').textContent=r.telefone||'';
@@ -7329,6 +7342,13 @@ function SOC_abrir(id){
   ]).then(function(res){
     var vendas=(res[0].error?[]:(res[0].data||[]));
     var fins=(res[1].error?[]:(res[1].data||[]));
+    if(isoDe||isoAte){
+      function _dv(v){ return String(v.data_venda||v.data_primeira_parcela||(v.created_at||'').split('T')[0]||'').slice(0,10); }
+      function _df(f){ return String(f.data_operacao||f.data_inicio||(f.created_at||'').split('T')[0]||'').slice(0,10); }
+      function _in(d){ return d && (!isoDe||d>=isoDe) && (!isoAte||d<=isoAte); }
+      vendas=vendas.filter(function(v){ return _in(_dv(v)); });
+      fins=fins.filter(function(f){ return _in(_df(f)); });
+    }
     var mers=(res[2]&&!res[2].error?(res[2].data||[]):[]).filter(function(m){ return (m.status||'estoque')==='estoque'; });
     mers.sort(function(x,y){ var a2=String(x.data_compra||''), b2=String(y.data_compra||''); return a2===b2?0:(a2<b2?1:-1); });
     var eOps=[], custoE=0, capE=0;
@@ -7366,7 +7386,7 @@ function SOC_abrir(id){
       var ap=Number(f.investidor_aporte)||0, rt=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
       return {nome:(f.nome||f.descricao||'—'), data:HIST_fmtData(String(f.data_operacao||f.data_inicio||(f.created_at||'').split('T')[0]).slice(0,10)), aporte:ap, retorno:rt, lucro:rt-ap};
     });
-    SOC_viewData={nome:r.nome||'', nE:nE, custoE:custoE, capE:capE, eOps:eOps, nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
+    SOC_viewData={nome:r.nome||'', fDe:(isoDe?fDe:''), fAte:(isoAte?fAte:''), nE:nE, custoE:custoE, capE:capE, eOps:eOps, nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -7699,7 +7719,8 @@ function SOC_extratoFoto(){
   var W=820, PAD=40, CW=W-PAD*2;
   var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0, temE=d.eOps&&d.eOps.length>0;
   function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
-  var H=170 + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + (temE?(secH(d.eOps.length)+22):0) + ((!temV&&!temC&&!temF&&!temE)?60:0) + 50;
+  var temP=!!(d.fDe||d.fAte);
+  var H=170 + (temP?26:0) + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + (temE?(secH(d.eOps.length)+22):0) + ((!temV&&!temC&&!temF&&!temE)?60:0) + 50;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -7708,8 +7729,14 @@ function SOC_extratoFoto(){
   c.fillText('E X T R A T O   D O   S Ó C I O', PAD, 96);
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
   c.fillText((d.nome||'').toUpperCase(), PAD, 146);
+  var temP=!!(d.fDe||d.fAte);
+  if(temP){
+    var pTxt = d.fDe&&d.fAte ? ('Período: '+d.fDe+' – '+d.fAte) : (d.fDe ? ('Período: a partir de '+d.fDe) : ('Período: até '+d.fAte));
+    c.fillStyle='#888'; c.font='600 13px -apple-system, Helvetica, sans-serif';
+    c.fillText(pTxt, PAD, 168);
+  }
   function trunc(t,maxW,font){ c.font=font; if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'…').width>maxW){ t=t.slice(0,-1); } return t+'…'; }
-  var y=170;
+  var y=170+(temP?26:0);
   function secao(titulo, linhas, totais){
     var hh=secH(linhas.length)-18+Math.max(0,(totais.length-2))*22;
     c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
@@ -9351,7 +9378,7 @@ function REC_openEditor(ac){
         +'<button onclick="REC_genIguais()" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:10px;background:var(--sf);color:var(--tx);font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">GERAR PARCELAS</button>'
       +'</div>'
       +(ctrl?'':'<hr style="border:none;border-top:0.5px solid var(--ln3);margin:14px 0 10px;">'
-      +'<button onclick="REC_toggleRateio()" id="rec-rateio-toggle" style="width:100%;padding:11px;border:0.5px solid '+(REC_rateioOn?'#111':'#ddd')+';border-radius:10px;background:'+(REC_rateioOn?'#111':'#fff')+';color:'+(REC_rateioOn?'#fff':'#888')+';font-size:12px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':'')+'</button>'
+      +'<button onclick="REC_toggleRateio()" id="rec-rateio-toggle" style="width:100%;padding:11px;border:0.5px solid '+(REC_rateioOn?'var(--acc)':'var(--ln)')+';border-radius:10px;background:'+(REC_rateioOn?'var(--acc)':'var(--sf)')+';color:'+(REC_rateioOn?'var(--acc-tx)':'var(--mu)')+';font-size:12px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':'')+'</button>'
       +'<div id="rec-rateio-box" style="display:'+(REC_rateioOn?'block':'none')+';margin-top:8px;"></div>')
       +'<div style="margin-top:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">NOTA</div><textarea id="rec-f-nota" autocapitalize="sentences" rows="2" placeholder="forma de pagamento, observações... (livre)" style="'+REC_taCss+'">'+REC_esc(ac.obs||'')+'</textarea></div>'
       +(REC_editId?'<button onclick="REC_excluir(this)" style="width:100%;padding:11px;border:none;border-radius:10px;background:var(--sf);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;margin-top:14px;">Excluir</button>':'')
@@ -9581,6 +9608,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.94.2</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Extrato do Sócio com filtro de período: campos DE e ATÉ no painel — vazios, tudo como sempre; preenchidos, o painel e a foto consideram só as operações do intervalo, e a foto carimba o período embaixo do nome. EM ESTOQUE fica fora do filtro de propósito: capital parado é retrato de hoje. Trocar de sócio limpa o filtro. De brinde, o botão RATEIO DE SÓCIO dos Recebimentos entrou no tema escuro (tinha ficado fora da migração)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.94.1</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">+ ADICIONAR AO ESTOQUE acende como os outros botões de confirmar: qualquer campo preenchido no formulário de novo relógio pinta o botão (a data não conta, que já vem com hoje). Adicionou, o formulário limpa e o botão apaga. No modo edição continua como era: só acende com alteração de verdade</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.94.0</span><span class="cl-ver-date">10/07/2026</span></div>
