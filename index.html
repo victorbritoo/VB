@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.95.3</title>
+<title>VB - v1.95.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -470,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--so); opacity:1; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.3<br>11/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.95.5<br>11/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3815,6 +3815,8 @@ function HIST_renderRows(tab, rows){
     } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado);
+      var _lF=HIST_lucroRow('fin', r), _finV=Number(r.valor_financiado)||0;
+      if(_lF!=null){ var _pF=(!r.tem_investidor && _finV>0)?(' <span style="color:var(--so);">('+Math.round(_lF/_finV*100)+'%)</span>'):''; linha2='<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF; }
       var _dopF=String(r.data_operacao||r.data_inicio||'').slice(0,10);
       if(_dopF) campos.push({l:'Data da operação', v:HIST_fmtData(_dopF)});
       if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
@@ -9631,6 +9633,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.5</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Régua única de % fechada: no Financiamento com investidor o card mostra só o L: (capital seu é zero, como no consignado — retorno percentual não existe); sem investidor, % sobre o financiado, que é seu capital. Agora todo % do Histórico significa a mesma coisa: seu lucro sobre o seu capital</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.4</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Card do Financiamento ganhou o L: na linha de resumo — sempre o SEU lucro (com investidor, parcela VB × prazo, que já era o número computado por dentro), com % sobre o valor financiado da operação. Antecipação conferida: o % já era lucro sobre o líquido desembolsado, régua certa, ficou como está</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.95.3</span><span class="cl-ver-date">11/07/2026</span></div>
