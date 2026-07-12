@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.98.0</title>
+<title>VB - v1.99.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.98.0<br>12/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.99.0<br>12/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -957,7 +957,13 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       </div>
     </div>
     <div id="ven-margem" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
-    <div id="ven-rend" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;"></div>
+    <div id="ven-rend" onclick="VEN_rendToggle()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;cursor:pointer;"></div>
+    <div id="ven-rend-box" style="display:none;margin-top:6px;padding:8px 10px;border:0.5px dashed var(--ln);border-radius:12px;text-align:center;font-family:-apple-system,sans-serif;">
+      <span style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
+      <input id="ven-rend-alvo" type="text" inputmode="decimal" oninput="VEN_rendCalc()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
+      <span style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
+      <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
+    </div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — SUA PARTE (%)</div>
       <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
@@ -1307,8 +1313,14 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
 
   <div id="hist-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
     <div style="display:flex;gap:5px;">
-      <button id="hist-sort-data" onclick="HIST_setSort('data')" style="padding:6px 12px;border:0.5px solid var(--ln);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
-      <button id="hist-sort-valor" onclick="HIST_setSort('valor')" style="padding:6px 12px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu2);font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
+      <div style="position:relative;display:inline-block;">
+        <button id="hist-sort-btn" onclick="HIST_sortMenuToggle()" style="padding:6px 12px;border:0.5px solid var(--ln);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data ↓</button>
+        <div id="hist-sort-menu" style="display:none;position:absolute;top:112%;left:0;z-index:10000;background:var(--sf);border:0.5px solid var(--ln);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.28);overflow:hidden;min-width:132px;">
+          <button onclick="HIST_setSort('data')" id="hist-sortopt-data" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;background:transparent;color:var(--tx);font-size:12px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Data</button>
+          <button onclick="HIST_setSort('valor')" id="hist-sortopt-valor" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:0.5px solid var(--ln2);background:transparent;color:var(--tx);font-size:12px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">Valor</button>
+          <button onclick="HIST_setSort('rend')" id="hist-sortopt-rend" style="display:block;width:100%;text-align:left;padding:9px 14px;border:none;border-top:0.5px solid var(--ln2);background:transparent;color:var(--tx);font-size:12px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">% a.m.</button>
+        </div>
+      </div>
       <button id="hist-filter-btn" onclick="HIST_openFilter()" title="Filtrar" style="padding:6px 10px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;"><svg id="hist-filter-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></button>
     </div>
     <div style="display:flex;gap:5px;">
@@ -3450,13 +3462,42 @@ function HIST_updateFilterUIState(){
   else { wrap.innerHTML=''; wrap.style.display='none'; }
 }
 
+function HIST_sortMenuToggle(){
+  var m=document.getElementById('hist-sort-menu'); if(!m) return;
+  m.style.display=(m.style.display==='none'||!m.style.display)?'block':'none';
+}
 function HIST_styleSortChips(){
-  ['data','valor'].forEach(function(c){
-    var b=document.getElementById('hist-sort-'+c); if(!b) return;
-    var base = (c==='data')?'Data':'Valor';
-    if(c===HIST_sortCol){ b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; b.textContent=base+(HIST_sortDir==='asc'?' ↑':' ↓'); }
-    else { b.style.background='var(--sf)'; b.style.color='var(--mu2)'; b.textContent=base; }
+  var btn=document.getElementById('hist-sort-btn');
+  var nomes={data:'Data', valor:'Valor', rend:'% a.m.'};
+  if(btn) btn.textContent=(nomes[HIST_sortCol]||'Data')+(HIST_sortDir==='asc'?' ↑':' ↓');
+  ['data','valor','rend'].forEach(function(c){
+    var o=document.getElementById('hist-sortopt-'+c); if(!o) return;
+    o.style.background=(c===HIST_sortCol)?'var(--acc)':'transparent';
+    o.style.color=(c===HIST_sortCol)?'var(--acc-tx)':'var(--tx)';
   });
+}
+function HIST_rendRow(tab, r){
+  try{
+    if(tab==='ant'){
+      if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return null;
+      return VB_termometro(HIST_lucroRow('ant', r), Number(r.valor_liquido)||0, (Number(r.prazo_medio)||0)/30);
+    }
+    if(tab==='fin'){
+      if(r.tem_investidor) return null;
+      var tx=Number(r.taxa); return (isFinite(tx)&&tx>0)?tx:null;
+    }
+    if(tab==='ven'){
+      var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0;
+      var temS=(r.socio&&vs>0&&c>0&&vs<=c);
+      var cap=temS?(c-vs):c; if(!(cap>0)) return null;
+      var lv=HIST_lucroRow('ven', r); if(lv==null) return null;
+      var meuL=temS?lv*(((r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50)/100):lv;
+      var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null; if(!dc) return null;
+      var cic=HIST_cicloVenda(dc, r); if(!cic) return null;
+      return VB_termometro(meuL, cap, cic);
+    }
+  }catch(e){}
+  return null;
 }
 
 var HIST_antSub='ops';
@@ -3558,6 +3599,7 @@ function HIST_toggleSearch(){
   if(HIST_searchOpen) HIST_collapseSearch(); else HIST_openSearch();
 }
 function HIST_setSort(col){
+  var m=document.getElementById('hist-sort-menu'); if(m) m.style.display='none';
   if(col===HIST_sortCol){ HIST_sortDir = (HIST_sortDir==='desc'?'asc':'desc'); }
   else { HIST_sortCol=col; HIST_sortDir='desc'; }
   HIST_styleSortChips();
@@ -3680,6 +3722,15 @@ function HIST_fetch(term){
       rows=rows.filter(function(r){
         var atrasado=(Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0);
         return HIST_antSub==='atr' ? atrasado : !atrasado;
+      });
+    }
+    if(HIST_sortCol==='rend'){
+      rows.sort(function(a,b){
+        var ra=HIST_rendRow(tab,a), rb=HIST_rendRow(tab,b);
+        if(ra==null&&rb==null) return 0;
+        if(ra==null) return 1;
+        if(rb==null) return -1;
+        return (rb-ra)*(HIST_sortDir==='desc'?1:-1);
       });
     }
     if(rows.length===0){
@@ -4995,7 +5046,8 @@ function VEN_updateLucro(){
     if(_tm!=null){
       rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. <span style="color:var(--so);">\u00b7 ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m</span>';
       rd.style.display='block';
-    } else { rd.style.display='none'; rd.innerHTML=''; }
+    } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
+    try{ if((document.getElementById('ven-rend-box')||{}).style.display==='block') VEN_rendCalc(); }catch(e){}
   }
   if(isNaN(t)||!(t>0)||isNaN(c)||!(c>0)){
     el.textContent='---'; el.style.color='var(--ink)';
@@ -8568,6 +8620,38 @@ var VEN_socioNome=null, VEN_socioValor=0, VEN_lucroVBpct=null;
 function VEN_onLucroPct(){ var v=parseFloat((document.getElementById('ven-lucroPct').value||'').replace(',','.')); VEN_lucroVBpct=(isNaN(v)?null:Math.max(0,Math.min(100,v))); VEN_updateLucro(); }
 var VEN_merVinculo=null;
 var VEN_merDataCompra=null;
+function VEN_rendDados(){
+  var t=VEN_parseBR((document.getElementById('ven-total')||{}).value);
+  var c=VEN_parseBR((document.getElementById('ven-custo')||{}).value);
+  if(isNaN(c)||!(c>0)) return null;
+  var tem=(VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<=c);
+  var pV=100;
+  if(tem){ pV=(Math.abs(VEN_socioValor/c-0.5)<0.005)?50:((VEN_lucroVBpct!=null)?VEN_lucroVBpct:50); }
+  var meuC=tem?(c-VEN_socioValor):c;
+  var cic=VEN_cicloMeses();
+  return { t:(isNaN(t)?null:t), c:c, pV:pV, meuC:meuC, cic:cic };
+}
+function VEN_rendToggle(){
+  var box=document.getElementById('ven-rend-box'); if(!box) return;
+  if(box.style.display==='none'||!box.style.display){
+    var inp=document.getElementById('ven-rend-alvo');
+    if(inp && !inp.value){
+      var d=VEN_rendDados();
+      if(d && d.t!=null && d.meuC>0 && d.cic){ var atual=VB_termometro((d.t-d.c)*d.pV/100, d.meuC, d.cic); if(atual!=null) inp.value=atual.toLocaleString('pt-BR',{maximumFractionDigits:1}); }
+    }
+    box.style.display='block'; VEN_rendCalc();
+  } else { box.style.display='none'; }
+}
+function VEN_rendCalc(){
+  var out=document.getElementById('ven-rend-out'); if(!out) return;
+  var d=VEN_rendDados();
+  var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(',','.'));
+  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
+  var meuLNec = (alvo/100)*d.meuC*d.cic;
+  var lucroTotNec = meuLNec/(d.pV/100);
+  var totalNec = d.c + lucroTotNec;
+  out.innerHTML='→ vender por <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(seu lucro R$ '+VEN_formatBR(meuLNec)+')</span>';
+}
 function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
 function VEN_cicloMeses(){
   if(!VEN_merDataCompra) return null;
@@ -9723,6 +9807,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.99.0</span><span class="cl-ver-date">12/07/2026</span></div>
+      <div class="cl-item">Duas armas novas. (1) Ordenação do Histórico virou um botão só com menu — Data, Valor e % a.m.: a nova opção ordena pelo rendimento do seu capital (Vendas pelo termômetro, Antecipação pelo % a.m. real, Financiamento sem investidor pela taxa); operações sem rendimento afundam pro final. (2) Precificação reversa na Venda: tocar na linha SEU RENDIMENTO abre a caixinha MANTER X% a.m., que devolve ao vivo o total de venda necessário pra segurar sua taxa com os prazos da tela — prazo esticado agora tem preço na hora. Fechamento do Mês auditado: o LUCRO DO MÊS já era o seu (divisões de sócio aplicadas), nada a corrigir</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.98.0</span><span class="cl-ver-date">12/07/2026</span></div>
