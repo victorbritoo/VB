@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.96.5</title>
+<title>VB - v1.98.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.96.5<br>11/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.98.0<br>12/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -957,6 +957,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       </div>
     </div>
     <div id="ven-margem" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
+    <div id="ven-rend" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;"></div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — SUA PARTE (%)</div>
       <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
@@ -979,7 +980,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <div id="ven-secTabelaData" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
       <div>
         <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">DATA DA VENDA</div>
-        <input id="ven-dataVenda" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" oninput="REC_maskData(this)" onblur="autoCompleteDate(this)" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:15px;color:var(--tx);padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
+        <input id="ven-dataVenda" type="text" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" onclick="this.select()" oninput="REC_maskData(this)" onblur="autoCompleteDate(this);try{VEN_updateLucro()}catch(e){}" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:15px;color:var(--tx);padding:4px 0;text-align:center;font-family:-apple-system,'Helvetica Neue',sans-serif;">
       </div>
       <div>
         <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">PRIMEIRO VENCIMENTO</div>
@@ -1663,6 +1664,10 @@ function HIST_carregarVen(r){
   VEN_updateConfirmarBtnLabel();
   VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven');
   setTimeout(function(){ VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven'); }, 0);
+  VEN_merDataCompra=null;
+  sb.from('mercadorias').select('data_compra').eq('venda_id', r.id).limit(1).then(function(q2){
+    if(!q2.error && q2.data && q2.data[0]){ VEN_merDataCompra=q2.data[0].data_compra||null; try{ VEN_updateLucro(); }catch(e){} }
+  });
   VB_telaAnterior = 'hist';
   showScreen('ven');
 }
@@ -3610,6 +3615,23 @@ function HIST_lucroRow(tab, r){
   return null;
 }
 
+var HIST_merCompra=null;
+function HIST_cicloVenda(dcIso, r){
+  var pp=String(dcIso||'').split('T')[0].split('-'); if(pp.length!==3) return null;
+  var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
+  var dv=null;
+  if(r.data_venda){ var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length===3) dv=new Date(+vv[0],+vv[1]-1,+vv[2]); }
+  if(!dv||isNaN(dv.getTime())) return null;
+  var dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  var soma=0, peso=0;
+  (r.parcelas||[]).forEach(function(p){
+    var v=PAG_parseBR(p.v||''); var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.d||'').trim());
+    if(!isNaN(v)&&v>0&&m){ var d2=new Date(+m[3],+m[2]-1,+m[1]); var dd=(d2-dv)/86400000; if(dd<0)dd=0; soma+=v*dd; peso+=v; }
+  });
+  var pm=(peso>0)?soma/peso:0;
+  var meses=(dias+pm)/30;
+  return (isFinite(meses)&&meses>0)?meses:null;
+}
 function HIST_fetch(term){
   var tab=HIST_tabAtual;
   var listaEl=document.getElementById('hist-lista');
@@ -3619,6 +3641,14 @@ function HIST_fetch(term){
   if(countEl) countEl.textContent='';
   listaEl.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;margin-top:40px;">Carregando...</div>';
   listaEl.style.minHeight='200px';
+  if(tab==='ven' && HIST_merCompra===null){
+    HIST_merCompra='loading';
+    sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).then(function(q2){
+      HIST_merCompra={};
+      if(!q2.error) (q2.data||[]).forEach(function(m){ if(m.venda_id) HIST_merCompra[String(m.venda_id)]=m.data_compra||null; });
+      if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
+    });
+  }
   var q=sb.from(HIST_tabela(tab)).select('*');
   var col=HIST_nameCol(tab), valCol=HIST_valCol(tab);
   if(term){
@@ -3701,10 +3731,11 @@ function HIST_fetch(term){
             } else { minha2 += j; }
           }
         });
-        var lucroCell = temL2 ? (val(HIST_fmtMoeda(lucro2))+((tab==='ven'&&Math.abs(minha2-lucro2)>0.005)?('<div style="font-size:9px;color:var(--so);font-weight:600;">VB: '+HIST_fmtMoeda(minha2)+'</div>'):'')) : val('—');
+        var _difS=(tab==='ven'&&Math.abs(minha2-lucro2)>0.005);
+        var lucroCell = temL2 ? (val(HIST_fmtMoeda(minha2))+(_difS?('<div style="font-size:9px;color:var(--so);font-weight:600;">total c/ s\u00f3cios: '+HIST_fmtMoeda(lucro2)+'</div>'):'')) : val('\u2014');
         totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
           +'<div>'+lbl('TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt)+val(HIST_fmtMoeda(soma))+'</div>'
-          +'<div>'+lbl('LUCRO')+lucroCell+'</div>'
+          +'<div>'+lbl((tab==='ven')?'SEU LUCRO':'LUCRO')+lucroCell+'</div>'
           +'</div>';
       } else {
         totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt+'</span>'+
@@ -3865,6 +3896,14 @@ function HIST_renderRows(tab, rows){
       if(r.cliente) _l2.push(HIST_nomeFit(r.cliente));
       if(_l2.length) linha2=_l2.join('<span style="color:var(--so2);"> · </span>');
       if(_lvL!=null && _temSocio){ campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)}); campos.push({l:'Lucro sócio', v:HIST_fmtMoeda(_lvL-_meuL)}); }
+      (function(){
+        if(_lvL==null) return;
+        var _cap=_temSocio?(_c-_vs):_c; if(!(_cap>0)) return;
+        var _dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null; if(!_dc) return;
+        var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
+        var _tm=VB_termometro(_meuL, _cap, _cic); if(_tm==null) return;
+        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'});
+      })();
       if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
@@ -4895,6 +4934,7 @@ document.getElementById('ven-qtd').addEventListener('input', function(){
 
 function VEN_limpar(){
   VEN_snapshot = null;
+  VEN_merDataCompra=null;
   VEN_parcelaManual = false;
   VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value='';
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
@@ -4942,7 +4982,22 @@ function VEN_updateLucro(){
       } else { mg.style.display='none'; mg.innerHTML=''; }
     }
   }
-  else {
+  var rd=document.getElementById('ven-rend');
+  if(rd){
+    var _ok=(!isNaN(t)&&t>0&&!isNaN(c)&&c>0);
+    var _tem=(VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<=c);
+    var _pV2=100;
+    if(_tem){ _pV2=(Math.abs(VEN_socioValor/c-0.5)<0.005)?50:((VEN_lucroVBpct!=null)?VEN_lucroVBpct:50); }
+    var _meuC=_tem?(c-VEN_socioValor):c;
+    var _meuL=_ok?((t-c)*_pV2/100):null;
+    var _cic=VEN_cicloMeses();
+    var _tm=(_ok&&_meuC>0&&_cic)?VB_termometro(_meuL,_meuC,_cic):null;
+    if(_tm!=null){
+      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. <span style="color:var(--so);">\u00b7 ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m</span>';
+      rd.style.display='block';
+    } else { rd.style.display='none'; rd.innerHTML=''; }
+  }
+  if(isNaN(t)||!(t>0)||isNaN(c)||!(c>0)){
     el.textContent='---'; el.style.color='var(--ink)';
     if(mg){ mg.style.display='none'; mg.innerHTML=''; }
   }
@@ -5144,6 +5199,10 @@ function VEN_renderParcelas(){
     }, {passive:false});
   });
 }
+(function(){
+  var _rp=VEN_renderParcelas; VEN_renderParcelas=function(){ _rp.apply(this,arguments); try{ VEN_updateLucro(); }catch(e){} };
+  var _al=VEN_autoLista; VEN_autoLista=function(){ _al.apply(this,arguments); try{ VEN_updateLucro(); }catch(e){} };
+})();
 
 function VEN_removerParcela(id){
   VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
@@ -8508,6 +8567,23 @@ var VEN_estoqueCache=[];
 var VEN_socioNome=null, VEN_socioValor=0, VEN_lucroVBpct=null;
 function VEN_onLucroPct(){ var v=parseFloat((document.getElementById('ven-lucroPct').value||'').replace(',','.')); VEN_lucroVBpct=(isNaN(v)?null:Math.max(0,Math.min(100,v))); VEN_updateLucro(); }
 var VEN_merVinculo=null;
+var VEN_merDataCompra=null;
+function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+function VEN_cicloMeses(){
+  if(!VEN_merDataCompra) return null;
+  var pp=String(VEN_merDataCompra).split('T')[0].split('-'); if(pp.length!==3) return null;
+  var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
+  var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+  var dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  var soma=0, peso=0;
+  (VEN_parcelas||[]).forEach(function(p){
+    var v=VEN_parseBR(p.valor), d=VB_brToDate(p.data);
+    if(!isNaN(v)&&v>0&&d){ var dd=(d-dv)/86400000; if(dd<0)dd=0; soma+=v*dd; peso+=v; }
+  });
+  var pm=(peso>0)?soma/peso:0;
+  var m2=(dias+pm)/30;
+  return (isFinite(m2)&&m2>0)?m2:null;
+}
 function VEN_dataVendaHoje(){
   var el=document.getElementById('ven-dataVenda');
   if(!el) return;
@@ -8519,6 +8595,7 @@ function VEN_pegarEstoque(id){
   var r=VEN_estoqueCache.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
   VEN_merVinculo=r.id;
+  VEN_merDataCompra=r.data_compra||null;
   var cx=(r.marca||r.modelo||r.ano||r.sn)?{modelo:r.modelo||'',ano:r.ano||'',sn:r.sn||''}:(function(){var q=MER_desmontar(r.descricao);return {modelo:q.modelo,ano:q.ano,sn:q.sn};})();
   var descVen=[cx.modelo,cx.ano].filter(function(x){return x;}).join(' ');
   if(cx.sn) descVen+=(descVen?' ':'')+'SN: '+cx.sn;
@@ -9646,6 +9723,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.98.0</span><span class="cl-ver-date">12/07/2026</span></div>
+      <div class="cl-item">Termômetro fase 2 — Vendas. Na tela da Venda, linha SEU RENDIMENTO ao vivo no card de custo/lucro: seu lucro sobre o seu capital pelo ciclo real do dinheiro (dias em estoque + recebimento médio ponderado das parcelas), recalculando conforme você mexe em valores, parcelas, datas e divisão. Só aparece com relógio puxado do estoque e capital seu na jogada. No Histórico, campo Rendimento no card expandido da venda, mesma conta, casando cada venda com a ficha do relógio (uma consulta a mais, feita uma vez por sessão). Editar uma venda antiga busca a ficha vinculada e acende a linha na tela também</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.97.0</span><span class="cl-ver-date">11/07/2026</span></div>
+      <div class="cl-item">Rodapé do Histórico de Vendas desvirado: o número grande agora é SEU LUCRO (sua parte real, mesma conta dos cards e do cabeçalho do mês), e o lucro cheio com os sócios desceu pra linha de apoio "total c/ sócios". Quando não há venda com sócio no filtro, os dois seriam iguais e a linha de apoio some. Financiamento segue LUCRO, que lá já era todo seu</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.96.5</span><span class="cl-ver-date">11/07/2026</span></div>
