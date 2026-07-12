@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.99.2</title>
+<title>VB - v1.99.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.99.2<br>12/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.99.3<br>12/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3492,7 +3492,7 @@ function HIST_rendRow(tab, r){
       var cap=temS?(c-vs):c; if(!(cap>0)) return null;
       var lv=HIST_lucroRow('ven', r); if(lv==null) return null;
       var meuL=temS?lv*(((r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50)/100):lv;
-      var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null; if(!dc) return null;
+      var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
       var cic=HIST_cicloVenda(dc, r); if(!cic) return null;
       return VB_termometro(meuL, cap, cic);
     }
@@ -3659,12 +3659,15 @@ function HIST_lucroRow(tab, r){
 
 var HIST_merCompra=null;
 function HIST_cicloVenda(dcIso, r){
-  var pp=String(dcIso||'').split('T')[0].split('-'); if(pp.length!==3) return null;
-  var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
   var dv=null;
   if(r.data_venda){ var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length===3) dv=new Date(+vv[0],+vv[1]-1,+vv[2]); }
   if(!dv||isNaN(dv.getTime())) return null;
-  var dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  var dias=0;
+  if(dcIso){
+    var pp=String(dcIso).split('T')[0].split('-'); if(pp.length!==3) return null;
+    var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
+    dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  }
   var soma=0, peso=0;
   (r.parcelas||[]).forEach(function(p){
     var v=PAG_parseBR(p.v||''); var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.d||'').trim());
@@ -3950,10 +3953,10 @@ function HIST_renderRows(tab, rows){
       (function(){
         if(_lvL==null) return;
         var _cap=_temSocio?(_c-_vs):_c; if(!(_cap>0)) return;
-        var _dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null; if(!_dc) return;
+        var _dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
         var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
         var _tm=VB_termometro(_meuL, _cap, _cic); if(_tm==null) return;
-        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'});
+        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')});
       })();
       if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
@@ -5044,7 +5047,7 @@ function VEN_updateLucro(){
     var _cic=VEN_cicloMeses();
     var _tm=(_ok&&_meuC>0&&_cic)?VB_termometro(_meuL,_meuC,_cic):null;
     if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. <span style="color:var(--so);">\u00b7 ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m</span>';
+      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% a.m. <span style="color:var(--so);">\u00b7 ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'</span>';
       rd.style.display='block';
     } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
     try{ if((document.getElementById('ven-rend-box')||{}).style.display==='block') VEN_rendCalc(); }catch(e){}
@@ -8661,11 +8664,13 @@ function VEN_rendCalc(){
 }
 function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
 function VEN_cicloMeses(){
-  if(!VEN_merDataCompra) return null;
-  var pp=String(VEN_merDataCompra).split('T')[0].split('-'); if(pp.length!==3) return null;
-  var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
   var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
-  var dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  var dias=0;
+  if(VEN_merDataCompra){
+    var pp=String(VEN_merDataCompra).split('T')[0].split('-'); if(pp.length!==3) return null;
+    var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
+    dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+  }
   var soma=0, peso=0;
   (VEN_parcelas||[]).forEach(function(p){
     var v=VEN_parseBR(p.valor), d=VB_brToDate(p.data);
@@ -9814,6 +9819,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.99.3</span><span class="cl-ver-date">12/07/2026</span></div>
+      <div class="cl-item">Venda direta ganhou termômetro: sem relógio do estoque, o ciclo conta da data da venda, só pelas parcelas — e a linha marca "venda direta" pra não se confundir com operação de estoque. Vale na tela (ao vivo, com custo digitado) e no Histórico (card e ordenação por % a.m.). À vista sem ficha continua sem %: capital que volta no ato não tem taxa mensal</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.99.2</span><span class="cl-ver-date">12/07/2026</span></div>
