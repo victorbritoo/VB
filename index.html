@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.99.5</title>
+<title>VB - v1.100.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.99.5<br>12/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.100.0<br>12/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1892,11 +1892,30 @@ function HIST_csv(tab, rows){
     head=['Nome','Data','Modo','Taxa (% a.m.)','Tarifa','Qtd títulos','Prazo médio (d)','Bruto','Líquido'];
     rows.forEach(function(r){ lin.push([(r.nome||r.cliente||''), HIST_fmtData(r.data_operacao), (r.modo==='personalizado'?'Personalizada':'Simples'), r.taxa||'', HIST_fmtMoeda(r.tarifa), r.quantidade_titulos||'', (r.prazo_medio!=null?Number(r.prazo_medio).toFixed(1):''), HIST_fmtMoeda(r.valor_bruto), HIST_fmtMoeda(r.valor_liquido)]); });
   } else if(tab==='fin'){
-    head=['Descrição','Data início','Parcelas','Valor parcela','Taxa (% a.m.)','Financiado','Total'];
-    rows.forEach(function(r){ lin.push([(r.nome||r.descricao||''), HIST_fmtData(r.data_inicio), r.qtd_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.taxa||'', HIST_fmtMoeda(r.valor_financiado), HIST_fmtMoeda(r.valor_total)]); });
+    head=['Descrição','Data início','Parcelas','Valor parcela','Taxa (% a.m.)','Financiado','Total','Investidor','Lucro VB','Rendimento VB (% a.m.)'];
+    rows.forEach(function(r){
+      var lf=HIST_lucroRow('fin', r);
+      var rendF=(!r.tem_investidor && Number(r.taxa)>0)?Number(r.taxa).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+      lin.push([(r.nome||r.descricao||''), HIST_fmtData(r.data_inicio), r.qtd_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.taxa||'', HIST_fmtMoeda(r.valor_financiado), HIST_fmtMoeda(r.valor_total),
+        (r.tem_investidor?(r.investidor_nome||'SIM'):''), (lf!=null?HIST_fmtMoeda(lf):''), rendF]);
+    });
   } else if(tab==='ven'){
-    head=['Descrição','1ª parcela','Qtd parcelas','Valor parcela','Modo','Total'];
-    rows.forEach(function(r){ lin.push([(r.nome||r.descricao||''), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', HIST_fmtMoeda(r.valor_parcela), r.modo||'', HIST_fmtMoeda(r.valor_total)]); });
+    head=['Descrição','Cliente','Data venda','1ª parcela','Qtd parcelas','Modo','Total','Custo','Sócio','Valor sócio','Capital VB','Lucro total','Lucro VB','Data compra','Dias estoque','Ciclo (m)','Rendimento (% a.m.)'];
+    rows.forEach(function(r){
+      var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
+      var temS=(r.socio&&vs>0&&c>0&&vs<=c);
+      var cap=temS?(c-vs):c;
+      var lv=HIST_lucroRow('ven', r);
+      var meuL=(lv!=null&&temS)?lv*(((r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50)/100):lv;
+      var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
+      var cic=HIST_cicloVenda(dc, r);
+      var tm=(cap>0&&cic&&meuL!=null)?VB_termometro(meuL, cap, cic):null;
+      var diasE='';
+      if(dc && r.data_venda){ try{ diasE=Math.max(0, Math.round(MER_diasEntre(String(dc).split('T')[0], String(r.data_venda).split('T')[0]))); }catch(e){ diasE=''; } }
+      lin.push([(r.nome||r.descricao||''), (r.cliente||''), HIST_fmtData(r.data_venda), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', r.modo||'', HIST_fmtMoeda(r.valor_total),
+        HIST_fmtMoeda(c), (r.socio||''), (temS?HIST_fmtMoeda(vs):''), HIST_fmtMoeda(cap), (lv!=null?HIST_fmtMoeda(lv):''), (meuL!=null?HIST_fmtMoeda(meuL):''),
+        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')]);
+    });
   } else {
     head=['Data','Qtd lançamentos','Total'];
     rows.forEach(function(r){ var d=r.created_at?r.created_at.split('T')[0]:null; lin.push([HIST_fmtData(d), (r.pagamentos||[]).length, HIST_fmtMoeda(r.valor_total)]); });
@@ -1940,6 +1959,14 @@ function HIST_csvExport(){
   var tab=HIST_tabAtual;
   var rows=HIST_rowsCache||[];
   if(!rows.length){ VB_toast('Nada para exportar.'); return; }
+  if(tab==='ven' && !(HIST_merCompra&&typeof HIST_merCompra==='object')){
+    sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).then(function(q2){
+      HIST_merCompra={};
+      if(!q2.error) (q2.data||[]).forEach(function(m){ if(m.venda_id) HIST_merCompra[String(m.venda_id)]=m.data_compra||null; });
+      HIST_csvExport();
+    });
+    return;
+  }
   try{
     var csv=HIST_csv(tab, rows);
     var blob=new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
@@ -9824,6 +9851,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.100.0</span><span class="cl-ver-date">12/07/2026</span></div>
+      <div class="cl-item">Exportar v2 — CSV pronto pra auditoria. Vendas ganhou Cliente, Data venda, Custo, Sócio, Valor sócio, Capital VB, Lucro total, Lucro VB, Data compra, Dias estoque, Ciclo (m) e Rendimento (% a.m.) — as mesmas contas do termômetro, linha a linha, buscando a ficha do relógio se ainda não estiver em memória. Financiamentos ganhou Investidor, Lucro VB e Rendimento VB (taxa, quando o capital é seu). PDF e demais abas intocados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.99.5</span><span class="cl-ver-date">12/07/2026</span></div>
