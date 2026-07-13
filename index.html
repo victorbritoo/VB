@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.104.0</title>
+<title>VB - v1.104.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.0<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.2<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -963,7 +963,6 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
       <span style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
       <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
-      <button id="ven-rend-aplicar" onclick="VEN_rendAplicar()" style="display:none;margin-top:7px;padding:6px 16px;border:0.5px solid var(--ln);border-radius:9px;background:var(--sf);color:var(--tx2);font-size:9px;letter-spacing:1.5px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">APLICAR NAS PARCELAS</button>
     </div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — SUA PARTE (%)</div>
@@ -5082,7 +5081,8 @@ function VEN_updateLucro(){
     var _cic=VEN_cicloMeses();
     var _tm=(_ok&&_meuC>0&&_cic)?VB_termometro(_meuL,_meuC,_cic):null;
     if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. <span style="color:var(--so);">\u00b7 ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'</span>';
+      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> \u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'
+        +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
       rd.style.display='block';
     } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
     try{ if((document.getElementById('ven-rend-box')||{}).style.display==='block') VEN_rendCalc(); }catch(e){}
@@ -8797,13 +8797,12 @@ function VEN_rendCalc(){
   var out=document.getElementById('ven-rend-out'); if(!out) return;
   var d=VEN_rendDados();
   var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(',','.'));
-  var bt=document.getElementById('ven-rend-aplicar');
-  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; if(bt) bt.style.display='none'; return; }
-  if(bt) bt.style.display='inline-block';
+  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
   var meuLNec = (alvo/100)*d.meuC*d.cic;
   var lucroTotNec = meuLNec/(d.pV/100);
   var totalNec = d.c + lucroTotNec;
-  out.innerHTML='→ vender por <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(seu lucro R$ '+VEN_formatBR(meuLNec)+')</span>';
+  out.innerHTML='Vender por: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(Lucro: R$ '+VEN_formatBR(meuLNec)+')</span>.'
+    +'<span onclick="VEN_rendAplicar()" style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;cursor:pointer;">APLICAR</span>';
 }
 function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
 function VEN_cicloMeses(){
@@ -9962,6 +9961,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.2</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Resposta da caixinha no formato "Vender por: R$ X (Lucro: R$ Y)." com chip APLICAR pequeno no fim da frase, gêmeo do SIMULAR — o botão-bloco saiu. Simular em cima, aplicar embaixo, mesma linguagem visual</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Linha SEU RENDIMENTO com Ciclo maiúsculo, ponto final e chip SIMULAR no fim — a caixinha do alvo deixou de ser segredo de quem sabe e ganhou placa na porta. A linha inteira segue tocável</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.0</span><span class="cl-ver-date">13/07/2026</span></div>
