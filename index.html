@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.103.6</title>
+<title>VB - v1.104.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.103.6<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.0<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -963,6 +963,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
       <span style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
       <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
+      <button id="ven-rend-aplicar" onclick="VEN_rendAplicar()" style="display:none;margin-top:7px;padding:6px 16px;border:0.5px solid var(--ln);border-radius:9px;background:var(--sf);color:var(--tx2);font-size:9px;letter-spacing:1.5px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">APLICAR NAS PARCELAS</button>
     </div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — SUA PARTE (%)</div>
@@ -8758,6 +8759,29 @@ function VEN_rendBlur(){
   if(d && d.t!=null && d.meuC>0 && d.cic){ var atual=VB_termometro((d.t-d.c)*d.pV/100, d.meuC, d.cic); if(atual!=null) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
   VEN_rendCalc();
 }
+function VEN_rendAplicar(){
+  var d=VEN_rendDados();
+  var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(/\./g,'').replace(',','.'));
+  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)) return;
+  var meuLNec=(alvo/100)*d.meuC*d.cic;
+  var T=d.c + meuLNec/(d.pV/100);
+  var tEl=document.getElementById('ven-total');
+  var oldT=VEN_parseBR(tEl.value);
+  tEl.value=VEN_formatBR(T);
+  if(VEN_modoPersonalizado){
+    if(!isNaN(oldT) && oldT>0){
+      var f=T/oldT;
+      VEN_parcelas.forEach(function(p){ var v=VEN_parseBR(p.valor); if(!isNaN(v)&&v>0) p.valor=VEN_formatBR(v*f); });
+      VEN_renderParcelas();
+    }
+  } else {
+    var q=parseInt((document.getElementById('ven-qtd')||{}).value||'0');
+    if(q>0){ var pEl=document.getElementById('ven-parcela'); if(pEl) pEl.value=VEN_formatBR(T/q); }
+    VEN_autoLista();
+  }
+  VEN_updateLucro();
+  VB_toast('Parcelas ajustadas pro alvo de '+alvo.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
+}
 function VEN_rendToggle(){
   var box=document.getElementById('ven-rend-box'); if(!box) return;
   if(box.style.display==='none'||!box.style.display){
@@ -8773,7 +8797,9 @@ function VEN_rendCalc(){
   var out=document.getElementById('ven-rend-out'); if(!out) return;
   var d=VEN_rendDados();
   var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(',','.'));
-  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
+  var bt=document.getElementById('ven-rend-aplicar');
+  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; if(bt) bt.style.display='none'; return; }
+  if(bt) bt.style.display='inline-block';
   var meuLNec = (alvo/100)*d.meuC*d.cic;
   var lucroTotNec = meuLNec/(d.pV/100);
   var totalNec = d.c + lucroTotNec;
@@ -9936,6 +9962,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Botão APLICAR NAS PARCELAS na caixinha do alvo: um toque materializa a sugestão — o total vira o preço calculado e as parcelas se reajustam (modo simples: parcela = total ÷ qtd; personalizado: cada linha escala na proporção, datas intactas). Escala proporcional não mexe no recebimento médio, então o rendimento crava exatamente no alvo. A linha SEU RENDIMENTO confirma na hora</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.103.6</span><span class="cl-ver-date">13/07/2026</span></div>
