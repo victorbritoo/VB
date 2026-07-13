@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.104.2</title>
+<title>VB - v1.104.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.2<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.4<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7636,6 +7636,37 @@ function GLB_digitou(){
   if(GLB_timer) clearTimeout(GLB_timer);
   GLB_timer=setTimeout(GLB_buscar, 320);
 }
+function GLB_norm(s){ try{ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(e){ return String(s||'').toLowerCase(); } }
+function GLB_score(nome, termo){
+  var nl=GLB_norm(nome), tl=GLB_norm(termo);
+  if(nl.indexOf(tl)===0) return 0;                      // título começa com o termo
+  if(nl.indexOf(' '+tl)>=0) return 1;                   // alguma palavra começa com o termo
+  if(nl.indexOf(tl)>=0) return 2;                       // termo no meio
+  return 3;                                             // casou em campo escondido (sócio, cliente, SN...)
+}
+function GLB_dataOp(tipo, r){
+  var d = (tipo==='ant')?r.data_operacao
+        : (tipo==='fin')?r.data_inicio
+        : (tipo==='ven')?r.data_venda
+        : (tipo==='mer')?(r.data_venda||r.data_compra)
+        : null;
+  return String(d||r.created_at||'').split('T')[0];
+}
+function GLB_dica(tipo, r){
+  try{
+    if(tipo==='mer'){
+      if(r.socio){
+        if(typeof VB_consigVen==='function' && VB_consigVen(r.socio, r.valor_socio, r.custo, null)) return 'consig. '+r.socio;
+        return String(r.socio);
+      }
+      if(r.fornecedor) return 'de '+r.fornecedor;
+      return '';
+    }
+    if(tipo==='ven') return r.cliente ? ('p/ '+r.cliente) : '';
+    if(tipo==='fin') return (r.tem_investidor && r.investidor_nome) ? ('inv. '+r.investidor_nome) : '';
+  }catch(e){}
+  return '';
+}
 function GLB_buscar(){
   var termo=(document.getElementById('glb-termo').value||'').trim();
   var res=document.getElementById('glb-res');
@@ -7661,26 +7692,28 @@ function GLB_buscar(){
       ['ESTOQUE','mer', rs[4].data||[], function(r){return r.descricao||'—';}],
       ['SÓCIO','soc', rs[5].data||[], function(r){return r.nome||'—';}]
     ];
-    var itens=[], tl=termo.toLowerCase();
+    var itens=[];
     grupos.forEach(function(g){
       g[2].forEach(function(r){
         var nome=g[3](r)||'';
-        var nl=nome.toLowerCase();
-        var score = nl.indexOf(tl)===0 ? 0 : (nl.indexOf(tl)>=0 ? 1 : 2);
         var rot=g[0];
         if(g[1]==='mer' && (r.status||'estoque')==='vendida') rot='VENDIDO';
         if(g[1]==='ant' && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0)) rot='ATRASADO';
-        itens.push({tipo:g[1], rot:rot, r:r, nome:nome, score:score, ts:(r.created_at||'')});
+        itens.push({tipo:g[1], rot:rot, r:r, nome:nome, score:GLB_score(nome, termo), dop:GLB_dataOp(g[1], r), ts:(r.created_at||'')});
       });
     });
-    itens.sort(function(a,b){ if(a.score!==b.score) return a.score-b.score; return a.ts<b.ts?1:a.ts>b.ts?-1:0; });
+    itens.sort(function(a,b){
+      if(a.score!==b.score) return a.score-b.score;
+      if(a.dop!==b.dop) return a.dop<b.dop?1:-1;
+      return a.ts<b.ts?1:a.ts>b.ts?-1:0;
+    });
     var html='';
     itens.forEach(function(it){
       var key=it.tipo+'_'+it.r.id;
       GLB_cache[key]=it.r;
       html+='<button data-gt="'+it.tipo+'" data-gi="'+String(it.r.id)+'" onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'
-          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+'</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+(function(){ var d=GLB_dica(it.tipo, it.r); return d?('<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d)+'</span>'):''; })()+'</span>'
           +'<span style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+it.rot+'</span>'
         +'</div>'
       +'</button>';
@@ -9961,6 +9994,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.4</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Busca geral mais esperta: quatro faixas de relevância (título começa com o termo → palavra do título começa → termo no meio → casou só em campo escondido como sócio/cliente/SN), desempate pela data da OPERAÇÃO em vez da criação do registro (operação antiga digitada ontem não fura mais fila), e acentos ignorados na pontuação (CERAMICA acha CERÂMICA na posição certa)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.3</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Busca geral com sobrenome de contexto em cinza de apoio, um por linha, com preposição que conta a relação: Estoque mostra o sócio ("· EMANUEL FILHO"), consignado o dono ("· consig. GIVAGO") ou, se a peça é 100% sua, o fornecedor ("· de TONY DU CARRO"); Venda mostra o cliente ("· p/ CLEVERSON"); Financiamento com investidor mostra "· inv. FULANO". Três GMT BRUCE iguais deixam de ser adivinhação. O sobrenome vive dentro do título e trunca junto — resultado segue de uma linha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.2</span><span class="cl-ver-date">13/07/2026</span></div>
