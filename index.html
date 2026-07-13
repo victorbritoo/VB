@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.107.1</title>
+<title>VB - v1.108.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1500,6 +1500,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
+  setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
 }
 function VB_showLogin(msg){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='flex';
@@ -2227,6 +2228,7 @@ function VB_backupMenu(){
       +'<div id="vb-bkp-ultimo" style="text-align:center;font-size:11px;color:var(--so);font-weight:500;margin-bottom:14px;">—</div>'
       +'<button id="vb-bkp-json" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">BACKUP (JSON)</button>'
       +'<button id="vb-bkp-zip" style="width:100%;padding:13px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);color:var(--tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">EXPORTAR IMAGENS (ZIP)</button>'
+      +'<button id="vb-bkp-snaps" style="width:100%;padding:13px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);color:var(--tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">SNAPSHOTS</button>'
       +'<button id="vb-bkp-restore" style="width:100%;padding:13px;border:0.5px solid var(--red);border-radius:14px;background:var(--sf);color:var(--red);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">RESTAURAR BACKUP</button>'
       +'<button id="vb-bkp-cancel" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>'
       +'</div>';
@@ -2234,6 +2236,7 @@ function VB_backupMenu(){
     ov.addEventListener('click', function(e){ if(e.target===ov) VB_backupMenuFechar(); });
     ov.querySelector('#vb-bkp-json').addEventListener('click', function(){ VB_backupMenuFechar(); VB_backupJSON(); });
     ov.querySelector('#vb-bkp-zip').addEventListener('click', function(){ VB_backupMenuFechar(); VB_exportarZip(); });
+    ov.querySelector('#vb-bkp-snaps').addEventListener('click', function(){ VB_backupMenuFechar(); VB_snapshotsSheet(); });
     ov.querySelector('#vb-bkp-restore').addEventListener('click', function(){ VB_backupMenuFechar(); VB_restaurarStart(); });
     ov.querySelector('#vb-bkp-cancel').addEventListener('click', VB_backupMenuFechar);
   }
@@ -2496,7 +2499,7 @@ function VB_exportarZip(){
 }
 
 function VB_fetchTudo(onOk, onErr){
-  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios'];
   Promise.all(tabelas.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
@@ -2560,6 +2563,97 @@ function VB_shareJSON(dados, total, onDone){
       document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); onDone&&onDone();
     }
   }catch(e){ onDone&&onDone(); }
+}
+// ===== Snapshot automático diário (vb_backups, retenção 14) =====
+function VB_snapshotAuto(){
+  try{
+    sb.from('vb_backups').select('created_at').order('created_at',{ascending:false}).limit(1).then(function(res){
+      if(res.error) return; // tabela ausente ou offline: silêncio total
+      var ult=(res.data&&res.data[0])?new Date(res.data[0].created_at):null;
+      if(ult && (Date.now()-ult.getTime()) < 24*60*60*1000) return; // já tem snapshot nas últimas 24h
+      VB_fetchTudo(function(dados, total){
+        if(!total) return; // nunca fotografa banco vazio
+        var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
+        sb.from('vb_backups').insert({total:total, payload:payload}).then(function(r2){
+          if(r2.error) return;
+          sb.from('vb_backups').select('id,created_at').order('created_at',{ascending:false}).then(function(r3){
+            var rows=(r3&&r3.data)||[];
+            if(rows.length>14){
+              var apagar=rows.slice(14).map(function(x){ return x.id; });
+              sb.from('vb_backups').delete().in('id', apagar).then(function(){});
+            }
+          });
+        });
+      }, function(){});
+    });
+  }catch(e){}
+}
+// Lembrete ativo do backup iCloud vencido (1 toast por dia, no máximo)
+function VB_backupLembrete(){
+  try{
+    sb.from('vb_meta').select('valor').eq('chave','ultimo_backup').maybeSingle().then(function(res){
+      var remoto=(res&&res.data&&res.data.valor)||null, local=VB_lerBackupLocal();
+      var best=(remoto&&local) ? (new Date(remoto)>new Date(local)?remoto:local) : (remoto||local);
+      var dias=best ? Math.floor((Date.now()-new Date(best).getTime())/86400000) : null;
+      if(best && dias<7) return;
+      var hoje=new Date().toISOString().slice(0,10), marcado=null;
+      try{ marcado=localStorage.getItem('vb_bkp_toast_dia'); }catch(e){}
+      if(marcado===hoje) return;
+      try{ localStorage.setItem('vb_bkp_toast_dia', hoje); }catch(e){}
+      VB_toast(best ? ('Sem backup no iCloud há '+dias+' dias') : 'Você ainda não fez backup no iCloud');
+    });
+  }catch(e){}
+}
+// Folha SNAPSHOTS: lista os automáticos; toque compartilha o JSON (restaura pelo fluxo normal)
+function VB_snapshotsSheet(){
+  var old=document.getElementById('vb-snaps-sheet'); if(old) old.remove();
+  var ov=document.createElement('div');
+  ov.id='vb-snaps-sheet';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;-webkit-text-size-adjust:100%;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">SNAPSHOTS AUTOM\u00c1TICOS</div>'
+    +'<div style="text-align:center;font-size:11px;color:var(--so);font-weight:500;margin-bottom:12px;">Toque num snapshot para compartilhar o JSON</div>'
+    +'<div id="vb-snaps-lista" style="max-height:46vh;overflow-y:auto;"><div style="text-align:center;font-size:12px;color:var(--so2);padding:14px;">Carregando...</div></div>'
+    +'<button id="vb-snaps-fechar" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#vb-snaps-fechar').addEventListener('click', function(){ ov.remove(); });
+  sb.from('vb_backups').select('id,created_at,total').order('created_at',{ascending:false}).limit(14).then(function(res){
+    var box=document.getElementById('vb-snaps-lista'); if(!box) return;
+    if(res.error){ box.innerHTML='<div style="text-align:center;font-size:12px;color:var(--so2);padding:14px;">N\u00e3o consegui ler os snapshots.</div>'; return; }
+    var rows=res.data||[];
+    if(!rows.length){ box.innerHTML='<div style="text-align:center;font-size:12px;color:var(--so2);padding:14px;">Nenhum snapshot ainda. O primeiro nasce sozinho no pr\u00f3ximo uso.</div>'; return; }
+    var hh='';
+    rows.forEach(function(r){
+      var d=new Date(r.created_at);
+      var dt=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' \u00b7 '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+      hh+='<div onclick="VB_snapshotShare(\''+r.id+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:0.5px solid var(--ln3);cursor:pointer;">'
+        +'<span style="font-size:13px;color:var(--tx);font-weight:600;">'+dt+'</span>'
+        +'<span style="font-size:12px;color:var(--mu);">'+(r.total||0)+' opera\u00e7\u00f5es</span>'
+        +'</div>';
+    });
+    box.innerHTML=hh;
+  });
+}
+function VB_snapshotShare(id){
+  VB_toast('Preparando snapshot\u2026');
+  sb.from('vb_backups').select('payload,created_at').eq('id', id).maybeSingle().then(function(res){
+    if(res.error || !res.data || !res.data.payload){ VB_toast('N\u00e3o consegui abrir esse snapshot.'); return; }
+    try{
+      var payload=res.data.payload;
+      var d=new Date(res.data.created_at);
+      var fname='VB - Snapshot - '+('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear()+'.json';
+      var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+      var file=new File([blob], fname, {type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file]}).catch(function(){});
+      } else {
+        var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500);
+      }
+    }catch(e){ VB_toast('N\u00e3o consegui compartilhar o snapshot.'); }
+  });
 }
 function VB_backupJSON(){
   VB_toast('Gerando backup…');
@@ -2689,8 +2783,8 @@ function VB_restaurarStart(){
           var data=JSON.parse(rd.result);
           if(!data || data.app!=='VB' || !data.dados){ VB_toast('Arquivo não parece um backup do VB.'); inp.value=''; return; }
           var d=data.dados;
-          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length };
-          var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos+cont.mercadorias+cont.listas+cont.recebimentos;
+          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length, socios:(d.socios||[]).length };
+          var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos+cont.mercadorias+cont.listas+cont.recebimentos+cont.socios;
           if(!tot){ VB_toast('O backup está vazio.'); inp.value=''; return; }
           VB_restPayload={ data:data, cont:cont, tot:tot, diff:null };
           VB_toast('Analisando o backup...');
@@ -2722,7 +2816,7 @@ function VB_diffCampos(a,b){
 }
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
-  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
+  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios'];
   Promise.all(tabs.map(function(t){ return sb.from(t).select('*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
@@ -2831,7 +2925,7 @@ function VB_restaurarExec(){
   if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
   var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
   var d=P.data.dados;
-  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]]];
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]]];
   var i=0, okCount=0, erros=[];
   function next(){
     if(i>=tabelas.length){ done(); return; }
@@ -8999,8 +9093,10 @@ function VEN_rendCalc(){
   var meuLNec = (alvo/100)*d.meuC*d.cic;
   var lucroTotNec = meuLNec/(d.pV/100);
   var totalNec = d.c + lucroTotNec;
-  out.innerHTML='Vender por: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(Lucro: R$ '+VEN_formatBR(meuLNec)+')</span>.'
-    +'<span onclick="VEN_rendAplicar()" style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;cursor:pointer;">APLICAR</span>';
+  out.innerHTML='<span style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+    +'<span style="flex:1;min-width:0;">Venda: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(Lucro: R$ '+VEN_formatBR(meuLNec)+')</span></span>'
+    +'<span onclick="VEN_rendAplicar()" style="flex:none;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);cursor:pointer;">APLICAR</span>'
+    +'</span>';
 }
 function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
 function VEN_cicloMeses(){
@@ -10159,6 +10255,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.108.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Chip APLICAR do simulador de rendimento parou de cair \u00f3rf\u00e3o pra linha de baixo com valores de 6 d\u00edgitos: a resposta virou duas colunas \u2014 frase \u00e0 esquerda (quebra internamente se precisar), chip ancorado \u00e0 direita, sempre centralizado. E \u201cVender por:\u201d encurtou pra \u201cVenda:\u201d, ganhando a largura que faltava</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.108.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Backup em duas camadas. (1) Snapshot autom\u00e1tico di\u00e1rio: 2,5s depois de abrir o app, se o \u00faltimo snapshot tem mais de 24h, um retrato completo do banco vai sozinho pra tabela vb_backups \u2014 sil\u00eancio total, reten\u00e7\u00e3o de 14, banco vazio nunca \u00e9 fotografado. No menu BACKUP, novo bot\u00e3o SNAPSHOTS lista os 14 com data e contagem; toque compartilha o JSON, que entra pelo fluxo de RESTAURAR de sempre (nenhum caminho novo de escrita). (2) Lembrete ativo: iCloud vencido (7+ dias) agora gera um toast ao abrir, no m\u00e1ximo um por dia \u2014 o texto vermelho passivo continua. E os S\u00d3CIOS entraram no backup e no restore: antes, uma restaura\u00e7\u00e3o devolvia as opera\u00e7\u00f5es mas deixava o cadastro de s\u00f3cios \u00f3rf\u00e3o. Requer SQL da tabela vb_backups (j\u00e1 rodado)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.107.1</span><span class="cl-ver-date">13/07/2026</span></div>
