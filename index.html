@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.104.4</title>
+<title>VB - v1.104.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.4<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.5<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7652,20 +7652,23 @@ function GLB_dataOp(tipo, r){
         : null;
   return String(d||r.created_at||'').split('T')[0];
 }
-function GLB_dica(tipo, r){
+function GLB_badge(letra){
+  return ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:2px;white-space:nowrap;">'+letra+'</span>';
+}
+function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no título, nome em cinza
   try{
     if(tipo==='mer'){
       if(r.socio){
-        if(typeof VB_consigVen==='function' && VB_consigVen(r.socio, r.valor_socio, r.custo, null)) return 'consig. '+r.socio;
-        return String(r.socio);
+        var _cons=(typeof VB_consigVen==='function' && VB_consigVen(r.socio, r.valor_socio, r.custo, null));
+        return { b:(_cons?'C':'S'), n:String(r.socio) };
       }
-      if(r.fornecedor) return 'de '+r.fornecedor;
-      return '';
+      if(r.fornecedor) return { b:'', n:'de '+r.fornecedor };
+      return null;
     }
-    if(tipo==='ven') return r.cliente ? ('p/ '+r.cliente) : '';
-    if(tipo==='fin') return (r.tem_investidor && r.investidor_nome) ? ('inv. '+r.investidor_nome) : '';
+    if(tipo==='ven') return r.cliente ? { b:'', n:String(r.cliente) } : null;
+    if(tipo==='fin') return (r.tem_investidor && r.investidor_nome) ? { b:'I', n:String(r.investidor_nome) } : null;
   }catch(e){}
-  return '';
+  return null;
 }
 function GLB_buscar(){
   var termo=(document.getElementById('glb-termo').value||'').trim();
@@ -7713,7 +7716,7 @@ function GLB_buscar(){
       GLB_cache[key]=it.r;
       html+='<button data-gt="'+it.tipo+'" data-gi="'+String(it.r.id)+'" onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'
-          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+(function(){ var d=GLB_dica(it.tipo, it.r); return d?('<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d)+'</span>'):''; })()+'</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+(function(){ var d=GLB_dica(it.tipo, it.r); if(!d) return ''; return (d.b?GLB_badge(d.b):'')+'<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d.n)+'</span>'; })()+'</span>'
           +'<span style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+it.rot+'</span>'
         +'</div>'
       +'</button>';
@@ -9994,6 +9997,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.5</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Busca geral falando a língua dos badges: sócio e consignado ganham o selo S/C oficial colado no título com o nome em cinza ("...DU161897 [C] · GIVAGO"), financiamento com investidor ganha o I, e a venda mostra só o cliente em cinza, sem o "p/" — mesmo vocabulário dos cards, menos texto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.4</span><span class="cl-ver-date">13/07/2026</span></div>
