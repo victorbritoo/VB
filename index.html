@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.106.1</title>
+<title>VB - v1.106.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -470,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.106.1<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.106.2<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1415,10 +1415,6 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
             <input id="mer-valorSocio" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:14px;font-weight:700;color:var(--tx);width:100px;text-align:center;font-family:-apple-system,sans-serif;">
           </div>
         </div>
-      </div>
-      <div id="mer-baixaNota-wrap" style="display:none;margin-top:6px;text-align:center;">
-        <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">NOTA DA SAÍDA</div>
-        <input id="mer-baixaNota" type="text" placeholder="DEVOLVIDO AO DONO, TROCA..." oninput="MER_dirtyPaint()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
       </div>
     </div>
     <div id="mer-btn-row" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px;">
@@ -8699,41 +8695,6 @@ function MER_viewFechar(){
   GLB_fichaDaBusca=false; MER_fichaDoHist=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
 }
 var MER_viewFecharArmado=false;
-function MER_editar(id){
-  if(MER_editId && String(MER_editId)!==String(id)){ MER_dirtyGuard(function(){ MER_editar(id); }); return; }
-  var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
-  if(!r) return;
-  MER_editId=r.id;
-  var _cx = (r.marca||r.modelo||r.ano||r.sn) ? {marca:r.marca||'', modelo:((r.marca?r.marca+' ':'')+(r.modelo||'')).trim(), ano:r.ano||'', sn:r.sn||''} : MER_desmontar(r.descricao);
-  document.getElementById('mer-modelo').value=_cx.modelo||'';
-  document.getElementById('mer-ano').value=_cx.ano||'';
-  document.getElementById('mer-sn').value=_cx.sn||'';
-  document.getElementById('mer-infos').value=r.infos||'';
-  VB_autoGrow(document.getElementById('mer-infos'));
-  document.getElementById('mer-custo').value=r.custo!=null?MER_fmtBR(r.custo):'';
-  document.getElementById('mer-data').value=MER_fmtData(r.data_compra)||'';
-  document.getElementById('mer-fornecedor').value=r.fornecedor||'';
-  document.getElementById('mer-pagamento').value=r.pagamento||'';
-  VB_autoGrow(document.getElementById('mer-pagamento'));
-  document.getElementById('mer-socio').value=r.socio||'';
-  document.getElementById('mer-valorSocio').value=r.valor_socio!=null?MER_fmtBR(r.valor_socio):'';
-  var _bnW=document.getElementById('mer-baixaNota-wrap'), _bnI=document.getElementById('mer-baixaNota');
-  var _ehBaixaManual=((r.status||'')==='vendida' && !r.venda_id);
-  if(_bnI) _bnI.value=r.baixa_nota||'';
-  if(_bnW) _bnW.style.display=_ehBaixaManual?'block':'none';
-  MER_pctLive();
-  if(r.fornecedor||r.pagamento||r.socio||r.valor_socio||(_ehBaixaManual&&r.baixa_nota)){
-    var d=document.getElementById('mer-detalhes');
-    if(d && d.style.display==='none') MER_toggleDetalhes();
-  }
-  MER_updateAddBtn();
-  MER_toggleForm(true);
-  VB_autoGrow(document.getElementById('mer-infos'));
-  VB_autoGrow(document.getElementById('mer-pagamento'));
-  MER_dirtyPaint();
-  window.scrollTo(0,0);
-  VB_toast('Editando. Salve ou cancele.');
-}
 function MER_cancelEdit(){
   MER_editId=null;
   ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
@@ -10163,6 +10124,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.106.2</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Etapa 2 da edição na ficha, com o caminho novo aprovado em teste: o MER_editar antigo (teletransporte pro formulário) foi removido junto com o campo NOTA DA SAÍDA do formulário do topo, que só servia a ele. O formulário da lista volta a ser exclusivamente cadastro de item novo; toda edição vive na ficha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.106.1</span><span class="cl-ver-date">13/07/2026</span></div>
