@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.102.0</title>
+<title>VB - v1.103.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.102.0<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.103.0<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8400,41 +8400,44 @@ function MER_possibilidades(r){
       +'</div>';
   });
   hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
-    +'<div style="text-align:center;margin-bottom:6px;"><span style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">ENTRADA</span> <span style="font-size:11px;color:var(--mu);">R$</span> <input id="mer-poss-ent" type="text" inputmode="numeric" placeholder="0,00" onclick="event.stopPropagation()" oninput="MER_possEntMask(this)" style="width:96px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:12px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;"></div>'
+    +'<div style="display:flex;gap:6px;justify-content:center;margin-bottom:7px;">'
+      +'<button id="mer-poss-m1" onclick="event.stopPropagation();MER_possModoSet(\'1\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--acc);color:var(--acc-tx);font-size:10px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">1+N</button>'
+      +'<button id="mer-poss-m0" onclick="event.stopPropagation();MER_possModoSet(\'0\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--sf);color:var(--mu2);font-size:10px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">0+N</button>'
+    +'</div>'
     +'<div id="mer-poss-tab"></div>'
-    +'<div style="text-align:center;font-size:9px;color:var(--so);margin-top:7px;">pre\u00e7o que segura o alvo \u00b7 entrada vazia = igual \u00e0s parcelas</div>'
+    +'<div style="text-align:center;font-size:9px;color:var(--so);margin-top:7px;">pre\u00e7o que segura o alvo \u00b7 <span id="mer-poss-leg">1+N: parcelas iguais, primeira no ato</span></div>'
     +'</div>';
   hh+='</div>';
   return hh;
+}
+var MER_possModo='1';
+function MER_possModoSet(m){
+  MER_possModo=m;
+  var b1=document.getElementById('mer-poss-m1'), b0=document.getElementById('mer-poss-m0');
+  if(b1){ b1.style.background=(m==='1')?'var(--acc)':'var(--sf)'; b1.style.color=(m==='1')?'var(--acc-tx)':'var(--mu2)'; }
+  if(b0){ b0.style.background=(m==='0')?'var(--acc)':'var(--sf)'; b0.style.color=(m==='0')?'var(--acc-tx)':'var(--mu2)'; }
+  var lg=document.getElementById('mer-poss-leg');
+  if(lg) lg.textContent=(m==='1')?'1+N: parcelas iguais, primeira no ato':'0+N: sem entrada, primeira em 30 dias';
+  MER_possCalc();
 }
 function MER_possToggle(){
   var e=document.getElementById('mer-poss-exp'); if(!e) return;
   if(e.style.display==='none'||!e.style.display){ e.style.display='block'; MER_possCalc(); }
   else { e.style.display='none'; }
 }
-function MER_possEntMask(el){
-  var raw=el.value.replace(/\D/g,'');
-  el.value = raw ? MER_fmtBR(parseInt(raw)/100) : '';
-  MER_possCalc();
-}
 function MER_possCalc(){
   var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
-  var entS=((document.getElementById('mer-poss-ent')||{}).value||'').trim();
-  var E=parseFloat(entS.replace(/\./g,'').replace(',','.')); if(isNaN(E)||E<0) E=0;
   var q=d.pV/100, out='';
   for(var N=1;N<=10;N++){
     var alvo=(N<=3)?MER_ALVOS.curto:((N<=6)?MER_ALVOS.medio:MER_ALVOS.longo);
     var R=(alvo/100)*d.cap;
-    var T=d.c*1.15;
-    for(var i=0;i<30;i++){
-      var mean=(E>0)?(((T-E)>0?(T-E):0)*15*(N+1)/T):(15*N);
-      var m=(d.dias+mean)/30; if(!(m>0)) m=0.01;
-      T=d.c + R*m/q;
-    }
+    var media=(MER_possModo==='0') ? 15*(N+1) : 15*N;
+    var m=(d.dias + media)/30; if(!(m>0)) m=0.01;
+    var T=d.c + R*m/q;
     var marg=Math.round((T-d.c)/d.c*100);
-    var ok=(E<T);
+    var ok=true;
     out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
-      +'<span style="color:var(--mu);white-space:nowrap;">1+'+N+' <span style="color:var(--so);">('+alvo.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%)</span></span>'
+      +'<span style="color:var(--mu);white-space:nowrap;">'+((MER_possModo==='0')?'0+':'1+')+N+' <span style="color:var(--so);">('+alvo.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%)</span></span>'
       +'<span style="text-align:right;white-space:nowrap;color:var(--tx);">'+(ok?('R$ '+MER_fmtBR(T)+' \u00b7 <b style="color:var(--ink);">+'+marg+'%</b>'):'\u2014')+'</span>'
       +'</div>';
   }
@@ -9918,6 +9921,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.103.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Card de POSSIBILIDADES ganhou o modo 0+N: seletor no topo da tabela troca entre 1+N (parcelas iguais, primeira no ato) e 0+N (sem entrada, primeira em 30 dias) — vendeu dia 13/07 em 0+10, primeira cai 13/08. Mesma escada de alvos; o 0+N sai naturalmente mais caro no mesmo número de parcelas, mostrando em reais o preço de abrir mão da entrada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.102.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Campo ENTRADA removido do card de POSSIBILIDADES: a tabela 1+1 a 1+10 assume o padrão da casa (parcelas iguais, primeira no ato) — entrada diferenciada é assunto de proposta, e proposta mora na tela de Vendas. Doutrina no card, negociação na mesa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.102.0</span><span class="cl-ver-date">13/07/2026</span></div>
