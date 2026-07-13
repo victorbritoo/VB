@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.104.5</title>
+<title>VB - v1.105.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.104.5<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.105.1<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -7666,6 +7666,7 @@ function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no tí
       return null;
     }
     if(tipo==='ven') return r.cliente ? { b:'', n:String(r.cliente) } : null;
+    if(tipo==='ant') return r.data_operacao ? { b:'', n:HIST_fmtData(r.data_operacao) } : null;
     if(tipo==='fin') return (r.tem_investidor && r.investidor_nome) ? { b:'I', n:String(r.investidor_nome) } : null;
   }catch(e){}
   return null;
@@ -7700,7 +7701,7 @@ function GLB_buscar(){
       g[2].forEach(function(r){
         var nome=g[3](r)||'';
         var rot=g[0];
-        if(g[1]==='mer' && (r.status||'estoque')==='vendida') rot='VENDIDO';
+        if(g[1]==='mer' && (r.status||'estoque')==='vendida') rot=(r.venda_id?'VENDIDO':'BAIXADO');
         if(g[1]==='ant' && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0)) rot='ATRASADO';
         itens.push({tipo:g[1], rot:rot, r:r, nome:nome, score:GLB_score(nome, termo), dop:GLB_dataOp(g[1], r), ts:(r.created_at||'')});
       });
@@ -7828,8 +7829,11 @@ function FM_load(){
     sb.from('antecipacoes').select('*').limit(10000),
     sb.from('financiamentos_hist').select('*').limit(10000),
     sb.from('vendas').select('*').limit(10000),
-    sb.from('pagamentos').select('*').limit(10000)
+    sb.from('pagamentos').select('*').limit(10000),
+    sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000)
   ]).then(function(res){
+    var _merMap={};
+    ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
     var ant=filtra(res[0].data,'ant'), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
@@ -7857,7 +7861,25 @@ function FM_load(){
     Object.keys(venPartes).sort().forEach(function(nm){ if(venPartes[nm]) partes.push(['Lucro '+nm, venPartes[nm]]); });
     var dVen={n:ven.length, tot:soma(ven,function(r){return Number(r.valor_total);}), luc:lucroDe(ven,'ven'), lucVB:venLucVB, partes:partes};
     var dPag={n:pag.length, tot:soma(pag,function(r){return Number(r.valor_total);})};
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:dAnt.luc+dFin.luc+venLucVB};
+    // Rendimento do capital no mês: média ponderada por capital-tempo (= soma dos lucros / soma de capital x ciclo)
+    var _rL=0, _rCM=0;
+    antOp.forEach(function(r){
+      var liq=Number(r.valor_liquido)||0, cic=(Number(r.prazo_medio)||0)/30, l=HIST_lucroRow('ant', r);
+      if(liq>0 && cic>0 && l!=null){ _rL+=l; _rCM+=liq*cic; }
+    });
+    ven.forEach(function(v){
+      if(v.custo==null) return;
+      var c2=Number(v.custo)||0, vs2=Number(v.valor_socio)||0;
+      if(VB_consigVen(v.socio, vs2, c2, v.lucro_vb_pct)) return;
+      var temS2=(v.socio && vs2>0 && vs2<=c2);
+      var cap2=temS2?(c2-vs2):c2; if(!(cap2>0)) return;
+      var pV2=temS2?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
+      var lv2=HIST_lucroRow('ven', v); if(lv2==null) return;
+      var cic2=HIST_cicloVenda(_merMap[String(v.id)]||null, v); if(!cic2) return;
+      _rL+=lv2*(pV2/100); _rCM+=cap2*cic2;
+    });
+    var rendMes=(_rCM>0)?(_rL/_rCM*100):null;
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:dAnt.luc+dFin.luc+venLucVB, rend:rendMes};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -7880,6 +7902,7 @@ function FM_load(){
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     hh+=bloco('VENDAS · '+dVen.n, vlin);
     hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>';
+    if(FM_dados.rend!=null) hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">RENDIMENTO DO CAPITAL</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span></div>';
     body.innerHTML=hh;
   });
 }
@@ -7931,6 +7954,12 @@ function FM_foto(){
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
   c.fillStyle='#fff'; c.font='700 24px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
   c.fillText(HIST_fmtMoeda(d.lucroTotal), PAD+CW-22, y+42); c.textAlign='left';
+  if(d.rend!=null){
+    y+=72;
+    c.fillStyle='#888'; c.font='600 11px -apple-system, Helvetica, sans-serif'; c.fillText('RENDIMENTO DO CAPITAL', PAD+22, y+8);
+    c.font='700 14px -apple-system, Helvetica, sans-serif'; c.fillStyle='#111'; c.textAlign='right';
+    c.fillText(d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.', PAD+CW-22, y+10); c.textAlign='left';
+  }
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
   c.fillText('Gerado em '+ds, W-PAD, H-20); c.textAlign='left';
@@ -8178,7 +8207,22 @@ function MER_render(){
           +((r.data_compra&&MER_dias(r.data_compra)!=null)?(function(){
               var dd=MER_dias(r.data_compra);
               var forte=dd>=60;
-              return ' <span style="color:'+(forte?'var(--ink)':'var(--so)')+';'+(forte?'font-weight:700;':'')+'white-space:nowrap;">('+dd+'d estoque)</span>';
+              var alarme=(function(){ // 1+4 padrão abaixo de 3,5% a.m. = capital rendendo menos que a Antecipação
+                try{
+                  var c=Number(r.custo)||0; if(!(c>0)) return false;
+                  var vs=Number(r.valor_socio)||0;
+                  var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
+                  if(VB_consigVen(r.socio, r.valor_socio, r.custo, _vv?_vv.lucro_vb_pct:null)) return false;
+                  var temS=(r.socio&&vs>0&&vs<=c);
+                  var cap=temS?(c-vs):c; if(!(cap>0)) return false;
+                  var cen=(MER_CENARIOS||[]).filter(function(s){return s.pct!=null&&s.n>1;})[0]||{pct:15,n:5};
+                  var meuL=c*(cen.pct/100)*((temS?50:100)/100);
+                  var m=(dd+(cen.n-1)/2*30)/30; if(!(m>0)) return false;
+                  return (meuL/cap/m*100)<3.5;
+                }catch(e){ return false; }
+              })();
+              var cor=alarme?'var(--red)':(forte?'var(--ink)':'var(--so)');
+              return ' <span style="color:'+cor+';'+((forte||alarme)?'font-weight:700;':'')+'white-space:nowrap;">('+dd+'d estoque)</span>';
             })():'')
           +'</div>'
           +(r.socio?(function(){
@@ -9997,6 +10041,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.105.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Busca geral: Antecipação ganhou a data da operação em cinza ("· 10/07/2026") — cliente recorrente se distingue pela data. E etiqueta honesta na saída de estoque: item baixado SEM venda vinculada aparece como BAIXADO (consignado devolvido, troca, baixa administrativa); VENDIDO ficou reservado pra quando há venda de verdade por trás</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.105.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Dois olhos novos no capital. (1) Alarme de sono na lista do Estoque: o "(Xd estoque)" fica VERMELHO quando o 1+4 padrão daquele relógio já renderia menos de 3,5% a.m. — o dorminhoco se denuncia sem abrir ficha (consignados fora, capital do sócio abatido). (2) Selo RENDIMENTO DO CAPITAL no Fechamento do Mês, tela e foto: lucro do mês dividido pelo capital-tempo empregado (Vendas com termômetro + Antecipações em dia; Financiamento fora — camada de base com taxa contratada, não fecha por mês). Extrato do Sócio auditado: linha e total já calculavam o % sobre o capital DO SÓCIO — nada a corrigir</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.104.5</span><span class="cl-ver-date">13/07/2026</span></div>
