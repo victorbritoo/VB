@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.105.1</title>
+<title>VB - v1.106.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -354,6 +354,7 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
     <div id="mer-view-body" style="margin-top:12px;"></div>
     <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
     <button id="mer-view-editar" style="width:100%;margin-top:8px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
+    <button id="mer-view-cancelar" style="display:none;width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>
     <button onclick="MER_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
   </div>
 </div>
@@ -469,7 +470,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.105.1<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.106.0<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1414,6 +1415,10 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
             <input id="mer-valorSocio" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:14px;font-weight:700;color:var(--tx);width:100px;text-align:center;font-family:-apple-system,sans-serif;">
           </div>
         </div>
+      </div>
+      <div id="mer-baixaNota-wrap" style="display:none;margin-top:6px;text-align:center;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">NOTA DA SAÍDA</div>
+        <input id="mer-baixaNota" type="text" placeholder="DEVOLVIDO AO DONO, TROCA..." oninput="MER_dirtyPaint()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
       </div>
     </div>
     <div id="mer-btn-row" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px;">
@@ -7338,11 +7343,13 @@ function MER_isDirty(){
     fornecedor:(document.getElementById('mer-fornecedor').value||'').trim(),
     pagamento:(document.getElementById('mer-pagamento').value||'').trim(),
     socio:(document.getElementById('mer-socio').value||'').trim(),
-    vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0
+    vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0,
+    bnota:((document.getElementById('mer-baixaNota')||{}).value||'').trim().toUpperCase()
   };
   var orig= r ? {
     descricao:(r.descricao||''), infos:(r.infos||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
-    fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0
+    fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0,
+    bnota:(r.baixa_nota||'').trim().toUpperCase()
   } : null;
   return !orig || JSON.stringify(atual)!==JSON.stringify(orig);
 }
@@ -7359,7 +7366,7 @@ function MER_dirtyPaint(){
   var b=document.getElementById('mer-add-btn'); if(!b) return;
   var on;
   if(MER_editId){ on=MER_isDirty(); }
-  else { on=['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].some(function(id){ var el=document.getElementById(id); return el && (el.value||'').trim()!==''; }); }
+  else { on=['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].some(function(id){ var el=document.getElementById(id); return el && (el.value||'').trim()!==''; }); }
   if(on){ b.style.border='0.5px solid var(--lnk)'; b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; b.style.fontWeight='600'; }
   else  { b.style.border='0.5px dashed var(--ln)'; b.style.background='transparent'; b.style.color='var(--mu2)'; b.style.fontWeight='500'; }
 }
@@ -8362,7 +8369,7 @@ function MER_abrir(id){
     hh+='</div>';
   })();
   if(r.status==='vendida'){ hh+='<div id="mer-view-venda"></div>'; }
-  else { hh+=MER_possibilidades(r); }
+  else { hh+='<div id="mer-poss-card">'+MER_possibilidades(r)+'</div>'; }
   document.getElementById('mer-view-body').innerHTML=hh;
   if(r.status==='vendida'){
     var alvo=document.getElementById('mer-view-venda');
@@ -8410,6 +8417,9 @@ function MER_abrir(id){
   }
   var _bv=document.getElementById('mer-view-vender');
   var _be=document.getElementById('mer-view-editar');
+  MER_viewEdit=false; MER_viewEditRow=null;
+  _be.textContent='EDITAR'; _be.disabled=false;
+  var _bcX=document.getElementById('mer-view-cancelar'); if(_bcX) _bcX.style.display='none';
   if(r.status!=='vendida'){
     _bv.style.display='block';
     _bv.onclick=function(){ MER_venderItem(id); };
@@ -8418,25 +8428,7 @@ function MER_abrir(id){
     _bv.style.display='none';
     _be.style.background='var(--acc)'; _be.style.color='var(--acc-tx)'; _be.style.border='none';
   }
-  document.getElementById('mer-view-editar').onclick=function(){
-    var _daBusca=GLB_fichaDaBusca;
-    MER_viewFechar();
-    if(_daBusca){
-      GLB_reabrir=false;
-      document.getElementById('glb-overlay').style.display='none';
-      showScreen('mer');
-      var tent=0;
-      (function espera(){
-        tent++;
-        if(MER_rows && MER_rows.some(function(x){ return String(x.id)===String(id); })){ MER_editar(id); return; }
-        if(tent<15) setTimeout(espera, 200);
-      })();
-      return;
-    }
-    var _sm=document.getElementById('screen-mer');
-    if(!_sm || _sm.style.display!=='block') showScreen('mer');
-    MER_editar(id);
-  };
+  document.getElementById('mer-view-editar').onclick=function(){ MER_viewEditar(id); };
   document.getElementById('mer-view-overlay').style.display='flex';
 }
 function MER_resumoParcelas(v){
@@ -8539,6 +8531,128 @@ function MER_possCalc(){
   }
   tb.innerHTML=out;
 }
+function MER_syncVenda(_r0, payload, desc){
+  // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
+  if(!(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id)) return;
+  var _novoV={custo:payload.custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
+  sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
+    var _vOld=(rq.data&&rq.data[0])||null;
+    sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
+      if(!rv.error && rv.data && rv.data.length){
+        var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
+        VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' \u00b7 '+_dv2):''));
+        VB_toast('Venda vinculada atualizada.');
+      }
+    });
+  });
+}
+var MER_viewEdit=false, MER_viewEditRow=null, MER_viewSnap0='';
+function MER_eVal(id){ var el=document.getElementById(id); return el?(el.value||''):''; }
+function MER_eIso(v){ var pp=(v||'').split('/'); if(pp.length!==3) return null; var y=pp[2]; if(y.length===2) y='20'+y; return y+'-'+('0'+pp[1]).slice(-2)+'-'+('0'+pp[0]).slice(-2); }
+function MER_eMask(el){ var raw=el.value.replace(/\D/g,''); el.value=raw?VEN_formatBR(parseInt(raw)/100):''; MER_viewTocou(); }
+function MER_eSocioPick(){ SOC_openPicker(function(n){ var el=document.getElementById('mer-e-socio'); if(el) el.value=n; MER_viewTocou(); }); }
+function MER_viewTocou(){ MER_viewDirtyPaint(); MER_viewPossRefresh(); }
+function MER_viewCampoIn(l, id, valor, extra){
+  return '<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;align-items:baseline;">'
+    +'<span style="color:var(--mu);white-space:nowrap;">'+l+':</span>'
+    +'<input id="'+id+'" type="text" value="'+HIST_esc(valor||'')+'" '+(extra||'oninput="MER_viewTocou()"')+' style="flex:1;min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:12px;font-weight:700;color:var(--ink);text-align:right;padding:1px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">'
+    +'</div>';
+}
+function MER_viewSnapshot(){
+  return JSON.stringify(['mer-e-modelo','mer-e-ano','mer-e-sn','mer-e-infos','mer-e-custo','mer-e-data','mer-e-fornecedor','mer-e-pagamento','mer-e-socio','mer-e-valorSocio','mer-e-dataSaida','mer-e-baixaNota'].map(function(i){ return MER_eVal(i).trim().toUpperCase(); }));
+}
+function MER_viewDirty(){ return MER_viewEdit && MER_viewSnapshot()!==MER_viewSnap0; }
+function MER_viewDirtyPaint(){
+  if(!MER_viewEdit) return;
+  var b=document.getElementById('mer-view-editar'); if(!b) return;
+  var dd=MER_viewDirty();
+  b.style.background=dd?'var(--acc)':'var(--sf)';
+  b.style.color=dd?'var(--acc-tx)':'var(--mu2)';
+  b.style.border=dd?'none':'0.5px solid var(--ln)';
+}
+function MER_viewPossRefresh(){
+  if(!MER_viewEdit || !MER_viewEditRow) return;
+  var el=document.getElementById('mer-poss-card'); if(!el) return;
+  var r=MER_viewEditRow;
+  var r2={ custo:VEN_parseBR(MER_eVal('mer-e-custo')), valor_socio:(function(){ var v=VEN_parseBR(MER_eVal('mer-e-valorSocio')); return (!isNaN(v)&&v>0)?v:null; })(),
+    socio:MER_eVal('mer-e-socio').trim()||null, data_compra:MER_eIso(MER_eVal('mer-e-data'))||r.data_compra,
+    status:r.status, venda_id:r.venda_id };
+  el.innerHTML=MER_possibilidades(r2);
+}
+function MER_viewEditar(id){
+  var r=MER_rows.find(function(x){ return String(x.id)===String(id); }); if(!r) return;
+  MER_viewEdit=true; MER_viewEditRow=r; MER_viewFecharArmado=false;
+  var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:((r.marca?r.marca+' ':'')+(r.modelo||'')).trim(),ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
+  var ehBaixa=((r.status||'')==='vendida' && !r.venda_id);
+  var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;">';
+  hh+=MER_viewCampoIn('Modelo','mer-e-modelo',cx.modelo);
+  hh+=MER_viewCampoIn('Ano','mer-e-ano',cx.ano);
+  hh+=MER_viewCampoIn('SN','mer-e-sn',cx.sn);
+  hh+=MER_viewCampoIn('Acompanha','mer-e-infos',r.infos||'');
+  hh+='</div><div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
+  hh+=MER_viewCampoIn('Custo','mer-e-custo', r.custo!=null?MER_fmtBR(r.custo):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this)"');
+  hh+=MER_viewCampoIn('Data da Compra','mer-e-data', MER_fmtData(r.data_compra)||'', 'inputmode="numeric" maxlength="10" onclick="this.select()" oninput="REC_maskData(this);MER_viewTocou()" onblur="autoCompleteDate(this);MER_viewTocou()"');
+  if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+='<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:var(--mu);white-space:nowrap;">Em Estoque:</span><span style="font-weight:700;color:var(--so);">'+MER_dias(r.data_compra)+'d</span></div>';
+  hh+=MER_viewCampoIn('De Quem Comprei','mer-e-fornecedor',r.fornecedor||'');
+  hh+=MER_viewCampoIn('Pagamento','mer-e-pagamento',r.pagamento||'');
+  hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','readonly onclick="MER_eSocioPick()"');
+  hh+=MER_viewCampoIn('Parte do S\u00f3cio','mer-e-valorSocio', (r.valor_socio!=null&&Number(r.valor_socio)>0)?MER_fmtBR(r.valor_socio):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this)"');
+  hh+='</div>';
+  if(ehBaixa){
+    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
+    hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:2px;">SA\u00cdDA (BAIXA MANUAL)</div>';
+    hh+=MER_viewCampoIn('Data da Sa\u00edda','mer-e-dataSaida', MER_fmtData(r.data_venda)||'', 'inputmode="numeric" maxlength="10" onclick="this.select()" oninput="REC_maskData(this);MER_viewTocou()" onblur="autoCompleteDate(this);MER_viewTocou()"');
+    hh+=MER_viewCampoIn('Nota da Sa\u00edda','mer-e-baixaNota', r.baixa_nota||'');
+    hh+='</div>';
+  }
+  if(r.status!=='vendida') hh+='<div id="mer-poss-card">'+MER_possibilidades(r)+'</div>';
+  document.getElementById('mer-view-body').innerHTML=hh;
+  var _bv=document.getElementById('mer-view-vender'); if(_bv) _bv.style.display='none';
+  var _be=document.getElementById('mer-view-editar');
+  _be.textContent='SALVAR ALTERA\u00c7\u00d5ES';
+  _be.onclick=MER_viewSalvar;
+  var _bc=document.getElementById('mer-view-cancelar');
+  if(_bc){ _bc.style.display='block'; _bc.onclick=function(){ MER_viewEdit=false; MER_viewEditRow=null; MER_abrir(id); }; }
+  MER_viewSnap0=MER_viewSnapshot();
+  MER_viewDirtyPaint();
+}
+function MER_viewSalvar(){
+  if(!MER_viewEdit || !MER_viewEditRow) return;
+  if(!MER_viewDirty()){ VB_toast('Nada mudou.'); return; }
+  var r=MER_viewEditRow;
+  var mo=MER_eVal('mer-e-modelo').trim(), an=MER_eVal('mer-e-ano').trim(), sn=MER_eVal('mer-e-sn').trim();
+  var desc=[mo,an].filter(function(x){return x;}).join(' '); if(sn) desc+=(desc?' ':'')+'SN: '+sn; desc=desc.toUpperCase();
+  var custo=VEN_parseBR(MER_eVal('mer-e-custo'));
+  if(!desc){ VB_toast('Preencha o modelo.'); return; }
+  if(isNaN(custo)||custo<=0){ VB_toast('Preencha o custo.'); return; }
+  var vs=VEN_parseBR(MER_eVal('mer-e-valorSocio'));
+  var payload={ descricao:desc, custo:custo, data_compra:MER_eIso(MER_eVal('mer-e-data')),
+    marca:null, modelo:mo.toUpperCase()||null, ano:an||null, sn:sn.toUpperCase()||null,
+    infos:MER_eVal('mer-e-infos').trim().toUpperCase()||null,
+    fornecedor:MER_eVal('mer-e-fornecedor').trim().toUpperCase()||null,
+    pagamento:MER_eVal('mer-e-pagamento').trim().toUpperCase()||null,
+    socio:MER_eVal('mer-e-socio').trim().toUpperCase()||null,
+    valor_socio:(!isNaN(vs)&&vs>0)?vs:null };
+  var ehBaixa=((r.status||'')==='vendida' && !r.venda_id);
+  if(ehBaixa){
+    var dsai=MER_eIso(MER_eVal('mer-e-dataSaida')); if(dsai) payload.data_venda=dsai;
+    payload.baixa_nota=MER_eVal('mer-e-baixaNota').trim().toUpperCase()||null;
+  }
+  var b=document.getElementById('mer-view-editar');
+  if(b){ b.disabled=true; b.textContent='SALVANDO...'; }
+  sb.from('mercadorias').update(payload).eq('id', r.id).select().then(function(res){
+    if(b){ b.disabled=false; b.textContent='SALVAR ALTERA\u00c7\u00d5ES'; }
+    if(res.error){ VB_toast('N\u00e3o salvou: '+(res.error.message||res.error.code||'erro')); return; }
+    var _det=VB_logDiff(r, payload);
+    VB_log('ESTOQUE','editou', desc, _det||VB_logDet({custo:custo||0}));
+    MER_syncVenda(r, payload, desc);
+    Object.assign(r, payload);
+    MER_viewEdit=false; MER_viewEditRow=null;
+    VB_toast('Altera\u00e7\u00f5es salvas.');
+    MER_load();
+    MER_abrir(r.id);
+  });
+}
 function MER_venderItem(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
@@ -8571,7 +8685,20 @@ function MER_abrirVenda(id){
   HIST_voltaParaHist=_doHist&&!_daBusca;
   VB_telaAnterior = _daBusca ? 'home' : (_doHist ? 'hist' : 'mer'); // volta pra onde a ficha nasceu
 }
-function MER_viewFechar(){ GLB_fichaDaBusca=false; MER_fichaDoHist=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none'; }
+function MER_viewFechar(){
+  if(MER_viewEdit && MER_viewDirty()){
+    if(MER_viewFecharArmado){ MER_viewFecharArmado=false; }
+    else {
+      MER_viewFecharArmado=true;
+      VB_toast('Altera\u00e7\u00f5es n\u00e3o salvas. Toque de novo para descartar.');
+      setTimeout(function(){ MER_viewFecharArmado=false; }, 2500);
+      return;
+    }
+  }
+  MER_viewEdit=false; MER_viewEditRow=null;
+  GLB_fichaDaBusca=false; MER_fichaDoHist=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
+}
+var MER_viewFecharArmado=false;
 function MER_editar(id){
   if(MER_editId && String(MER_editId)!==String(id)){ MER_dirtyGuard(function(){ MER_editar(id); }); return; }
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
@@ -8590,8 +8717,12 @@ function MER_editar(id){
   VB_autoGrow(document.getElementById('mer-pagamento'));
   document.getElementById('mer-socio').value=r.socio||'';
   document.getElementById('mer-valorSocio').value=r.valor_socio!=null?MER_fmtBR(r.valor_socio):'';
+  var _bnW=document.getElementById('mer-baixaNota-wrap'), _bnI=document.getElementById('mer-baixaNota');
+  var _ehBaixaManual=((r.status||'')==='vendida' && !r.venda_id);
+  if(_bnI) _bnI.value=r.baixa_nota||'';
+  if(_bnW) _bnW.style.display=_ehBaixaManual?'block':'none';
   MER_pctLive();
-  if(r.fornecedor||r.pagamento||r.socio||r.valor_socio){
+  if(r.fornecedor||r.pagamento||r.socio||r.valor_socio||(_ehBaixaManual&&r.baixa_nota)){
     var d=document.getElementById('mer-detalhes');
     if(d && d.style.display==='none') MER_toggleDetalhes();
   }
@@ -8605,7 +8736,7 @@ function MER_editar(id){
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive(); MER_dirtyPaint();
+  ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -8736,6 +8867,7 @@ function MER_add(btn){
   var pgto=(document.getElementById('mer-pagamento').value||'').trim().toUpperCase();
   var socio=(document.getElementById('mer-socio').value||'').trim().toUpperCase();
   var vSocio=VEN_parseBR(document.getElementById('mer-valorSocio').value);
+  var _rEd = MER_editId ? (MER_rows||[]).filter(function(x){ return String(x.id)===String(MER_editId); })[0] : null;
   var payload={
     descricao:desc, custo:custo, data_compra:iso,
     marca:null,
@@ -8746,6 +8878,9 @@ function MER_add(btn){
     fornecedor: forn||null, pagamento: pgto||null,
     socio: socio||null, valor_socio: (!isNaN(vSocio)&&vSocio>0)?vSocio:null
   };
+  if(_rEd && (_rEd.status||'')==='vendida' && !_rEd.venda_id){
+    payload.baixa_nota=((document.getElementById('mer-baixaNota')||{}).value||'').trim().toUpperCase()||null;
+  }
   if(btn){ btn.disabled=true; btn.textContent='SALVANDO...'; }
   var q = MER_editId
     ? sb.from('mercadorias').update(payload).eq('id', MER_editId).select()
@@ -8757,25 +8892,12 @@ function MER_add(btn){
     var _mid=MER_editId;
     var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
     MER_editId=null;
-    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); MER_pctLive(); MER_dirtyPaint();
+    ['mer-modelo','mer-ano','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
     MER_updateAddBtn();
     MER_toggleForm(false);
     var _detEd = editava&&_r0 ? VB_logDiff(_r0, payload) : '';
     VB_log('ESTOQUE', editava?'editou':'criou', desc, editava?(_detEd||VB_logDet({custo:custo||0})):VB_logDet({custo:custo||0}));
-    // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
-    if(editava && _r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
-      var _novoV={custo:custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
-      sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
-        var _vOld=(rq.data&&rq.data[0])||null;
-        sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
-          if(!rv.error && rv.data && rv.data.length){
-            var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
-            VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' · '+_dv2):''));
-            VB_toast('Venda vinculada atualizada.');
-          }
-        });
-      });
-    }
+    if(editava) MER_syncVenda(_r0, payload, desc);
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
     MER_load();
   });
@@ -10041,6 +10163,16 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.106.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Edição dentro da ficha — fim do teletransporte. EDITAR agora transforma a própria ficha: cada valor vira campo no lugar onde está (Modelo, Ano, SN, Acompanha, Custo, Data da Compra, De Quem Comprei, Pagamento, Sócio com picker, Parte do Sócio), Em Estoque fica travado (é derivado), e baixa manual ganha o bloco SAÍDA com Data e Nota editáveis. O card POSSIBILIDADES recalcula ao vivo enquanto você mexe no custo ou na parte do sócio. SALVAR ALTERAÇÕES acende quando algo diverge (padrão da casa), CANCELAR volta à ficha intacta, FECHAR com mudança pendente pede segundo toque. Salvou: log com diff, sincronia com a venda vinculada e a ficha se redesenha na hora. O formulário do topo da lista segue existindo como caminho antigo nesta versão — some na próxima, depois do seu teste</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.105.2</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Editar um item BAIXADO (baixa manual, sem venda vinculada) agora mostra o campo NOTA DA SAÍDA no formulário — dá pra adicionar ou corrigir a nota depois da baixa. O campo só aparece nesse caso, entra no aviso de alterações não salvas e vai pro Log como os demais</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.105.1</span><span class="cl-ver-date">13/07/2026</span></div>
