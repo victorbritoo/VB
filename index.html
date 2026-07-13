@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.103.0</title>
+<title>VB - v1.103.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.103.0<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.103.1<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8374,7 +8374,7 @@ function MER_resumoParcelas(v){
   return '';
 }
 var MER_vendaCache=null;
-var MER_CENARIOS=[{rot:'\u00c0 VISTA', pct:13, n:1},{rot:'1+4', pct:15, n:5},{rot:'1+5', pct:18, n:6}]; // calibrado na auditoria de 12/07/2026
+var MER_CENARIOS=[{rot:'\u00c0 VISTA', pct:13, n:1},{rot:'1+4', pct:15, n:5},{rot:'1+9', alvo:7.5, n:10}]; // margens da auditoria de 12/07; 1+9 pela escada (sem histórico próprio)
 var MER_ALVOS={curto:5.5, medio:6.5, longo:7.5}; // alvo % a.m.: 1+1..3 / 1+4..6 / 1+7..10
 var MER_possDados=null;
 function MER_possibilidades(r){
@@ -8389,13 +8389,22 @@ function MER_possibilidades(r){
   var hh='<div onclick="MER_possToggle()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;cursor:pointer;">';
   hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">POSSIBILIDADES DE VENDA \u00b7 '+dias+'d em Estoque</div>';
   MER_CENARIOS.forEach(function(s){
-    var preco=c*(1+s.pct/100);
-    var meuL=c*(s.pct/100)*(pV/100);
     var cic=(dias + (s.n-1)/2*30)/30;
-    var tm=(cic>0)?VB_termometro(meuL, cap, cic):null;
+    var preco, tm, pctRot;
+    if(s.alvo!=null){
+      var m=(cic>0)?cic:0.01;
+      preco=c + (s.alvo/100)*cap*m/(pV/100);
+      pctRot=Math.round((preco-c)/c*100);
+      tm=s.alvo;
+    } else {
+      preco=c*(1+s.pct/100);
+      pctRot=s.pct;
+      var meuL=c*(s.pct/100)*(pV/100);
+      tm=(cic>0)?VB_termometro(meuL, cap, cic):null;
+    }
     var cor=(tm!=null&&tm<3.5)?'var(--red)':'var(--ink)';
     hh+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:4px;">'
-      +'<span style="color:var(--mu);white-space:nowrap;">'+s.rot+' <span style="color:var(--so);">(+'+s.pct+'%)</span></span>'
+      +'<span style="color:var(--mu);white-space:nowrap;">'+s.rot+' <span style="color:var(--so);">(+'+pctRot+'%)</span></span>'
       +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(preco)+' \u00b7 <b style="color:'+cor+';">'+(tm!=null?(tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'):'\u2014')+'</b></span>'
       +'</div>';
   });
@@ -9921,6 +9930,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.103.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Card fechado virou o mapa dos extremos: À VISTA +13% (teto do giro), 1+4 +15% (centro da mesa) e 1+9 (fronteira longa) — o 1+5 saiu por dizer quase o mesmo que o 1+4. O 1+9 não tem margem auditada (nunca vendido), então usa a escada: preço que segura 7,5% a.m., com a margem resultante mostrada. Qualquer proposta real cai entre dois pontos do card; o expandido segue sendo o zoom</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.103.0</span><span class="cl-ver-date">13/07/2026</span></div>
