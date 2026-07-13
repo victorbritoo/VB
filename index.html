@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.101.0</title>
+<title>VB - v1.102.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -469,7 +469,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.101.0<br>12/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.102.0<br>13/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8375,6 +8375,8 @@ function MER_resumoParcelas(v){
 }
 var MER_vendaCache=null;
 var MER_CENARIOS=[{rot:'\u00c0 VISTA', pct:13, n:1},{rot:'1+4', pct:15, n:5},{rot:'1+5', pct:18, n:6}]; // calibrado na auditoria de 12/07/2026
+var MER_ALVOS={curto:5.5, medio:6.5, longo:7.5}; // alvo % a.m.: 1+1..3 / 1+4..6 / 1+7..10
+var MER_possDados=null;
 function MER_possibilidades(r){
   var c=Number(r.custo)||0; if(!(c>0)) return '';
   var vs=Number(r.valor_socio)||0;
@@ -8383,8 +8385,9 @@ function MER_possibilidades(r){
   var cap=temS?(c-vs):c; if(!(cap>0)) return '';
   var pV=temS?50:100;
   var dias=(r.data_compra?MER_dias(r.data_compra):0)||0; if(dias<0) dias=0;
-  var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
-  hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">POSSIBILIDADES DE VENDA \u00b7 '+dias+'d em casa</div>';
+  MER_possDados={c:c, cap:cap, pV:pV, dias:dias};
+  var hh='<div onclick="MER_possToggle()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;cursor:pointer;">';
+  hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">POSSIBILIDADES DE VENDA \u00b7 '+dias+'d em Estoque</div>';
   MER_CENARIOS.forEach(function(s){
     var preco=c*(1+s.pct/100);
     var meuL=c*(s.pct/100)*(pV/100);
@@ -8396,8 +8399,46 @@ function MER_possibilidades(r){
       +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(preco)+' \u00b7 <b style="color:'+cor+';">'+(tm!=null?(tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'):'\u2014')+'</b></span>'
       +'</div>';
   });
+  hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
+    +'<div style="text-align:center;margin-bottom:6px;"><span style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">ENTRADA</span> <span style="font-size:11px;color:var(--mu);">R$</span> <input id="mer-poss-ent" type="text" inputmode="numeric" placeholder="0,00" onclick="event.stopPropagation()" oninput="MER_possEntMask(this)" style="width:96px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:12px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;"></div>'
+    +'<div id="mer-poss-tab"></div>'
+    +'<div style="text-align:center;font-size:9px;color:var(--so);margin-top:7px;">pre\u00e7o que segura o alvo \u00b7 entrada vazia = igual \u00e0s parcelas</div>'
+    +'</div>';
   hh+='</div>';
   return hh;
+}
+function MER_possToggle(){
+  var e=document.getElementById('mer-poss-exp'); if(!e) return;
+  if(e.style.display==='none'||!e.style.display){ e.style.display='block'; MER_possCalc(); }
+  else { e.style.display='none'; }
+}
+function MER_possEntMask(el){
+  var raw=el.value.replace(/\D/g,'');
+  el.value = raw ? MER_fmtBR(parseInt(raw)/100) : '';
+  MER_possCalc();
+}
+function MER_possCalc(){
+  var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
+  var entS=((document.getElementById('mer-poss-ent')||{}).value||'').trim();
+  var E=parseFloat(entS.replace(/\./g,'').replace(',','.')); if(isNaN(E)||E<0) E=0;
+  var q=d.pV/100, out='';
+  for(var N=1;N<=10;N++){
+    var alvo=(N<=3)?MER_ALVOS.curto:((N<=6)?MER_ALVOS.medio:MER_ALVOS.longo);
+    var R=(alvo/100)*d.cap;
+    var T=d.c*1.15;
+    for(var i=0;i<30;i++){
+      var mean=(E>0)?(((T-E)>0?(T-E):0)*15*(N+1)/T):(15*N);
+      var m=(d.dias+mean)/30; if(!(m>0)) m=0.01;
+      T=d.c + R*m/q;
+    }
+    var marg=Math.round((T-d.c)/d.c*100);
+    var ok=(E<T);
+    out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
+      +'<span style="color:var(--mu);white-space:nowrap;">1+'+N+' <span style="color:var(--so);">('+alvo.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%)</span></span>'
+      +'<span style="text-align:right;white-space:nowrap;color:var(--tx);">'+(ok?('R$ '+MER_fmtBR(T)+' \u00b7 <b style="color:var(--ink);">+'+marg+'%</b>'):'\u2014')+'</span>'
+      +'</div>';
+  }
+  tb.innerHTML=out;
 }
 function MER_venderItem(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
@@ -9877,6 +9918,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.102.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Card POSSIBILIDADES expandível: um toque abre a tabela 1+1 até 1+10, cada linha com o preço que segura o alvo da escada de risco (5,5% a.m. no curto 1+1–3 · 6,5% no médio 1+4–6 · 7,5% no longo 1+7–10, gravada em MER_ALVOS) — dias de Estoque dentro do ciclo. Campo ENTRADA (R$): vazio = entrada igual às parcelas; preenchido, o saldo divide nas N e a tabela recalcula ao vivo — entrada maior, preço menor, mesma taxa. Outro toque recolhe. Rótulo do card trocado pra "em Estoque"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.101.0</span><span class="cl-ver-date">12/07/2026</span></div>
