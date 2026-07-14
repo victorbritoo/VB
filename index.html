@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.109.3</title>
+<title>VB - v1.109.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9189,23 +9189,17 @@ function VEN_resumoSocioDados(r){
 }
 function VEN_resumoSocioTexto(d){
   var L=[];
-  L.push(d.titulo+(d.cliente?(' \u2014 '+d.cliente):''));
-  var l2=[]; if(d.sn) l2.push('SN: '+d.sn); if(d.dataVenda) l2.push('Neg\u00f3cio: '+d.dataVenda);
-  if(l2.length) L.push(l2.join(' \u00b7 '));
+  L.push('*'+d.titulo+'*.');
+  var l2=[]; if(d.sn) l2.push('*SN*: '+d.sn); if(d.dataVenda) l2.push('*Venda*: '+d.dataVenda);
+  if(l2.length) L.push(l2.join(' \u00b7 ')+'.');
+  L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
+  L.push('*Venda*: '+HIST_fmtMoeda(d.total)+'.');
+  L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
+  if(d.rend!=null) L.push('*Rendimento*: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. \u00b7 Prazo M\u00e9dio '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
   L.push('');
-  L.push('VENDA');
-  L.push('Total: '+HIST_fmtMoeda(d.total));
-  d.parc.forEach(function(p,i){ L.push(('0'+(i+1)).slice(-2)+' \u00b7 '+p.d+' \u00b7 '+HIST_fmtMoeda(p.v)); });
-  L.push('');
-  L.push('RESUMO');
-  L.push('Custo: '+HIST_fmtMoeda(d.custo));
-  L.push('Receita: '+HIST_fmtMoeda(d.total));
-  L.push('Lucro: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'% margem)'):''));
-  if(d.rend!=null) L.push('Rendimento: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. \u00b7 ciclo '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m');
-  L.push('');
-  L.push('S\u00d3CIO '+d.socio+' ('+d.racha+'% do lucro)');
-  L.push('Capital: '+HIST_fmtMoeda(d.capS));
-  L.push('Lucro: '+HIST_fmtMoeda(d.lucroS)+(d.pctS!=null?(' ('+Math.round(d.pctS)+'% sobre o capital)'):''));
+  L.push('*S\u00d3CIO: '+d.socio+' ('+d.racha+'%)*.');
+  L.push('*Capital*: '+HIST_fmtMoeda(d.capS)+'.');
+  L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroS)+(d.pctS!=null?(' ('+Math.round(d.pctS)+'%)'):'')+'.');
   return L.join('\n');
 }
 function VEN_resumoSocioCopiar(d){
@@ -10416,6 +10410,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.109.4</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">Texto do RESUMO P/ S\u00d3CIO no formato WhatsApp aprovado: r\u00f3tulos e t\u00edtulo entre asteriscos (negrito na conversa), template compacto \u2014 t\u00edtulo, SN \u00b7 data da venda, Custo, Venda, Lucro (%), Rendimento (% a.m. \u00b7 Prazo M\u00e9dio) e bloco S\u00d3CIO com Capital e Lucro (%). Lista de parcelas saiu do texto (a FOTO j\u00e1 \u00e9 a tabela delas)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.109.3</span><span class="cl-ver-date">13/07/2026</span></div>
