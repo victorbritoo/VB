@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.109.0</title>
+<title>VB - v1.109.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5449,6 +5449,8 @@ function VEN_gerarTabela(){
   // Pre-calc total row height with obs
   var totalRowH = linhas.reduce(function(a,l){ return a+(l.obs&&l.obs.trim()?altRow+altObs:altRow); },0);
   var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
+  var socioBlkH = VEN_socioExtra ? (8+6+20+20+30+4) : 0;
+  H += socioBlkH;
 
   // Código + QR (para carregar em outro aparelho)
   var ven_codeStr = VEN_codeB32();
@@ -5525,6 +5527,29 @@ function VEN_gerarTabela(){
   ctx.fillText('Total', c1, y+altTot*0.68);
   ctx.fillText('R$ '+VEN_formatBR(total), c2, y+altTot*0.68);
   var yTableBottom = y + altTot;
+
+  if(VEN_socioExtra){
+    var sd=VEN_socioExtra, ys=yTableBottom+8;
+    ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(padH,ys); ctx.lineTo(W-padH,ys); ctx.stroke();
+    ys+=6;
+    function _sLin(lab,val){
+      ctx.fillStyle='#888'; ctx.font='500 10px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(lab, padH, ys+13);
+      ctx.fillStyle='#111'; ctx.font='600 10px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+      ctx.fillText(val, W-padH, ys+13);
+      ys+=20;
+    }
+    _sLin('Capital '+sd.socio, HIST_fmtMoeda(sd.capS));
+    _sLin('Racha do lucro', sd.racha+'% '+sd.socio);
+    ctx.fillStyle='#111'; ctx.fillRect(padH, ys, W-padH*2, 26);
+    ctx.fillStyle='#bbb'; ctx.font='700 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+    ctx.fillText('LUCRO '+sd.socio, padH+10, ys+16.5);
+    ctx.fillStyle='#fff'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(HIST_fmtMoeda(sd.lucroS)+(sd.pctS!=null?(' ('+Math.round(sd.pctS)+'%)'):''), W-padH-10, ys+17);
+    ctx.textAlign='left';
+    yTableBottom = ys+26+4;
+  }
 
   var img = document.getElementById('ven-tabelaImagem');
   VB_drawWatermark(ctx, W, H);
@@ -9101,7 +9126,7 @@ function VEN_rendCalc(){
     +'</span>';
 }
 // ===== Resumo da operação pro sócio (vendas em sociedade) =====
-var VEN_resumoAtual=null;
+var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null;
 function VEN_resumoSocioDados(r){
   if(!r) return null;
   var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
@@ -9123,25 +9148,49 @@ function VEN_resumoSocioDados(r){
       }
     }
   }
-  return { titulo:(r.nome||r.descricao||'(sem descri\u00e7\u00e3o)'), socio:String(r.socio).toUpperCase(),
+  var titulo=(r.nome||r.descricao||'(sem descri\u00e7\u00e3o)'), sn=null;
+  var _snM=String(titulo).match(/\bSN\s*:?\s*([A-Za-z0-9-]+)/i);
+  if(_snM){ sn=_snM[1]; titulo=titulo.replace(_snM[0],'').replace(/\s{2,}/g,' ').trim()||titulo; }
+  // ciclo: dias em estoque (se veio do estoque) + prazo médio ponderado das parcelas
+  var cic=null;
+  (function(){
+    if(!r.data_venda) return;
+    var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length!==3) return;
+    var dv=new Date(+vv[0],+vv[1]-1,+vv[2]); if(isNaN(dv.getTime())) return;
+    var dias=0;
+    var dc=(typeof HIST_merCompra==='object'&&HIST_merCompra)?HIST_merCompra[String(r.id)]:null;
+    if(dc){ var pp=String(dc).split('T')[0].split('-'); if(pp.length===3){ var d0=new Date(+pp[0],+pp[1]-1,+pp[2]); if(!isNaN(d0.getTime())){ dias=(dv-d0)/86400000; if(!isFinite(dias)||dias<0) dias=0; } } }
+    var soma=0, peso=0;
+    parc.forEach(function(p){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(p.d); if(m&&p.v>0){ var d2=new Date(+m[3],+m[2]-1,+m[1]); var dd=(d2-dv)/86400000; if(dd<0)dd=0; soma+=p.v*dd; peso+=p.v; } });
+    var pm=(peso>0)?soma/peso:0;
+    var m2=(dias+pm)/30;
+    if(isFinite(m2)&&m2>0) cic=m2;
+  })();
+  var rend=(cic&&c>0)?VB_termometro(l, c, cic):null; // rendimento do NEGÓCIO: lucro total sobre custo total
+  return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(r.socio).toUpperCase(),
     dataVenda:(r.data_venda?HIST_fmtData(r.data_venda):null), total:Number(r.valor_total)||0,
-    parc:parc, capS:vs, lucroS:lS, pctS:(vs>0?(lS/vs*100):null), racha:(100-pVB) };
+    parc:parc, custo:c, lucroTot:l, margem:(c>0?(l/c*100):null), cic:cic, rend:rend,
+    capS:vs, lucroS:lS, pctS:(vs>0?(lS/vs*100):null), racha:(100-pVB) };
 }
 function VEN_resumoSocioTexto(d){
   var L=[];
-  L.push('VB \u00b7 RESUMO DA OPERA\u00c7\u00c3O');
-  L.push(d.titulo);
-  if(d.dataVenda) L.push('Data do neg\u00f3cio: '+d.dataVenda);
+  L.push(d.titulo+(d.cliente?(' \u2014 '+d.cliente):''));
+  var l2=[]; if(d.sn) l2.push('SN: '+d.sn); if(d.dataVenda) l2.push('Neg\u00f3cio: '+d.dataVenda);
+  if(l2.length) L.push(l2.join(' \u00b7 '));
   L.push('');
-  L.push('Valor da venda: '+HIST_fmtMoeda(d.total));
-  if(d.parc.length){
-    L.push('Parcelas:');
-    d.parc.forEach(function(p,i){ L.push(('0'+(i+1)).slice(-2)+' \u00b7 '+p.d+' \u00b7 '+HIST_fmtMoeda(p.v)); });
-  }
+  L.push('VENDA');
+  L.push('Total: '+HIST_fmtMoeda(d.total));
+  d.parc.forEach(function(p,i){ L.push(('0'+(i+1)).slice(-2)+' \u00b7 '+p.d+' \u00b7 '+HIST_fmtMoeda(p.v)); });
   L.push('');
-  L.push('S\u00f3cio: '+d.socio+' ('+d.racha+'% do lucro)');
-  L.push('Capital '+d.socio+': '+HIST_fmtMoeda(d.capS));
-  L.push('Lucro '+d.socio+': '+HIST_fmtMoeda(d.lucroS)+(d.pctS!=null?(' ('+Math.round(d.pctS)+'% sobre o capital)'):''));
+  L.push('RESUMO');
+  L.push('Custo: '+HIST_fmtMoeda(d.custo));
+  L.push('Receita: '+HIST_fmtMoeda(d.total));
+  L.push('Lucro: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'% margem)'):''));
+  if(d.rend!=null) L.push('Rendimento: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. \u00b7 ciclo '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m');
+  L.push('');
+  L.push('S\u00d3CIO '+d.socio+' ('+d.racha+'% do lucro)');
+  L.push('Capital: '+HIST_fmtMoeda(d.capS));
+  L.push('Lucro: '+HIST_fmtMoeda(d.lucroS)+(d.pctS!=null?(' ('+Math.round(d.pctS)+'% sobre o capital)'):''));
   return L.join('\n');
 }
 function VEN_resumoSocioShareTexto(d){
@@ -9153,72 +9202,10 @@ function VEN_resumoSocioShareTexto(d){
     catch(e){ VB_toast('N\u00e3o consegui copiar o texto.'); }
   }
 }
-function VEN_resumoSocioFoto(d){
-  var W=820, PAD=40, CW=W-PAD*2;
-  // título quebrado em até 2 linhas por largura real
-  var cvm=document.createElement('canvas').getContext('2d');
-  cvm.font='700 24px -apple-system, Helvetica, sans-serif';
-  var tl=[], cur='';
-  String(d.titulo).split(' ').forEach(function(w){
-    var t=cur?cur+' '+w:w;
-    if(cvm.measureText(t).width>CW && cur){ tl.push(cur); cur=w; } else { cur=t; }
-  });
-  if(cur) tl.push(cur);
-  tl=tl.slice(0,2);
-  var nP=d.parc.length;
-  var h1=58+30+14 + nP*30 + 14;           // card venda: título + linha total + parcelas
-  var h2=58+30*2+(d.pctS!=null?0:0)+14;   // card sócio: capital + racha
-  var H=150 + tl.length*32 + (d.dataVenda?24:0) + 14 + h1+12 + h2+12 + 64 + 52;
-  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
-  var c=cv.getContext('2d');
-  c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
-  try{ VB_drawWatermark(c, W, H); }catch(e){}
-  c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', PAD, 70);
-  c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
-  c.fillText('R E S U M O   D A   O P E R A \u00c7 \u00c3 O', PAD, 96);
-  var y=138;
-  c.fillStyle='#111'; c.font='700 24px -apple-system, Helvetica, sans-serif';
-  tl.forEach(function(t){ c.fillText(t, PAD, y); y+=32; });
-  if(d.dataVenda){ c.fillStyle='#888'; c.font='500 13px -apple-system, Helvetica, sans-serif'; c.fillText('Data do neg\u00f3cio: '+d.dataVenda, PAD, y); y+=24; }
-  y+=14;
-  function card(hh, desenha){
-    c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
-    c.beginPath(); c.roundRect(PAD,y,CW,hh,14); c.fill(); c.stroke();
-    desenha(y); y+=hh+12;
-  }
-  function lin(yy, lab, val, forte){
-    c.fillStyle='#888'; c.font='500 14px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
-    c.fillText(lab, PAD+22, yy);
-    c.fillStyle='#111'; c.font=(forte?'700 15px':'600 15px')+' -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-    c.fillText(val, PAD+CW-22, yy); c.textAlign='left';
-  }
-  card(h1, function(y0){
-    c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif';
-    c.fillText('VENDA', PAD+22, y0+28);
-    var yy=y0+56;
-    lin(yy, 'Valor da venda', HIST_fmtMoeda(d.total), true); yy+=30;
-    d.parc.forEach(function(p,i){ lin(yy, ('0'+(i+1)).slice(-2)+' \u00b7 '+p.d, HIST_fmtMoeda(p.v)); yy+=30; });
-  });
-  card(h2, function(y0){
-    c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif';
-    c.fillText('S\u00d3CIO \u00b7 '+d.socio, PAD+22, y0+28);
-    var yy=y0+56;
-    lin(yy, 'Capital '+d.socio, HIST_fmtMoeda(d.capS)); yy+=30;
-    lin(yy, 'Racha do lucro', d.racha+'% '+d.socio);
-  });
-  c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
-  c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO '+d.socio, PAD+22, y+38);
-  c.fillStyle='#fff'; c.font='700 22px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-  c.fillText(HIST_fmtMoeda(d.lucroS)+(d.pctS!=null?(' ('+Math.round(d.pctS)+'%)'):''), PAD+CW-22, y+42); c.textAlign='left';
-  var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-  c.fillText('Gerado em '+ds, W-PAD, H-20); c.textAlign='left';
-  VB_fotoPreview(cv, 'VB - Resumo Socio - '+d.socio+'.jpg');
-}
 function VEN_resumoSocioSheet(r){
   var d=VEN_resumoSocioDados(r);
   if(!d){ VB_toast('Essa venda n\u00e3o \u00e9 sociedade.'); return; }
-  VEN_resumoAtual=d;
+  VEN_resumoAtual=d; VEN_resumoAtualRow=r;
   var old=document.getElementById('vb-rsoc-sheet'); if(old) old.remove();
   var ov=document.createElement('div');
   ov.id='vb-rsoc-sheet';
@@ -9232,7 +9219,14 @@ function VEN_resumoSocioSheet(r){
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
-  ov.querySelector('#vb-rsoc-foto').addEventListener('click', function(){ ov.remove(); VEN_resumoSocioFoto(VEN_resumoAtual); });
+  ov.querySelector('#vb-rsoc-foto').addEventListener('click', function(){
+    ov.remove();
+    VEN_socioExtra=VEN_resumoAtual;
+    try{
+      if(VB_telaAtual!=='ven'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarVen(VEN_resumoAtualRow); }
+      VEN_gerarTabela();
+    }finally{ VEN_socioExtra=null; }
+  });
   ov.querySelector('#vb-rsoc-txt').addEventListener('click', function(){ ov.remove(); VEN_resumoSocioShareTexto(VEN_resumoAtual); });
   ov.querySelector('#vb-rsoc-cancel').addEventListener('click', function(){ ov.remove(); });
 }
@@ -10398,6 +10392,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.109.1</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">RESUMO P/ S\u00d3CIO redesenhado no formato aprovado. FOTO: agora \u00e9 a pr\u00f3pria tabela de parcelas que o cliente recebe, com o bloco do s\u00f3cio embaixo \u2014 Capital, Racha e faixa preta LUCRO NOME R$ X (%); o canvas exclusivo da 1.109.0 foi apagado (uma linguagem visual s\u00f3, e a foto do cliente segue id\u00eantica quando gerada pelo caminho normal). TEXTO: novo formato em se\u00e7\u00f5es \u2014 t\u00edtulo com cliente, SN e data do neg\u00f3cio; VENDA com total e parcelas; RESUMO com custo, receita, lucro (margem %) e rendimento do neg\u00f3cio (% a.m. \u00b7 ciclo, lucro total sobre custo total); bloco do S\u00d3CIO com capital e lucro dele em % sobre o capital DELE</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.109.0</span><span class="cl-ver-date">13/07/2026</span></div>
