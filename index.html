@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.109.6</title>
+<title>VB - v1.110.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5451,7 +5451,7 @@ function VEN_gerarTabela(){
   var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
   var socioBlkH = 0;
   if(VEN_socioExtra){
-    var _nR = (VEN_socioExtra.rend!=null) ? 4 : 3;   // linhas do RESUMO
+    var _nR = (VEN_socioExtra.rend!=null) ? 5 : 3;   // linhas do RESUMO (Rendimento + Ciclo de Capital)
     socioBlkH = 8+6 + 16 + _nR*20 + 8 + 16 + 20 + 26 + 4;
   }
   H += socioBlkH;
@@ -5553,7 +5553,10 @@ function VEN_gerarTabela(){
     _sLin('Custo', HIST_fmtMoeda(sd.custo));
     _sLin('Venda', HIST_fmtMoeda(sd.total));
     _sLin('Lucro', HIST_fmtMoeda(sd.lucroTot)+(sd.margem!=null?(' ('+Math.round(sd.margem)+'%)'):''));
-    if(sd.rend!=null) _sLin('Rendimento', sd.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. \u00b7 Ciclo de Capital '+sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m');
+    if(sd.rend!=null){
+      _sLin('Rendimento', sd.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
+      _sLin('Ciclo de Capital', sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m');
+    }
     ys+=8;
     _sHdr('S\u00d3CIO: '+sd.socio+' ('+sd.racha+'%)');
     _sLin('Capital', HIST_fmtMoeda(sd.capS));
@@ -9195,7 +9198,10 @@ function VEN_resumoSocioTexto(d){
   L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
   L.push('*Venda*: '+HIST_fmtMoeda(d.total)+'.');
   L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
-  if(d.rend!=null) L.push('*Rendimento*: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. \u00b7 Ciclo de Capital '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
+  if(d.rend!=null){
+    L.push('*Rendimento*: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
+    L.push('*Ciclo de Capital*: '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
+  }
   L.push('');
   L.push('*S\u00d3CIO: '+d.socio+' ('+d.racha+'%)*.');
   L.push('*Capital*: '+HIST_fmtMoeda(d.capS)+'.');
@@ -9239,6 +9245,12 @@ function VEN_resumoSocioSheet(r){
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#vb-rsoc-foto').addEventListener('click', function(){
     ov.remove();
+    try{
+      var _t=VEN_resumoSocioTexto(VEN_resumoAtual);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(_t).then(function(){ VB_toast('Texto copiado \u2014 cola junto da foto.'); }, function(){});
+      }
+    }catch(e){}
     VEN_socioExtra=VEN_resumoAtual;
     try{
       if(VB_telaAtual!=='ven'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarVen(VEN_resumoAtualRow); }
@@ -10410,6 +10422,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.110.0</span><span class="cl-ver-date">13/07/2026</span></div>
+      <div class="cl-item">FOTO do resumo p/ s\u00f3cio agora copia o texto junto: um toque gera a tabela E deixa a mensagem no clipboard, com toast avisando \u2014 compartilha a foto no WhatsApp e cola o texto na mesma conversa, sem voltar no app. E o Ciclo de Capital ganhou linha pr\u00f3pria com r\u00f3tulo em negrito (*Ciclo de Capital*: 1,4m.) no texto e na foto \u2014 a linha do Rendimento vivia quebrando</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.109.6</span><span class="cl-ver-date">13/07/2026</span></div>
