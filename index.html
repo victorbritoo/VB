@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.116.0</title>
+<title>VB - v1.116.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.116.0<br>15/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.116.2<br>15/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1982,7 +1982,7 @@ var VB_logPrev=null;
 var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',notas:'Notas',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',modelo:'Modelo',ano:'Ano',sn:'SN',infos:'Acompanha',
   valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
   taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
-  data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d']};
+  data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d'],data_operacao:['Data da operação','d'],data_inicio:['Início','d'],quantidade_parcelas:'Parcelas',valor_parcela:['Valor da parcela','$'],qtd_parcelas:'Parcelas',modo:'Modo',investidor_pct:'Investidor %',investidor_parcela:['Parcela do investidor','$'],vb_parcela:['Parcela VB','$'],investidor_aporte:['Aporte','$'],baixa_nota:'Nota da baixa',telefone:'Telefone'};
 function VB_logFmtV(v, tp){
   if(v==null||v==='') return '—';
   if(tp==='$'){ try{ return HIST_fmtMoeda(Number(v)); }catch(e){ return 'R$ '+v; } }
@@ -2019,7 +2019,10 @@ function VB_logDiffArr(nome, A, B){
 function VB_logDiff(prev, row){
   if(!prev||!row) return '';
   var p=[];
-  for(var k in row){
+  // datas e parâmetros de entrada primeiro; valores calculados por último — o log lê causa → consequência
+  var _tarde={valor_liquido:1,valor_bruto:1,valor_total:1,valor_financiado:1,investidor_parcela:1,vb_parcela:1,investidor_aporte:1};
+  var _ks=Object.keys(row).sort(function(x,y){ return (_tarde[x]?1:0)-(_tarde[y]?1:0); });
+  for(var _i=0;_i<_ks.length;_i++){ var k=_ks[_i];
     if(!Object.prototype.hasOwnProperty.call(row,k)) continue;
     var cfg=VB_LOG_CAMPOS[k];
     var antes=prev[k], depois=row[k];
@@ -2028,6 +2031,25 @@ function VB_logDiff(prev, row){
     if(k==='parcelas'||k==='titulos'){
       var _d=VB_logDiffArr(k==='titulos'?'Títulos':'Parcelas', antes, depois);
       if(_d) p.push(_d);
+      continue;
+    }
+    if(k==='pagamentos'){
+      var _dp=(function(A,B){
+        var pa,pb;
+        try{ pa=A?(typeof A==='string'?JSON.parse(A):A):[]; pb=B?(typeof B==='string'?JSON.parse(B):B):[]; if(!Array.isArray(pa))pa=[]; if(!Array.isArray(pb))pb=[]; }catch(e){ return 'Linhas alteradas'; }
+        var out=[]; if(pa.length!==pb.length) out.push('Linhas: '+pa.length+' → '+pb.length);
+        var n2=Math.min(pa.length,pb.length), mud=[];
+        for(var i2=0;i2<n2;i2++){
+          var m2=[], xa=pa[i2]||{}, xb=pb[i2]||{};
+          if(String(xa.desc||'')!==String(xb.desc||'')) m2.push('descrição '+(xa.desc||'—')+' → '+(xb.desc||'—'));
+          if(String(xa.valor||'')!==String(xb.valor||'')) m2.push('valor '+(xa.valor||'—')+' → '+(xb.valor||'—'));
+          if(!!xa.cr!==!!xb.cr) m2.push(xb.cr?'virou crédito':'deixou de ser crédito');
+          if(m2.length) mud.push((i2+1)+'ª linha: '+m2.join(', '));
+        }
+        if(mud.length){ var mo2=mud.slice(0,6); out.push(mo2.join(' · ')+(mud.length>6?(' · e mais '+(mud.length-6)+' linhas alteradas'):'')); }
+        return out.join(' · ');
+      })(antes, depois);
+      if(_dp) p.push(_dp);
       continue;
     }
     if(!cfg) continue; // campo técnico: fora do log
@@ -8284,7 +8306,9 @@ function SOC_salvar(btn){
   var op = SOC_editId ? sb.from('socios').update(payload).eq('id',SOC_editId).select() : sb.from('socios').insert(payload).select();
   op.then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
-    VB_log('SÓCIOS', SOC_editId?'editou':'criou', nome, tel||'');
+    var _detS=tel||'';
+    if(SOC_editId){ try{ var _pvS=(SOC_rows||[]).find(function(x){ return String(x.id)===String(SOC_editId); }); if(_pvS) _detS=VB_logDiff(_pvS,payload)||'sem mudanças'; }catch(e){} }
+    VB_log('SÓCIOS', SOC_editId?'editou':'criou', nome, _detS);
     VB_toast(SOC_editId?'Sócio atualizado.':'Sócio adicionado.');
     SOC_editId=null;
     document.getElementById('soc-nome').value=''; document.getElementById('soc-tel').value='';
@@ -10404,7 +10428,7 @@ function REC_excluir(btn){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.116.0</span><span class="cl-ver-date">15/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.116.2</span><span class="cl-ver-date">15/07/2026</span></div>
       <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
       <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
       <div class="cl-item">Card redesenhado: t\u00edtulo do escopo centralizado no topo (JULHO / GERAL), r\u00f3tulos na gram\u00e1tica dos selos do Relat\u00f3rio \u2014 BRUTO (2 OPERA\u00c7\u00d5ES), TOTAL (4 VENDAS), FINANCIADO (X OPERA\u00c7\u00d5ES) \u2014 e no lucro das Vendas: LUCRO VB com LUCRO TOTAL logo abaixo quando h\u00e1 s\u00f3cio, mesmo vocabul\u00e1rio do resto do app</div>
@@ -10413,6 +10437,8 @@ function REC_excluir(btn){
       <div class="cl-item">Segundo aperto no card sem tocar no tamanho das letras: padding no osso e line-height comprimido em t\u00edtulo, r\u00f3tulos e valores</div>
       <div class="cl-item">Corre\u00e7\u00e3o de coer\u00eancia: com filtro ativo o card soma o conjunto filtrado inteiro (antes podia dizer JULHO \u00b7 0 opera\u00e7\u00f5es com o filtro em junho). Filtro de um \u00fanico m\u00eas nomeia o card com aquele m\u00eas e ano (JUNHO 2026); demais filtros ficam sem t\u00edtulo. Toggle e \u21c4 desligam enquanto h\u00e1 filtro, igual \u00e0 busca</div>
       <div class="cl-item">RESUMO P/ S\u00d3CIO ganhou TEMPO DE OPERA\u00c7\u00c3O (compra \u2192 venda, em dias) na FOTO e no TEXTO, ao lado do rendimento \u2014 com o tempo na mesa o s\u00f3cio fecha a conta do % a.m. sozinho: n\u00famero audit\u00e1vel vale mais que n\u00famero de confian\u00e7a. S\u00f3 aparece quando a venda tem data de compra vinculada (veio do estoque); mesma conven\u00e7\u00e3o de dias do ciclo, ent\u00e3o as contas batem entre si</div>
+      <div class="cl-item">Log mais fiel \u00e0 verdade: Data da opera\u00e7\u00e3o e In\u00edcio entraram no mapa de campos (antes uma edi\u00e7\u00e3o de data aparecia s\u00f3 pela consequ\u00eancia \u2014 L\u00edquido novo \u2014 escondendo a causa). Parcelas e valor da parcela tamb\u00e9m. E o diff agora lista causa antes de consequ\u00eancia: datas e par\u00e2metros primeiro, valores calculados por \u00faltimo</div>
+      <div class="cl-item">Fidelidade do log auditada nas cinco telas: Financiamento ganhou Parcelas (qtd), Investidor % e os valores do investidor no diff; Venda e Antecipa\u00e7\u00e3o ganharam Modo; Pagamentos agora difere linha a linha (descri\u00e7\u00e3o, valor, cr\u00e9dito \u2014 antes s\u00f3 o Total aparecia); Estoque ganhou Nota da baixa; e editar S\u00f3cio registra antes \u2192 depois de nome e telefone em vez de s\u00f3 o estado novo</div>
     </div>
 
     <div class="cl-version">
