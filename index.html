@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.115.1</title>
+<title>VB - v1.115.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.115.1<br>15/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.115.2<br>15/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3271,20 +3271,23 @@ function HIST_renderTotal(tab, rows, term){
   var esc=(busca||fixo)?'geral':HIST_totEscopo;
   var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
   var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
-  var escTag='';
-  if(!busca && !fixo){ escTag=(esc==='mes') ? HIST_mesLabel(nowYM).split(' ')[0].toUpperCase() : 'GERAL'; }
-  var tag=escTag?(' \u00b7 '+escTag):'';
+  var titulo='';
+  if(!busca && !fixo){
+    var tt=(esc==='mes') ? HIST_mesLabel(nowYM).split(' ')[0].toUpperCase() : 'GERAL';
+    titulo='<div style="text-align:center;font-size:10px;letter-spacing:2.5px;font-weight:700;opacity:0.85;margin-bottom:6px;">'+tt+'</div>';
+  }
   var valCol=HIST_valCol(tab);
   var soma=rowsT.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
-  var nOps=rowsT.length, opsTxt=nOps+' '+(nOps===1?'OPERA\u00c7\u00c3O':'OPERA\u00c7\u00d5ES');
+  var nOps=rowsT.length;
   var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
   var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
+  var corpo='';
   if(tab==='ant'){
     if(HIST_antSub==='atr'){
       var atrA=0, nAtrA=0;
       rowsT.forEach(function(r){ atrA+=HIST_atrHoje(r); nAtrA++; });
-      totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
-        +'<div>'+lbl('ATRASADOS'+tag+' \u00b7 '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'\u2014', nAtrA?'#ff6b6b':null)+'</div>'
+      corpo='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
+        +'<div>'+lbl('ATRASADOS \u00b7 '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'\u2014', nAtrA?'#ff6b6b':null)+'</div>'
         +'</div>';
     } else {
       var bruto=0, nOk=0, lucro=0, temL=false;
@@ -3292,8 +3295,8 @@ function HIST_renderTotal(tab, rows, term){
         bruto+=Number(r.valor_bruto)||0; nOk++;
         var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; }
       });
-      totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
-        +'<div>'+lbl('BRUTO'+tag+' \u00b7 '+nOk)+val(nOk?HIST_fmtMoeda(bruto):'\u2014')+'</div>'
+      corpo='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+        +'<div>'+lbl('BRUTO ('+nOk+' '+(nOk===1?'OPERA\u00c7\u00c3O':'OPERA\u00c7\u00d5ES')+')')+val(nOk?HIST_fmtMoeda(bruto):'\u2014')+'</div>'
         +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'\u2014')+'</div>'
         +'</div>';
     }
@@ -3311,15 +3314,21 @@ function HIST_renderTotal(tab, rows, term){
       }
     });
     var _difS=(tab==='ven'&&Math.abs(minha2-lucro2)>0.005);
-    var lucroCell = temL2 ? (val(HIST_fmtMoeda(minha2))+(_difS?('<div style="font-size:9px;color:var(--so);font-weight:600;">total c/ s\u00f3cios: '+HIST_fmtMoeda(lucro2)+'</div>'):'')) : val('\u2014');
-    totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
-      +'<div>'+lbl('TOTAL ('+HIST_valLabel(tab).toUpperCase()+')'+tag+' \u00b7 '+opsTxt)+val(nOps?HIST_fmtMoeda(soma):'\u2014')+'</div>'
-      +'<div>'+lbl((tab==='ven')?'SEU LUCRO':'LUCRO')+lucroCell+'</div>'
+    var lucroCell = temL2 ? (val(HIST_fmtMoeda(minha2))+(_difS?('<div style="font-size:9px;color:var(--so);font-weight:600;">LUCRO TOTAL: '+HIST_fmtMoeda(lucro2)+'</div>'):'')) : val('\u2014');
+    var lblEsq=(tab==='ven')
+      ? ('TOTAL ('+nOps+' '+(nOps===1?'VENDA':'VENDAS')+')')
+      : ('FINANCIADO ('+nOps+' '+(nOps===1?'OPERA\u00c7\u00c3O':'OPERA\u00c7\u00d5ES')+')');
+    corpo='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+      +'<div>'+lbl(lblEsq)+val(nOps?HIST_fmtMoeda(soma):'\u2014')+'</div>'
+      +'<div>'+lbl((tab==='ven')?'LUCRO VB':'LUCRO')+lucroCell+'</div>'
       +'</div>';
   } else {
-    totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+')'+tag+' \u00b7 '+opsTxt+'</span>'+
-      '<span style="font-size:15px;font-weight:700;">'+(nOps?HIST_fmtMoeda(soma):'\u2014')+'</span>';
+    corpo='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;">'
+      +'<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">TOTAL ('+nOps+' '+(nOps===1?'OPERA\u00c7\u00c3O':'OPERA\u00c7\u00d5ES')+')</span>'
+      +'<span style="font-size:15px;font-weight:700;">'+(nOps?HIST_fmtMoeda(soma):'\u2014')+'</span>'
+      +'</div>';
   }
+  totalEl.innerHTML='<div style="width:100%;">'+titulo+corpo+'</div>';
   if(!busca && !fixo){
     totalEl.insertAdjacentHTML('beforeend','<div style="position:absolute;top:5px;right:9px;font-size:9px;color:var(--acc-tx);opacity:0.4;pointer-events:none;">\u21c4</div>');
   }
@@ -10386,9 +10395,10 @@ function REC_excluir(btn){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.115.1</span><span class="cl-ver-date">15/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.115.2</span><span class="cl-ver-date">15/07/2026</span></div>
       <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
       <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
+      <div class="cl-item">Card redesenhado: t\u00edtulo do escopo centralizado no topo (JULHO / GERAL), r\u00f3tulos na gram\u00e1tica dos selos do Relat\u00f3rio \u2014 BRUTO (2 OPERA\u00c7\u00d5ES), TOTAL (4 VENDAS), FINANCIADO (X OPERA\u00c7\u00d5ES) \u2014 e no lucro das Vendas: LUCRO VB com LUCRO TOTAL logo abaixo quando h\u00e1 s\u00f3cio, mesmo vocabul\u00e1rio do resto do app</div>
     </div>
 
     <div class="cl-version">
