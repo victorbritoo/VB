@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.115.6</title>
+<title>VB - v1.116.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.115.6<br>15/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.116.0<br>15/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -5466,7 +5466,7 @@ function VEN_gerarTabela(){
   var socioBlkH = 0;
   if(VEN_socioExtra){
     // RESUMO hdr+div, CUSTO+VENDA, faixa LUCRO, MARGEM(+REND+CICLO), div pontilhado, SÓCIO 2 linhas, CAPITAL, faixa LUCRO
-    var _nP = (VEN_socioExtra.rend!=null?2:0);   // linhas de % (rendimento, ciclo) — margem vive na faixa
+    var _nP = (VEN_socioExtra.rend!=null?2:0) + (VEN_socioExtra.diasEst!=null?1:0);   // linhas de % (tempo op, rendimento, ciclo) — margem vive na faixa
     socioBlkH = 8+6 + 18 + 6 + 20*2 + 4 + 26 + 4 + _nP*20 + 10 + 6 + 15 + 17 + 6 + 20 + 4 + 26 + 4 + 4;
   }
   H += socioBlkH;
@@ -5579,6 +5579,7 @@ function VEN_gerarTabela(){
     _sLin('VENDA', HIST_fmtMoeda(sd.total));
     ys+=4;
     _sFaixa('LUCRO', HIST_fmtMoeda(sd.lucroTot)+(sd.margem!=null?(' ('+Math.round(sd.margem)+'%)'):''));
+    if(sd.diasEst!=null){ _sLin('TEMPO DE OPERA\u00c7\u00c3O', sd.diasEst+' '+(sd.diasEst===1?'Dia':'Dias')); }
     if(sd.rend!=null){
       _sLin('RENDIMENTO', sd.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
       _sLin('CICLO DE CAPITAL', sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+' Meses');
@@ -9193,14 +9194,14 @@ function VEN_resumoSocioDados(r){
   var _snM=String(titulo).match(/\bSN\s*:?\s*([A-Za-z0-9-]+)/i);
   if(_snM){ sn=_snM[1]; titulo=titulo.replace(_snM[0],'').replace(/\s{2,}/g,' ').trim()||titulo; }
   // ciclo: dias em estoque (se veio do estoque) + prazo médio ponderado das parcelas
-  var cic=null;
+  var cic=null, diasEst=null;
   (function(){
     if(!r.data_venda) return;
     var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length!==3) return;
     var dv=new Date(+vv[0],+vv[1]-1,+vv[2]); if(isNaN(dv.getTime())) return;
     var dias=0;
     var dc=(typeof HIST_merCompra==='object'&&HIST_merCompra)?HIST_merCompra[String(r.id)]:null;
-    if(dc){ var pp=String(dc).split('T')[0].split('-'); if(pp.length===3){ var d0=new Date(+pp[0],+pp[1]-1,+pp[2]); if(!isNaN(d0.getTime())){ dias=(dv-d0)/86400000; if(!isFinite(dias)||dias<0) dias=0; } } }
+    if(dc){ var pp=String(dc).split('T')[0].split('-'); if(pp.length===3){ var d0=new Date(+pp[0],+pp[1]-1,+pp[2]); if(!isNaN(d0.getTime())){ dias=(dv-d0)/86400000; if(!isFinite(dias)||dias<0) dias=0; diasEst=Math.round(dias); } } }
     var soma=0, peso=0;
     parc.forEach(function(p){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(p.d); if(m&&p.v>0){ var d2=new Date(+m[3],+m[2]-1,+m[1]); var dd=(d2-dv)/86400000; if(dd<0)dd=0; soma+=p.v*dd; peso+=p.v; } });
     var pm=(peso>0)?soma/peso:0;
@@ -9210,7 +9211,7 @@ function VEN_resumoSocioDados(r){
   var rend=(cic&&c>0)?VB_termometro(l, c, cic):null; // rendimento do NEGÓCIO: lucro total sobre custo total
   return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(r.socio).toUpperCase(),
     dataVenda:(r.data_venda?HIST_fmtData(r.data_venda):null), total:Number(r.valor_total)||0,
-    parc:parc, custo:c, lucroTot:l, margem:(c>0?(l/c*100):null), cic:cic, rend:rend,
+    parc:parc, custo:c, lucroTot:l, margem:(c>0?(l/c*100):null), cic:cic, rend:rend, diasEst:diasEst,
     capS:vs, lucroS:lS, pctS:(vs>0?(lS/vs*100):null), racha:(100-pVB) };
 }
 function VEN_resumoSocioTexto(d){
@@ -9221,6 +9222,7 @@ function VEN_resumoSocioTexto(d){
   L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
   L.push('*Venda*: '+HIST_fmtMoeda(d.total)+'.');
   L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
+  if(d.diasEst!=null){ L.push('*Tempo de opera\u00e7\u00e3o*: '+d.diasEst+' '+(d.diasEst===1?'dia':'dias')+'.'); }
   if(d.rend!=null){
     L.push('*Rendimento*: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
     L.push('*Ciclo de Capital*: '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
@@ -10402,7 +10404,7 @@ function REC_excluir(btn){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.115.6</span><span class="cl-ver-date">15/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.116.0</span><span class="cl-ver-date">15/07/2026</span></div>
       <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
       <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
       <div class="cl-item">Card redesenhado: t\u00edtulo do escopo centralizado no topo (JULHO / GERAL), r\u00f3tulos na gram\u00e1tica dos selos do Relat\u00f3rio \u2014 BRUTO (2 OPERA\u00c7\u00d5ES), TOTAL (4 VENDAS), FINANCIADO (X OPERA\u00c7\u00d5ES) \u2014 e no lucro das Vendas: LUCRO VB com LUCRO TOTAL logo abaixo quando h\u00e1 s\u00f3cio, mesmo vocabul\u00e1rio do resto do app</div>
@@ -10410,6 +10412,7 @@ function REC_excluir(btn){
       <div class="cl-item">Card emagrecido: padding vertical pela metade, t\u00edtulo e r\u00f3tulos colados, mesmo conte\u00fado em quase metade da altura</div>
       <div class="cl-item">Segundo aperto no card sem tocar no tamanho das letras: padding no osso e line-height comprimido em t\u00edtulo, r\u00f3tulos e valores</div>
       <div class="cl-item">Corre\u00e7\u00e3o de coer\u00eancia: com filtro ativo o card soma o conjunto filtrado inteiro (antes podia dizer JULHO \u00b7 0 opera\u00e7\u00f5es com o filtro em junho). Filtro de um \u00fanico m\u00eas nomeia o card com aquele m\u00eas e ano (JUNHO 2026); demais filtros ficam sem t\u00edtulo. Toggle e \u21c4 desligam enquanto h\u00e1 filtro, igual \u00e0 busca</div>
+      <div class="cl-item">RESUMO P/ S\u00d3CIO ganhou TEMPO DE OPERA\u00c7\u00c3O (compra \u2192 venda, em dias) na FOTO e no TEXTO, ao lado do rendimento \u2014 com o tempo na mesa o s\u00f3cio fecha a conta do % a.m. sozinho: n\u00famero audit\u00e1vel vale mais que n\u00famero de confian\u00e7a. S\u00f3 aparece quando a venda tem data de compra vinculada (veio do estoque); mesma conven\u00e7\u00e3o de dias do ciclo, ent\u00e3o as contas batem entre si</div>
     </div>
 
     <div class="cl-version">
