@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.113.2</title>
+<title>VB - v1.114.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -817,7 +817,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
         <span></span>
       </div>
       <div id="ven-listaParcelas"></div>
-      <button onclick="VEN_repetirParcela()" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
+      <button data-fast="1" onclick="VEN_repetirParcela()" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
     </div>
   </div>
 
@@ -6730,6 +6730,21 @@ function ANT_adicionarTitulo(focus){
 // Registra UM ÚNICO evento por botão: touch em quem tem toque, click no resto.
 // Assim é impossível o par touchend+click do iOS disparar a ação duas vezes.
 var VB_temToque = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
+// ===== Guarda global anti toque duplo (v1.114.0) =====
+// Segundo click no MESMO elemento em <350ms é engolido (fase de captura).
+// Exceções: .pin-key (dígitos repetidos do PIN) e [data-fast] (toque rápido legítimo).
+(function(){
+  var VB_lastTap = new WeakMap();
+  document.addEventListener('click', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('button,[onclick]') : null;
+    if(!el) return;
+    if(el.closest('.pin-key,[data-fast]')) return;
+    var t = Date.now(), p = VB_lastTap.get(el) || 0;
+    if(t - p < 350){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+    VB_lastTap.set(el, t);
+  }, true);
+})();
+
 function VB_onTap(el, fn){
   if(!el) return;
   if(VB_temToque){
@@ -10340,6 +10355,11 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.114.0</span><span class="cl-ver-date">14/07/2026</span></div>
+      <div class="cl-item">Guarda global anti toque duplo: segundo toque no mesmo bot\u00e3o em menos de 350ms \u00e9 engolido \u2014 mata a\u00e7\u00e3o executada duas vezes por dedo r\u00e1pido, no app inteiro e em c\u00f3digo futuro, sem mexer bot\u00e3o por bot\u00e3o. Exce\u00e7\u00f5es mapeadas pros toques repetidos leg\u00edtimos: teclado do PIN (d\u00edgito repetido) e + REPETIR \u00daLTIMA da Venda. Bot\u00f5es da Antecipa\u00e7\u00e3o que usam VB_onTap (touchend) seguem no fluxo pr\u00f3prio, fora da guarda. Downloads e seletor de arquivo n\u00e3o passam pela guarda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.113.2</span><span class="cl-ver-date">14/07/2026</span></div>
