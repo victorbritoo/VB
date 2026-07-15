@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.114.0</title>
+<title>VB - v1.115.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.106.2<br>13/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.115.1<br>15/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3260,6 +3260,83 @@ function HIST_dateCol(tab){ return tab==='ant'?'data_operacao':tab==='fin'?'data
 function HIST_tabLabel(tab){ return tab==='ant'?'Antecipação':tab==='fin'?'Financiamento':tab==='ven'?'Vendas':'Pagamentos'; }
 function HIST_tipoLabel(tab){ return tab==='ant'?'ANTEC':tab==='fin'?'FINANC':tab==='ven'?'VENDA':'PAGTO'; }
 function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
+// ===== Card de totais com escopo (v1.115.0): m\u00eas atual (padr\u00e3o) <-> geral; busca ativa soma tudo =====
+var HIST_totEscopo='mes';
+function HIST_renderTotal(tab, rows, term){
+  var totalEl=document.getElementById('hist-total');
+  if(!totalEl) return;
+  if(!rows || rows.length===0){ totalEl.style.display='none'; return; }
+  var busca=!!term;
+  var fixo=(tab==='ant' && HIST_antSub==='atr'); // atrasado \u00e9 estoque a cobrar: sempre panorama geral, sem toque
+  var esc=(busca||fixo)?'geral':HIST_totEscopo;
+  var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
+  var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
+  var escTag='';
+  if(!busca && !fixo){ escTag=(esc==='mes') ? HIST_mesLabel(nowYM).split(' ')[0].toUpperCase() : 'GERAL'; }
+  var tag=escTag?(' \u00b7 '+escTag):'';
+  var valCol=HIST_valCol(tab);
+  var soma=rowsT.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
+  var nOps=rowsT.length, opsTxt=nOps+' '+(nOps===1?'OPERA\u00c7\u00c3O':'OPERA\u00c7\u00d5ES');
+  var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
+  var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
+  if(tab==='ant'){
+    if(HIST_antSub==='atr'){
+      var atrA=0, nAtrA=0;
+      rowsT.forEach(function(r){ atrA+=HIST_atrHoje(r); nAtrA++; });
+      totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
+        +'<div>'+lbl('ATRASADOS'+tag+' \u00b7 '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'\u2014', nAtrA?'#ff6b6b':null)+'</div>'
+        +'</div>';
+    } else {
+      var bruto=0, nOk=0, lucro=0, temL=false;
+      rowsT.forEach(function(r){
+        bruto+=Number(r.valor_bruto)||0; nOk++;
+        var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; }
+      });
+      totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+        +'<div>'+lbl('BRUTO'+tag+' \u00b7 '+nOk)+val(nOk?HIST_fmtMoeda(bruto):'\u2014')+'</div>'
+        +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'\u2014')+'</div>'
+        +'</div>';
+    }
+  } else if(tab==='fin' || tab==='ven'){
+    var lucro2=0, temL2=false, minha2=0;
+    rowsT.forEach(function(r){
+      var j=HIST_lucroRow(tab, r);
+      if(j!=null){
+        lucro2+=j; temL2=true;
+        var _vs=Number(r.valor_socio)||0, _c=Number(r.custo)||0;
+        if(tab==='ven' && r.socio && _vs>0 && _c>0 && _vs<=_c){
+          var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
+          minha2 += j*(_pVB/100);
+        } else { minha2 += j; }
+      }
+    });
+    var _difS=(tab==='ven'&&Math.abs(minha2-lucro2)>0.005);
+    var lucroCell = temL2 ? (val(HIST_fmtMoeda(minha2))+(_difS?('<div style="font-size:9px;color:var(--so);font-weight:600;">total c/ s\u00f3cios: '+HIST_fmtMoeda(lucro2)+'</div>'):'')) : val('\u2014');
+    totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
+      +'<div>'+lbl('TOTAL ('+HIST_valLabel(tab).toUpperCase()+')'+tag+' \u00b7 '+opsTxt)+val(nOps?HIST_fmtMoeda(soma):'\u2014')+'</div>'
+      +'<div>'+lbl((tab==='ven')?'SEU LUCRO':'LUCRO')+lucroCell+'</div>'
+      +'</div>';
+  } else {
+    totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+')'+tag+' \u00b7 '+opsTxt+'</span>'+
+      '<span style="font-size:15px;font-weight:700;">'+(nOps?HIST_fmtMoeda(soma):'\u2014')+'</span>';
+  }
+  if(!busca && !fixo){
+    totalEl.insertAdjacentHTML('beforeend','<div style="position:absolute;top:5px;right:9px;font-size:9px;color:var(--acc-tx);opacity:0.4;pointer-events:none;">\u21c4</div>');
+  }
+  totalEl.style.position='relative';
+  totalEl.style.cursor=(busca||fixo)?'default':'pointer';
+  if(!totalEl._escBind){
+    totalEl._escBind=true;
+    totalEl.addEventListener('click', function(){
+      if(HIST_searchTerm) return;
+      if(HIST_tabCache==='ant' && HIST_antSub==='atr') return;
+      var t=Date.now(); if(t-(totalEl._escT||0)<350) return; totalEl._escT=t;
+      HIST_totEscopo=(HIST_totEscopo==='mes')?'geral':'mes';
+      HIST_renderTotal(HIST_tabCache, HIST_rowsCache, HIST_searchTerm);
+    });
+  }
+  totalEl.style.display='flex';
+}
 function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
 // Data de NEGÓCIO da operação (eixo do tempo do Histórico): ant=data da operação, fin=início, ven=data da venda (fallback 1ª parcela), pag=carimbo
 function HIST_dataNeg(tab,r){
@@ -3753,56 +3830,8 @@ function HIST_fetch(term){
       var n=rows.length, capped=(n>=500?'500+':n);
       HIST_setCount(term ? ('Encontrado: '+capped+' '+(n===1?'Operação':'Operações')) : '');
     }
-    // total
-    if(totalEl && rows.length===0){ totalEl.style.display='none'; }
-    else if(totalEl){
-      var soma=rows.reduce(function(a,r){ return a + (Number(r[valCol])||0); },0);
-      var nOps=rows.length, opsTxt=nOps+' '+(nOps===1?'OPERAÇÃO':'OPERAÇÕES');
-      var lbl=function(t){return '<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-bottom:2px;white-space:nowrap;">'+t+'</div>';};
-      var val=function(v,c){return '<div style="font-size:14px;font-weight:700;'+(c?('color:'+c+';'):'')+'white-space:nowrap;">'+v+'</div>';};
-      if(tab==='ant'){
-        if(HIST_antSub==='atr'){
-          var atrA=0, nAtrA=0;
-          rows.forEach(function(r){ atrA+=HIST_atrHoje(r); nAtrA++; });
-          totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:center;">'
-            +'<div>'+lbl('ATRASADOS · '+nAtrA)+val(nAtrA?HIST_fmtMoeda(atrA):'—', nAtrA?'#ff6b6b':null)+'</div>'
-            +'</div>';
-        } else {
-          var bruto=0, nOk=0, lucro=0, temL=false;
-          rows.forEach(function(r){
-            bruto+=Number(r.valor_bruto)||0; nOk++;
-            var j=HIST_lucroRow('ant', r); if(j!=null){ lucro+=j; temL=true; }
-          });
-          totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
-            +'<div>'+lbl('BRUTO · '+nOk)+val(HIST_fmtMoeda(bruto))+'</div>'
-            +'<div>'+lbl('LUCRO')+val(temL?HIST_fmtMoeda(lucro):'—')+'</div>'
-            +'</div>';
-        }
-      } else if(tab==='fin' || tab==='ven'){
-        var lucro2=0, temL2=false, minha2=0;
-        rows.forEach(function(r){
-          var j=HIST_lucroRow(tab, r);
-          if(j!=null){
-            lucro2+=j; temL2=true;
-            var _vs=Number(r.valor_socio)||0, _c=Number(r.custo)||0;
-            if(tab==='ven' && r.socio && _vs>0 && _c>0 && _vs<=_c){
-              var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
-              minha2 += j*(_pVB/100);
-            } else { minha2 += j; }
-          }
-        });
-        var _difS=(tab==='ven'&&Math.abs(minha2-lucro2)>0.005);
-        var lucroCell = temL2 ? (val(HIST_fmtMoeda(minha2))+(_difS?('<div style="font-size:9px;color:var(--so);font-weight:600;">total c/ s\u00f3cios: '+HIST_fmtMoeda(lucro2)+'</div>'):'')) : val('\u2014');
-        totalEl.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;text-align:center;">'
-          +'<div>'+lbl('TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt)+val(HIST_fmtMoeda(soma))+'</div>'
-          +'<div>'+lbl((tab==='ven')?'SEU LUCRO':'LUCRO')+lucroCell+'</div>'
-          +'</div>';
-      } else {
-        totalEl.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">TOTAL ('+HIST_valLabel(tab).toUpperCase()+') · '+opsTxt+'</span>'+
-          '<span style="font-size:15px;font-weight:700;">'+HIST_fmtMoeda(soma)+'</span>';
-      }
-      totalEl.style.display='flex';
-    }
+    // total (card com escopo: mês atual <-> geral)
+    HIST_renderTotal(tab, rows, term);
   }).catch(function(e){
     listaEl.innerHTML='<div style="text-align:center;color:var(--red2);font-size:12px;margin-top:40px;">Sem conexão.</div>';
   });
@@ -10355,6 +10384,12 @@ function REC_excluir(btn){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.115.1</span><span class="cl-ver-date">15/07/2026</span></div>
+      <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
+      <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.114.0</span><span class="cl-ver-date">14/07/2026</span></div>
