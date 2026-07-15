@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.117.0</title>
+<title>VB - v1.117.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.117.0<br>15/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.117.1<br>15/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -5914,9 +5914,10 @@ document.getElementById('ant-valorBruto').addEventListener('blur', function(){
     ANT_recalc();
   }
 });
-ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_liqSolveTaxa=false; ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); ANT_recalc(); });
 ANT_maskVal(document.getElementById('ant-valorLiquido'),  function(){
-  if(ANT_userFields.has('bruto')){ ANT_liqSolveTaxa=true; ANT_userFields.add('liquido'); }
+  var _temAncora = ANT_userFields.has('bruto') || (ANT_userFields.has('parcela') && ANT_parseBR(document.getElementById('ant-valorBruto').value)>0);
+  if(_temAncora){ ANT_liqSolveTaxa=true; ANT_userFields.add('liquido'); }
   else { ANT_liqSolveTaxa=false; ANT_userFields.add('liquido'); ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela'); }
   ANT_recalc();
 });
@@ -5962,7 +5963,7 @@ function ANT_recalc(){
     } else {
       _elTx.value=''; taxa=NaN; tOk=false; // líquido ≥ bruto − tarifa: taxa não existe, campo fica vazio em vez de mentir
     }
-    if(nOk){ document.getElementById('ant-valorParcela').value=ANT_formatBR(VB/n); VP=VB/n; vpOk=true; }
+    if(nOk && !ANT_userFields.has('parcela')){ document.getElementById('ant-valorParcela').value=ANT_formatBR(VB/n); VP=VB/n; vpOk=true; }
   }
   // CASO 1: Usuário preencheu Líquido → calcular Bruto a partir do Líquido
   else if(hasLiq && vlOk && nOk && tOk && pmOk){
@@ -10446,7 +10447,7 @@ function REC_excluir(btn){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.117.0</span><span class="cl-ver-date">15/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.117.1</span><span class="cl-ver-date">15/07/2026</span></div>
       <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
       <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
       <div class="cl-item">Card redesenhado: t\u00edtulo do escopo centralizado no topo (JULHO / GERAL), r\u00f3tulos na gram\u00e1tica dos selos do Relat\u00f3rio \u2014 BRUTO (2 OPERA\u00c7\u00d5ES), TOTAL (4 VENDAS), FINANCIADO (X OPERA\u00c7\u00d5ES) \u2014 e no lucro das Vendas: LUCRO VB com LUCRO TOTAL logo abaixo quando h\u00e1 s\u00f3cio, mesmo vocabul\u00e1rio do resto do app</div>
@@ -10458,6 +10459,7 @@ function REC_excluir(btn){
       <div class="cl-item">Log mais fiel \u00e0 verdade: Data da opera\u00e7\u00e3o e In\u00edcio entraram no mapa de campos (antes uma edi\u00e7\u00e3o de data aparecia s\u00f3 pela consequ\u00eancia \u2014 L\u00edquido novo \u2014 escondendo a causa). Parcelas e valor da parcela tamb\u00e9m. E o diff agora lista causa antes de consequ\u00eancia: datas e par\u00e2metros primeiro, valores calculados por \u00faltimo</div>
       <div class="cl-item">Fidelidade do log auditada nas cinco telas: Financiamento ganhou Parcelas (qtd), Investidor % e os valores do investidor no diff; Venda e Antecipa\u00e7\u00e3o ganharam Modo; Pagamentos agora difere linha a linha (descri\u00e7\u00e3o, valor, cr\u00e9dito \u2014 antes s\u00f3 o Total aparecia); Estoque ganhou Nota da baixa; e editar S\u00f3cio registra antes \u2192 depois de nome e telefone em vez de s\u00f3 o estado novo</div>
       <div class="cl-item">Antecipa\u00e7\u00e3o em modo inverso: com o Bruto digitado, preencher o L\u00cdQUIDO calcula a TAXA embutida (f\u00f3rmula fechada, exata: taxa = (1 \u2212 (VL+tarifa)/VB)\u00b730/pm). Quem voc\u00ea digita por \u00faltimo manda: digitou a taxa de novo, o l\u00edquido volta a ser resultado. L\u00edquido \u2265 bruto \u2212 tarifa deixa a taxa vazia em vez de mostrar n\u00famero imposs\u00edvel. Precisa de prazo m\u00e9dio na mesa (gerar tabela primeiro)</div>
+      <div class="cl-item">Modo inverso corrigido: a \u00e2ncora do bruto agora vale tamb\u00e9m quando ele nasce de valor por t\u00edtulo \u00d7 quantidade (antes s\u00f3 bruto digitado direto acionava o c\u00e1lculo da taxa). Nesse caso a parcela digitada n\u00e3o \u00e9 sobrescrita</div>
     </div>
 
     <div class="cl-version">
