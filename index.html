@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.121.0</title>
+<title>VB - v1.122.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.121.0<br>16/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.122.0<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -10734,6 +10734,193 @@ function CLI_del(btn,i){
     VB_toast('Cliente excluído.'); CLI_load();
   });
 }
+/* === PDF no aparelho + ficha do contrato (v1.122.0) === */
+function CTR_docxParse(bytes){
+  // abre o .docx salvo e extrai parágrafos [ [bold,texto], ... ] e a foto
+  return CTR_unzipBytes(bytes).then(function(parts){
+    var xml=new TextDecoder().decode(parts['word/document.xml']);
+    function unesc(t){ return t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#(\d+);/g,function(_,n){return String.fromCharCode(+n);}); }
+    var paras=[], m, reP=/<w:p[ >][\s\S]*?<\/w:p>/g;
+    while((m=reP.exec(xml))){
+      var p=m[0];
+      if(p.indexOf('<w:drawing')>=0){ paras.push('IMG'); continue; }
+      var segs=[], r, reR=/<w:r>([\s\S]*?)<\/w:r>/g;
+      while((r=reR.exec(p))){
+        var run=r[1], t='', tm, reT=/<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+        while((tm=reT.exec(run))) t+=tm[1];
+        if(t) segs.push([run.indexOf('<w:b/>')>=0?1:0, unesc(t)]);
+      }
+      paras.push(segs);
+    }
+    var foto=parts['word/media/image1.jpg']||null;
+    return {paras:paras, foto:foto};
+  });
+}
+function CTR_paginas(doc){
+  // renderiza as páginas A4 em canvas
+  return new Promise(function(resolve){
+    var W=1240,H=1754,M=118,maxY=H-M,lh=37;
+    var pgs=[],cv,ctx,y;
+    function nova(){ cv=document.createElement('canvas'); cv.width=W; cv.height=H; ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#111'; y=M; pgs.push(cv); }
+    function fonte(b){ ctx.font=(b?'bold ':'')+ '26px Helvetica, Arial, sans-serif'; }
+    function paragrafo(segs){
+      var words=[];
+      segs.forEach(function(s){ String(s[1]).split(/(\s+)/).forEach(function(w){ if(w!=='') words.push([s[0],w]); }); });
+      var x=M;
+      words.forEach(function(w){
+        fonte(w[0][0]===1||w[0]===1);
+        var wd=ctx.measureText(w[1]).width;
+        if(x+wd>W-M && w[1].trim()!==''){ x=M; y+=lh; if(y>maxY){ nova(); } }
+        ctx.fillText(w[1], x, y);
+        x+=wd;
+      });
+      y+=lh+8;
+      if(y>maxY) nova();
+    }
+    function desenha(fotoImg){
+      nova();
+      doc.paras.forEach(function(p){
+        if(p==='IMG'){
+          if(fotoImg){
+            var iw=W-2*M, ih=iw*fotoImg.height/fotoImg.width;
+            if(y+ih>maxY){ nova(); }
+            ctx.drawImage(fotoImg, M, y-24, iw, ih);
+            y+=ih+4; if(y>maxY) nova();
+          }
+          return;
+        }
+        if(!p.length){ y+=14; if(y>maxY) nova(); return; }
+        paragrafo(p);
+      });
+      resolve(pgs);
+    }
+    if(doc.foto){
+      var img=new Image();
+      img.onload=function(){ desenha(img); };
+      img.onerror=function(){ desenha(null); };
+      var b=new Blob([doc.foto],{type:'image/jpeg'});
+      img.src=URL.createObjectURL(b);
+    } else desenha(null);
+  });
+}
+function CTR_pdfBlob(pgs){
+  // PDF mínimo escrito à mão: uma imagem JPEG por página A4
+  var enc=new TextEncoder();
+  var parts=[], off=0, xref=[];
+  function push(s){ var u=(typeof s==='string')?enc.encode(s):s; parts.push(u); off+=u.length; }
+  function obj(n, body){ xref[n]=off; push(n+' 0 obj\n'+body+'\nendobj\n'); }
+  push('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n');
+  var N=pgs.length, kids=[];
+  for(var i=0;i<N;i++) kids.push((3+i*3)+' 0 R');
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2,'<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+N+' >>');
+  var jpgs=pgs.map(function(cv){
+    var du=cv.toDataURL('image/jpeg',0.85);
+    return CTR_b64bytes(du.split(',')[1]);
+  });
+  for(var i=0;i<N;i++){
+    var pn=3+i*3, im=pn+1, cn=pn+2, cv=pgs[i];
+    obj(pn,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /I'+i+' '+im+' 0 R >> >> /Contents '+cn+' 0 R >>');
+    xref[im]=off;
+    push(im+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+cv.width+' /Height '+cv.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpgs[i].length+' >>\nstream\n');
+    push(jpgs[i]);
+    push('\nendstream\nendobj\n');
+    var cs='q 595 0 0 842 0 0 cm /I'+i+' Do Q';
+    obj(cn,'<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream');
+  }
+  var total=3+N*3;
+  var xo=off;
+  var x='xref\n0 '+total+'\n0000000000 65535 f \n';
+  for(var n=1;n<total;n++){ x+=('0000000000'+xref[n]).slice(-10)+' 00000 n \n'; }
+  x+='trailer\n<< /Size '+total+' /Root 1 0 R >>\nstartxref\n'+xo+'\n%%EOF';
+  push(x);
+  return new Blob(parts,{type:'application/pdf'});
+}
+function CTR_share1(file, blob){
+  if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file]}).catch(function(){}); }
+  else { var u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); }
+}
+function CTR_shareEscolha(docxBlob, fname){
+  var old=document.getElementById('vb-ctr-sh'); if(old) old.remove();
+  var ov=document.createElement('div');
+  ov.id='vb-ctr-sh';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10090;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">COMPARTILHAR</div>'
+    +'<button id="ctrsh-pdf" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:7px;font-family:-apple-system,sans-serif;">PDF (PARA O CLIENTE)</button>'
+    +'<button id="ctrsh-doc" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">WORD (MEUS ARQUIVOS)</button></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#ctrsh-doc').addEventListener('click',function(){
+    ov.remove();
+    CTR_share1(new File([docxBlob], fname, {type:docxBlob.type}), docxBlob);
+  });
+  ov.querySelector('#ctrsh-pdf').addEventListener('click',function(){
+    var b=ov.querySelector('#ctrsh-pdf'); b.textContent='GERANDO PDF...';
+    docxBlob.arrayBuffer().then(function(ab){ return CTR_docxParse(new Uint8Array(ab)); })
+    .then(CTR_paginas).then(function(pgs){
+      var pdf=CTR_pdfBlob(pgs), pf=fname.replace(/\.docx$/i,'')+'.pdf';
+      ov.remove();
+      CTR_share1(new File([pdf], pf, {type:'application/pdf'}), pdf);
+    }).catch(function(e){ ov.remove(); VB_toast('Erro no PDF: '+(e&&e.message||e)); });
+  });
+}
+function CTR_viewerPDF(docxBlob, fname){
+  VB_toast('Montando o documento...');
+  docxBlob.arrayBuffer().then(function(ab){ return CTR_docxParse(new Uint8Array(ab)); })
+  .then(CTR_paginas).then(function(pgs){
+    var old=document.getElementById('vb-ctr-view'); if(old) old.remove();
+    var ov=document.createElement('div');
+    ov.id='vb-ctr-view';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10080;display:flex;flex-direction:column;';
+    var inner='<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
+    pgs.forEach(function(cv){ inner+='<img src="'+cv.toDataURL('image/jpeg',0.8)+'" style="display:block;width:100%;max-width:520px;margin:0 auto 10px;border-radius:6px;">'; });
+    inner+='</div>'
+      +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
+      +'<button id="ctrv-fechar" style="padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">FECHAR</button>'
+      +'<button id="ctrv-share" style="padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">COMPARTILHAR</button></div>';
+    ov.innerHTML=inner;
+    document.body.appendChild(ov);
+    ov.querySelector('#ctrv-fechar').addEventListener('click',function(){ ov.remove(); });
+    ov.querySelector('#ctrv-share').addEventListener('click',function(){ CTR_shareEscolha(docxBlob, fname); });
+  }).catch(function(e){ VB_toast('Erro: '+(e&&e.message||e)); });
+}
+function CON_getBlob(c, cb){
+  if(c._blob){ cb(c._blob, c.fname||'CONTRATO.docx'); return; }
+  sb.from('contratos').select('arquivo_b64,fname').eq('id',c.id).single().then(function(res){
+    if(res.error||!res.data||!res.data.arquivo_b64){ VB_toast('Arquivo não disponível.'); return; }
+    var u=CTR_b64bytes(res.data.arquivo_b64);
+    c._blob=new Blob([u],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    c.fname=res.data.fname||c.fname;
+    cb(c._blob, c.fname||'CONTRATO.docx');
+  });
+}
+function CON_ficha(i){
+  var c=CON_rows[i]; if(!c) return;
+  var old=document.getElementById('vb-con-ficha'); if(old) old.remove();
+  var dt=(c.created_at||'').slice(0,10).split('-').reverse().join('/');
+  function bloco(lbl,v){ return '<div style="margin-bottom:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+lbl+'</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:2px;text-transform:uppercase;">'+(CTR_esc(v||'')||'<span style=\'color:var(--so2)\'>—</span>')+'</div></div>'; }
+  var ov=document.createElement('div');
+  ov.id='vb-con-ficha';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;">'
+    +'<div style="grid-column:1/-1;">'+bloco('CLIENTE',c.cliente_nome)+'</div>'
+    +bloco('CPF',c.cpf)+bloco('DATA',dt)
+    +'<div style="grid-column:1/-1;">'+bloco('RELÓGIO',c.descricao)+'</div>'
+    +bloco('VALOR',c.valor_total?('R$ '+CTR_fmtV(Number(c.valor_total))):'')+bloco('ARQUIVO',c.fname)
+    +'</div>'
+    +'<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR (PDF)</button>'
+    +'<button id="conf-share" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">COMPARTILHAR</button>'
+    +'<button id="conf-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
+  ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f); }); });
+  ov.querySelector('#conf-share').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_shareEscolha(b,f); }); });
+}
 /* === CONTRATOS salvos + preview (v1.121.0) === */
 var CTR_PREV_TPL='<p>De um lado, <b>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</b>, pessoa jurídica de direito privado inscrita no CNPJ sob o Nº 24.505.024/0001-60, estabelecida em Fortaleza/CE, na AV. Santos Dumont Nº 3131, Sala 816, Aldeota, CEP 60.150-162, representada por seu sócio-administrador <b>VICTOR FERNANDES BRITO</b>, brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente <b>CREDOR</b>, e, de outro lado,<b> </b><b>{{DEVEDOR_NOME}}</b>, {{DEVEDOR_QUALIFICACAO}}, titular do CPF Nº. {{DEVEDOR_CPF}}, e do {{DEVEDOR_DOC}}, domiciliado {{DEVEDOR_ENDERECO}}, como  <b>DEVEDOR</b>.</p><div class="sp"></div><p>Têm entre si, justo e acertado o presente <b>CONTRATO DE CONFISSÃO DE DÍVIDA E NOVAÇÃO</b>, que se regerá pelas seguintes cláusulas e condições:</p><div class="sp"></div><p><b>Cláusula 1ª</b><b>. </b>O <b>DEVEDOR</b> confessa e assume, em caráter irrevogável e irretratável, uma dívida de <b>R$ {{VALOR_TOTAL}} ({{VALOR_TOTAL_EXTENSO}})</b><b>,</b> referente a venda do relógio:</p><p><b>Marca e Modelo</b>: {{MARCA}}{{ANO_TXT}}. <b>REF.:</b> {{REF}} <b>SN.</b>: {{SN}}.</p><div class="sp"></div><p><b>Cláusula 2ª</b><b>.</b> A propriedade plena do relógio objeto deste contrato permanecerá com o <b>CREDOR</b> até a quitação integral da dívida ora confessada. Somente após o pagamento total das obrigações financeiras previstas neste instrumento a propriedade será considerada definitivamente transferida ao <b>DEVEDOR</b>, ocasião em que também serão entregues os documentos, certificados e demais acessórios vinculados ao relógio.</p><div class="sp"></div><p><b>Cláusula 3ª</b><b>.</b> O <b>DEVEDOR</b> confessa e assume a quantia acima referida, e se propõe a pagá-la nos termos e condições previstas no presente contrato, desde já aceitas pelo <b>CREDOR</b>.</p><div class="sp"></div><p><b>Cláusula 4ª</b><b>. </b>Pelo presente instrumento, a dívida reconhecida e novada acima referida, a qual o <b>DEVEDOR</b> confessa e assume de forma solidária e integral, em caráter irrevogável e irretratável, e se compromete a pagá-la, mediante depósito bancário ou transferência eletrônica bancária para o, PIX CNPJ: 24.505.024/0001-60 de titularidade do <b>CREDOR</b>, valendo o comprovante de depósito e/ou transferência como recibo, da seguinte forma:</p><div class="sp"></div><div class="sp"></div>[[ITENS]]<div class="sp"></div>[[IMG]]<div class="sp"></div><div class="sp"></div><p><b>Cláusula 5ª</b><b>.</b> O <b>DEVEDOR</b> renuncia expressamente, desde já, em caráter irrevogável e irretratável, a qualquer reclamação, controvérsia ou contestação em relação ao valor e procedência da dívida objeto do presente contrato.</p><div class="sp"></div><p><b>Cláusula 6ª</b><b>.</b> O presente instrumento passa a vigorar e a produzir todos os seus devidos efeitos legais entre as partes a partir da data da sua assinatura.</p><div class="sp"></div><p><b>Cláusula 7ª</b><b>.</b> O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita o <b>DEVEDOR</b> ao pagamento de multa de 5% (cinco por cento), correção monetária pelo IGPM, ou outro índice que venha a substituí-lo, e juros mensais de 1% (um por cento) ao mês, independente de qualquer notificação prévia ou protesto.</p><div class="sp"></div><p><b>Cláusula 8ª</b><b>.</b> O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita o <b>DEVEDOR</b> ao vencimento automático e antecipado de todas as parcelas subsequentes à vencida, vencendo, portanto, todo o saldo devedor do presente contrato, sendo facultado ao <b>CREDOR</b> protestar e/ou executar o presente contrato, independente de qualquer notificação prévia ou protesto.</p><div class="sp"></div><p><b>Cláusula 9ª</b><b>.</b> Qualquer tolerância do <b>CREDOR</b> em relação à eventual inadimplência do <b>DEVEDOR</b><b> </b>constituirá mera liberalidade, não importando em qualquer perdão, novação ou remição da dívida.</p><div class="sp"></div><div class="sp"></div><p><b>Cláusula 10ª</b><b>.</b> As obrigações, cláusulas e condições firmadas e assumidas no presente contrato são estendidas aos herdeiros e sucessores na falta de quaisquer das partes.</p><div class="sp"></div><p><b>Cláusula 11ª</b><b>.</b> O presente contrato constitui título executivo extrajudicial, nos termos do art. 784, inciso III, do CPC/2015.</p><div class="sp"></div><p><b>Cláusula 12ª</b><b>.</b> Fica o eleito o Foro da Comarca de Fortaleza para dirimir eventuais dúvidas e/ou controvérsias sobre o presente contrato, com renúncia expressa, desde já, a qualquer outro, por mais privilegiado que seja.</p><div class="sp"></div><p>E assim, por estarem, assim justos e contratados, as partes acima qualificadas firmam o presente instrumento, em duas vias de igual teor, na presença de 2 (duas) testemunhas que a tudo presenciaram ou tiveram conhecimento.</p><div class="sp"></div><div class="sp"></div><p>Fortaleza/CE, {{DATA_EXTENSO}}.</p><div class="sp"></div><div class="sp"></div><div class="sp"></div><p>___________________________________________________________</p><p><b>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</b></p><div class="sp"></div><div class="sp"></div><div class="sp"></div><p>___________________________________________________________</p><p><b>{{DEVEDOR_NOME}}</b></p><div class="sp"></div><div class="sp"></div>';
 function CTR_itensLinhas(parcelas, dataVendaBR){
@@ -10783,10 +10970,7 @@ function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
     +'</div>';
   document.body.appendChild(ov);
   ov.querySelector('#ctrp-fechar').addEventListener('click',function(){ ov.remove(); });
-  ov.querySelector('#ctrp-share').addEventListener('click',function(){
-    if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file]}).catch(function(){}); }
-    else { var u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); }
-  });
+  ov.querySelector('#ctrp-share').addEventListener('click',function(){ CTR_shareEscolha(blob, file.name); });
 }
 function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total){
   try{
@@ -10813,7 +10997,7 @@ function CON_render(){
   el.innerHTML=CON_rows.map(function(c,i){
     var dt=(c.created_at||'').slice(0,10).split('-').reverse().join('/');
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">'
-      +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="CON_share('+i+')">'
+      +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="CON_ficha('+i+')">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CTR_esc(c.cliente_nome||'')+'</div>'
       +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+'</div>'
       +'</div>'
@@ -10853,9 +11037,8 @@ function CTR_inflateRaw(u8){
   var st=new Blob([u8]).stream().pipeThrough(ds);
   return new Response(st).arrayBuffer().then(function(ab){ return new Uint8Array(ab); });
 }
-function CTR_lerModelo(){
-  if(CTR_partsCache) return Promise.resolve(CTR_partsCache);
-  var z=CTR_b64bytes(CTR_TPL_B64), dv=new DataView(z.buffer);
+function CTR_unzipBytes(z){
+  var dv=new DataView(z.buffer, z.byteOffset, z.byteLength);
   var eocd=-1;
   for(var i=z.length-22;i>=0;i--){ if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
   if(eocd<0) return Promise.reject(new Error('modelo corrompido'));
@@ -10877,7 +11060,11 @@ function CTR_lerModelo(){
     })(name, method, raw);
     p+=46+nlen+elen+clen;
   }
-  return Promise.all(jobs).then(function(){ CTR_partsCache=parts; return parts; });
+  return Promise.all(jobs).then(function(){ return parts; });
+}
+function CTR_lerModelo(){
+  if(CTR_partsCache) return Promise.resolve(CTR_partsCache);
+  return CTR_unzipBytes(CTR_b64bytes(CTR_TPL_B64)).then(function(p){ CTR_partsCache=p; return p; });
 }
 // ---- zip: escrita (STORED + crc32) ----
 var CTR_crcT=(function(){ var t=new Uint32Array(256); for(var i=0;i<256;i++){ var c=i; for(var j=0;j<8;j++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[i]=c>>>0; } return t; })();
@@ -11179,6 +11366,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.122.0</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
