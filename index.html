@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.122.2</title>
+<title>VB - v1.122.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.122.2<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.122.3<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -10750,6 +10750,7 @@ function CTR_docxParse(bytes){
         while((tm=reT.exec(run))) t+=tm[1];
         if(t) segs.push([run.indexOf('<w:b/>')>=0?1:0, unesc(t)]);
       }
+      if(p.indexOf('<w:numPr>')>=0) segs._num=true;
       paras.push(segs);
     }
     var foto=parts['word/media/image1.jpg']||null;
@@ -10796,20 +10797,40 @@ function CTR_paginas(doc){
     }
     function nova(){ cv=document.createElement('canvas'); cv.width=W; cv.height=H; ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#111'; y=M; pgs.push(cv); cabecalho(); }
     function fonte(b){ ctx.font=(b?'bold ':'')+ '26px Helvetica, Arial, sans-serif'; }
-    function paragrafo(segs){
-      var words=[];
-      segs.forEach(function(s){ String(s[1]).split(/(\s+)/).forEach(function(w){ if(w!=='') words.push([s[0],w]); }); });
-      var x=M;
-      words.forEach(function(w){
-        fonte(w[0][0]===1||w[0]===1);
-        var wd=ctx.measureText(w[1]).width;
-        if(x+wd>W-M && w[1].trim()!==''){ x=M; y+=lh; if(y>maxY){ nova(); } }
-        ctx.fillText(w[1], x, y);
-        x+=wd;
+    var SW=0;
+    function paragrafo(segs, marcador){
+      if(!SW){ fonte(0); SW=ctx.measureText(' ').width; }
+      var toks=[];
+      if(marcador) toks.push([0,marcador]);
+      segs.forEach(function(s){ String(s[1]).split(/\s+/).forEach(function(w){ if(w) toks.push([s[0],w]); }); });
+      var maxW=W-2*M, ind=marcador?34:0;
+      var lines=[], cur=[], curW=0;
+      toks.forEach(function(t){
+        fonte(t[0]===1);
+        var wd=ctx.measureText(t[1]).width;
+        var lim=maxW-(lines.length>0?ind:0);
+        if(cur.length && curW+SW+wd>lim){ lines.push([cur,curW]); cur=[]; curW=0; }
+        cur.push([t[0],t[1],wd]);
+        curW+= (cur.length>1?SW:0)+wd;
       });
-      y+=lh+8;
+      if(cur.length) lines.push([cur,curW]);
+      lines.forEach(function(L,li){
+        if(y>maxY) nova();
+        var gaps=L[0].length-1, lim=maxW-(li>0?ind:0);
+        var extra=0;
+        if(li<lines.length-1 && gaps>0){ extra=(lim-L[1])/gaps; if(extra>SW*2.2) extra=0; }
+        var x=M+(li>0?ind:0);
+        L[0].forEach(function(t,k){
+          fonte(t[0]===1);
+          ctx.fillText(t[1], x, y);
+          x+=t[2]+(k<gaps?(SW+extra):0);
+        });
+        y+=lh;
+      });
+      y+=8;
       if(y>maxY) nova();
     }
+    var _li=0;
     function desenha(fotoImg){
       nova();
       doc.paras.forEach(function(p){
@@ -10822,8 +10843,9 @@ function CTR_paginas(doc){
           }
           return;
         }
-        if(!p.length){ y+=14; if(y>maxY) nova(); return; }
-        paragrafo(p);
+        if(!p.length){ _li=0; y+=14; if(y>maxY) nova(); return; }
+        if(p._num){ paragrafo(p, String.fromCharCode(97+(_li++))+')'); }
+        else { _li=0; paragrafo(p); }
       });
       pgs.forEach(function(pg,i){
         var c2=pg.getContext('2d');
@@ -10886,8 +10908,8 @@ function CTR_shareEscolha(docxBlob, fname){
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10090;display:flex;align-items:flex-end;justify-content:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">COMPARTILHAR</div>'
-    +'<button id="ctrsh-pdf" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:7px;font-family:-apple-system,sans-serif;">PDF (PARA O CLIENTE)</button>'
-    +'<button id="ctrsh-doc" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">WORD (MEUS ARQUIVOS)</button></div>';
+    +'<button id="ctrsh-pdf" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:7px;font-family:-apple-system,sans-serif;">PDF</button>'
+    +'<button id="ctrsh-doc" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">WORD</button></div>';
   document.body.appendChild(ov);
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#ctrsh-doc').addEventListener('click',function(){
@@ -11407,10 +11429,11 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.122.2</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.122.3</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
+      <div class="cl-item">Auditoria do PDF contra o impresso do Word: texto justificado como no original, marcadores a) b) dos itens da Cláusula 4ª de volta (com recuo nas linhas de continuação), e corrigida a fonte miúda que aparecia quando a página quebrava no meio do parágrafo (o cabeçalho da página nova deixava a fonte pequena ligada). Botões do compartilhar enxutos: PDF e WORD</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
