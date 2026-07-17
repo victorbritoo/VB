@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.122.1</title>
+<title>VB - v1.122.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.122.1<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.122.2<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -10744,7 +10744,7 @@ function CTR_docxParse(bytes){
     while((m=reP.exec(xml))){
       var p=m[0];
       if(p.indexOf('<w:drawing')>=0){ paras.push('IMG'); continue; }
-      var segs=[], r, reR=/<w:r>([\s\S]*?)<\/w:r>/g;
+      var segs=[], r, reR=/<w:r(?:\s[^>]*)?>([\s\S]*?)<\/w:r>/g;
       while((r=reR.exec(p))){
         var run=r[1], t='', tm, reT=/<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
         while((tm=reT.exec(run))) t+=tm[1];
@@ -10758,7 +10758,7 @@ function CTR_docxParse(bytes){
       var hx=new TextDecoder().decode(parts['word/header1.xml']);
       var hp, reHP=/<w:p[ >][\s\S]*?<\/w:p>/g;
       while((hp=reHP.exec(hx))){
-        var r2, reR2=/<w:r>([\s\S]*?)<\/w:r>/g;
+        var r2, reR2=/<w:r(?:\s[^>]*)?>([\s\S]*?)<\/w:r>/g;
         while((r2=reR2.exec(hp[0]))){
           var run=r2[1], t='', tm2, reT2=/<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
           while((tm2=reT2.exec(run))) t+=tm2[1];
@@ -10912,7 +10912,7 @@ function CTR_viewerPDF(docxBlob, fname){
     var ov=document.createElement('div');
     ov.id='vb-ctr-view';
     ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10080;display:flex;flex-direction:column;';
-    var inner='<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
+    var inner='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
     pgs.forEach(function(cv){ inner+='<img src="'+cv.toDataURL('image/jpeg',0.8)+'" style="display:block;width:100%;max-width:520px;margin:0 auto 10px;border-radius:6px;">'; });
     inner+='</div>'
       +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
@@ -10998,7 +10998,7 @@ function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
   var ov=document.createElement('div');
   ov.id='vb-ctr-prev';
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:10080;display:flex;flex-direction:column;';
-  ov.innerHTML='<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 12px 12px;">'
+  ov.innerHTML='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 12px 12px;">'
     +'<div style="max-width:520px;margin:0 auto;background:#fff;color:#111;border-radius:10px;padding:22px 20px;font-family:Calibri,-apple-system,sans-serif;font-size:12.5px;line-height:1.45;text-align:justify;">'
     +'<style>#vb-ctr-prev p{margin:0 0 2px;} #vb-ctr-prev .sp{height:9px;} #vb-ctr-prev .it{margin:0 0 6px 14px;text-indent:-8px;}</style>'
     +body
@@ -11407,9 +11407,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.122.1</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.122.2</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
+      <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
