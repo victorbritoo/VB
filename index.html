@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.124.1</title>
+<title>VB - v1.124.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.124.1<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.124.3<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -10821,6 +10821,12 @@ function CTR_paginas(doc){
         });
       });
       delete toks._esp;
+      for(var ti=toks.length-2; ti>=0; ti--){
+        if(/^N[\u00ba\u00b0o]\.?$/i.test(toks[ti][1]) && toks[ti+1]){
+          toks[ti][1]+=' '+toks[ti+1][1];
+          toks.splice(ti+1,1);
+        }
+      }
       var maxW=W-2*M, ind=marcador?34:0;
       var lines=[], cur=[], curW=0;
       toks.forEach(function(t){
@@ -10834,13 +10840,16 @@ function CTR_paginas(doc){
       if(cur.length) lines.push([cur,curW]);
       var centrado=!!segs._c;
       var cabem=Math.floor((maxY-y)/lh);
-      if(cabem<lines.length && (cabem<3 || lines.length-cabem<2)){ nova(); }
-      if(centrado && toks.length && /^_{6,}/.test(toks[0][1])){ y+=100; if(y>maxY) nova(); }
+      if(cabem<lines.length && (cabem<2 || lines.length-cabem<2)){ nova(); }
+      if(centrado && toks.length && /^_{6,}/.test(toks[0][1])){
+        var need=90+2*(lh+8);
+        if(y+need>maxY){ nova(); y+=24; } else { y+=90; }
+      }
       lines.forEach(function(L,li){
         if(y>maxY) nova();
         var gaps=L[0].length-1, lim=maxW-(li>0?ind:0);
         var extra=0;
-        if(!centrado && li<lines.length-1 && gaps>0){ extra=(lim-L[1])/gaps; if(extra>SW*2.2) extra=0; }
+        if(!centrado && li<lines.length-1 && gaps>0){ extra=(lim-L[1])/gaps; if(extra>SW*6) extra=0; }
         var x=centrado?(M+(maxW-L[1])/2):(M+(li>0?ind:0));
         L[0].forEach(function(t,k){
           fonte(t[0]===1);
@@ -10994,14 +11003,14 @@ function CON_ficha(i){
     +bloco('VALOR',c.valor_total?('R$ '+CTR_fmtV(Number(c.valor_total))):'')+bloco('ARQUIVO',c.fname)
     +'</div>'
     +'<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR (PDF)</button>'
-    +'<button id="conf-share" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">COMPARTILHAR</button>'
+
     +'<button id="conf-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
   ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f); }); });
-  ov.querySelector('#conf-share').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_shareEscolha(b,f); }); });
+
 }
 /* === CONTRATOS salvos + preview (v1.121.0) === */
 var CTR_PREV_TPL='<p>De um lado, <b>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</b>, pessoa jurídica de direito privado inscrita no CNPJ sob o Nº 24.505.024/0001-60, estabelecida em Fortaleza/CE, na AV. Santos Dumont Nº 3131, Sala 816, Aldeota, CEP 60.150-162, representada por seu sócio-administrador <b>VICTOR FERNANDES BRITO</b>, brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente <b>CREDOR</b>, e, de outro lado,<b> </b><b>{{DEVEDOR_NOME}}</b>, {{DEVEDOR_QUALIFICACAO}}, titular do CPF Nº. {{DEVEDOR_CPF}}, e do {{DEVEDOR_DOC}}, domiciliado {{DEVEDOR_ENDERECO}}, como  <b>DEVEDOR</b>.</p><div class="sp"></div><p>Têm entre si, justo e acertado o presente <b>CONTRATO DE CONFISSÃO DE DÍVIDA E NOVAÇÃO</b>, que se regerá pelas seguintes cláusulas e condições:</p><div class="sp"></div><p><b>Cláusula 1ª</b><b>. </b>O <b>DEVEDOR</b> confessa e assume, em caráter irrevogável e irretratável, uma dívida de <b>R$ {{VALOR_TOTAL}} ({{VALOR_TOTAL_EXTENSO}})</b><b>,</b> referente a venda do relógio:</p><p><b>Marca e Modelo</b>: {{MARCA}}{{ANO_TXT}}. <b>REF.:</b> {{REF}} <b>SN.</b>: {{SN}}.</p><div class="sp"></div><p><b>Cláusula 2ª</b><b>.</b> A propriedade plena do relógio objeto deste contrato permanecerá com o <b>CREDOR</b> até a quitação integral da dívida ora confessada. Somente após o pagamento total das obrigações financeiras previstas neste instrumento a propriedade será considerada definitivamente transferida ao <b>DEVEDOR</b>, ocasião em que também serão entregues os documentos, certificados e demais acessórios vinculados ao relógio.</p><div class="sp"></div><p><b>Cláusula 3ª</b><b>.</b> O <b>DEVEDOR</b> confessa e assume a quantia acima referida, e se propõe a pagá-la nos termos e condições previstas no presente contrato, desde já aceitas pelo <b>CREDOR</b>.</p><div class="sp"></div><p><b>Cláusula 4ª</b><b>. </b>Pelo presente instrumento, a dívida reconhecida e novada acima referida, a qual o <b>DEVEDOR</b> confessa e assume de forma solidária e integral, em caráter irrevogável e irretratável, e se compromete a pagá-la, mediante depósito bancário ou transferência eletrônica bancária para o, PIX CNPJ: 24.505.024/0001-60 de titularidade do <b>CREDOR</b>, valendo o comprovante de depósito e/ou transferência como recibo, da seguinte forma:</p><div class="sp"></div><div class="sp"></div>[[ITENS]]<div class="sp"></div>[[IMG]]<div class="sp"></div><div class="sp"></div><p><b>Cláusula 5ª</b><b>.</b> O <b>DEVEDOR</b> renuncia expressamente, desde já, em caráter irrevogável e irretratável, a qualquer reclamação, controvérsia ou contestação em relação ao valor e procedência da dívida objeto do presente contrato.</p><div class="sp"></div><p><b>Cláusula 6ª</b><b>.</b> O presente instrumento passa a vigorar e a produzir todos os seus devidos efeitos legais entre as partes a partir da data da sua assinatura.</p><div class="sp"></div><p><b>Cláusula 7ª</b><b>.</b> O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita o <b>DEVEDOR</b> ao pagamento de multa de 5% (cinco por cento), correção monetária pelo IGPM, ou outro índice que venha a substituí-lo, e juros mensais de 1% (um por cento) ao mês, independente de qualquer notificação prévia ou protesto.</p><div class="sp"></div><p><b>Cláusula 8ª</b><b>.</b> O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita o <b>DEVEDOR</b> ao vencimento automático e antecipado de todas as parcelas subsequentes à vencida, vencendo, portanto, todo o saldo devedor do presente contrato, sendo facultado ao <b>CREDOR</b> protestar e/ou executar o presente contrato, independente de qualquer notificação prévia ou protesto.</p><div class="sp"></div><p><b>Cláusula 9ª</b><b>.</b> Qualquer tolerância do <b>CREDOR</b> em relação à eventual inadimplência do <b>DEVEDOR</b><b> </b>constituirá mera liberalidade, não importando em qualquer perdão, novação ou remição da dívida.</p><div class="sp"></div><div class="sp"></div><p><b>Cláusula 10ª</b><b>.</b> As obrigações, cláusulas e condições firmadas e assumidas no presente contrato são estendidas aos herdeiros e sucessores na falta de quaisquer das partes.</p><div class="sp"></div><p><b>Cláusula 11ª</b><b>.</b> O presente contrato constitui título executivo extrajudicial, nos termos do art. 784, inciso III, do CPC/2015.</p><div class="sp"></div><p><b>Cláusula 12ª</b><b>.</b> Fica o eleito o Foro da Comarca de Fortaleza para dirimir eventuais dúvidas e/ou controvérsias sobre o presente contrato, com renúncia expressa, desde já, a qualquer outro, por mais privilegiado que seja.</p><div class="sp"></div><p>E assim, por estarem, assim justos e contratados, as partes acima qualificadas firmam o presente instrumento, em duas vias de igual teor, na presença de 2 (duas) testemunhas que a tudo presenciaram ou tiveram conhecimento.</p><div class="sp"></div><div class="sp"></div><p>Fortaleza/CE, {{DATA_EXTENSO}}.</p><div class="sp"></div><div class="sp"></div><div class="sp"></div><p>___________________________________________________________</p><p><b>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</b></p><div class="sp"></div><div class="sp"></div><div class="sp"></div><p>___________________________________________________________</p><p><b>{{DEVEDOR_NOME}}</b></p><div class="sp"></div><div class="sp"></div>';
@@ -11456,7 +11465,7 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.124.1</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.124.3</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
@@ -11465,6 +11474,8 @@ function CTR_gerar(ov){
       <div class="cl-item">Nome do arquivo do contrato agora leva primeiro nome e último sobrenome do devedor (CONTRATO GMT BATMAN ROMULO CARVALHO.docx)</div>
       <div class="cl-item">Diagramação do PDF refinada: pontuação gruda na palavra (fim dos espaços antes de vírgula e ponto criados pela justificação), cláusula não deixa rabinho órfão na página seguinte, página final em branco eliminada, sublinhado do cabeçalho em faixa contínua, ~3cm de respiro antes das linhas de assinatura, e (À VISTA) com acento na foto da venda</div>
       <div class="cl-item">Fechar o visualizador depois de GERAR volta direto pro Histórico de Vendas (formulário se encerra junto); vindo da Gestão, fechar continua voltando pra ficha do contrato</div>
+      <div class="cl-item">Ficha do contrato só com VISUALIZAR e FECHAR (compartilhar vive dentro do visualizador). Assinaturas viram bloco atômico: linha e nome não se separam, respiro só entra se couber na página, e a regra anti-órfão ficou menos agressiva — acabou a página extra só de assinatura</div>
+      <div class="cl-item">Tipografia: Nº gruda no número que o segue (quebram de linha juntos, sem Nº viúvo no fim da linha) e a justificação estica a linha até a margem como o Word, sem deixar linha curta antes de número longo</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
