@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.129.3</title>
+<title>VB - v1.129.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.129.3<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.129.4<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -10991,50 +10991,10 @@ function CTR_viewerPDF(docxBlob, fname, aoFechar){
     ov.querySelector('#ctrv-share').addEventListener('click',function(){ CTR_shareEscolha(docxBlob, fname); });
   }).catch(function(e){ VB_toast('Erro: '+(e&&e.message||e)); });
 }
-function CTR_pdfJpegs(u8){
-  // varre o PDF atrás dos JPEGs das páginas (nosso PDF gerado guarda cada página como JPEG)
-  var out=[], i=0, N=u8.length;
-  while(i<N-3 && out.length<40){
-    if(u8[i]===0xFF && u8[i+1]===0xD8 && u8[i+2]===0xFF){
-      var k=i+3;
-      while(k<N-1 && !(u8[k]===0xFF && u8[k+1]===0xD9)) k++;
-      if(k<N-1){
-        var tam=k+2-i;
-        if(tam>15000) out.push(u8.subarray(i,k+2));
-        i=k+2; continue;
-      }
-    }
-    i++;
-  }
-  return out;
-}
 function CTR_viewerAssinado(blob, nome){
-  blob.arrayBuffer().then(function(ab){
-    var jp=CTR_pdfJpegs(new Uint8Array(ab));
-    if(!jp.length){
-      VB_toast('Visualiza\u00e7\u00e3o indispon\u00edvel para este PDF \u2014 use o compartilhar (toque no nome do arquivo para pr\u00e9-visualizar).');
-      CTR_share1(new File([blob], nome, {type:'application/pdf'}), blob);
-      return;
-    }
-    var old=document.getElementById('vb-ctr-vass'); if(old) old.remove();
-    var ov=document.createElement('div');
-    ov.id='vb-ctr-vass';
-    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10080;display:flex;flex-direction:column;';
-    var inner='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
-    jp.forEach(function(u){
-      var b=new Blob([u],{type:'image/jpeg'});
-      inner+='<img src="'+URL.createObjectURL(b)+'" style="display:block;width:100%;max-width:520px;margin:0 auto 10px;border-radius:6px;background:#fff;">';
-    });
-    inner+='</div>'
-      +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
-      +'<button id="ctrva-fechar" style="padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">FECHAR</button>'
-      +'<button id="ctrva-share" style="padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">COMPARTILHAR</button>'
-      +'</div>';
-    ov.innerHTML=inner;
-    document.body.appendChild(ov);
-    ov.querySelector('#ctrva-fechar').addEventListener('click',function(){ ov.remove(); });
-    ov.querySelector('#ctrva-share').addEventListener('click',function(){ CTR_share1(new File([blob], nome, {type:'application/pdf'}), blob); });
-  });
+  // PDF assinado: o carimbo do gov.br \u00e9 camada sobre a p\u00e1gina \u2014 s\u00f3 o leitor nativo mostra fiel.
+  // Folha do iOS: toque no nome do arquivo abre o Quick Look completo.
+  CTR_share1(new File([blob], nome, {type:'application/pdf'}), blob);
 }
 function CON_getBlob(c, cb){
   if(c._blob){ cb(c._blob, c.fname||'CONTRATO.docx'); return; }
@@ -11588,7 +11548,7 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.129.3</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.129.4</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
@@ -11619,6 +11579,7 @@ function CTR_gerar(ov){
       <div class="cl-item">Ficha do contrato ganhou bloco HISTÓRICO: GERADO · data, e ASSINADO · data em verde (ou AGUARDANDO ASSINATURA enquanto não anexar) — visível tanto pela Gestão quanto pelo card da venda</div>
       <div class="cl-item">Log com data E hora em tudo (histórico da ficha e carimbo do card). E o visualizador do assinado trocou o iframe problemático do iOS por extração direta: o app abre o PDF assinado, puxa os JPEGs das páginas de dentro dele (a assinatura gov.br não mexe nas páginas) e mostra no visualizador rolável padrão — zoom certo, rolagem normal</div>
       <div class="cl-item">Monocromático restaurado: saíram os verdes e vermelhos das telas novas (selo ✓ ASSINADO e ASSINADO do histórico agora em negrito neutro, × armado e DESCARTAR no padrão). Campo CONTRATO removido do card da venda — o histórico vive na ficha do contrato, a um toque</div>
+      <div class="cl-item">CONTRATO ASSINADO abre direto na folha do iOS: o carimbo do gov.br é camada desenhada sobre a página e só o leitor nativo (Quick Look — toque no nome do arquivo na folha) mostra o documento fiel. O extrator de páginas foi descartado por mostrar a página sem o carimbo; nenhuma biblioteca externa entrou no app</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
