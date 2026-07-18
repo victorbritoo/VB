@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.126.0</title>
+<title>VB - v1.127.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.126.0<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.127.1<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -2446,7 +2446,7 @@ function VB_exportarZip(){
 
 function VB_fetchTudo(onOk, onErr){
   var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
-  Promise.all(tabelas.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
+  Promise.all(tabelas.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
     var dados={}, total=0;
@@ -2763,7 +2763,7 @@ function VB_diffCampos(a,b){
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
   var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
-  Promise.all(tabs.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
+  Promise.all(tabs.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
     res.forEach(function(x){
@@ -11020,6 +11020,9 @@ function CON_fichaObj(c, aoGerarNovo){
     +'</div>'
     +'<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR</button>'
 
+    +(c.assinado_em
+      ? '<button id="conf-ass" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ASSINADO \u00b7 '+CTR_esc((c.assinado_em||'').slice(0,10).split('-').reverse().join('/'))+' \u2014 COMPARTILHAR</button>'
+      : '<button id="conf-anexar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ANEXAR ASSINADO (PDF)</button>')
     +(aoGerarNovo?'<button id="conf-novo" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR NOVO CONTRATO</button>':'')
     +'<button id="conf-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
@@ -11028,6 +11031,42 @@ function CON_fichaObj(c, aoGerarNovo){
   ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
   ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f); }); });
   var bn=ov.querySelector('#conf-novo'); if(bn) bn.addEventListener('click',function(){ ov.remove(); aoGerarNovo(); });
+  var ba=ov.querySelector('#conf-anexar');
+  if(ba) ba.addEventListener('click',function(){
+    var inp=document.createElement('input'); inp.type='file'; inp.accept='application/pdf';
+    inp.addEventListener('change',function(){
+      var f=inp.files && inp.files[0]; if(!f) return;
+      var path='assinado_'+c.id+'.pdf';
+      VB_toast('Enviando...');
+      sb.storage.from('contratos').upload(path, f, {upsert:true, contentType:'application/pdf'}).then(function(up){
+        if(up.error){ VB_toast('Erro no envio: '+up.error.message); return; }
+        sb.from('contratos').update({assinado_path:path, assinado_em:new Date().toISOString()}).eq('id',c.id).then(function(res){
+          if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+          VB_log('CONTRATOS','anexou assinado', c.cliente_nome||'', f.name);
+          VB_toast('Contrato assinado anexado.');
+          ov.remove(); if(typeof CON_load==='function') CON_load();
+        });
+      });
+    });
+    inp.click();
+  });
+  var bs2=ov.querySelector('#conf-ass');
+  if(bs2) bs2.addEventListener('click',function(){
+    var nm=(c.fname||'CONTRATO.docx').replace(/\.docx$/i,'')+' ASSINADO.pdf';
+    if(c.assinado_path){
+      sb.storage.from('contratos').download(c.assinado_path).then(function(res){
+        if(res.error||!res.data){ VB_toast('Arquivo não disponível.'); return; }
+        CTR_share1(new File([res.data], nm, {type:'application/pdf'}), res.data);
+      });
+    } else {
+      sb.from('contratos').select('assinado_b64').eq('id',c.id).single().then(function(res){
+        if(res.error||!res.data||!res.data.assinado_b64){ VB_toast('Arquivo não disponível.'); return; }
+        var u=CTR_b64bytes(res.data.assinado_b64);
+        var blob=new Blob([u],{type:'application/pdf'});
+        CTR_share1(new File([blob], nm, {type:'application/pdf'}), blob);
+      });
+    }
+  });
 
 }
 /* === CONTRATOS salvos + preview (v1.121.0) === */
@@ -11095,7 +11134,7 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
 }
 var CON_rows=[];
 function CON_load(){
-  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id').order('created_at',{ascending:false}).limit(200).then(function(res){
+  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').order('created_at',{ascending:false}).limit(200).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     CON_rows=res.data||[]; CON_render();
   });
@@ -11302,7 +11341,7 @@ function CTR_parcelasDaVenda(r){
 // ---- UI ----
 function CTR_abrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
-  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id').eq('venda_id',r0.id).order('created_at',{ascending:false}).limit(1).then(function(res){
+  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').eq('venda_id',r0.id).order('created_at',{ascending:false}).limit(1).then(function(res){
     if(!res.error && res.data && res.data.length){ CON_fichaObj(res.data[0], function(){ CTR_abrirForm(idx); }); }
     else { CTR_abrirForm(idx); }
   });
@@ -11490,7 +11529,7 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.126.0</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.127.1</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
@@ -11510,6 +11549,8 @@ function CTR_gerar(ov){
       <div class="cl-item">Legenda da foto sem o ano — só marca e modelo, uma linha</div>
       <div class="cl-item">Compartilhar a FOTO do resumo do sócio copia o TEXTO do sócio (resumo estruturado completo), não mais a legenda de cliente — cada foto com sua mensagem</div>
       <div class="cl-item">CONTRATO na venda virou porteiro: se a venda já tem contrato (vínculo novo venda_id), abre a ficha dele — VISUALIZAR, GERAR NOVO CONTRATO ou fechar — em vez de criar duplicata; só vendas sem contrato caem no formulário</div>
+      <div class="cl-item">Contrato assinado no gov.br entra no app: ANEXAR ASSINADO (PDF) na ficha do contrato grava o arquivo no registro com data; depois a ficha mostra ASSINADO · data e compartilha o PDF assinado direto. Registro logado; arquivo fora dos snapshots como o irmão .docx</div>
+      <div class="cl-item">PDF assinado migrou pro Supabase Storage (bucket contratos): 1,6MB por arquivo não pesa mais no banco — a tabela guarda só o caminho e a data. Anexos antigos em base64 continuam abrindo (reserva de legado)</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
