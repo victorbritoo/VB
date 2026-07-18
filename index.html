@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.127.1</title>
+<title>VB - v1.128.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.127.1<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.128.1<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -11018,11 +11018,11 @@ function CON_fichaObj(c, aoGerarNovo){
     +'<div style="grid-column:1/-1;">'+bloco('RELÓGIO',c.descricao)+'</div>'
     +bloco('VALOR',c.valor_total?('R$ '+CTR_fmtV(Number(c.valor_total))):'')+bloco('ARQUIVO',c.fname)
     +'</div>'
-    +'<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR</button>'
-
     +(c.assinado_em
-      ? '<button id="conf-ass" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ASSINADO \u00b7 '+CTR_esc((c.assinado_em||'').slice(0,10).split('-').reverse().join('/'))+' \u2014 COMPARTILHAR</button>'
-      : '<button id="conf-anexar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ANEXAR ASSINADO (PDF)</button>')
+      ? '<button id="conf-ass" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CONTRATO ASSINADO \u00b7 '+CTR_esc((c.assinado_em||'').slice(0,10).split('-').reverse().join('/'))+'</button>'
+        +'<button id="conf-ver" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VERS\u00c3O GERADA (SEM ASSINATURA)</button>'
+      : '<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR</button>'
+        +'<button id="conf-anexar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ANEXAR ASSINADO (PDF)</button>')
     +(aoGerarNovo?'<button id="conf-novo" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR NOVO CONTRATO</button>':'')
     +'<button id="conf-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
@@ -11043,6 +11043,13 @@ function CON_fichaObj(c, aoGerarNovo){
         sb.from('contratos').update({assinado_path:path, assinado_em:new Date().toISOString()}).eq('id',c.id).then(function(res){
           if(res.error){ VB_toast('Erro: '+res.error.message); return; }
           VB_log('CONTRATOS','anexou assinado', c.cliente_nome||'', f.name);
+          if(c.venda_id){
+            var hj2=new Date(), dd2=('0'+hj2.getDate()).slice(-2)+'/'+('0'+(hj2.getMonth()+1)).slice(-2);
+            sb.from('vendas').select('notas').eq('id',c.venda_id).single().then(function(rv){
+              var nt=(rv.data&&rv.data.notas)?rv.data.notas+' \u00b7 ':'';
+              sb.from('vendas').update({notas: nt+'ASSINADO '+dd2}).eq('id',c.venda_id).then(function(){});
+            });
+          }
           VB_toast('Contrato assinado anexado.');
           ov.remove(); if(typeof CON_load==='function') CON_load();
         });
@@ -11126,7 +11133,15 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
     fr.onload=function(){
       var b64=String(fr.result).split(',')[1]||'';
       sb.from('contratos').insert({cliente_nome:nome, cpf:cpf||null, descricao:marca||null, valor_total:total||null, fname:fname, arquivo_b64:b64, venda_id:vendaId||null}).then(function(res){
-        if(!res.error){ VB_toast('Contrato salvo em Gestão \u203a Contratos.'); }
+        if(res.error){ VB_toast('Contrato N\u00c3O salvo na Gest\u00e3o: '+res.error.message); return; }
+        VB_toast('Contrato salvo em Gestão \u203a Contratos.');
+        if(vendaId){
+          var hj=new Date(), dd=('0'+hj.getDate()).slice(-2)+'/'+('0'+(hj.getMonth()+1)).slice(-2);
+          sb.from('vendas').select('notas').eq('id',vendaId).single().then(function(rv){
+            var nt=(rv.data&&rv.data.notas)?rv.data.notas+' \u00b7 ':'';
+            sb.from('vendas').update({notas: nt+'CONTRATO GERADO '+dd}).eq('id',vendaId).then(function(){});
+          });
+        }
       });
     };
     fr.readAsDataURL(blob);
@@ -11147,7 +11162,7 @@ function CON_render(){
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">'
       +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="CON_ficha('+i+')">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CTR_esc(c.cliente_nome||'')+'</div>'
-      +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+'</div>'
+      +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+(c.assinado_em?' \u00b7 <span style=\'color:#2e9e5b;font-weight:700;\'>\u2713 ASSINADO</span>':'')+'</div>'
       +'</div>'
       +'<button onclick="CON_del(this,'+i+')" style="border:none;background:transparent;color:var(--so2);font-size:17px;cursor:pointer;padding:4px 6px;">\u00d7</button>'
       +'</div>';
@@ -11406,7 +11421,7 @@ function CTR_buscaCli(el){
   if(!achou.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML=achou.map(function(c){
     var i=CTR_clientes.indexOf(c);
-    return '<div onclick="CTR_pegaCli('+i+')" style="padding:10px 12px;border-bottom:0.5px solid var(--ln3);cursor:pointer;">'
+    return '<div onpointerdown="event.preventDefault();CTR_pegaCli('+i+')" style="padding:10px 12px;border-bottom:0.5px solid var(--ln3);cursor:pointer;">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;">'+CTR_esc(c.nome||'')+'</div>'
       +'<div style="font-size:9px;color:var(--so);">'+CTR_esc(c.cpf||'SEM CPF')+'</div></div>';
   }).join('');
@@ -11416,7 +11431,7 @@ function CTR_pegaCli(i){
   var c=CTR_clientes[i]; if(!c) return;
   CTR_cliSel=c;
   var box=document.getElementById('ctr-cli-res'); if(box){ box.style.display='none'; box.innerHTML=''; }
-  document.getElementById('ctr-cli-busca').value=c.nome||'';
+  var _bq=document.getElementById('ctr-cli-busca'); if(_bq){ _bq.value=''; _bq.blur(); }
   var d=CLI_decEnd1(c);
   var set=function(id,v){ var el=document.getElementById(id); if(el) el.value=v||''; };
   set('ctr-nome',c.nome); set('ctr-qual',c.qualificacao||'brasileiro, casado, empresário'); set('ctr-cpf',c.cpf);
@@ -11529,7 +11544,7 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.127.1</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.128.1</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
@@ -11551,6 +11566,9 @@ function CTR_gerar(ov){
       <div class="cl-item">CONTRATO na venda virou porteiro: se a venda já tem contrato (vínculo novo venda_id), abre a ficha dele — VISUALIZAR, GERAR NOVO CONTRATO ou fechar — em vez de criar duplicata; só vendas sem contrato caem no formulário</div>
       <div class="cl-item">Contrato assinado no gov.br entra no app: ANEXAR ASSINADO (PDF) na ficha do contrato grava o arquivo no registro com data; depois a ficha mostra ASSINADO · data e compartilha o PDF assinado direto. Registro logado; arquivo fora dos snapshots como o irmão .docx</div>
       <div class="cl-item">PDF assinado migrou pro Supabase Storage (bucket contratos): 1,6MB por arquivo não pesa mais no banco — a tabela guarda só o caminho e a data. Anexos antigos em base64 continuam abrindo (reserva de legado)</div>
+      <div class="cl-item">Assinado vira o documento principal: selo ✓ ASSINADO verde na lista de contratos, e na ficha o botão de destaque passa a ser CONTRATO ASSINADO (compartilha o PDF do gov.br) com a versão gerada demovida a secundária — vale também no porteiro da venda</div>
+      <div class="cl-item">Busca de cliente no contrato: tocar no resultado funciona com o teclado aberto (um toque só). Log vivo nas notas da venda: gerar contrato carimba CONTRATO GERADO dd/mm e anexar o assinado carimba ASSINADO dd/mm — aparece no card e na foto. E se o salvamento na Gestão falhar, o erro aparece em vez de sumir em silêncio</div>
+      <div class="cl-item">Escolher cliente na busca limpa o campo de busca (nome fica só no campo NOME — acabou o duplicado) e fecha o teclado</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
