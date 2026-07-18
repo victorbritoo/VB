@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.128.1</title>
+<title>VB - v1.129.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.128.1<br>17/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.129.0<br>17/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -2029,7 +2029,7 @@ var VB_logPrev=null;
 var VB_LOG_CAMPOS={nome:'Nome',descricao:'Descrição',cliente:'Cliente',notas:'Notas',identificacao:'Identificação',investidor_nome:'Investidor',socio:'Sócio',modelo:'Modelo',ano:'Ano',sn:'SN',infos:'Acompanha',
   valor_total:['Total','$'],valor_bruto:['Bruto','$'],valor_liquido:['Líquido','$'],valor_financiado:['Financiado','$'],custo:['Custo','$'],valor_socio:['Parte do sócio','$'],tarifa:['Tarifa','$'],
   taxa:'Taxa',lucro_vb_pct:'Lucro VB %',pagamento:'Pagamento',fornecedor:'Fornecedor',
-  data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d'],data_operacao:['Data da operação','d'],data_inicio:['Início','d'],quantidade_parcelas:'Parcelas',valor_parcela:['Valor da parcela','$'],qtd_parcelas:'Parcelas',modo:'Modo',investidor_pct:'Investidor %',investidor_parcela:['Parcela do investidor','$'],vb_parcela:['Parcela VB','$'],investidor_aporte:['Aporte','$'],baixa_nota:'Nota da baixa',telefone:'Telefone',nacionalidade:'Nacionalidade',estado_civil:'Estado civil',profissao:'Profissão',doc_tipo:'Tipo de documento',doc_num:'Documento',end1:'Endereço',end2:'Complemento',cidade:'Cidade',uf:'UF',cep:'CEP',numero:'Número',bairro:'Bairro',qualificacao:'Qualificação',endereco:'Endereço completo'};
+  data_venda:['Data da venda','d'],data_primeira_parcela:['1ª parcela','d'],data_compra:['Data da compra','d'],data_operacao:['Data da operação','d'],data_inicio:['Início','d'],quantidade_parcelas:'Parcelas',valor_parcela:['Valor da parcela','$'],qtd_parcelas:'Parcelas',modo:'Modo',investidor_pct:'Investidor %',investidor_parcela:['Parcela do investidor','$'],vb_parcela:['Parcela VB','$'],investidor_aporte:['Aporte','$'],baixa_nota:'Nota da baixa',telefone:'Telefone',nacionalidade:'Nacionalidade',estado_civil:'Estado civil',profissao:'Profissão',doc_tipo:'Tipo de documento',doc_num:'Documento',end1:'Endereço',end2:'Complemento',cidade:'Cidade',uf:'UF',cep:'CEP',numero:'Número',bairro:'Bairro',qualificacao:'Qualificação',endereco:'Endereço completo',contrato_status:'Contrato'};
 function VB_logFmtV(v, tp){
   if(v==null||v==='') return '—';
   if(tp==='$'){ try{ return HIST_fmtMoeda(Number(v)); }catch(e){ return 'R$ '+v; } }
@@ -4115,6 +4115,7 @@ function HIST_renderRows(tab, rows){
         }
       }
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
+      if(r.contrato_status) campos.push({l:'Contrato', v:r.contrato_status, w:1});
       if(r.notas) campos.push({l:'Notas', v:r.notas, w:1});
 
     } else {
@@ -10991,6 +10992,23 @@ function CTR_viewerPDF(docxBlob, fname, aoFechar){
     ov.querySelector('#ctrv-share').addEventListener('click',function(){ CTR_shareEscolha(docxBlob, fname); });
   }).catch(function(e){ VB_toast('Erro: '+(e&&e.message||e)); });
 }
+function CTR_viewerAssinado(blob, nome){
+  var old=document.getElementById('vb-ctr-vass'); if(old) old.remove();
+  var url=URL.createObjectURL(blob);
+  var ov=document.createElement('div');
+  ov.id='vb-ctr-vass';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a1a;z-index:10080;display:flex;flex-direction:column;';
+  ov.innerHTML='<div style="flex:1 1 0;min-height:0;padding-top:env(safe-area-inset-top,0px);">'
+    +'<iframe src="'+url+'" style="width:100%;height:100%;border:none;background:#fff;"></iframe>'
+    +'</div>'
+    +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
+    +'<button id="ctrva-fechar" style="padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">FECHAR</button>'
+    +'<button id="ctrva-share" style="padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">COMPARTILHAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#ctrva-fechar').addEventListener('click',function(){ ov.remove(); URL.revokeObjectURL(url); });
+  ov.querySelector('#ctrva-share').addEventListener('click',function(){ CTR_share1(new File([blob], nome, {type:'application/pdf'}), blob); });
+}
 function CON_getBlob(c, cb){
   if(c._blob){ cb(c._blob, c.fname||'CONTRATO.docx'); return; }
   sb.from('contratos').select('arquivo_b64,fname').eq('id',c.id).single().then(function(res){
@@ -11045,10 +11063,7 @@ function CON_fichaObj(c, aoGerarNovo){
           VB_log('CONTRATOS','anexou assinado', c.cliente_nome||'', f.name);
           if(c.venda_id){
             var hj2=new Date(), dd2=('0'+hj2.getDate()).slice(-2)+'/'+('0'+(hj2.getMonth()+1)).slice(-2);
-            sb.from('vendas').select('notas').eq('id',c.venda_id).single().then(function(rv){
-              var nt=(rv.data&&rv.data.notas)?rv.data.notas+' \u00b7 ':'';
-              sb.from('vendas').update({notas: nt+'ASSINADO '+dd2}).eq('id',c.venda_id).then(function(){});
-            });
+            sb.from('vendas').update({contrato_status:'ASSINADO '+dd2}).eq('id',c.venda_id).then(function(){});
           }
           VB_toast('Contrato assinado anexado.');
           ov.remove(); if(typeof CON_load==='function') CON_load();
@@ -11063,14 +11078,13 @@ function CON_fichaObj(c, aoGerarNovo){
     if(c.assinado_path){
       sb.storage.from('contratos').download(c.assinado_path).then(function(res){
         if(res.error||!res.data){ VB_toast('Arquivo não disponível.'); return; }
-        CTR_share1(new File([res.data], nm, {type:'application/pdf'}), res.data);
+        CTR_viewerAssinado(res.data, nm);
       });
     } else {
       sb.from('contratos').select('assinado_b64').eq('id',c.id).single().then(function(res){
         if(res.error||!res.data||!res.data.assinado_b64){ VB_toast('Arquivo não disponível.'); return; }
         var u=CTR_b64bytes(res.data.assinado_b64);
-        var blob=new Blob([u],{type:'application/pdf'});
-        CTR_share1(new File([blob], nm, {type:'application/pdf'}), blob);
+        CTR_viewerAssinado(new Blob([u],{type:'application/pdf'}), nm);
       });
     }
   });
@@ -11137,10 +11151,7 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
         VB_toast('Contrato salvo em Gestão \u203a Contratos.');
         if(vendaId){
           var hj=new Date(), dd=('0'+hj.getDate()).slice(-2)+'/'+('0'+(hj.getMonth()+1)).slice(-2);
-          sb.from('vendas').select('notas').eq('id',vendaId).single().then(function(rv){
-            var nt=(rv.data&&rv.data.notas)?rv.data.notas+' \u00b7 ':'';
-            sb.from('vendas').update({notas: nt+'CONTRATO GERADO '+dd}).eq('id',vendaId).then(function(){});
-          });
+          sb.from('vendas').update({contrato_status:'GERADO '+dd}).eq('id',vendaId).then(function(){});
         }
       });
     };
@@ -11357,7 +11368,7 @@ function CTR_parcelasDaVenda(r){
 function CTR_abrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
   sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').eq('venda_id',r0.id).order('created_at',{ascending:false}).limit(1).then(function(res){
-    if(!res.error && res.data && res.data.length){ CON_fichaObj(res.data[0], function(){ CTR_abrirForm(idx); }); }
+    if(!res.error && res.data && res.data.length){ CON_fichaObj(res.data[0]); }
     else { CTR_abrirForm(idx); }
   });
 }
@@ -11379,10 +11390,9 @@ function CTR_abrirForm(idx){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO — '+CTR_esc(titulo)+'</div>'
     +'<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;margin:2px 0 5px;">DEVEDOR</div>'
     +'<div style="position:relative;">'
-    +inp('ctr-cli-busca','BUSCAR CLIENTE CADASTRADO','','oninput="CTR_buscaCli(this)"')
+    +inp('ctr-nome','NOME COMPLETO (DIGITE PARA BUSCAR)','','oninput="CTR_buscaCli(this)"')
     +'<div id="ctr-cli-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
     +'</div>'
-    +inp('ctr-nome','NOME COMPLETO','')
     +inp('ctr-qual','QUALIFICAÇÃO','brasileiro, casado, empresário')
     +'<div style="display:grid;grid-template-columns:1.3fr 74px 1fr;gap:6px;">'
     +inp('ctr-cpf','CPF','','inputmode="numeric" oninput="CLI_maskCPF(this)"')
@@ -11431,7 +11441,7 @@ function CTR_pegaCli(i){
   var c=CTR_clientes[i]; if(!c) return;
   CTR_cliSel=c;
   var box=document.getElementById('ctr-cli-res'); if(box){ box.style.display='none'; box.innerHTML=''; }
-  var _bq=document.getElementById('ctr-cli-busca'); if(_bq){ _bq.value=''; _bq.blur(); }
+  var _nm=document.getElementById('ctr-nome'); if(_nm) _nm.blur();
   var d=CLI_decEnd1(c);
   var set=function(id,v){ var el=document.getElementById(id); if(el) el.value=v||''; };
   set('ctr-nome',c.nome); set('ctr-qual',c.qualificacao||'brasileiro, casado, empresário'); set('ctr-cpf',c.cpf);
@@ -11544,7 +11554,7 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.128.1</span><span class="cl-ver-date">17/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.129.0</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
       <div class="cl-item">Dois consertos no visualizador: o cabeçalho voltou inteiro (o leitor ignorava runs com atributos no XML do Word — por isso só sobrava um fragmento) e a rolagem no iOS destravada (min-height:0 no container flex, manha conhecida do Safari)</div>
@@ -11569,6 +11579,9 @@ function CTR_gerar(ov){
       <div class="cl-item">Assinado vira o documento principal: selo ✓ ASSINADO verde na lista de contratos, e na ficha o botão de destaque passa a ser CONTRATO ASSINADO (compartilha o PDF do gov.br) com a versão gerada demovida a secundária — vale também no porteiro da venda</div>
       <div class="cl-item">Busca de cliente no contrato: tocar no resultado funciona com o teclado aberto (um toque só). Log vivo nas notas da venda: gerar contrato carimba CONTRATO GERADO dd/mm e anexar o assinado carimba ASSINADO dd/mm — aparece no card e na foto. E se o salvamento na Gestão falhar, o erro aparece em vez de sumir em silêncio</div>
       <div class="cl-item">Escolher cliente na busca limpa o campo de busca (nome fica só no campo NOME — acabou o duplicado) e fecha o teclado</div>
+      <div class="cl-item">Campo de busca separado eliminado: o próprio NOME busca enquanto você digita — achou, toca e preenche tudo; não achou, o que digitou já é o nome do cliente novo. Um campo, dois trabalhos</div>
+      <div class="cl-item">CONTRATO ASSINADO abre em visualização (leitor nativo do Safari embutido) com COMPARTILHAR e FECHAR no rodapé, mesmo padrão do visualizador da versão gerada</div>
+      <div class="cl-item">Status do contrato saiu das notas e ganhou campo próprio no card da venda (CONTRATO: GERADO dd/mm → ASSINADO dd/mm, sobrescrito por estado; notas voltam a ser 100% suas). E o GERAR NOVO CONTRATO saiu do porteiro da venda — contrato novo só em venda nova; correção é apagar na Gestão, que reabre o formulário. SQL de uma linha (no chat)</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
