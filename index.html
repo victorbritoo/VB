@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.134.0</title>
+<title>VB - v1.135.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.134.0<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.135.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8185,9 +8185,10 @@ function CLIP_abrir(nome){
   ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
   Promise.all([
-    sb.from('antecipacoes').select('cliente,nome,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at').limit(10000),
-    sb.from('vendas').select('cliente,nome,descricao,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda').limit(10000),
-    sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000)
+    sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at').limit(10000),
+    sb.from('vendas').select('id,cliente,nome,descricao,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda').limit(10000),
+    sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var ant=(res[0].data||[]).filter(function(r){ return key(r.cliente||r.nome)===alvo; });
@@ -8196,8 +8197,9 @@ function CLIP_abrir(nome){
     var hoje=REN_hojeISO();
     var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
     var antAtr=ant.filter(function(r){ return (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0); });
-    // em aberto (parcelas futuras)
-    var fut=REN_coleta(antOk, [], ven).filter(function(x){ return x.venc>=hoje; });
+    // em aberto = parcelas sem baixa (futuras e vencidas)
+    var _bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ _bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=1; });
+    var fut=REN_coleta(antOk, [], ven).filter(function(x){ return !_bx[REN_key(x)]; });
     fut.sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:0; });
     var totFut=0; fut.forEach(function(x){ totFut+=x.valor; });
     // cobrança
@@ -8225,7 +8227,7 @@ function CLIP_abrir(nome){
     if(!fut.length) inner+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada a vencer.</div>';
     else{
       var mostra=fut.slice(0,12);
-      mostra.forEach(function(x){ inner+=ln(fdt(x.venc)+' \u00b7 '+CLIP_esc(x.rot), HIST_fmtMoeda(x.valor)); });
+      mostra.forEach(function(x){ var atrX=(x.venc<hoje); inner+=ln((atrX?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):fdt(x.venc))+' \u00b7 '+CLIP_esc(x.rot), HIST_fmtMoeda(x.valor), atrX); });
       if(fut.length>12) inner+='<div style="font-size:10px;color:var(--so2);margin-top:5px;">+'+(fut.length-12)+' parcelas</div>';
       inner+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total em aberto</b>', HIST_fmtMoeda(totFut));
     }
@@ -8249,7 +8251,7 @@ function CLIP_abrir(nome){
       con.forEach(function(c3){ innK+=ln(CLIP_esc(c3.descricao||'CONTRATO'), c3.assinado_em?'\u2713 ASSINADO':'AGUARDANDO'); });
       hh+=bl('CONTRATOS \u00b7 '+con.length, innK);
     }
-    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Casado pelo nome nas opera\u00e7\u00f5es \u2014 grafias diferentes contam como clientes diferentes. Financiamentos ficam fora (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
+    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Casado pelo nome nas opera\u00e7\u00f5es \u2014 grafias diferentes contam como clientes diferentes. Parcelas baixadas ficam fora do EM ABERTO; vencidas sem baixa aparecem em vermelho. Financiamentos ficam fora (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
     hh+='<button onclick="document.getElementById(\'clip-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
     hh+='</div>';
     ov.innerHTML=hh;
@@ -8277,25 +8279,36 @@ function REN_coleta(ant, fin, ven){
     var cli=String(r.cliente||r.nome||r.descricao||'\u2014').toUpperCase();
     var rot=(r.descricao||r.nome||'VENDA');
     if(Array.isArray(r.parcelas)&&r.parcelas.length){
-      r.parcelas.forEach(function(p){ var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven'}); });
+      r.parcelas.forEach(function(p,ix){ var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:ix}); });
     } else {
       var n=Number(r.quantidade_parcelas)||0, vp=Number(r.valor_parcela)||0;
       var d1=r.data_primeira_parcela?String(r.data_primeira_parcela).slice(0,10):null;
-      if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:rot, tab:'ven'});
+      if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:k});
     }
   });
   (ant||[]).forEach(function(r){
     if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return; // atrasada: já virou cobrança, fora do cronograma
     var cli=String(r.cliente||r.nome||'\u2014').toUpperCase();
-    (r.titulos||[]).forEach(function(t){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), tab:'ant'}); });
+    (r.titulos||[]).forEach(function(t,ix){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), tab:'ant', opId:String(r.id), idx:ix}); });
   });
   (fin||[]).forEach(function(r){
     var n=Number(r.qtd_parcelas)||0, vp=Number(r.valor_parcela)||0;
     var d1=r.data_inicio?String(r.data_inicio).slice(0,10):null;
     var cli=String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase();
-    if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:cli, tab:'fin'});
+    if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:cli, tab:'fin', opId:String(r.id), idx:k});
   });
   return out;
+}
+function REN_key(x){ return x.tab+'|'+x.opId+'|'+x.idx; }
+var REN_sort='data', REN_showRec=false, REN_cache=null;
+function REN_setSort(s){ REN_sort=s; REN_render(); }
+function REN_toggleRec(){ REN_showRec=!REN_showRec; REN_render(); }
+function REN_ordena(arr){
+  var a=arr.slice();
+  if(REN_sort==='valor') a.sort(function(x,y){ return y.valor-x.valor; });
+  else if(REN_sort==='cliente') a.sort(function(x,y){ return x.cliente<y.cliente?-1:x.cliente>y.cliente?1:(x.venc<y.venc?-1:1); });
+  else a.sort(function(x,y){ return x.venc<y.venc?-1:x.venc>y.venc?1:0; });
+  return a;
 }
 function REN_abrir(){
   var ov=document.getElementById('ren-overlay');
@@ -8305,47 +8318,146 @@ function REN_abrir(){
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     document.body.appendChild(ov);
   }
-  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
+  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
   Promise.all([
-    sb.from('antecipacoes').select('cliente,nome,valor_bruto,valor_liquido,titulos').limit(10000),
-    sb.from('financiamentos_hist').select('descricao,nome,qtd_parcelas,valor_parcela,data_inicio').limit(10000),
-    sb.from('vendas').select('cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela').limit(10000)
+    sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos').limit(10000),
+    sb.from('financiamentos_hist').select('id,descricao,nome,qtd_parcelas,valor_parcela,data_inicio').limit(10000),
+    sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela').limit(10000),
+    sb.from('parcela_baixas').select('*').limit(20000)
   ]).then(function(res){
+    var semTabela=!!(res[3]&&res[3].error);
     var itens=REN_coleta(res[0].data||[], res[1].data||[], res[2].data||[]);
-    var hoje=REN_hojeISO();
-    var d7=(function(){ var d=new Date(); d.setDate(d.getDate()+7); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
-    var fut=itens.filter(function(x){ return x.venc>=hoje; });
-    fut.sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:0; });
-    var total=0; fut.forEach(function(x){ total+=x.valor; });
-    var sem=fut.filter(function(x){ return x.venc<=d7; });
-    var porCli={};
-    fut.forEach(function(x){ var k=x.cliente||'\u2014'; if(!porCli[k]) porCli[k]={total:0,n:0,prox:x.venc}; porCli[k].total+=x.valor; porCli[k].n++; if(x.venc<porCli[k].prox) porCli[k].prox=x.venc; });
-    var cliArr=Object.keys(porCli).map(function(k){ return {nome:k, total:porCli[k].total, n:porCli[k].n, prox:porCli[k].prox}; });
-    cliArr.sort(function(a,b){ return b.total-a.total; });
-    function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7); }
-    function linha(esq, dir, sub){
-      return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+(sub?('<span style="color:var(--so2);font-size:10px;"> \u00b7 '+sub+'</span>'):'')+'</span><span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+dir+'</span></div>';
-    }
-    var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
-    hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">A RECEBER</div>';
-    hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL EM ABERTO</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(total)+'</span></div><div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+fut.length+' parcela'+(fut.length===1?'':'s')+' futura'+(fut.length===1?'':'s')+'</div></div>';
-    var s7=0; sem.forEach(function(x){ s7+=x.valor; });
-    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">';
-    hh+='<div style="display:flex;justify-content:space-between;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">PR\u00d3XIMOS 7 DIAS \u00b7 '+sem.length+'</span>'+(sem.length?('<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(s7)+'</span>'):'')+'</div>';
-    if(!sem.length) hh+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada vence esta semana.</div>';
-    else sem.forEach(function(x){ hh+=linha((x.venc===hoje?'<b>HOJE</b>':fdt(x.venc))+' \u00b7 '+x.cliente, HIST_fmtMoeda(x.valor), x.rot!==x.cliente?x.rot:''); });
-    hh+='</div>';
-    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">';
-    hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">POR CLIENTE \u00b7 EXPOSI\u00c7\u00c3O EM ABERTO</div>';
-    if(!cliArr.length) hh+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nenhuma parcela futura.</div>';
-    else cliArr.forEach(function(c2){ hh+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="cursor:pointer;">'+linha(CLIP_esc(c2.nome)+' \u203a', HIST_fmtMoeda(c2.total), c2.n+'x \u00b7 pr\u00f3x '+fdt(c2.prox))+'</div>'; });
-    hh+='</div>';
-    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Derivado das opera\u00e7\u00f5es (vendas, antecipa\u00e7\u00f5es, financiamentos) \u2014 s\u00f3 parcelas com vencimento de hoje em diante. Vencidas e cobran\u00e7as ficam fora at\u00e9 a baixa por parcela existir. Financiamento aparece pela descri\u00e7\u00e3o (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
-    hh+='<button onclick="document.getElementById(\'ren-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
-    hh+='</div>';
-    ov.innerHTML=hh;
+    var bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
+    var map={}; itens.forEach(function(x){ map[REN_key(x)]=x; });
+    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela};
+    REN_render();
+  });
+}
+function REN_render(){
+  var ov=document.getElementById('ren-overlay'); if(!ov||!REN_cache) return;
+  var itens=REN_cache.itens, bx=REN_cache.bx, hoje=REN_hojeISO();
+  var d7=(function(){ var d=new Date(); d.setDate(d.getDate()+7); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+  var abertas=itens.filter(function(x){ return !bx[REN_key(x)]; });
+  var receb=itens.filter(function(x){ return !!bx[REN_key(x)]; });
+  var atr=abertas.filter(function(x){ return x.venc<hoje; });
+  var venc=abertas.filter(function(x){ return x.venc>=hoje; });
+  var totAb=0; abertas.forEach(function(x){ totAb+=x.valor; });
+  var totAtr=0; atr.forEach(function(x){ totAtr+=x.valor; });
+  var s7=0, n7=0; venc.forEach(function(x){ if(x.venc<=d7){ s7+=x.valor; n7++; } });
+  function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7); }
+  function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
+  function row(x, atrasada){
+    var k=REN_key(x);
+    var dTx=atrasada?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):(x.venc===hoje?'<b>HOJE</b>':fdt(x.venc));
+    return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
+      +'<div onclick="REN_editBaixa(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
+      +'<div style="font-size:12px;color:var(--tx);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dTx+' \u00b7 '+CLIP_esc(x.cliente)+'</div>'
+      +'<div style="font-size:9px;color:var(--so);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.rot)+'</div></div>'
+      +'<span style="font-size:12px;font-weight:700;color:'+(atrasada?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+HIST_fmtMoeda(x.valor)+'</span>'
+      +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;">\u2713</button>'
+      +'</div>';
+  }
+  function rowRec(x){
+    var b=bx[REN_key(x)];
+    var dt=b.recebido_em?String(b.recebido_em).slice(0,10):x.venc;
+    return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:12px;color:var(--mu);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+fdt(dt)+' \u00b7 '+CLIP_esc(x.cliente)+'</div>'
+      +'<div style="font-size:9px;color:var(--so);">'+CLIP_esc(x.rot)+(Number(b.valor_recebido)!==Number(x.valor)?(' \u00b7 parcela '+HIST_fmtMoeda(x.valor)):'')+'</div></div>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--mu);white-space:nowrap;">'+HIST_fmtMoeda(Number(b.valor_recebido)||0)+'</span>'
+      +'<button onclick="REN_desfaz(this,\''+b.id+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;padding:0;line-height:1;flex:none;">\u21a9</button>'
+      +'</div>';
+  }
+  function bl(t, inner){ return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'+t+inner+'</div>'; }
+  function hdr(t){ return '<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">'+t+'</div>'; }
+  var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
+  hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">A RECEBER</div>';
+  if(REN_cache.semTabela) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Tabela parcela_baixas n\u00e3o encontrada \u2014 rode o SQL no Supabase para habilitar as baixas.</div>';
+  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL EM ABERTO</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'
+    +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+(n7?('vence em 7 dias: '+HIST_fmtMoeda(s7)+' \u00b7 '+n7+'x'):'nada vence esta semana')+'</div></div>';
+  hh+='<div style="display:flex;gap:6px;margin-bottom:10px;">'+chip('data','DATA')+chip('valor','VALOR')+chip('cliente','CLIENTE')+'</div>';
+  if(atr.length){
+    var iA=''; REN_ordena(atr).forEach(function(x){ iA+=row(x,true); });
+    iA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div><div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px;"><span style="color:var(--red);font-weight:700;">Total atrasado</span><span style="font-weight:700;color:var(--red);">'+HIST_fmtMoeda(totAtr)+'</span></div>';
+    hh+=bl(hdr('ATRASADAS \u00b7 '+atr.length), iA);
+  }
+  var iV='';
+  if(!venc.length) iV='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada a vencer.</div>';
+  else REN_ordena(venc).forEach(function(x){ iV+=row(x,false); });
+  hh+=bl(hdr('A VENCER \u00b7 '+venc.length), iV);
+  if(receb.length){
+    var iR='<span onclick="REN_toggleRec()" style="cursor:pointer;">'+hdr('RECEBIDAS \u00b7 '+receb.length+' '+(REN_showRec?'\u25be':'\u25b8'))+'</span>';
+    if(REN_showRec){ var rs=receb.slice(); rs.sort(function(a,b){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b)].recebido_em||''); return av>bv?-1:1; }); rs.forEach(function(x){ iR+=rowRec(x); }); }
+    hh+=bl('', iR);
+  }
+  var porCli={};
+  abertas.forEach(function(x){ var k2=x.cliente||'\u2014'; if(!porCli[k2]) porCli[k2]={total:0,n:0,prox:x.venc}; porCli[k2].total+=x.valor; porCli[k2].n++; if(x.venc<porCli[k2].prox) porCli[k2].prox=x.venc; });
+  var cliArr=Object.keys(porCli).map(function(k3){ return {nome:k3, total:porCli[k3].total, n:porCli[k3].n, prox:porCli[k3].prox}; });
+  cliArr.sort(function(a,b){ return b.total-a.total; });
+  var iC='';
+  if(!cliArr.length) iC='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nenhuma parcela em aberto.</div>';
+  else cliArr.forEach(function(c2){ iC+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+CLIP_esc(c2.nome)+' \u203a<span style="color:var(--so2);font-size:10px;"> \u00b7 '+c2.n+'x \u00b7 pr\u00f3x '+fdt(c2.prox)+'</span></span><span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(c2.total)+'</span></div>'; });
+  hh+=bl(hdr('POR CLIENTE \u00b7 EXPOSI\u00c7\u00c3O EM ABERTO'), iC);
+  hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Cronograma derivado das opera\u00e7\u00f5es; a baixa \u00e9 registro seu (\u2713 dois toques = valor cheio hoje; tocar na linha ajusta valor e data; \u21a9 desfaz). Baixa n\u00e3o mexe em lucro nem Fechamento. Antecipa\u00e7\u00f5es em cobran\u00e7a ficam fora; financiamento aparece pela descri\u00e7\u00e3o.</div>';
+  hh+='<button onclick="document.getElementById(\'ren-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
+  hh+='</div>';
+  ov.innerHTML=hh;
+}
+function REN_quick(btn, k){
+  if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  REN_gravaBaixa(x, x.valor, REN_hojeISO());
+}
+function REN_gravaBaixa(x, valor, dataISO){
+  sb.from('parcela_baixas').insert({op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:valor, recebido_em:dataISO+'T12:00:00.000Z'}).then(function(res){
+    if(res.error){ VB_toast(String(res.error.code)==='23505'?'Parcela j\u00e1 baixada.':('Erro: '+res.error.message)); return; }
+    try{ VB_log('RECEB\u00cdVEIS','baixa', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(valor)+(dataISO!==REN_hojeISO()?(' \u00b7 '+dataISO.split('-').reverse().join('/')):'')); }catch(e){}
+    VB_toast('Baixa registrada.');
+    var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
+    REN_abrir();
+  });
+}
+function REN_editBaixa(k){
+  if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  if(REN_cache.bx[k]){ VB_toast('Parcela j\u00e1 baixada \u2014 desfa\u00e7a em RECEBIDAS.'); return; }
+  var ov=document.getElementById('ren-baixa-ov');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ren-baixa-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100014;display:none;align-items:flex-end;justify-content:center;';
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  var hojeBR=REN_hojeISO().split('-').reverse().join('/');
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(x.cliente)+' \u00b7 '+CLIP_esc(x.rot)+' \u00b7 venc. '+x.venc.split('-').reverse().join('/')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><input id="renb-valor" inputmode="decimal" value="'+String(x.valor).replace('.',',')+'" style="'+IN+'"></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
+    +'</div>'
+    +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
+    +'<button onclick="document.getElementById(\'ren-baixa-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CANCELAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function REN_confirmaBaixa(k){
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  var v=REN_num((document.getElementById('renb-valor')||{}).value);
+  var d=REN_brToISO((document.getElementById('renb-data')||{}).value);
+  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
+  REN_gravaBaixa(x, v, d);
+}
+function REN_desfaz(btn, baixaId){
+  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  sb.from('parcela_baixas').delete().eq('id', baixaId).then(function(res){
+    if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+    try{ VB_log('RECEB\u00cdVEIS','desfez baixa','',''); }catch(e){}
+    VB_toast('Baixa desfeita.'); REN_abrir();
   });
 }
 function FM_calcMes(ym, res, _merMap){
@@ -11895,6 +12007,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.135.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">A RECEBER virou gestão (Fase 2): a lista agora tem ATRASADAS (venceu sem baixa — em vermelho, com total; o que antes era invisível), A VENCER (cronológica) e RECEBIDAS (recolhida, com ↩ pra desfazer). Ordenação por DATA, VALOR ou CLIENTE. Baixa no padrão da casa: ✓ com dois toques registra valor cheio na data de hoje; tocar na linha abre DAR BAIXA com valor e data ajustáveis. A baixa é um evento gravado (parcela_baixas) — o cronograma continua derivado das operações, uma fonte de verdade só; baixa NÃO mexe em lucro nem Fechamento (é caixa/cobrança, não contabilidade). Panorama do cliente acompanhou: EM ABERTO exclui baixadas e mostra vencidas em vermelho. Requer SQL: create table parcela_baixas (id uuid primary key default gen_random_uuid(), op_tab text not null, op_id text not null, parcela_idx int not null, venc date, valor numeric, valor_recebido numeric, recebido_em timestamptz default now(), nota text, unique(op_tab, op_id, parcela_idx)); — sem a tabela, a tela avisa e segue só leitura</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.134.0</span><span class="cl-ver-date">19/07/2026</span></div>
