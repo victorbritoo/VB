@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.139.0</title>
+<title>VB - v1.140.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.139.0<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.140.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -474,7 +474,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Gestão</span>
     </button>
     <button onclick="PIN_request('ren')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">A Receber</span>
+      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Recebimentos</span>
     </button>
     <button onclick="PIN_request('hist')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:none;border-radius:14px;background:var(--acc);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--acc-tx);flex:1;text-align:center;">Histórico</span>
@@ -1368,7 +1368,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
   </div>
-  <div class="simulacao-label">A RECEBER</div>
+  <div class="simulacao-label">RECEBIMENTOS</div>
   <hr class="divider">
   <div id="ren-body"><div style="text-align:center;color:var(--so2);font-size:12px;margin-top:24px;">Carregando...</div></div>
 </div>
@@ -8319,6 +8319,7 @@ function REN_coleta(ant, fin, ven){
   return out;
 }
 function REN_key(x){ return x.tab+'|'+x.opId+'|'+x.idx; }
+function REN_nm(x){ return ('0'+(x.idx+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
 var REN_sort='data', REN_aba='aberto', REN_cache=null, REN_erroBx='';
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
@@ -8367,7 +8368,7 @@ function REN_render(){
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.cliente)+'</div>'
-      +'<div style="font-size:11px;color:var(--mu);margin-top:1px;">Parcela '+(x.idx+1)+'/'+x.tot+' \u00b7 <b style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</b></div>'
+      +'<div style="font-size:11px;color:var(--mu);margin-top:1px;">Parcela '+REN_nm(x)+' \u00b7 <b style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</b></div>'
       +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.rot)+'</div>'
       +'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">'
@@ -8381,7 +8382,7 @@ function REN_render(){
     return '<div style="background:var(--sf);border:0.5px solid var(--ln3);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;opacity:0.75;">'
       +'<div onclick="REN_ficha(\''+REN_key(x)+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.cliente)+'</div>'
-      +'<div style="font-size:11px;color:var(--mu);margin-top:1px;">Parcela '+(x.idx+1)+'/'+x.tot+' \u00b7 <b>'+HIST_fmtMoeda(Number(b.valor_recebido)||0)+'</b>'+(Number(b.valor_recebido)!==Number(x.valor)?(' <span style="color:var(--so);">(parcela '+HIST_fmtMoeda(x.valor)+')</span>'):'')+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);margin-top:1px;">Parcela '+REN_nm(x)+' \u00b7 <b>'+HIST_fmtMoeda(Number(b.valor_recebido)||0)+'</b>'+(Number(b.valor_recebido)!==Number(x.valor)?(' <span style="color:var(--so);">(parcela '+HIST_fmtMoeda(x.valor)+')</span>'):'')+'</div>'
       +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.rot)+'</div>'
       +'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">'
@@ -8453,11 +8454,11 @@ function REN_ficha(k){
   irmas.forEach(function(y){
     var kb=REN_key(y), yb=REN_cache.bx[kb], atual=(kb===k);
     var st, stC;
-    if(yb){ st='\u2713 '+HIST_fmtData(String(yb.recebido_em||y.venc).slice(0,10)); stC='var(--mu)'; }
+    if(yb){ st='RECEBIDA '+HIST_fmtData(String(yb.recebido_em||y.venc).slice(0,10)); stC='var(--mu)'; }
     else if(y.venc<hoje){ st='ATRASADA'; stC='var(--red)'; }
     else { st='A VENCER'; stC='var(--so)'; }
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:4px;'+(atual?'font-weight:700;':'')+'">'
-      +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';">'+(atual?'\u25b8 ':'')+(y.idx+1)+'/'+y.tot+' \u00b7 '+HIST_fmtData(y.venc)+' \u00b7 '+HIST_fmtMoeda(y.valor)+'</span>'
+      +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';">'+HIST_fmtMoeda(y.valor)+' \u00b7 '+HIST_fmtData(y.venc)+' \u00b7 '+REN_nm(y)+'</span>'
       +'<span style="color:'+stC+';font-size:10px;font-weight:600;">'+st+'</span></div>';
   });
   var hh='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
@@ -8465,12 +8466,12 @@ function REN_ficha(k){
   hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;">';
   hh+='<div style="grid-column:1/-1;">'+bloco('CLIENTE',CLIP_esc(x.cliente))+'</div>';
   hh+='<div style="grid-column:1/-1;">'+bloco('OPERA\u00c7\u00c3O',CLIP_esc(x.rot))+'</div>';
-  hh+=bloco('PARCELA',(x.idx+1)+'/'+x.tot)+bloco('VALOR',HIST_fmtMoeda(x.valor),red);
+  hh+=bloco('PARCELA',REN_nm(x))+bloco('VALOR',HIST_fmtMoeda(x.valor),red);
   hh+=bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red);
   if(b) hh+='<div style="grid-column:1/-1;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' <span style=\'color:var(--so)\'>(parcela '+HIST_fmtMoeda(x.valor)+')</span>'):''))+'</div>';
   hh+='</div>';
   hh+='<div style="border-top:0.5px solid var(--ln3);margin-top:4px;padding-top:8px;">';
-  hh+='<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:2px;">TODAS AS PARCELAS DA OPERA\u00c7\u00c3O</div>'+tl+'</div>';
+  hh+='<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:2px;">PARCELAS DA OPERA\u00c7\u00c3O</div>'+tl+'</div>';
   if(b) hh+='<button onclick="if(confirm(\'Desfazer a baixa desta parcela?\')){document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_desfazDireto(\''+b.id+'\');}" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">\u21a9 DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">DAR BAIXA</button>';
   hh+='<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ABRIR OPERA\u00c7\u00c3O</button>';
@@ -8503,7 +8504,8 @@ function REN_quick(btn, k){
   REN_gravaBaixa(x, x.valor, REN_hojeISO());
 }
 function REN_gravaBaixa(x, valor, dataISO){
-  sb.from('parcela_baixas').insert({op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:valor, recebido_em:dataISO+'T12:00:00.000Z'}).select().then(function(res){
+  var _rem=(dataISO===REN_hojeISO())?new Date().toISOString():(dataISO+'T12:00:00.000Z');
+  sb.from('parcela_baixas').insert({op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:valor, recebido_em:_rem}).select().then(function(res){
     if(res.error){ VB_toast(String(res.error.code)==='23505'?'Parcela j\u00e1 baixada.':('Erro: '+res.error.message)); return; }
     try{ VB_log('RECEB\u00cdVEIS','baixa', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(valor)+(dataISO!==REN_hojeISO()?(' \u00b7 '+dataISO.split('-').reverse().join('/')):'')); }catch(e){}
     VB_toast('Baixa registrada.');
@@ -8526,7 +8528,7 @@ function REN_editBaixa(k){
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+(x.idx+1)+'/'+x.tot+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><input id="renb-valor" inputmode="decimal" value="'+Number(x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="'+IN+'"></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
@@ -12099,6 +12101,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.140.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">Lapidação do módulo, agora chamado RECEBIMENTOS (o antigo com esse nome segue aposentado fora da Home). Parcela em extenso em todo lugar: "Parcela 01 de 06" nos cards, na ficha e no DAR BAIXA. Linha do tempo da ficha virou PARCELAS DA OPERAÇÃO, sem símbolos: cada linha é R$ valor · data · NN de MM, com a atual em negrito e o status à direita (RECEBIDA com a data, ATRASADA em vermelho, A VENCER). E a ordem das RECEBIDAS foi consertada de verdade: a baixa rápida gravava todas com o mesmo horário fixo — agora grava o horário real, então últimas recebidas aparecem primeiro</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.139.0</span><span class="cl-ver-date">19/07/2026</span></div>
