@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.138.0</title>
+<title>VB - v1.139.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.138.0<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.139.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -473,7 +473,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <button onclick="PIN_request('ges')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Gestão</span>
     </button>
-    <button onclick="REN_abrir()" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+    <button onclick="PIN_request('ren')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">A Receber</span>
     </button>
     <button onclick="PIN_request('hist')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:none;border-radius:14px;background:var(--acc);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
@@ -1360,6 +1360,17 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   </div>
   <hr class="divider">
   <div id="con-lista" style="font-family:-apple-system,sans-serif;"></div>
+</div>
+</div>
+
+<div id="screen-ren" class="vb-screen">
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
+  </div>
+  <div class="simulacao-label">A RECEBER</div>
+  <hr class="divider">
+  <div id="ren-body"><div style="text-align:center;color:var(--so2);font-size:12px;margin-top:24px;">Carregando...</div></div>
 </div>
 </div>
 
@@ -4456,7 +4467,7 @@ function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','hist','rec','mer','soc','ges','cli','con'].forEach(function(s){
+  ['fin','ant','pag','ven','hist','rec','mer','soc','ges','cli','con','ren'].forEach(function(s){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
@@ -4469,6 +4480,7 @@ function showScreen(name){
   if(name==='cli'){ CLI_load(); VB_telaAnterior='ges'; }
   if(name==='ges'){ VB_telaAnterior='home'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
+  if(name==='ren'){ REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
@@ -8307,7 +8319,7 @@ function REN_coleta(ant, fin, ven){
   return out;
 }
 function REN_key(x){ return x.tab+'|'+x.opId+'|'+x.idx; }
-var REN_sort='data', REN_aba='aberto', REN_cache=null;
+var REN_sort='data', REN_aba='aberto', REN_cache=null, REN_erroBx='';
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
 function REN_ordena(arr){
@@ -8318,15 +8330,8 @@ function REN_ordena(arr){
   return a;
 }
 function REN_abrir(){
-  var ov=document.getElementById('ren-overlay');
-  if(!ov){
-    ov=document.createElement('div'); ov.id='ren-overlay';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100012;display:none;align-items:flex-end;justify-content:center;';
-    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
-    document.body.appendChild(ov);
-  }
-  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
-  ov.style.display='flex';
+  var body=document.getElementById('ren-body'); if(!body) return;
+  body.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;padding:16px;">Carregando...</div>';
   Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos').limit(10000),
     sb.from('financiamentos_hist').select('id,descricao,nome,qtd_parcelas,valor_parcela,data_inicio').limit(10000),
@@ -8334,6 +8339,8 @@ function REN_abrir(){
     sb.from('parcela_baixas').select('*').limit(20000)
   ]).then(function(res){
     var semTabela=!!(res[3]&&res[3].error);
+    var erroBx=semTabela?String((res[3].error&&res[3].error.message)||''):'';
+    REN_erroBx=erroBx;
     var itens=REN_coleta(res[0].data||[], res[1].data||[], res[2].data||[]);
     var bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
     var map={}; itens.forEach(function(x){ map[REN_key(x)]=x; });
@@ -8342,7 +8349,7 @@ function REN_abrir(){
   });
 }
 function REN_render(){
-  var ov=document.getElementById('ren-overlay'); if(!ov||!REN_cache) return;
+  var body=document.getElementById('ren-body'); if(!body||!REN_cache) return;
   var itens=REN_cache.itens, bx=REN_cache.bx, hoje=REN_hojeISO();
   var d7=(function(){ var d=new Date(); d.setDate(d.getDate()+7); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
   var abertas=itens.filter(function(x){ return !bx[REN_key(x)]; });
@@ -8364,7 +8371,7 @@ function REN_render(){
       +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.rot)+'</div>'
       +'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">'
-      +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;">\u2713</button>'
+      +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
       +'<span style="font-size:10px;font-weight:600;color:'+(atrasada?'var(--red)':'var(--so)')+';white-space:nowrap;">'+dcanto+'</span>'
       +'</div></div>';
   }
@@ -8378,13 +8385,12 @@ function REN_render(){
       +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.rot)+'</div>'
       +'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;">'
-      +'<button onclick="REN_desfaz(this,\''+b.id+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;padding:0;line-height:1;">\u21a9</button>'
+      +'<button onclick="REN_desfaz(this,\''+b.id+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;padding:0;line-height:1;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u21a9</button>'
       +'<span style="font-size:10px;font-weight:600;color:var(--so);white-space:nowrap;">'+HIST_fmtData(dt)+'</span>'
       +'</div></div>';
   }
-  var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
-  hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">A RECEBER</div>';
-  if(REN_cache.semTabela) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Tabela parcela_baixas n\u00e3o encontrada \u2014 rode o SQL no Supabase para habilitar as baixas.</div>';
+  var hh='';
+  if(REN_cache.semTabela) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Baixas indispon\u00edveis: '+CLIP_esc(REN_erroBx||'tabela parcela_baixas n\u00e3o encontrada')+'</div>';
   function aba(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="flex:1;padding:9px;border-radius:12px;font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
   hh+='<div style="display:flex;gap:6px;margin-bottom:10px;">'+aba('aberto','EM ABERTO')+aba('rec','RECEBIDAS \u00b7 '+receb.length)+'</div>';
   if(REN_aba==='rec'){
@@ -8422,9 +8428,7 @@ function REN_render(){
   hh+='</div>';
   hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Cronograma derivado das opera\u00e7\u00f5es; a baixa \u00e9 registro seu (\u2713 dois toques = valor cheio hoje; tocar no card ajusta valor e data). Baixa n\u00e3o mexe em lucro nem Fechamento. Antecipa\u00e7\u00f5es em cobran\u00e7a ficam fora; financiamento aparece pela descri\u00e7\u00e3o.</div>';
   }
-    hh+='<button onclick="document.getElementById(\'ren-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
-  hh+='</div>';
-  ov.innerHTML=hh;
+    body.innerHTML=hh;
 }
 function REN_ficha(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -8469,32 +8473,43 @@ function REN_ficha(k){
   hh+='<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:2px;">TODAS AS PARCELAS DA OPERA\u00c7\u00c3O</div>'+tl+'</div>';
   if(b) hh+='<button onclick="if(confirm(\'Desfazer a baixa desta parcela?\')){document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_desfazDireto(\''+b.id+'\');}" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">\u21a9 DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">DAR BAIXA</button>';
+  hh+='<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ABRIR OPERA\u00c7\u00c3O</button>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\');" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">PANORAMA DO CLIENTE</button>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
   ov.innerHTML=hh; ov.style.display='flex';
+}
+function REN_abrirOp(tab, opId){
+  var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':'vendas';
+  sb.from(tabela).select('*').eq('id', opId).limit(1).then(function(res){
+    if(res.error||!res.data||!res.data.length){ VB_toast('Opera\u00e7\u00e3o n\u00e3o encontrada (foi exclu\u00edda?).'); return; }
+    var r=res.data[0];
+    var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
+    if(tab==='ant') HIST_carregarAnt(r); else if(tab==='fin') HIST_carregarFin(r); else HIST_carregarVen(r);
+    VB_telaAnterior='ren'; // logo/swipe volta pro A Receber
+  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_desfazDireto(baixaId){
   sb.from('parcela_baixas').delete().eq('id', baixaId).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     try{ VB_log('RECEB\u00cdVEIS','desfez baixa','',''); }catch(e){}
     VB_toast('Baixa desfeita.'); REN_abrir();
-  });
+  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_quick(btn, k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   REN_gravaBaixa(x, x.valor, REN_hojeISO());
 }
 function REN_gravaBaixa(x, valor, dataISO){
-  sb.from('parcela_baixas').insert({op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:valor, recebido_em:dataISO+'T12:00:00.000Z'}).then(function(res){
+  sb.from('parcela_baixas').insert({op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:valor, recebido_em:dataISO+'T12:00:00.000Z'}).select().then(function(res){
     if(res.error){ VB_toast(String(res.error.code)==='23505'?'Parcela j\u00e1 baixada.':('Erro: '+res.error.message)); return; }
     try{ VB_log('RECEB\u00cdVEIS','baixa', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(valor)+(dataISO!==REN_hojeISO()?(' \u00b7 '+dataISO.split('-').reverse().join('/')):'')); }catch(e){}
     VB_toast('Baixa registrada.');
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     REN_abrir();
-  });
+  }).catch(function(e){ VB_toast('Sem conex\u00e3o \u2014 baixa n\u00e3o gravada.'); });
 }
 function REN_editBaixa(k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
@@ -8535,7 +8550,7 @@ function REN_desfaz(btn, baixaId){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     try{ VB_log('RECEB\u00cdVEIS','desfez baixa','',''); }catch(e){}
     VB_toast('Baixa desfeita.'); REN_abrir();
-  });
+  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
@@ -12084,6 +12099,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.139.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">A RECEBER virou módulo de verdade: tela própria no padrão da casa (logo VB volta, swipe-back de borda funciona, entrada pela Home via roteador), sem FECHAR — deixou de ser sheet. E a ficha da parcela ganhou ABRIR OPERAÇÃO: busca a venda/antecipação/financiamento no banco e carrega na tela de edição dela, exatamente como o Histórico faz — e o voltar te devolve pro A Receber, não pra Home. Parcela → operação inteira → edição, sem sair do fluxo</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.138.1</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">Baixa que não saía: o ✓ de dois toques ganhou touch-action:manipulation (o Safari podia engolir o segundo toque como gesto de zoom), toast "Toque de novo para dar baixa" no primeiro toque, e toda a gravação/desfazer ganhou .catch — falha de rede agora avisa em vez de sumir em silêncio. Se a consulta de baixas falhar, o aviso vermelho passa a mostrar o motivo exato do banco</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.138.0</span><span class="cl-ver-date">19/07/2026</span></div>
