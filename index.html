@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.133.0</title>
+<title>VB - v1.134.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.133.0<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.134.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8171,6 +8171,90 @@ function FM_mesDe(r, tab){
   var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
+/* === PANORAMA DO CLIENTE: tudo derivado por nome — em aberto, cobrança, histórico, contratos === */
+function CLIP_esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function CLIP_abrir(nome){
+  var alvo=String(nome||'').trim().toUpperCase(); if(!alvo) return;
+  var ov=document.getElementById('clip-overlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='clip-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100013;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
+  ov.style.display='flex';
+  Promise.all([
+    sb.from('antecipacoes').select('cliente,nome,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at').limit(10000),
+    sb.from('vendas').select('cliente,nome,descricao,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda').limit(10000),
+    sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000)
+  ]).then(function(res){
+    function key(s){ return String(s||'').trim().toUpperCase(); }
+    var ant=(res[0].data||[]).filter(function(r){ return key(r.cliente||r.nome)===alvo; });
+    var ven=(res[1].data||[]).filter(function(r){ return key(r.cliente||r.nome||r.descricao)===alvo; });
+    var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
+    var hoje=REN_hojeISO();
+    var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
+    var antAtr=ant.filter(function(r){ return (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0); });
+    // em aberto (parcelas futuras)
+    var fut=REN_coleta(antOk, [], ven).filter(function(x){ return x.venc>=hoje; });
+    fut.sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:0; });
+    var totFut=0; fut.forEach(function(x){ totFut+=x.valor; });
+    // cobrança
+    var totCob=0; var cobL=antAtr.map(function(r){ var v=HIST_atrHoje(r); totCob+=v; return {rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), valor:v}; });
+    // histórico + lucro VB gerado
+    var negociado=0, lucVB=0;
+    ant.forEach(function(r){ negociado+=Number(r.valor_bruto)||0; var l=HIST_lucroRow('ant', r); if(l!=null) lucVB+=l; });
+    ven.forEach(function(v){
+      negociado+=Number(v.valor_total)||0;
+      var l=HIST_lucroRow('ven', v); if(l==null) return;
+      var c=Number(v.custo)||0, vs=Number(v.valor_socio)||0;
+      var consig=VB_consigVen(v.socio, vs, c, v.lucro_vb_pct);
+      var temS=(v.socio && vs>0 && !consig);
+      var p=temS?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
+      lucVB+=l*(p/100);
+    });
+    function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4); }
+    function bl(t, inner){ return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;"><div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">'+t+'</div>'+inner+'</div>'; }
+    function ln(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+dir+'</span></div>'; }
+    var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
+    hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>';
+    hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
+    // EM ABERTO
+    var inner='';
+    if(!fut.length) inner+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada a vencer.</div>';
+    else{
+      var mostra=fut.slice(0,12);
+      mostra.forEach(function(x){ inner+=ln(fdt(x.venc)+' \u00b7 '+CLIP_esc(x.rot), HIST_fmtMoeda(x.valor)); });
+      if(fut.length>12) inner+='<div style="font-size:10px;color:var(--so2);margin-top:5px;">+'+(fut.length-12)+' parcelas</div>';
+      inner+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total em aberto</b>', HIST_fmtMoeda(totFut));
+    }
+    hh+=bl('EM ABERTO \u00b7 '+fut.length, inner);
+    // COBRANÇA
+    if(antAtr.length){
+      var innC=''; cobL.forEach(function(x){ innC+=ln(CLIP_esc(x.rot), HIST_fmtMoeda(x.valor), true); });
+      innC+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total em cobran\u00e7a</b>', HIST_fmtMoeda(totCob), true);
+      hh+=bl('EM COBRAN\u00c7A \u00b7 '+antAtr.length, innC);
+    }
+    // HISTÓRICO
+    var innH='';
+    innH+=ln('Antecipa\u00e7\u00f5es', String(ant.length));
+    innH+=ln('Vendas', String(ven.length));
+    innH+=ln('Total negociado', HIST_fmtMoeda(negociado));
+    innH+=ln('<b>Lucro VB gerado</b>', HIST_fmtMoeda(lucVB));
+    hh+=bl('HIST\u00d3RICO', innH);
+    // CONTRATOS
+    if(con.length){
+      var innK='';
+      con.forEach(function(c3){ innK+=ln(CLIP_esc(c3.descricao||'CONTRATO'), c3.assinado_em?'\u2713 ASSINADO':'AGUARDANDO'); });
+      hh+=bl('CONTRATOS \u00b7 '+con.length, innK);
+    }
+    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Casado pelo nome nas opera\u00e7\u00f5es \u2014 grafias diferentes contam como clientes diferentes. Financiamentos ficam fora (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
+    hh+='<button onclick="document.getElementById(\'clip-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
+    hh+='</div>';
+    ov.innerHTML=hh;
+  });
+}
 /* === A RECEBER (Fase 1): cronograma derivado das operações — só leitura, sem tabela nova === */
 function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function REN_brToISO(s){
@@ -8255,7 +8339,7 @@ function REN_abrir(){
     hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">';
     hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">POR CLIENTE \u00b7 EXPOSI\u00c7\u00c3O EM ABERTO</div>';
     if(!cliArr.length) hh+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nenhuma parcela futura.</div>';
-    else cliArr.forEach(function(c2){ hh+=linha(c2.nome, HIST_fmtMoeda(c2.total), c2.n+'x \u00b7 pr\u00f3x '+fdt(c2.prox)); });
+    else cliArr.forEach(function(c2){ hh+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="cursor:pointer;">'+linha(CLIP_esc(c2.nome)+' \u203a', HIST_fmtMoeda(c2.total), c2.n+'x \u00b7 pr\u00f3x '+fdt(c2.prox))+'</div>'; });
     hh+='</div>';
     hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Derivado das opera\u00e7\u00f5es (vendas, antecipa\u00e7\u00f5es, financiamentos) \u2014 s\u00f3 parcelas com vencimento de hoje em diante. Vencidas e cobran\u00e7as ficam fora at\u00e9 a baixa por parcela existir. Financiamento aparece pela descri\u00e7\u00e3o (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
     hh+='<button onclick="document.getElementById(\'ren-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
@@ -10879,7 +10963,8 @@ function CLI_fichaRender(){
     +body
     +(CLI_fichaEdit
       ? '<button id="clif-salvar" disabled style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;opacity:0.35;font-family:-apple-system,sans-serif;">SALVAR</button>'
-      : '<button id="clif-editar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">EDITAR</button>')
+      : '<button id="clif-editar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">EDITAR</button>'
+        +'<button onclick="CLIP_abrir(((CLI_rows[CLI_fichaIdx]||{}).nome)||\'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">PANORAMA</button>')
     +'<button id="clif-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   document.body.appendChild(ov);
@@ -11810,6 +11895,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.134.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">PANORAMA DO CLIENTE: tocar num cliente no A RECEBER (ou no botão PANORAMA da ficha em Gestão › Clientes) abre o retrato completo dele, tudo derivado — EM ABERTO (parcelas futuras, data a data), EM COBRANÇA (antecipações atrasadas dele, com o valor corrigido de hoje, em vermelho), HISTÓRICO (operações, total negociado e o lucro VB que ele já gerou — mesma matemática canônica do Fechamento) e CONTRATOS (assinado/aguardando). É a pergunta de crédito respondida numa tela: quanto deve, quanto atrasou, quanto já rendeu. O casamento é pelo nome digitado nas operações — grafias diferentes são clientes diferentes; financiamento fica fora por não guardar cliente</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.133.0</span><span class="cl-ver-date">19/07/2026</span></div>
