@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.132.1</title>
+<title>VB - v1.133.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.132.1<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.133.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -472,6 +472,9 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     </button>
     <button onclick="PIN_request('ges')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Gestão</span>
+    </button>
+    <button onclick="REN_abrir()" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">A Receber</span>
     </button>
     <button onclick="PIN_request('hist')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:none;border-radius:14px;background:var(--acc);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--acc-tx);flex:1;text-align:center;">Histórico</span>
@@ -8168,6 +8171,99 @@ function FM_mesDe(r, tab){
   var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
+/* === A RECEBER (Fase 1): cronograma derivado das operações — só leitura, sem tabela nova === */
+function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function REN_brToISO(s){
+  s=String(s||'').trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  var p=s.split('/'); if(p.length!==3) return null;
+  var y=p[2]; if(y.length===2) y='20'+y;
+  return y+'-'+('0'+p[1]).slice(-2)+'-'+('0'+p[0]).slice(-2);
+}
+function REN_addMesISO(iso, k){
+  var p=iso.split('-'); var y=+p[0], m=+p[1]+k, d=+p[2];
+  y+=Math.floor((m-1)/12); m=((m-1)%12)+1;
+  var last=new Date(y, m, 0).getDate(); if(d>last) d=last;
+  return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
+}
+function REN_num(x){ if(typeof x==='number') return x; var n=Number(String(x||'').replace(/\./g,'').replace(',','.')); return isFinite(n)?n:(Number(x)||0); }
+function REN_coleta(ant, fin, ven){
+  var out=[];
+  (ven||[]).forEach(function(r){
+    var cli=String(r.cliente||r.nome||r.descricao||'\u2014').toUpperCase();
+    var rot=(r.descricao||r.nome||'VENDA');
+    if(Array.isArray(r.parcelas)&&r.parcelas.length){
+      r.parcelas.forEach(function(p){ var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven'}); });
+    } else {
+      var n=Number(r.quantidade_parcelas)||0, vp=Number(r.valor_parcela)||0;
+      var d1=r.data_primeira_parcela?String(r.data_primeira_parcela).slice(0,10):null;
+      if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:rot, tab:'ven'});
+    }
+  });
+  (ant||[]).forEach(function(r){
+    if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return; // atrasada: já virou cobrança, fora do cronograma
+    var cli=String(r.cliente||r.nome||'\u2014').toUpperCase();
+    (r.titulos||[]).forEach(function(t){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) out.push({venc:d, valor:v, cliente:cli, rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), tab:'ant'}); });
+  });
+  (fin||[]).forEach(function(r){
+    var n=Number(r.qtd_parcelas)||0, vp=Number(r.valor_parcela)||0;
+    var d1=r.data_inicio?String(r.data_inicio).slice(0,10):null;
+    var cli=String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase();
+    if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) out.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:cli, tab:'fin'});
+  });
+  return out;
+}
+function REN_abrir(){
+  var ov=document.getElementById('ren-overlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ren-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100012;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
+  ov.style.display='flex';
+  Promise.all([
+    sb.from('antecipacoes').select('cliente,nome,valor_bruto,valor_liquido,titulos').limit(10000),
+    sb.from('financiamentos_hist').select('descricao,nome,qtd_parcelas,valor_parcela,data_inicio').limit(10000),
+    sb.from('vendas').select('cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela').limit(10000)
+  ]).then(function(res){
+    var itens=REN_coleta(res[0].data||[], res[1].data||[], res[2].data||[]);
+    var hoje=REN_hojeISO();
+    var d7=(function(){ var d=new Date(); d.setDate(d.getDate()+7); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+    var fut=itens.filter(function(x){ return x.venc>=hoje; });
+    fut.sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:0; });
+    var total=0; fut.forEach(function(x){ total+=x.valor; });
+    var sem=fut.filter(function(x){ return x.venc<=d7; });
+    var porCli={};
+    fut.forEach(function(x){ var k=x.cliente||'\u2014'; if(!porCli[k]) porCli[k]={total:0,n:0,prox:x.venc}; porCli[k].total+=x.valor; porCli[k].n++; if(x.venc<porCli[k].prox) porCli[k].prox=x.venc; });
+    var cliArr=Object.keys(porCli).map(function(k){ return {nome:k, total:porCli[k].total, n:porCli[k].n, prox:porCli[k].prox}; });
+    cliArr.sort(function(a,b){ return b.total-a.total; });
+    function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7); }
+    function linha(esq, dir, sub){
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+(sub?('<span style="color:var(--so2);font-size:10px;"> \u00b7 '+sub+'</span>'):'')+'</span><span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+dir+'</span></div>';
+    }
+    var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
+    hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">A RECEBER</div>';
+    hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL EM ABERTO</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(total)+'</span></div><div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+fut.length+' parcela'+(fut.length===1?'':'s')+' futura'+(fut.length===1?'':'s')+'</div></div>';
+    var s7=0; sem.forEach(function(x){ s7+=x.valor; });
+    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">';
+    hh+='<div style="display:flex;justify-content:space-between;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">PR\u00d3XIMOS 7 DIAS \u00b7 '+sem.length+'</span>'+(sem.length?('<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(s7)+'</span>'):'')+'</div>';
+    if(!sem.length) hh+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada vence esta semana.</div>';
+    else sem.forEach(function(x){ hh+=linha((x.venc===hoje?'<b>HOJE</b>':fdt(x.venc))+' \u00b7 '+x.cliente, HIST_fmtMoeda(x.valor), x.rot!==x.cliente?x.rot:''); });
+    hh+='</div>';
+    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">';
+    hh+='<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">POR CLIENTE \u00b7 EXPOSI\u00c7\u00c3O EM ABERTO</div>';
+    if(!cliArr.length) hh+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nenhuma parcela futura.</div>';
+    else cliArr.forEach(function(c2){ hh+=linha(c2.nome, HIST_fmtMoeda(c2.total), c2.n+'x \u00b7 pr\u00f3x '+fdt(c2.prox)); });
+    hh+='</div>';
+    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Derivado das opera\u00e7\u00f5es (vendas, antecipa\u00e7\u00f5es, financiamentos) \u2014 s\u00f3 parcelas com vencimento de hoje em diante. Vencidas e cobran\u00e7as ficam fora at\u00e9 a baixa por parcela existir. Financiamento aparece pela descri\u00e7\u00e3o (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
+    hh+='<button onclick="document.getElementById(\'ren-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
+    hh+='</div>';
+    ov.innerHTML=hh;
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+  });
+}
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
     var ant=filtra(res[0].data,'ant'), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
@@ -11714,6 +11810,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.133.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">A RECEBER (Fase 1 da gestão de recebíveis): novo botão na Home abre o cronograma derivado das próprias operações — nenhuma tabela nova, nenhuma digitação. TOTAL EM ABERTO (parcelas futuras de vendas, antecipações e financiamentos), PRÓXIMOS 7 DIAS (quem vence, quanto, HOJE em destaque) e POR CLIENTE (exposição em aberto, ordenada, com quantidade de parcelas e próximo vencimento). Vendas usam as parcelas reais (personalizadas ou N×valor), antecipações usam os títulos com data (atrasadas ficam fora — já são cobrança), financiamentos usam parcela×prazo a partir do 1º vencimento. Fase 2 (dar baixa por parcela) torna as vencidas rastreáveis</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.132.1</span><span class="cl-ver-date">19/07/2026</span></div>
