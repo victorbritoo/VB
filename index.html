@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.130.0</title>
+<title>VB - v1.132.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -338,8 +338,8 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
 
 <div id="soc-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)SOC_viewFechar()">
   <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;">
-    <div id="soc-view-nome" style="font-size:17px;font-weight:700;color:var(--ink);text-align:center;font-family:-apple-system,sans-serif;"></div>
-    <div id="soc-view-tel" style="font-size:12px;color:var(--tx);text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;"></div>
+    <div id="soc-view-nome" onclick="SOC_pillEdit('nome')" style="font-size:17px;font-weight:700;color:var(--ink);text-align:center;font-family:-apple-system,sans-serif;cursor:pointer;"></div>
+    <div id="soc-view-tel" onclick="SOC_pillEdit('tel')" style="font-size:12px;color:var(--tx);text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;cursor:pointer;"></div>
     <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-family:-apple-system,sans-serif;">
       <div style="flex:1;max-width:140px;"><div style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:2px;">DE</div><input id="soc-filtro-de" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="autoCompleteDate(this);SOC_filtroChange()" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:2px 0;text-align:center;font-family:-apple-system,sans-serif;"></div>
       <div style="flex:1;max-width:140px;"><div style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:2px;">ATÉ</div><input id="soc-filtro-ate" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="autoCompleteDate(this);SOC_filtroChange()" onclick="this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:2px 0;text-align:center;font-family:-apple-system,sans-serif;"></div>
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.130.0<br>19/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.132.0<br>19/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1770,13 +1770,20 @@ function HIST_abrirOperacao(idx){
   else if(tab==='ven') HIST_carregarVen(r);
   else HIST_carregarPag(r);
 }
+function VEN_checaContrato(vendaId, cb){
+  sb.from('contratos').select('id,assinado_em').eq('venda_id', String(vendaId)).limit(5).then(function(res){
+    var rows=(res && !res.error && res.data)||[];
+    if(!rows.length){ cb(null); return; }
+    cb({ass: rows.some(function(c){ return !!c.assinado_em; })});
+  });
+}
 function HIST_clickDelete(el, event){
   event.stopPropagation();
   var tab=el.getAttribute('data-del-tab');
   var idx=parseInt(el.getAttribute('data-del-idx'));
   var r=HIST_rowsCache[idx]; if(!r) return;
-  if(!confirm('Excluir esta operação do histórico?')) return;
   var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos';
+  function HDEL_exec(){
   sb.from(tabela).delete().eq('id',r.id).then(function(res){
     if(res.error){ VB_toast('Não conseguiu excluir.'); return; }
     VB_toast('Excluído.');
@@ -1784,6 +1791,15 @@ function HIST_clickDelete(el, event){
     if(tab==='ven'){ sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null}).eq('venda_id', r.id).then(function(){}); }
     HIST_reload(tab);
   });
+  }
+  if(tab==='ven'){
+    VEN_checaContrato(r.id, function(info){
+      var msg = info ? ('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será excluída; o contrato fica em GESTÃO › CONTRATOS.\nExcluir mesmo assim?') : 'Excluir esta operação do histórico?';
+      if(confirm(msg)) HDEL_exec();
+    });
+  } else {
+    if(confirm('Excluir esta operação do histórico?')) HDEL_exec();
+  }
 }
 // Renomear: grava SÓ no apelido do histórico (coluna nome). Nunca toca em cliente/descrição
 // nem em valores, taxa, títulos. Apagar e salvar vazio volta a exibir o cliente/descrição.
@@ -7787,6 +7803,59 @@ function SOC_render(){
 var SOC_viewId=null;
 function SOC_brToISO(br){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((br||'').trim()); return m?(m[3]+'-'+m[2]+'-'+m[1]):null; }
 function SOC_filtroChange(){ if(SOC_viewId!=null) SOC_abrir(SOC_viewId); }
+var SOC_pillCampo=null;
+function SOC_propagaNome(antigo, novo){
+  if(!antigo||!novo||String(antigo).trim().toUpperCase()===String(novo).trim().toUpperCase()) return Promise.resolve();
+  return Promise.all([
+    sb.from('vendas').update({socio:novo}).ilike('socio', antigo),
+    sb.from('mercadorias').update({socio:novo}).ilike('socio', antigo),
+    sb.from('financiamentos_hist').update({investidor_nome:novo}).ilike('investidor_nome', antigo)
+  ]);
+}
+function SOC_pillEdit(campo){
+  if(SOC_pillCampo) return;
+  var r=SOC_rows.find(function(x){return String(x.id)===String(SOC_viewId);}); if(!r) return;
+  SOC_pillCampo=campo;
+  var el=document.getElementById(campo==='nome'?'soc-view-nome':'soc-view-tel');
+  var val=campo==='nome'?(r.nome||''):(r.telefone||'');
+  var st=campo==='nome'
+    ? 'width:70%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:17px;font-weight:700;color:var(--ink);text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;'
+    : 'width:55%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:12px;color:var(--tx);text-align:center;font-family:-apple-system,sans-serif;';
+  el.innerHTML='<input id="soc-pill-inp" type="'+(campo==='tel'?'tel':'text')+'" value="'+String(val).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" style="'+st+'">'
+    +'<span onclick="SOC_pillSalvar(event)" style="font-size:10px;letter-spacing:1px;color:var(--tx);font-weight:700;cursor:pointer;margin-left:8px;">SALVAR</span>'
+    +'<span onclick="SOC_pillCancel(event)" style="font-size:12px;color:var(--mu2);font-weight:600;cursor:pointer;margin-left:8px;">\u00d7</span>';
+  var inp=document.getElementById('soc-pill-inp'); if(inp){ inp.focus(); inp.addEventListener('keydown',function(e){ if(e.key==='Enter') SOC_pillSalvar(e); }); }
+}
+function SOC_pillCancel(ev){
+  if(ev) ev.stopPropagation();
+  SOC_pillCampo=null;
+  var r=SOC_rows.find(function(x){return String(x.id)===String(SOC_viewId);});
+  document.getElementById('soc-view-nome').textContent=(r&&r.nome)||'';
+  document.getElementById('soc-view-tel').textContent=(r&&r.telefone)||'\u2014';
+}
+function SOC_pillSalvar(ev){
+  if(ev) ev.stopPropagation();
+  var campo=SOC_pillCampo; if(!campo) return;
+  var r=SOC_rows.find(function(x){return String(x.id)===String(SOC_viewId);}); if(!r){ SOC_pillCancel(); return; }
+  var inp=document.getElementById('soc-pill-inp'); var novo=((inp&&inp.value)||'').trim();
+  if(campo==='nome'){
+    if(!novo){ VB_toast('Informe o nome.'); return; }
+    var colide=SOC_rows.some(function(x){ return String(x.id)!==String(r.id) && String(x.nome||'').trim().toUpperCase()===novo.toUpperCase(); });
+    if(colide){ VB_toast('J\u00e1 existe s\u00f3cio com esse nome.'); return; }
+  }
+  var antigo=String(campo==='nome'?(r.nome||''):(r.telefone||'')).trim();
+  if(novo===antigo){ SOC_pillCancel(); return; }
+  var payload=campo==='nome'?{nome:novo}:{telefone:(novo||null)};
+  sb.from('socios').update(payload).eq('id', r.id).then(function(res){
+    if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+    VB_log('S\u00d3CIOS','editou (ficha)', campo==='nome'?novo:(r.nome||''), campo+': '+(antigo||'\u2014')+' \u2192 '+(novo||'\u2014'));
+    if(campo==='nome') r.nome=novo; else r.telefone=(novo||null);
+    SOC_pillCampo=null;
+    VB_toast('Atualizado.');
+    var fim=function(){ SOC_load(); SOC_abrir(r.id); };
+    if(campo==='nome') SOC_propagaNome(antigo, novo).then(fim); else fim();
+  });
+}
 function SOC_abrir(id){
   var r=SOC_rows.find(function(x){return String(x.id)===String(id);}); if(!r) return;
   if(String(SOC_viewId)!==String(id)){ var _fd=document.getElementById('soc-filtro-de'), _fa=document.getElementById('soc-filtro-ate'); if(_fd)_fd.value=''; if(_fa)_fa.value=''; }
@@ -7794,8 +7863,9 @@ function SOC_abrir(id){
   var fDe=(document.getElementById('soc-filtro-de')||{}).value||'', fAte=(document.getElementById('soc-filtro-ate')||{}).value||'';
   var isoDe=SOC_brToISO(fDe), isoAte=SOC_brToISO(fAte);
   var ov=document.getElementById('soc-view-overlay');
+  SOC_pillCampo=null;
   document.getElementById('soc-view-nome').textContent=r.nome||'';
-  document.getElementById('soc-view-tel').textContent=r.telefone||'';
+  document.getElementById('soc-view-tel').textContent=r.telefone||'\u2014';
   var body=document.getElementById('soc-view-body');
   body.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;padding:16px;">Carregando...</div>';
   ov.style.display='flex';
@@ -8098,21 +8168,7 @@ function FM_mesDe(r, tab){
   var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
-function FM_load(){
-  var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
-  document.getElementById('fm-titulo').textContent=FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear();
-  var body=document.getElementById('fm-body');
-  body.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;padding:16px;">Carregando...</div>';
-  Promise.all([
-    sb.from('antecipacoes').select('*').limit(10000),
-    sb.from('financiamentos_hist').select('*').limit(10000),
-    sb.from('vendas').select('*').limit(10000),
-    sb.from('pagamentos').select('*').limit(10000),
-    sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
-    sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000)
-  ]).then(function(res){
-    var _merMap={};
-    ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
+function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
     var ant=filtra(res[0].data,'ant'), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
@@ -8169,7 +8225,31 @@ function FM_load(){
       var cap3=temS3?(c3-vs3):c3; if(cap3>0) _estCap+=cap3;
     });
     var rendTot=((_rCM+_estCap)>0)?(_rL/(_rCM+_estCap)*100):null;
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:dAnt.luc+dFin.luc+venLucVB, rend:rendMes, rendDet:{aL:_aL,aCM:_aCM,vL:_vL,vCM:_vCM,estCap:_estCap,rendTot:rendTot}};
+    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, venLucVB:venLucVB, rend:rendMes,
+      rendDet:{aL:_aL,aCM:_aCM,vL:_vL,vCM:_vCM,estCap:_estCap,rendTot:rendTot},
+      lucroTotal:dAnt.luc+dFin.luc+venLucVB, nOps:(dAnt.n+dFin.n+dVen.n)};
+}
+function FM_load(){
+  var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
+  document.getElementById('fm-titulo').textContent=FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear();
+  var body=document.getElementById('fm-body');
+  body.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;padding:16px;">Carregando...</div>';
+  Promise.all([
+    sb.from('antecipacoes').select('*').limit(10000),
+    sb.from('financiamentos_hist').select('*').limit(10000),
+    sb.from('vendas').select('*').limit(10000),
+    sb.from('pagamentos').select('*').limit(10000),
+    sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
+    sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000)
+  ]).then(function(res){
+    var _merMap={};
+    ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
+    var _c=FM_calcMes(ym, res, _merMap);
+    var dAnt=_c.ant, dFin=_c.fin, dVen=_c.ven, dPag=_c.pag, venLucVB=_c.venLucVB, rendMes=_c.rend;
+    var _pd=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
+    var _pym=_pd.getFullYear()+'-'+('0'+(_pd.getMonth()+1)).slice(-2);
+    var _prev=FM_calcMes(_pym, res, _merMap);
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:_c.lucroTotal, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -8191,9 +8271,19 @@ function FM_load(){
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     hh+=bloco('VENDAS · '+dVen.n, vlin);
-    hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>';
+    var _dl='';
+    if(FM_dados.prevLucro!=null){
+      var _dv3=FM_dados.lucroTotal-FM_dados.prevLucro;
+      if(Math.abs(_dv3)>=0.005) _dl='<div style="font-size:10px;font-weight:600;color:var(--acc-tx);opacity:0.65;margin-top:3px;text-align:right;">'+(_dv3>0?'\u2191 +':'\u2193 \u2212')+HIST_fmtMoeda(Math.abs(_dv3))+' vs m\u00eas anterior</div>';
+    }
+    hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>'+_dl+'</div>';
     if(FM_dados.rend!=null){
       var _rd=FM_dados.rendDet||{};
+      var _ra='';
+      if(FM_dados.prevRend!=null){
+        var _dr=FM_dados.rend-FM_dados.prevRend;
+        if(Math.abs(_dr)>=0.005) _ra=' <span style="font-size:10px;font-weight:600;color:var(--so);">'+(_dr>0?'\u2191':'\u2193')+' era '+FM_dados.prevRend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%</span>';
+      }
       var _rpct=function(x){ return x.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'; };
       var _rlin=function(lab,val,red){ return '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px;"><span style="color:var(--mu);">'+lab+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+val+'</span></div>'; };
       var _rdet='';
@@ -8206,7 +8296,7 @@ function FM_load(){
         _rdet+=_rlin('Com estoque parado', _rpct(_rd.rendTot), _rd.rendTot<3.5);
       }
       hh+='<div'+(_rdet?' onclick="FM_rendToggle()"':'')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;'+(_rdet?'cursor:pointer;':'')+'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">RENDIMENTO DO CAPITAL'+(_rdet?' <span id="fm-rend-chev" style="color:var(--so);letter-spacing:0;">▸</span>':'')+'</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">RENDIMENTO DO CAPITAL'+(_rdet?' <span id="fm-rend-chev" style="color:var(--so);letter-spacing:0;">▸</span>':'')+'</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'+_ra+'</span></div>'
         +(_rdet?'<div id="fm-rend-det" style="display:none;padding-top:6px;">'+_rdet+'</div>':'')
         +'</div>';
     }
@@ -8397,7 +8487,7 @@ function SOC_salvar(btn){
   op.then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     var _detS=tel||'';
-    if(SOC_editId){ try{ var _pvS=(SOC_rows||[]).find(function(x){ return String(x.id)===String(SOC_editId); }); if(_pvS) _detS=VB_logDiff(_pvS,payload)||'sem mudanças'; }catch(e){} }
+    if(SOC_editId){ try{ var _pvS=(SOC_rows||[]).find(function(x){ return String(x.id)===String(SOC_editId); }); if(_pvS){ _detS=VB_logDiff(_pvS,payload)||'sem mudanças'; if(_pvS.nome) SOC_propagaNome(_pvS.nome, nome); } }catch(e){} }
     VB_log('SÓCIOS', SOC_editId?'editou':'criou', nome, _detS);
     VB_toast(SOC_editId?'Sócio atualizado.':'Sócio adicionado.');
     SOC_editId=null;
@@ -9092,9 +9182,12 @@ function MER_voltarExec(merId, apagarVenda, vendaId){
     });
   }
   if(apagarVenda && vendaId){
-    sb.from('vendas').delete().eq('id', vendaId).then(function(res){
-      if(res.error){ VB_toast('Não apagou a venda: '+(res.error.message||'')); return; }
-      voltaMer();
+    VEN_checaContrato(vendaId, function(info){
+      if(info && !confirm('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será apagada; o contrato fica em GESTÃO › CONTRATOS.\nApagar mesmo assim?')) return;
+      sb.from('vendas').delete().eq('id', vendaId).then(function(res){
+        if(res.error){ VB_toast('Não apagou a venda: '+(res.error.message||'')); return; }
+        voltaMer();
+      });
     });
   } else voltaMer();
 }
@@ -11068,6 +11161,7 @@ function CON_getBlob(c, cb){
 function CON_ficha(i){ CON_fichaObj(CON_rows[i]); }
 function CON_fichaObj(c, aoGerarNovo){
   if(!c) return;
+  var _dias=(function(){ try{ return Math.floor((Date.now()-new Date(c.created_at).getTime())/86400000); }catch(e){ return null; } })();
   var old=document.getElementById('vb-con-ficha'); if(old) old.remove();
   var dt=(c.created_at||'').slice(0,10).split('-').reverse().join('/');
   function bloco(lbl,v){ return '<div style="margin-bottom:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+lbl+'</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:2px;text-transform:uppercase;">'+(CTR_esc(v||'')||'<span style=\'color:var(--so2)\'>—</span>')+'</div></div>'; }
@@ -11086,7 +11180,7 @@ function CON_fichaObj(c, aoGerarNovo){
     +'<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:4px;">HIST\u00d3RICO</div>'
     +'<div style="font-size:11px;color:var(--tx);font-weight:600;line-height:1.7;">'
     +'\u2022 GERADO \u00b7 '+CTR_esc(CON_dtHora(c.created_at))
-    +(c.assinado_em?('<br>\u2022 <b>ASSINADO</b> \u00b7 '+CTR_esc(CON_dtHora(c.assinado_em))):'<br>\u2022 <span style="color:var(--so2);">AGUARDANDO ASSINATURA</span>')
+    +(c.assinado_em?('<br>\u2022 <b>ASSINADO</b> \u00b7 '+CTR_esc(CON_dtHora(c.assinado_em))):'<br>\u2022 <span style="color:'+((_dias!=null&&_dias>=7)?'var(--red)':'var(--so2)')+';">AGUARDANDO ASSINATURA'+((_dias!=null&&_dias>=1)?(' \u00b7 H\u00c1 '+_dias+' D'+(_dias===1?'IA':'IAS')):'')+'</span>')
     +'</div></div>'
     +(c.assinado_em
       ? '<button id="conf-ass" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CONTRATO ASSINADO \u00b7 '+CTR_esc((c.assinado_em||'').slice(0,10).split('-').reverse().join('/'))+'</button>'
@@ -11212,10 +11306,25 @@ function CON_dtHora(iso){
     return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
   }catch(e){ return (iso||'').slice(0,10).split('-').reverse().join('/'); }
 }
+var CON_orfaos={};
+function CON_aguarda(c){
+  try{ var d=Math.floor((Date.now()-new Date(c.created_at).getTime())/86400000); if(d>=7) return ' \u00b7 <span style="color:var(--red);font-weight:700;">AGUARDANDO '+d+'D</span>'; }catch(e){}
+  return '';
+}
 function CON_load(){
   sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').order('created_at',{ascending:false}).limit(200).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
-    CON_rows=res.data||[]; CON_render();
+    CON_rows=res.data||[];
+    var _ids=CON_rows.filter(function(c){ return c.venda_id; }).map(function(c){ return c.venda_id; });
+    if(!_ids.length){ CON_orfaos={}; CON_render(); return; }
+    sb.from('vendas').select('id').in('id', _ids).then(function(r2){
+      CON_orfaos={};
+      if(!r2.error){
+        var _vivas={}; (r2.data||[]).forEach(function(v){ _vivas[String(v.id)]=1; });
+        CON_rows.forEach(function(c){ if(c.venda_id && !_vivas[String(c.venda_id)]) CON_orfaos[String(c.id)]=1; });
+      }
+      CON_render();
+    });
   });
 }
 function CON_render(){
@@ -11226,7 +11335,7 @@ function CON_render(){
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">'
       +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="CON_ficha('+i+')">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CTR_esc(c.cliente_nome||'')+'</div>'
-      +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+(c.assinado_em?' \u00b7 <b>\u2713 ASSINADO</b>':'')+'</div>'
+      +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+(c.assinado_em?' \u00b7 <b>\u2713 ASSINADO</b>':CON_aguarda(c))+(CON_orfaos[String(c.id)]?' \u00b7 <b>VENDA EXCLU\u00cdDA</b>':'')+'</div>'
       +'</div>'
       +'<button onclick="CON_del(this,'+i+')" style="border:none;background:transparent;color:var(--so2);font-size:17px;cursor:pointer;padding:4px 6px;">\u00d7</button>'
       +'</div>';
@@ -11605,6 +11714,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.132.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">Quatro entregas. (1) Fechamento com tendência: LUCRO DO MÊS ganha a linha ↑/↓ com a diferença em R$ contra o mês anterior, e RENDIMENTO DO CAPITAL mostra ↑/↓ era X% ao lado do valor — mês anterior sem operação não compara. (2) Contrato órfão sinalizado: em Gestão › Contratos, contrato cuja venda foi excluída ganha a tag VENDA EXCLUÍDA. (3) Alarme de assinatura parada: contrato aguardando há 7+ dias fica vermelho com a contagem de dias, na lista e na ficha. (4) Ficha do sócio com pills: tocar no nome ou telefone edita ali mesmo — e renomear agora PROPAGA o novo nome para vendas, estoque e financiamentos (o vínculo é por nome; a edição antiga deixava as operações órfãs — corrigido nos dois caminhos). Nome duplicado é bloqueado</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.131.0</span><span class="cl-ver-date">19/07/2026</span></div>
+      <div class="cl-item">Guarda do contrato órfão: apagar uma venda que tem contrato — pelo × do Histórico ou pelo ↩ APAGAR VENDA E VOLTAR do estoque — agora avisa antes, dizendo se o contrato está gerado ou ASSINADO e lembrando que ele permanece em Gestão › Contratos. A venda some, o contrato fica; nada é apagado em cascata</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.130.0</span><span class="cl-ver-date">19/07/2026</span></div>
