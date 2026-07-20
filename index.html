@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.149.0</title>
+<title>VB - v1.150.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.149.0<br>20/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.150.1<br>20/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8383,9 +8383,10 @@ function REN_render(){
   var receb=REN_filtra(itens.filter(function(x){ return !!bx[REN_key(x)]; }));
   var atr=abertas.filter(function(x){ return x.venc<hoje; });
   var venc=abertas.filter(function(x){ return x.venc>=hoje; });
-  var totAb=0; abertas.forEach(function(x){ totAb+=x.valor; });
+  function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return x.valor-(oiX?REN_repDef(oiX,x):0); }
+  var totAb=0, totAbVB=0; abertas.forEach(function(x){ totAb+=x.valor; totAbVB+=_vbDe(x); });
   var totAtr=0; atr.forEach(function(x){ totAtr+=x.valor; });
-  var s7=0, n7=0; venc.forEach(function(x){ if(x.venc<=d7){ s7+=x.valor; n7++; } });
+  var s7=0, n7=0, s7vb=0; venc.forEach(function(x){ if(x.venc<=d7){ s7+=x.valor; n7++; s7vb+=_vbDe(x); } });
   function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
@@ -8425,10 +8426,11 @@ function REN_render(){
       var rs=receb.slice(); rs.sort(function(a,b){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b)].recebido_em||''); return av>bv?-1:1; });
       var MES=['JANEIRO','FEVEREIRO','MAR\u00c7O','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
       var grupos={}, ordem=[];
-      rs.forEach(function(x){ var b=bx[REN_key(x)]; var ym=String(b.recebido_em||x.venc).slice(0,7); if(!grupos[ym]){ grupos[ym]={itens:[],total:0}; ordem.push(ym); } grupos[ym].itens.push(x); grupos[ym].total+=Number(b.valor_recebido)||0; });
+      rs.forEach(function(x){ var b=bx[REN_key(x)]; var ym=String(b.recebido_em||x.venc).slice(0,7); if(!grupos[ym]){ grupos[ym]={itens:[],total:0,vb:0}; ordem.push(ym); } grupos[ym].itens.push(x); var _vr=Number(b.valor_recebido)||0; grupos[ym].total+=_vr; grupos[ym].vb+=_vr-(Number(b.repasse_valor)>0?Number(b.repasse_valor):0); });
       ordem.forEach(function(ym){
         var g=grupos[ym];
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(g.total)+'</span></div>';
+        var _gvbTx=(Math.abs(g.total-g.vb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(g.vb)+' VB)</span>'):'';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
         g.itens.forEach(function(x){ hh+=cardRec(x); });
       });
     }
@@ -8445,8 +8447,10 @@ function REN_render(){
         +'</div>';
     });
   } else {
-  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'
-    +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+(n7?('vence em 7 dias: '+HIST_fmtMoeda(s7)+' \u00b7 '+n7+'x'):'nada vence esta semana')+'</div></div>';
+  var _heroVB=(Math.abs(totAb-totAbVB)>0.005)?('<div style="font-size:11px;font-weight:600;color:var(--acc-tx);opacity:0.75;margin-top:1px;text-align:right;">('+HIST_fmtMoeda(totAbVB)+' VB)</div>'):'';
+  var _s7vbTx=(n7&&Math.abs(s7-s7vb)>0.005)?(' ('+HIST_fmtMoeda(s7vb)+' VB)'):'';
+  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB
+    +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+(n7?('vence em 7 dias: '+HIST_fmtMoeda(s7)+_s7vbTx+' \u00b7 '+n7+'x'):'nada vence esta semana')+'</div></div>';
   hh+='<div style="display:flex;gap:6px;">'+chip('data','DATA')+chip('valor','VALOR')+chip('cliente','CLIENTE')+'</div>';
   if(atr.length){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
@@ -8477,9 +8481,10 @@ function REN_render(){
     vs.forEach(function(x){
       var ym=x.venc.slice(0,7);
       if(ym!==gAtu){
-        gAtu=ym; var gtot=0, gn=0;
-        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 0;"><span style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(gtot)+'</span></div>';
+        gAtu=ym; var gtot=0, gn=0, gvb=0;
+        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
+        var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 0;"><span style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -12328,6 +12333,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.150.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">TOTAL A RECEBER com a parte de VB: o hero mostra o bruto grande e, logo abaixo, (R$ X VB) — o que sobra depois dos repasses; a linha do vence em 7 dias ganhou o mesmo parêntese. Sem repasse na conta, sem parêntese</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.150.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Cabeçalho mensal com a parte de VB: no A VENCER, cada mês mostra o bruto e, entre parênteses, o que fica com VB depois dos repasses de sócio e investidor — ex.: R$ 191.280,00 (R$ 154.930,00 VB). Nas CONCLUÍDAS, o mesmo com o recebido líquido (recebido − repasses da baixa). Mês sem repasse não mostra o parêntese — número igual duas vezes é ruído</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.149.0</span><span class="cl-ver-date">20/07/2026</span></div>
