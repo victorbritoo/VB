@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.152.0</title>
+<title>VB - v1.153.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1062,6 +1062,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <button onclick="ANT_gerarTabela()" style="width:100%;padding:9px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;">GERAR TABELA</button>
   </div>
 
+  <button id="ant-chipSim" onclick="ANT_toggleSim()" style="display:block;margin:10px auto 0;padding:6px 16px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">SIMULAÇÃO</button>
   <button id="ant-btnConfirmar" onclick="ANT_confirmarOperacao(this)" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:14px;background:var(--sf);font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:700;cursor:pointer;margin-top:10px;">✓ CONFIRMAR OPERAÇÃO</button>
 
 </div>
@@ -1112,6 +1113,11 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <div class="simulacao-label">PAGAMENTOS</div>
   </div>
   <hr class="divider">
+
+  <!-- Nome -->
+  <div class="fc" style="text-align:center;margin-bottom:6px;">
+    <input id="pag-nome" type="text" placeholder="NOME / REFERÊNCIA" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
+  </div>
 
   <!-- Valor Total -->
   <div class="fc" style="text-align:center;margin-bottom:6px;">
@@ -1543,6 +1549,7 @@ function HIST_carregarFin(r){
 function HIST_carregarAnt(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   ANT_currentOperationId = r.id;
+  ANT_simFlag=!!r.simulacao; ANT_paintSimChip();
   VB_carimboTS = r.created_at||null;
   // Fill all fields first, then recalc once at the end
   if(r.cliente) document.getElementById('ant-tabelaCliente').value = r.cliente;
@@ -1623,6 +1630,7 @@ function HIST_carregarPag(r){
   PAG_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
   if(r.valor_total) document.getElementById('pag-total').value = PAG_formatBR(Number(r.valor_total));
+  var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value = r.nome||'';
   PAG_pagamentos=[]; PAG_counter=0;
   (r.pagamentos||[]).forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.desc||''),valor:(it.valor||''),cr:!!it.cr}); });
   if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
@@ -2681,8 +2689,8 @@ function VB_backupCompleto(){
     if(!total){ VB_toast('Nada para o relatório.'); return; }
     var imgs;
     try{ imgs = VB_relatorioPDF(dados, total, true); }catch(e){ VB_toast('Não consegui montar a capa.'); return; }
-    var emDia=function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); };
-    var atrasada=function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); };
+    var emDia=function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); };
+    var atrasada=function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); };
     var ordem=[
       {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'ant', filtro:emDia},
       {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'atr', filtro:atrasada},
@@ -2774,7 +2782,7 @@ function VB_restaurarStart(){
   }
   inp.click();
 }
-function VB_opNome(t,r){ return t==='antecipacoes'?(r.nome||r.cliente||'—'):(t==='pagamentos'?'Pagamento':(r.nome||r.descricao||'—')); }
+function VB_opNome(t,r){ return t==='antecipacoes'?(r.nome||r.cliente||'—'):(t==='pagamentos'?(r.nome||'Pagamento'):(r.nome||r.descricao||'—')); }
 function VB_opData(t,r){
   var v = t==='antecipacoes'?r.data_operacao : t==='financiamentos_hist'?r.data_inicio : t==='vendas'?r.data_primeira_parcela : (r.created_at?String(r.created_at).split('T')[0]:null);
   var d=HIST_fmtData(v); return (d&&d!=='--')?d:'';
@@ -2946,7 +2954,7 @@ function VB_relatorioPDF(dados, total, returnImages){
     ctx.fillText(text,x,y);
   }
 
-  var ant=dados['antecipacoes']||[], fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
+  var ant=(dados['antecipacoes']||[]).filter(function(r){ return !r.simulacao; }), fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
   var merMap={}; (dados['mercadorias']||[]).forEach(function(m){ if(m.venda_id) merMap[m.venda_id]=m; });
   function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
   function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
@@ -2972,7 +2980,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   })();
 
   var secoes=[
-    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
+    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
       cols:[ {h:'Nome', x:pad, w:198, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:243, w:70, get:function(r){return dt(r.data_operacao);}},
              {h:'Bruto', x:318, w:102, r:1, get:function(r){return money(r.valor_bruto);}},
@@ -2997,7 +3005,7 @@ function VB_relatorioPDF(dados, total, returnImages){
           {label:'TARIFAS', texto:'R$ '+_num(tar)}
         ];
       } },
-    { key:'antecipacoes', titulo:'ATRASADOS (COBRANÇA)', date:'data_operacao', atraso:true, filter:function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
+    { key:'antecipacoes', titulo:'ATRASADOS (COBRANÇA)', date:'data_operacao', atraso:true, filter:function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
       cols:[ {h:'Cliente', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
              {h:'Bruto', x:430, w:160, r:1, get:function(r){return money(r.valor_bruto);}},
@@ -4025,6 +4033,7 @@ function HIST_renderRows(tab, rows){
     var carimboStr=HIST_fmtDataLocal(r.created_at)+(_hCar?(' '+_hCar):'');
     if(rtab==='ant'){
       titulo=r.nome||r.cliente||'(sem nome)';
+      if(r.simulacao) rowBadge='SIM';
       var _bru=Number(r.valor_bruto)||0, _liq=Number(r.valor_liquido)||0;
       var _atrasado=(_liq>_bru);
       if(_atrasado){
@@ -4344,7 +4353,7 @@ function ANT_assinatura(){
   return JSON.stringify([VB_val('ant-tabelaCliente'),VB_val('ant-dataOperacao'),VB_val('ant-taxa'),
     VB_val('ant-tarifa'),VB_val('ant-valorBruto'),VB_val('ant-qtd'),VB_val('ant-tabelaData'),
     (typeof ANT_modoPersonalizado!=='undefined'?!!ANT_modoPersonalizado:false),
-    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[])]);
+    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[]),(typeof ANT_simFlag!=='undefined'?!!ANT_simFlag:false)]);
 }
 function VEN_assinatura(){
   return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-cliente'),VB_val('ven-notas'),VB_val('ven-total'),VB_val('ven-qtd'),
@@ -4355,7 +4364,7 @@ function VEN_assinatura(){
     (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs];}):[])]);
 }
 function PAG_assinatura(){
-  return JSON.stringify([VB_val('pag-total'),
+  return JSON.stringify([VB_val('pag-total'),VB_val('pag-nome'),
     (typeof PAG_pagamentos!=='undefined'?PAG_pagamentos.map(function(p){return [p.desc,p.valor];}):[])]);
 }
 var VB_guardCfg={
@@ -4472,7 +4481,9 @@ function showScreen(name){
     if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
-  if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_refresh(); }
+  if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); }
+  if(name==='ven'){ VB_cliAttach('ven-cliente'); }
+  if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_expAbertos={}; HIST_refresh(); }
   if(name==='home'){ VB_updateBackupStatus(); }
   if(name==='rec'){ REC_load(); }
   if(name==='mer'){ MER_load(); }
@@ -5085,6 +5096,7 @@ function FIN_confirmarOperacao(btn){
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
+    if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='fin') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
     FIN_updateConfirmarBtnLabel();
@@ -5853,6 +5865,9 @@ function VEN_confirmarOperacao(btn){
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
     if(!ehAtualizacao){ try{ if(VEN_resumoSocioDados(row)) setTimeout(function(){ VEN_resumoSocioSheet(row); }, 600); }catch(e){} }
+    var _temResumo=false; try{ _temResumo=(!ehAtualizacao && !!VEN_resumoSocioDados(row)); }catch(e){}
+    if(row.cliente && !_temResumo){ setTimeout(function(){ VB_cliOferecerCadastro(row.cliente); }, 400); }
+    if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='ven') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
     VEN_updateConfirmarBtnLabel();
@@ -6140,6 +6155,7 @@ function ANT_limpar(){
   document.getElementById('ant-totDesc').textContent='---';
   ANT_titulos=[]; ANT_tituloCounter=0;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
+  ANT_simFlag=false; ANT_paintSimChip();
   ANT_currentOperationId = null;
   VB_carimboTS = null;
   ANT_updateConfirmarBtnLabel();
@@ -6588,9 +6604,14 @@ var ANT_currentOperationId = null;
 function ANT_updateConfirmarBtnLabel(){
   var b=document.getElementById('ant-btnConfirmar');
   if(!b) return;
-  b.textContent = ANT_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+  b.textContent = ANT_simFlag ? (ANT_currentOperationId?'✓ ATUALIZAR SIMULAÇÃO':'✓ SALVAR SIMULAÇÃO') : (ANT_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO');
 }
 
+var ANT_simFlag=false;
+function ANT_paintSimChip(){ var c=document.getElementById('ant-chipSim'); if(!c) return;
+  if(ANT_simFlag){ c.style.borderStyle='solid'; c.style.borderColor='var(--lnk)'; c.style.color='var(--tx)'; c.style.background='var(--sf)'; c.style.fontWeight='700'; }
+  else { c.style.borderStyle='dashed'; c.style.borderColor='var(--ln)'; c.style.color='var(--mu2)'; c.style.background='transparent'; c.style.fontWeight='500'; } }
+function ANT_toggleSim(){ ANT_simFlag=!ANT_simFlag; ANT_paintSimChip(); ANT_updateConfirmarBtnLabel(); VB_dirtyPaintTela('ant'); }
 var ANT_nomeChecked=false;
 function ANT_confirmarOperacao(btn){
   VB_carimboTS = null;
@@ -6627,6 +6648,7 @@ function ANT_confirmarOperacao(btn){
     cliente: cliente||null,
     data_operacao: toISO(dataOpStr),
     modo: modo,
+    simulacao: (typeof ANT_simFlag!=='undefined'?!!ANT_simFlag:false),
     valor_bruto: (!isNaN(VB)&&VB>0)?VB:null,
     valor_liquido: (!isNaN(VL)&&VL>0)?VL:null,
     taxa: (!isNaN(taxaVal)&&taxaVal>0)?taxaVal:null,
@@ -6663,7 +6685,9 @@ function ANT_confirmarOperacao(btn){
       VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _reg, _det);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
-    VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
+    VB_toast(ANT_simFlag ? (ehAtualizacao?'Simulação atualizada.':'Simulação salva.') : (ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.'));
+    if(!ANT_simFlag && cliente){ setTimeout(function(){ VB_cliOferecerCadastro(cliente); }, 400); }
+    if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='ant') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
     ANT_updateConfirmarBtnLabel();
@@ -7171,8 +7195,9 @@ var PAG_LS_KEY='VB_PAG_SESSION';
 function PAG_saveSession(){
   try{
     var t=(document.getElementById('pag-total').value||'');
+    var nm=(document.getElementById('pag-nome').value||'');
     var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||''), c:(p.cr?1:0)}; });
-    localStorage.setItem(PAG_LS_KEY, JSON.stringify({t:t,p:itens}));
+    localStorage.setItem(PAG_LS_KEY, JSON.stringify({t:t,n:nm,p:itens}));
   }catch(e){}
 }
 function PAG_restoreSession(){
@@ -7184,6 +7209,7 @@ function PAG_restoreSession(){
     var temDado=(obj.t && obj.t.trim()) || obj.p.some(function(it){ return (it.d&&it.d.trim())||(it.v&&it.v.trim()); });
     if(!temDado) return false;
     document.getElementById('pag-total').value=obj.t||'';
+    var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value=obj.n||'';
     PAG_pagamentos=[]; PAG_counter=0;
     obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||''),cr:!!it.c}); });
     if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
@@ -7247,15 +7273,23 @@ function PAG_updateConfirmarBtnLabel(){
   if(!b) return;
   b.textContent = PAG_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
 }
+var PAG_nomeChecked=false;
 function PAG_confirmarOperacao(btn){
   VB_carimboTS = null;
+  var _nomeEl=document.getElementById('pag-nome');
+  if(!(_nomeEl.value||'').trim() && !PAG_nomeChecked){
+    VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
+      onConfirm:function(nome){ if(nome) _nomeEl.value=nome; PAG_nomeChecked=true; PAG_confirmarOperacao(btn); PAG_nomeChecked=false; },
+      onSkip:function(){ PAG_nomeChecked=true; PAG_confirmarOperacao(btn); PAG_nomeChecked=false; } });
+    return;
+  }
   var total=PAG_parseBR(document.getElementById('pag-total').value);
   var itens=PAG_pagamentos.filter(function(p){ return p.desc||p.valor; }).map(function(p){ var o={desc:(p.desc||''), valor:(p.valor||'')}; if(p.cr) o.cr=true; return o; });
 
   var temLinha=itens.some(function(p){ return (PAG_parseBR(p.valor)||0)>0; });
   if(!(total>0) && !temLinha){ VB_toast('Preencha o total ou ao menos uma linha com valor.'); return; }
 
-  var row={ valor_total: (total>0?total:0), pagamentos: itens };
+  var row={ nome:((_nomeEl.value||'').trim().toUpperCase()||null), valor_total: (total>0?total:0), pagamentos: itens };
 
   var ehAtualizacao = !!PAG_currentOperationId;
   row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
@@ -7285,6 +7319,7 @@ function PAG_confirmarOperacao(btn){
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
+    if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='pag') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
     PAG_updateConfirmarBtnLabel();
@@ -7296,6 +7331,7 @@ function PAG_confirmarOperacao(btn){
 function PAG_limpar(){
   PAG_snapshot = null;
   document.getElementById('pag-total').value='';
+  var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value='';
   document.getElementById('pag-saldo').textContent='R$ ---';
   document.getElementById('pag-soma').textContent='---';
   PAG_currentOperationId = null;
@@ -8190,6 +8226,73 @@ function FM_mesDe(r, tab){
   var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
+/* === CLIENTES: base única — sugestões no campo (Vendas + Antecipação) e cadastro rápido === */
+var VB_cliBase=null, VB_cliBaseTs=0;
+function VB_cliNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
+function VB_cliCarregar(cb){
+  if(VB_cliBase && (Date.now()-VB_cliBaseTs)<120000){ cb(VB_cliBase); return; }
+  sb.from('clientes').select('id,nome').order('nome',{ascending:true}).limit(2000).then(function(res){
+    if(!res.error){ VB_cliBase=res.data||[]; VB_cliBaseTs=Date.now(); }
+    cb(VB_cliBase||[]);
+  }).catch(function(){ cb(VB_cliBase||[]); });
+}
+function VB_cliSugBox(){
+  var b=document.getElementById('vb-cli-sug');
+  if(!b){ b=document.createElement('div'); b.id='vb-cli-sug';
+    b.style.cssText='position:fixed;z-index:100020;display:none;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:190px;overflow-y:auto;font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;';
+    document.body.appendChild(b); }
+  return b;
+}
+function VB_cliSugFechar(){ var b=document.getElementById('vb-cli-sug'); if(b) b.style.display='none'; }
+function VB_cliAttach(inputId){
+  var el=document.getElementById(inputId); if(!el||el._cliOn) return; el._cliOn=true;
+  function render(){
+    var termo=VB_cliNorm(el.value);
+    var b=VB_cliSugBox();
+    if(termo.length<2){ b.style.display='none'; return; }
+    VB_cliCarregar(function(lista){
+      if(document.activeElement!==el) return;
+      var hits=(lista||[]).filter(function(c){ var n=VB_cliNorm(c.nome); return n.indexOf(termo)>=0 && n!==termo; }).slice(0,6);
+      if(!hits.length){ b.style.display='none'; return; }
+      b.innerHTML=hits.map(function(c){ return '<div data-nome="'+CLIP_esc(c.nome)+'" style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;border-bottom:0.5px solid var(--ln3);text-transform:uppercase;">'+CLIP_esc(c.nome)+'</div>'; }).join('');
+      Array.prototype.forEach.call(b.children,function(ch){ ch.addEventListener('mousedown',function(ev){ ev.preventDefault(); el.value=ch.getAttribute('data-nome'); b.style.display='none'; try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }); });
+      var r=el.getBoundingClientRect();
+      b.style.left=Math.max(8,r.left)+'px'; b.style.top=(r.bottom+4)+'px'; b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
+      b.style.display='block';
+    });
+  }
+  el.addEventListener('input', render);
+  el.addEventListener('focus', function(){ VB_cliCarregar(function(){}); render(); });
+  el.addEventListener('blur', function(){ setTimeout(VB_cliSugFechar,150); });
+}
+function VB_cliOferecerCadastro(nome){
+  var alvo=String(nome||'').trim(); if(!alvo) return;
+  VB_cliCarregar(function(lista){
+    var ja=(lista||[]).some(function(c){ return VB_cliNorm(c.nome)===VB_cliNorm(alvo); });
+    if(ja) return;
+    var ov=document.getElementById('vb-cli-novo');
+    if(!ov){ ov=document.createElement('div'); ov.id='vb-cli-novo';
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100021;display:none;align-items:flex-end;justify-content:center;';
+      ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+      document.body.appendChild(ov); }
+    ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;">'
+      +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:6px;">CLIENTE NOVO</div>'
+      +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px;text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>'
+      +'<button id="vb-cli-novo-sim" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">CADASTRAR NA BASE</button>'
+      +'<button id="vb-cli-novo-nao" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">AGORA NÃO</button>'
+      +'</div>';
+    ov.style.display='flex';
+    document.getElementById('vb-cli-novo-nao').onclick=function(){ ov.style.display='none'; };
+    document.getElementById('vb-cli-novo-sim').onclick=function(){
+      ov.style.display='none';
+      sb.from('clientes').insert({nome:alvo.toUpperCase()}).then(function(res){
+        if(res.error){ VB_toast('Não cadastrou (sem conexão?).'); return; }
+        VB_cliBase=null; VB_toast('Cliente cadastrado. Complete a ficha em GESTÃO › CLIENTES.');
+        VB_log('CLIENTES','criou', alvo.toUpperCase(), 'cadastro rápido');
+      }).catch(function(){ VB_toast('Sem conexão.'); });
+    };
+  });
+}
 /* === PANORAMA DO CLIENTE: tudo derivado por nome — em aberto, cobrança, histórico, contratos === */
 function CLIP_esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function CLIP_abrir(nome){
@@ -8210,7 +8313,7 @@ function CLIP_abrir(nome){
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
-    var ant=(res[0].data||[]).filter(function(r){ return key(r.cliente||r.nome)===alvo; });
+    var ant=(res[0].data||[]).filter(function(r){ return !r.simulacao && key(r.cliente||r.nome)===alvo; });
     var ven=(res[1].data||[]).filter(function(r){ return key(r.cliente||r.nome||r.descricao)===alvo; });
     var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
     var hoje=REN_hojeISO();
@@ -8309,6 +8412,7 @@ function REN_coleta(ant, fin, ven){
     fecha(ops);
   });
   (ant||[]).forEach(function(r){
+    if(r.simulacao) return; // simulação: fora do cronograma
     if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return; // atrasada: já virou cobrança, fora do cronograma
     var cli=String(r.cliente||r.nome||'\u2014').toUpperCase();
     var ops=[];
@@ -8788,7 +8892,7 @@ function REN_desfaz(btn, baixaId){
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
-    var ant=filtra(res[0].data,'ant'), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
+    var ant=filtra(res[0].data,'ant').filter(function(r){ return !r.simulacao; }), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
@@ -12359,6 +12463,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.153.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">SIMULAÇÃO na Antecipação: chip tracejado acima do confirmar — marcado, o botão vira SALVAR SIMULAÇÃO e a operação é guardada como rascunho: aparece no Histórico com etiqueta SIM mas fica FORA do Recebimentos, do Fechamento, do Panorama do Cliente e do Relatório. Pra virar operação real: abre no Histórico, desmarca o chip, ATUALIZAR. Requer rodar 1 SQL no Supabase (adiciona a coluna simulacao)</div>
+      <div class="cl-item">Clientes: uma base só. Os campos de cliente da VENDA e da ANTECIPAÇÃO agora sugerem nomes do cadastro (GESTÃO › CLIENTES) enquanto você digita — sem acento, qualquer parte do nome. E ao confirmar operação real com cliente que não existe na base, folha oferece CADASTRAR NA BASE (só o nome; a ficha completa se preenche na Gestão). Nome consistente = Panorama do Cliente sempre casa</div>
+      <div class="cl-item">ATUALIZAR OPERAÇÃO encerra a edição: quando a operação foi aberta pelo Histórico, salvar volta pro Histórico sozinho (Antecipação, Financiamento, Vendas e Pagamentos). Operação nova continua na tela — o fluxo confirmar → gerar tabela → compartilhar segue intacto</div>
+      <div class="cl-item">Pagamento com NOME: campo NOME / REFERÊNCIA no topo da tela; se salvar sem preencher, a folha NOMEAR OPERAÇÃO pergunta (com PULAR, igual aos outros módulos). O nome aparece no card do Histórico e na busca geral — acabou o "Pagamento" genérico. Requer rodar 1 SQL no Supabase (adiciona a coluna nome)</div>
+      <div class="cl-item">Histórico abre limpo: ao entrar na tela, os cards expandidos fecham — a expansão é sempre um gesto seu, não um estado que ficou pra trás</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.152.0</span><span class="cl-ver-date">20/07/2026</span></div>
