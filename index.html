@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.146.2</title>
+<title>VB - v1.147.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.146.2<br>20/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.147.0<br>20/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3814,7 +3814,7 @@ function HIST_atrHoje(r){
   if(dias<=0) return liq;
   return liq*Math.pow(1+tx/100, dias/30);
 }
-// Lucro por operação: ant = juros (bruto − líquido − tarifa; atrasados fora),
+// Lucro por operação: ant = bruto − líquido (tarifa fica com VB; atrasados fora),
 // fin = juros totais ou spread do investidor, ven = total − custo (quando houver custo)
 // Regra canônica: consignação = sócio com 100% do CUSTO e 0% do LUCRO. Se houver racha de lucro (pct<100), é sociedade — mesmo com capital todo dele.
 function VB_consigVen(socio, vs, c, pct){
@@ -3833,7 +3833,7 @@ function HIST_lucroRow(tab, r){
   if(tab==='ant'){
     var b=Number(r.valor_bruto)||0, l=Number(r.valor_liquido)||0;
     if(l>b) return null; // atrasado
-    var j=b-l-(Number(r.tarifa)||0);
+    var j=b-l; // tarifa fica com VB: integra o lucro (v1.147.0)
     return isFinite(j)?j:null;
   }
   if(tab==='fin'){
@@ -4030,7 +4030,7 @@ function HIST_renderRows(tab, rows){
       if(_atrasado){
         var _hj=HIST_atrHoje(r);
         valor=HIST_fmtMoeda(_hj);
-        var _jrH=_hj-_bru-(Number(r.tarifa)||0), _pjrH=_bru>0?Math.round(_jrH/_bru*100):0;
+        var _jrH=_hj-_bru, _pjrH=_bru>0?Math.round(_jrH/_bru*100):0;
         campos.push({l:'Principal', v:HIST_fmtMoeda(_bru)});
         campos.push({l:'Juros (hoje)', v:HIST_fmtMoeda(_jrH)+' ('+_pjrH+'%)'});
         campos.push({l:'Salvo em '+HIST_fmtData(String(r.created_at||'').split('T')[0]), v:HIST_fmtMoeda(_liq)});
@@ -12312,6 +12312,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.147.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Tarifa da antecipação agora É lucro: como VB usa a tarifa pra arredondar o líquido (o dinheiro fica com ele), a conta canônica virou bruto − líquido, sem subtrair tarifa. Vale em cadeia: L do card no Histórico, Juros (hoje) da cobrança de atrasado, Lucro do Fechamento, rendimento e panorama do cliente — os lucros históricos de antecipações sobem pelo valor de suas tarifas. O simulador não muda: lá a tarifa continua definindo o líquido do cliente, que é o papel dela na precificação</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.2</span><span class="cl-ver-date">20/07/2026</span></div>
