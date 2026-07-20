@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.155.1</title>
+<title>VB - v1.156.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4491,15 +4491,28 @@ function showScreen(name){
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
   if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); }
   if(name==='ven'){ VB_cliAttach('ven-cliente'); }
-  if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_expAbertos={}; HIST_refresh(); }
+  if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_expAbertos={};
+    HIST_searchOpen=false; HIST_searchGlobal=false; HIST_searchTerm='';
+    var _hs=document.getElementById('hist-search'); if(_hs) _hs.value='';
+    var _hw=document.getElementById('hist-search-wrap'); if(_hw) _hw.style.display='none';
+    var _hc=document.getElementById('hist-search-clear'); if(_hc) _hc.style.display='none';
+    if(typeof HIST_updateLupa==='function') HIST_updateLupa();
+    HIST_refresh(); }
   if(name==='home'){ VB_updateBackupStatus(); }
   if(name==='rec'){ REC_load(); }
-  if(name==='mer'){ MER_load(); }
+  if(name==='mer'){
+    var _mw=document.getElementById('mer-busca-wrap'); if(_mw) _mw.style.display='none';
+    var _mi=document.getElementById('mer-busca'); if(_mi) _mi.value='';
+    var _mb=document.getElementById('mer-busca-toggle'); if(_mb){ _mb.style.background='var(--sf)'; _mb.style.color='var(--ink)'; _mb.style.borderColor='var(--ln)'; }
+    MER_load(); }
   if(name==='soc'){ SOC_load(); VB_telaAnterior='ges'; }
-  if(name==='cli'){ CLI_aba='ativos'; CLI_pintaAbas(); var _fo=document.getElementById('cli-form-open'); if(_fo) _fo.style.display='flex'; CLI_load(); VB_telaAnterior='ges'; }
+  if(name==='cli'){ CLI_aba='ativos'; CLI_pintaAbas(); var _fo=document.getElementById('cli-form-open'); if(_fo) _fo.style.display='flex';
+    CLI_buscaOn=false; var _cw=document.getElementById('cli-busca-wrap'); if(_cw) _cw.style.display='none';
+    var _cb=document.getElementById('cli-busca'); if(_cb) _cb.value='';
+    CLI_load(); VB_telaAnterior='ges'; }
   if(name==='ges'){ VB_telaAnterior='home'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
-  if(name==='ren'){ REN_abrir(); VB_telaAnterior='home'; }
+  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
@@ -8071,6 +8084,7 @@ function GLB_badge(letra){
 }
 function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no título, nome em cinza
   try{
+    if(tipo==='cli'){ return r.cidade?{b:'', n:String(r.cidade)}:null; }
     if(tipo==='mer'){
       if(r.socio){
         var _cons=(typeof VB_consigVen==='function' && VB_consigVen(r.socio, r.valor_socio, r.custo, null));
@@ -8097,7 +8111,8 @@ function GLB_buscar(){
     sb.from('vendas').select('*').or('descricao.ilike.'+q+',nome.ilike.'+q+',socio.ilike.'+q+',cliente.ilike.'+q).limit(8),
     sb.from('pagamentos').select('*').ilike('nome', q).limit(8),
     sb.from('mercadorias').select('*').or('descricao.ilike.'+q+',fornecedor.ilike.'+q+',socio.ilike.'+q+',sn.ilike.'+q).limit(8),
-    sb.from('socios').select('*').ilike('nome', q).limit(8)
+    sb.from('socios').select('*').ilike('nome', q).limit(8),
+    sb.from('clientes').select('*').or('nome.ilike.'+q+',cpf.ilike.'+q).limit(8)
   ]).then(function(rs){
     var termoAtual=(document.getElementById('glb-termo').value||'').trim();
     if(termoAtual!==termo) return; // resposta velha
@@ -8108,7 +8123,8 @@ function GLB_buscar(){
       ['VENDA','ven', rs[2].data||[], function(r){return (r.nome||r.descricao||'—');}],
       ['PAGAMENTO','pag', rs[3].data||[], function(r){return r.nome||'—';}],
       ['ESTOQUE','mer', rs[4].data||[], function(r){return r.descricao||'—';}],
-      ['SÓCIO','soc', rs[5].data||[], function(r){return r.nome||'—';}]
+      ['SÓCIO','soc', rs[5].data||[], function(r){return r.nome||'—';}],
+      ['CLIENTE','cli', rs[6].data||[], function(r){return r.nome||'—';}]
     ];
     var itens=[];
     grupos.forEach(function(g){
@@ -8117,6 +8133,7 @@ function GLB_buscar(){
         var rot=g[0];
         if(g[1]==='mer' && (r.status||'estoque')==='vendida') rot=(r.venda_id?'VENDIDO':'BAIXADO');
         if(g[1]==='ant' && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0)) rot='ATRASADO';
+        if(g[1]==='cli' && r.ativo===false) rot='SPC';
         itens.push({tipo:g[1], rot:rot, r:r, nome:nome, score:GLB_score(nome, termo), dop:GLB_dataOp(g[1], r), ts:(r.created_at||'')});
       });
     });
@@ -8150,6 +8167,11 @@ function GLB_ir(tipo, id){
       if(!MER_rows.some(function(x){ return String(x.id)===String(id); })) MER_rows=MER_rows.concat([r]);
       GLB_fichaDaBusca=true;
       MER_abrir(id);
+      return;
+    }
+    if(tipo==='cli'){
+      // consulta por cima da busca: ativo abre o Panorama, reservatório abre a ficha SPC
+      if(r.ativo===false){ CLI_resFichaAbrir(r); } else { CLIP_abrir(r.nome); }
       return;
     }
     document.getElementById('glb-overlay').style.display='none';
@@ -11487,8 +11509,9 @@ function CLI_resRender(el,q){
   });
   el.innerHTML=hh+hint;
 }
-function CLI_resFicha(i){
-  var c=(CLI_resRows||[])[i]; if(!c) return;
+function CLI_resFicha(i){ var c=(CLI_resRows||[])[i]; if(c) CLI_resFichaAbrir(c); }
+function CLI_resFichaAbrir(c){
+  CLI_resFichaAtual=c;
   var ov=document.getElementById('cli-res-ficha');
   if(!ov){ ov=document.createElement('div'); ov.id='cli-res-ficha';
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100022;display:none;align-items:flex-end;justify-content:center;';
@@ -11519,21 +11542,23 @@ function CLI_resFicha(i){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:4px;">RESERVATÓRIO SPC</div>'
     +'<div style="text-align:center;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;text-transform:uppercase;">'+CTR_esc(c.nome||'')+'</div>'
     +corpo
-    +'<button onclick="CLI_resAtivar('+i+')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:14px;font-family:-apple-system,sans-serif;">ATIVAR NO CADASTRO</button>'
+    +'<button onclick="CLI_resAtivarAtual()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:14px;font-family:-apple-system,sans-serif;">ATIVAR NO CADASTRO</button>'
     +'<button onclick="document.getElementById(\'cli-res-ficha\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
 }
-function CLI_resAtivar(i){
-  var c=(CLI_resRows||[])[i]; if(!c) return;
+var CLI_resFichaAtual=null;
+function CLI_resAtivarAtual(){
+  var c=CLI_resFichaAtual; if(!c) return;
   sb.from('clientes').update({ativo:true}).eq('id',c.id).then(function(res){
     if(res.error){ VB_toast('Não ativou (sem conexão?).'); return; }
-    CLI_resRows.splice(i,1); VB_cliBase=null;
-    var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length;
+    c.ativo=true; VB_cliBase=null;
+    if(CLI_resRows){ for(var k=0;k<CLI_resRows.length;k++){ if(String(CLI_resRows[k].id)===String(c.id)){ CLI_resRows.splice(k,1); break; } }
+      var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length; }
     var ov=document.getElementById('cli-res-ficha'); if(ov) ov.style.display='none';
     VB_log('CLIENTES','ativou', c.nome, 'manual (reservatório)');
     VB_toast('Cliente ativado no cadastro.');
-    CLI_load();
+    if(VB_telaAtual==='cli'){ CLI_load(); }
   }).catch(function(){ VB_toast('Sem conexão.'); });
 }
 function CLI_load(){
@@ -12586,6 +12611,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Busca da Home enxerga CLIENTES: nome ou CPF/CNPJ, ativos e reservatório (etiqueta SPC na direita, cidade em cinza ao lado do nome). Toque abre por cima da busca, sem sair dela: cliente ativo → Panorama do Cliente; reservatório → ficha de consulta SPC com ATIVAR. Fechou, a busca continua onde estava</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.155.2</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Busca sempre nasce limpa: sair e voltar de Histórico, Clientes, Estoque ou Recebimentos recolhe o campo de busca e apaga o termo — mesmo princípio dos cards fechados: estado de tela é gesto seu, não sobra da visita anterior</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.155.1</span><span class="cl-ver-date">20/07/2026</span></div>
