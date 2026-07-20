@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.151.0</title>
+<title>VB - v1.152.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.151.0<br>20/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.152.0<br>20/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -3522,17 +3522,17 @@ function HIST_bucketLabel(iso){
   return m[d.getMonth()]+' '+d.getFullYear();
 }
 function HIST_sectionHeader(label, first, count, met){
-  var dir;
+  // Régua canônica dos cabeçalhos de mês (Histórico = Recebimentos = Vendidos)
+  var dir='';
   if(met){
-    dir='<span style="font-size:10px;font-weight:600;letter-spacing:0.2px;color:var(--so);white-space:nowrap;">'
-      +'<span style="color:var(--tx);font-weight:700;">'+HIST_fmtMoeda(met.v)+'</span>'
-      +(met.temL?(' · L: <span style="color:var(--tx);font-weight:700;">'+HIST_fmtMoeda(met.l)+'</span>'):'')
+    dir='<span style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.v)+'</span>'
+      +(met.temL?('<span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 L: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.l)+'</span>'):'')
       +'</span>';
-    label=label+(count!=null?(' · '+count):'');
+    label=label+(count!=null?(' \u00b7 '+count):'');
   } else {
-    dir=(count!=null) ? '<span style="font-size:11px;font-weight:600;letter-spacing:0.2px;color:var(--so);">'+count+' '+(count===1?'Operação':'Operações')+'</span>' : '';
+    dir=(count!=null) ? '<span style="font-size:10px;font-weight:600;color:var(--so);">'+count+' '+(count===1?'Opera\u00e7\u00e3o':'Opera\u00e7\u00f5es')+'</span>' : '';
   }
-  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.4px;color:var(--mu2);margin:'+(first?'0':'10px')+' 2px 6px;"><span style="white-space:nowrap;">'+HIST_esc(label)+'</span>'+dir+'</div>';
+  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+HIST_esc(label)+'</span>'+dir+'</div>';
 }
 function HIST_setCount(text){
   var inline=document.getElementById('hist-count-inline');
@@ -8430,7 +8430,7 @@ function REN_render(){
       ordem.forEach(function(ym){
         var g=grupos[ym];
         var _gvbTx=(Math.abs(g.total-g.vb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(g.vb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
         g.itens.forEach(function(x){ hh+=cardRec(x); });
       });
     }
@@ -8484,7 +8484,7 @@ function REN_render(){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 0;"><span style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -9207,7 +9207,7 @@ function MER_render(){
             }
           });
           var _lblG=(_gK!=='sem')?(FM_MESES[Number(_gK.slice(5,7))-1]+' '+_gK.slice(0,4)):'SEM DATA';
-          html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 4px;flex-wrap:wrap;"><span style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">'+_lblG+' \u00b7 '+gN+'</span><span style="font-size:10px;font-weight:700;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(gT)+' \u00b7 L: R$ '+MER_fmtBR(gL)+' \u00b7 VB: R$ '+MER_fmtBR(gVB)+'</span></div>';
+          html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 4px 4px;flex-wrap:wrap;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+_lblG+' \u00b7 '+gN+'</span><span style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gT)+'</span><span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 L: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gL)+'</span><span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 VB: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gVB)+'</span></span></div>';
         }
       }
       html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">' 
@@ -12359,6 +12359,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.152.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Um padrão só de cabeçalho mensal, VB pediu e tinha razão: Histórico, Recebimentos e Vendidos agora usam a mesma régua — esquerda JULHO 2026 · N em caps 9px espaçado cinza; direita valores em 11px fortes com rótulos e conectores (· L:, · VB:, parênteses) em 10px discretos; margens idênticas. O conteúdo de cada tela continua o seu (bruto·L no Histórico, bruto·(VB) no Recebimentos, vendido·L·VB nos Vendidos) — a unificação é de tipografia, não de semântica</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.151.0</span><span class="cl-ver-date">20/07/2026</span></div>
