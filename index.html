@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.156.2</title>
+<title>VB - v1.156.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6637,7 +6637,7 @@ var ANT_nomeChecked=false;
 function ANT_confirmarOperacao(btn){
   VB_carimboTS = null;
   var _nomeEl=document.getElementById('ant-tabelaCliente');
-  if(!(_nomeEl.value||'').trim() && !ANT_nomeChecked){
+  if(!(_nomeEl.value||'').trim() && !ANT_nomeChecked && !ANT_simFlag){
     VB_promptNome({ titulo:'NOMEAR OPERAÇÃO', valor:'', labelEsq:'PULAR', labelDir:'SALVAR',
       onConfirm:function(nome){ if(nome) _nomeEl.value=nome; ANT_nomeChecked=true; ANT_confirmarOperacao(btn); ANT_nomeChecked=false; },
       onSkip:function(){ ANT_nomeChecked=true; ANT_confirmarOperacao(btn); ANT_nomeChecked=false; } });
@@ -8271,10 +8271,15 @@ function VB_cliCarregar(cb){
     cb(VB_cliBase||[]);
   }).catch(function(){ cb(VB_cliBase||[]); });
 }
+var VB_cliSugAlvo=null;
 function VB_cliSugBox(){
   var b=document.getElementById('vb-cli-sug');
   if(!b){ b=document.createElement('div'); b.id='vb-cli-sug';
     b.style.cssText='position:fixed;z-index:100020;display:none;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:190px;overflow-y:auto;font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;';
+    b.addEventListener('touchstart', function(e){ var t=e.touches[0]; b._sx=t.clientX; b._sy=t.clientY; }, {passive:true});
+    window.addEventListener('scroll', function(){
+      if(b.style.display==='block' && VB_cliSugAlvo){ var r=VB_cliSugAlvo.getBoundingClientRect(); b.style.left=Math.max(8,r.left)+'px'; b.style.top=(r.bottom+4)+'px'; }
+    }, true);
     document.body.appendChild(b); }
   return b;
 }
@@ -8290,7 +8295,12 @@ function VB_cliAttach(inputId){
       var hits=(lista||[]).filter(function(c){ var n=VB_cliNorm(c.nome); return n.indexOf(termo)>=0 && n!==termo; }).slice(0,6);
       if(!hits.length){ b.style.display='none'; return; }
       b.innerHTML=hits.map(function(c){ return '<div data-nome="'+CLIP_esc(c.nome)+'" style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;border-bottom:0.5px solid var(--ln3);text-transform:uppercase;">'+CLIP_esc(c.nome)+'</div>'; }).join('');
-      Array.prototype.forEach.call(b.children,function(ch){ ch.addEventListener('mousedown',function(ev){ ev.preventDefault(); el.value=ch.getAttribute('data-nome'); b.style.display='none'; try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }); });
+      Array.prototype.forEach.call(b.children,function(ch){
+        function pick(ev){ ev.preventDefault(); ev.stopPropagation(); el.value=ch.getAttribute('data-nome'); b.style.display='none'; try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+        ch.addEventListener('touchend', function(ev){ var t=ev.changedTouches&&ev.changedTouches[0]; if(t && (Math.abs(t.clientX-(b._sx||t.clientX))>10 || Math.abs(t.clientY-(b._sy||t.clientY))>10)) return; pick(ev); });
+        ch.addEventListener('mousedown', pick);
+      });
+      VB_cliSugAlvo=el;
       var r=el.getBoundingClientRect();
       b.style.left=Math.max(8,r.left)+'px'; b.style.top=(r.bottom+4)+'px'; b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
       b.style.display='block';
@@ -8298,7 +8308,7 @@ function VB_cliAttach(inputId){
   }
   el.addEventListener('input', render);
   el.addEventListener('focus', function(){ VB_cliCarregar(function(){}); render(); });
-  el.addEventListener('blur', function(){ setTimeout(VB_cliSugFechar,150); });
+  el.addEventListener('blur', function(){ setTimeout(VB_cliSugFechar,250); });
 }
 function VB_cliOferecerCadastro(nome){
   var alvo=String(nome||'').trim(); if(!alvo) return;
@@ -8322,10 +8332,20 @@ function VB_cliOferecerCadastro(nome){
       +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:6px;">CLIENTE NOVO</div>'
       +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px;text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>'
       +'<button id="vb-cli-novo-sim" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">CADASTRAR NA BASE</button>'
+      +'<button id="vb-cli-novo-comp" style="width:100%;padding:13px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);color:var(--tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">CADASTRAR E COMPLETAR</button>'
       +'<button id="vb-cli-novo-nao" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">AGORA NÃO</button>'
       +'</div>';
     ov.style.display='flex';
     document.getElementById('vb-cli-novo-nao').onclick=function(){ ov.style.display='none'; };
+    document.getElementById('vb-cli-novo-comp').onclick=function(){
+      ov.style.display='none';
+      sb.from('clientes').insert({nome:alvo.toUpperCase()}).select().then(function(res){
+        if(res.error||!res.data||!res.data[0]){ VB_toast('Não cadastrou (sem conexão?).'); return; }
+        VB_cliBase=null; VB_log('CLIENTES','criou', alvo.toUpperCase(), 'cadastro rápido');
+        CLI_pendFichaId=res.data[0].id;
+        showScreen('cli');
+      }).catch(function(){ VB_toast('Sem conexão.'); });
+    };
     document.getElementById('vb-cli-novo-sim').onclick=function(){
       ov.style.display='none';
       sb.from('clientes').insert({nome:alvo.toUpperCase()}).then(function(res){
@@ -11460,7 +11480,7 @@ function CLI_decQual(c){
   var q=(c.qualificacao||'').split(',').map(function(s){return s.trim();});
   return [q[0]||'', q[1]||'', q.slice(2).join(', ')||''];
 }
-var CLI_aba='ativos', CLI_resRows=null;
+var CLI_aba='ativos', CLI_resRows=null, CLI_pendFichaId=null;
 function CLI_pintaAbas(){
   var on='padding:8px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
   var off='padding:8px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
@@ -11570,6 +11590,8 @@ function CLI_load(){
   sb.from('clientes').select('*').or('ativo.is.null,ativo.eq.true').order('nome',{ascending:true}).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     CLI_rows=res.data||[]; CLI_render();
+    if(CLI_pendFichaId!=null){ var _id=CLI_pendFichaId; CLI_pendFichaId=null;
+      for(var _i=0;_i<CLI_rows.length;_i++){ if(String(CLI_rows[_i].id)===String(_id)){ CLI_ficha(_i); break; } } }
   });
 }
 function CLI_render(){
@@ -12616,6 +12638,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.3</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Sugestão de cliente agora SELECIONA no iPhone: o item respondia só a evento de mouse — no iOS o toque fechava a caixa antes do clique chegar. Agora escuta o toque de verdade (com guarda de rolagem: arrastar a lista não seleciona), a caixa acompanha o scroll do teclado e a folga do blur subiu. Isso destrava também a troca de cliente na edição (inclusive de simulações)</div>
+      <div class="cl-item">Folha CLIENTE NOVO com três caminhos: CADASTRAR NA BASE (só o nome, como era), CADASTRAR E COMPLETAR (salva e já abre a ficha dele em GESTÃO › CLIENTES pra preencher CPF/endereço na hora) e AGORA NÃO</div>
+      <div class="cl-item">Simulação não pergunta mais NOMEAR OPERAÇÃO quando o cliente fica vazio — rascunho pode ficar sem nome</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.2</span><span class="cl-ver-date">20/07/2026</span></div>
