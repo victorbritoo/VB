@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.156.3</title>
+<title>VB - v1.156.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8271,15 +8271,16 @@ function VB_cliCarregar(cb){
     cb(VB_cliBase||[]);
   }).catch(function(){ cb(VB_cliBase||[]); });
 }
-var VB_cliSugAlvo=null;
+function VB_cliSugPos(el,b){
+  var r=el.getBoundingClientRect(), sx=window.pageXOffset||0, sy=window.pageYOffset||0;
+  b.style.left=Math.max(8,r.left+sx)+'px'; b.style.top=(r.bottom+sy+4)+'px';
+  b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
+}
 function VB_cliSugBox(){
   var b=document.getElementById('vb-cli-sug');
   if(!b){ b=document.createElement('div'); b.id='vb-cli-sug';
-    b.style.cssText='position:fixed;z-index:100020;display:none;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:190px;overflow-y:auto;font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;';
+    b.style.cssText='position:absolute;z-index:100020;display:none;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:190px;overflow-y:auto;font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;';
     b.addEventListener('touchstart', function(e){ var t=e.touches[0]; b._sx=t.clientX; b._sy=t.clientY; }, {passive:true});
-    window.addEventListener('scroll', function(){
-      if(b.style.display==='block' && VB_cliSugAlvo){ var r=VB_cliSugAlvo.getBoundingClientRect(); b.style.left=Math.max(8,r.left)+'px'; b.style.top=(r.bottom+4)+'px'; }
-    }, true);
     document.body.appendChild(b); }
   return b;
 }
@@ -8300,9 +8301,7 @@ function VB_cliAttach(inputId){
         ch.addEventListener('touchend', function(ev){ var t=ev.changedTouches&&ev.changedTouches[0]; if(t && (Math.abs(t.clientX-(b._sx||t.clientX))>10 || Math.abs(t.clientY-(b._sy||t.clientY))>10)) return; pick(ev); });
         ch.addEventListener('mousedown', pick);
       });
-      VB_cliSugAlvo=el;
-      var r=el.getBoundingClientRect();
-      b.style.left=Math.max(8,r.left)+'px'; b.style.top=(r.bottom+4)+'px'; b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
+      VB_cliSugPos(el,b);
       b.style.display='block';
     });
   }
@@ -12638,6 +12637,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.4</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Caixa de sugestão de cliente colada no campo em qualquer tela: era position:fixed e o scroll do teclado descolava ela (no Vendas aparecia lá em cima). Virou absoluta no documento, somando o scroll — gruda embaixo do campo e acompanha a rolagem sozinha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.3</span><span class="cl-ver-date">20/07/2026</span></div>
