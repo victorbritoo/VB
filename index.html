@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.156.1</title>
+<title>VB - v1.156.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -336,7 +336,7 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
   </div>
 </div>
 
-<div id="soc-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)SOC_viewFechar()">
+<div id="soc-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100014;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)SOC_viewFechar()">
   <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;">
     <div id="soc-view-nome" onclick="SOC_pillEdit('nome')" style="font-size:17px;font-weight:700;color:var(--ink);text-align:center;font-family:-apple-system,sans-serif;cursor:pointer;"></div>
     <div id="soc-view-tel" onclick="SOC_pillEdit('tel')" style="font-size:12px;color:var(--tx);text-align:center;margin-top:2px;font-family:-apple-system,sans-serif;cursor:pointer;"></div>
@@ -8174,15 +8174,20 @@ function GLB_ir(tipo, id){
       if(r.ativo===false){ CLI_resFichaAbrir(r); } else { CLIP_abrir(r.nome); }
       return;
     }
+    if(tipo==='soc'){
+      // painel por cima da busca: fechou, a busca continua
+      if(!SOC_rows.some(function(x){ return String(x.id)===String(r.id); })) SOC_rows=SOC_rows.concat([r]);
+      SOC_abrir(r.id);
+      return;
+    }
     document.getElementById('glb-overlay').style.display='none';
-    if(tipo!=='soc') GLB_reabrir=true; // voltar reabre a busca como estava
+    GLB_reabrir=true; // voltar reabre a busca como estava
     HIST_voltaParaHist=false; // veio da busca: volta direto pra ela, sem parar no Histórico
     if(tipo==='ant'){ HIST_carregarAnt(r); }
     else if(tipo==='fin'){ HIST_carregarFin(r); }
     else if(tipo==='ven'){ HIST_carregarVen(r); }
     else if(tipo==='pag'){ HIST_carregarPag(r); }
     if(tipo==='ant'||tipo==='fin'||tipo==='ven'||tipo==='pag'){ VB_telaAnterior='home'; } // veio da busca: voltar vai direto pra ela
-    else if(tipo==='soc'){ SOC_rows=[r]; SOC_abrir(r.id); }
 
   }, 120);
 }
@@ -12611,6 +12616,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.2</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Sócio na busca da Home entrou no padrão de consulta em 1 toque: o painel abre POR CIMA da busca (antes disputava a mesma camada e a busca morria) — fechou o painel, a busca está exatamente onde estava. Com isso, TUDO que sai da busca preserva ela: operações reabrem ao voltar; estoque, cliente, panorama e sócio abrem por cima</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.1</span><span class="cl-ver-date">20/07/2026</span></div>
