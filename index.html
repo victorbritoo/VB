@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.153.0</title>
+<title>VB - v1.153.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3379,6 +3379,8 @@ function HIST_renderTotal(tab, rows, term){
   var esc=(busca||fixo||filtro)?'geral':HIST_totEscopo;
   var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
   var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
+  rowsT=rowsT.filter(function(r){ return !(((r._tab||tab)==='ant') && r.simulacao); }); // simulação nunca soma
+  if(!rowsT.length){ totalEl.style.display='none'; return; }
   var titulo='', tt=null;
   if(!busca && !fixo){
     if(filtro){
@@ -3536,9 +3538,9 @@ function HIST_sectionHeader(label, first, count, met){
     dir='<span style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.v)+'</span>'
       +(met.temL?('<span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 L: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.l)+'</span>'):'')
       +'</span>';
-    label=label+(count!=null?(' \u00b7 '+count):'');
+    label=label+(count?(' \u00b7 '+count):'');
   } else {
-    dir=(count!=null) ? '<span style="font-size:10px;font-weight:600;color:var(--so);">'+count+' '+(count===1?'Opera\u00e7\u00e3o':'Opera\u00e7\u00f5es')+'</span>' : '';
+    dir=count ? '<span style="font-size:10px;font-weight:600;color:var(--so);">'+count+' '+(count===1?'Opera\u00e7\u00e3o':'Opera\u00e7\u00f5es')+'</span>' : '';
   }
   return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+HIST_esc(label)+'</span>'+dir+'</div>';
 }
@@ -4010,7 +4012,9 @@ function HIST_renderRows(tab, rows){
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
-  if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r)); bucketCount[bk]=(bucketCount[bk]||0)+1;
+  if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r));
+    if(rt==='ant' && r.simulacao){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
+    bucketCount[bk]=(bucketCount[bk]||0)+1;
     if(!mixed){
       var mm=bucketMet[bk]||(bucketMet[bk]={v:0,l:0,temL:false});
       if(rt==='ant'){ mm.v += (HIST_antSub==='atr') ? HIST_atrHoje(r) : (Number(r.valor_bruto)||0); }
@@ -12463,6 +12467,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.153.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Simulação fora das somas do Histórico: o cabeçalho do mês (bruto · L: e o · N de operações) e a barra BRUTO/LUCRO não contam mais operações com etiqueta SIM — o card continua visível na lista, só não entra em dinheiro nem em contagem. Mês que só tem simulação mostra o cabeçalho limpo, e se o escopo da barra só tiver simulações ela some</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.153.0</span><span class="cl-ver-date">20/07/2026</span></div>
