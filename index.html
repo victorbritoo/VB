@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.150.1</title>
+<title>VB - v1.151.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.150.1<br>20/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.151.0<br>20/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -9183,8 +9183,34 @@ function MER_render(){
     lista.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;margin-top:24px;">'+(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.')+'</div>';
   } else {
     var html='';
+    var _gAtu=null;
+    var _agrupa=(MER_tab==='vendida' && MER_ord!=='data_asc' && MER_ord!=='preco_desc' && MER_ord!=='preco_asc' && MER_ord!=='modelo');
+    function _ymDe(y){ return (y.data_venda?String(y.data_venda).slice(0,7):(y.baixa_em?String(y.baixa_em).slice(0,7):null)); }
     rows.forEach(function(r){
-      html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
+      if(_agrupa){
+        var _gK=_ymDe(r)||'sem';
+        if(_gK!==_gAtu){
+          _gAtu=_gK;
+          var gT=0, gL=0, gVB=0, gN=0;
+          rows.forEach(function(y){
+            if((_ymDe(y)||'sem')!==_gK) return;
+            gN++;
+            var v2=y.venda_id?MER_vendasMap[y.venda_id]:null;
+            var t2=v2?(Number(v2.valor_total)||0):0; if(!(t2>0)) return;
+            var c2=Number(v2.custo!=null?v2.custo:y.custo)||0;
+            gT+=t2;
+            if(c2>0){
+              var l2=t2-c2; gL+=l2;
+              var vs2=Number(v2.valor_socio)||0;
+              if(v2.socio && vs2>0 && !VB_consigVen(v2.socio,vs2,c2,v2.lucro_vb_pct)){ var p2=(v2.lucro_vb_pct!=null)?Number(v2.lucro_vb_pct):50; gVB+=l2*p2/100; }
+              else gVB+=l2;
+            }
+          });
+          var _lblG=(_gK!=='sem')?(FM_MESES[Number(_gK.slice(5,7))-1]+' '+_gK.slice(0,4)):'SEM DATA';
+          html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 4px;flex-wrap:wrap;"><span style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">'+_lblG+' \u00b7 '+gN+'</span><span style="font-size:10px;font-weight:700;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(gT)+' \u00b7 L: R$ '+MER_fmtBR(gL)+' \u00b7 VB: R$ '+MER_fmtBR(gVB)+'</span></div>';
+        }
+      }
+      html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">' 
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +((MER_tab==='vendida'&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
@@ -12333,6 +12359,10 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.151.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">VENDIDOS com quebra mensal, na gramática do Histórico: cabeçalho JULHO 2026 · n com o trio do mês à direita — vendido, L (lucro) e VB (sua fatia, mesma régua da barra) — agrupando pela data da venda (ou da baixa). A quebra respeita a busca e só vale na ordenação padrão (por data da venda); ordenando por preço ou modelo a lista fica corrida, porque cabeçalho de mês fora de ordem cronológica mente. Itens de baixa manual entram na contagem do mês sem somar valores</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.150.1</span><span class="cl-ver-date">20/07/2026</span></div>
