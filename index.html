@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.155.0</title>
+<title>VB - v1.155.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11448,6 +11448,21 @@ function CLI_setAba(a){
     if(CLI_resRows===null){ CLI_resLoad(); return; } }
   CLI_render();
 }
+var CLI_resLoading=false;
+function CLI_resFetchSilent(){
+  if(CLI_resRows!==null || CLI_resLoading) return; CLI_resLoading=true;
+  sb.from('clientes').select('*').eq('ativo',false).order('nome',{ascending:true}).limit(2000).then(function(res){
+    CLI_resLoading=false;
+    if(!res.error){ CLI_resRows=res.data||[];
+      var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length;
+      CLI_render(); }
+  }).catch(function(){ CLI_resLoading=false; });
+}
+function CLI_matchQ(lista,q){ return (lista||[]).filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }).length; }
+function CLI_hintOutraAba(dest,n){
+  var rot=(dest==='res') ? (n+' no reservatório →') : (n+' nos ativos →');
+  return '<div onclick="CLI_setAba(\''+dest+'\')" style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--mu2);font-weight:600;cursor:pointer;padding:10px 0 4px;">'+rot+'</div>';
+}
 function CLI_resLoad(){
   var el=document.getElementById('cli-lista'); if(el) el.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;margin-top:20px;">Carregando...</div>';
   sb.from('clientes').select('*').eq('ativo',false).order('nome',{ascending:true}).limit(2000).then(function(res){
@@ -11460,7 +11475,8 @@ function CLI_resLoad(){
 function CLI_resRender(el,q){
   var rows=(CLI_resRows||[]).slice();
   if(q){ rows=rows.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }); }
-  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Reservatório vazio.')+'</div>'; return; }
+  var hint=''; if(q){ var nA=CLI_matchQ(CLI_rows,q); if(nA) hint=CLI_hintOutraAba('ativos',nA); }
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Reservatório vazio.')+'</div>'+hint; return; }
   var hh='';
   rows.forEach(function(c){
     var i=CLI_resRows.indexOf(c);
@@ -11469,7 +11485,7 @@ function CLI_resRender(el,q){
       +(c.cidade?('<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);text-transform:uppercase;white-space:nowrap;">'+CTR_esc(c.cidade)+'</div>'):'')
       +'</div>';
   });
-  el.innerHTML=hh;
+  el.innerHTML=hh+hint;
 }
 function CLI_resFicha(i){
   var c=(CLI_resRows||[])[i]; if(!c) return;
@@ -11533,7 +11549,9 @@ function CLI_render(){
   var rows=CLI_rows.slice();
   if(CLI_ordem==='recentes'){ rows.sort(function(a,b){ return String(b.created_at||'').localeCompare(String(a.created_at||'')); }); }
   if(q){ rows=rows.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }); }
-  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Nenhum cliente cadastrado.')+'</div>'; return; }
+  var hint='';
+  if(q){ if(CLI_resRows===null){ CLI_resFetchSilent(); } else { var nR=CLI_matchQ(CLI_resRows,q); if(nR) hint=CLI_hintOutraAba('res',nR); } }
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Nenhum cliente cadastrado.')+'</div>'+hint; return; }
   var hh='';
   rows.forEach(function(c){
     var i=CLI_rows.indexOf(c);
@@ -11545,7 +11563,7 @@ function CLI_render(){
       +'<button onclick="CLI_del(this,'+i+')" style="border:none;background:transparent;color:var(--so2);font-size:17px;cursor:pointer;padding:4px 6px;">\u00d7</button>'
       +'</div>';
   });
-  el.innerHTML=hh;
+  el.innerHTML=hh+hint;
 }
 // ---- FICHA (padrão do estoque): view -> EDITAR vira editor com estado sujo e guarda de saída ----
 var CLI_fichaIdx=null, CLI_fichaEdit=false, CLI_fichaOrig=null;
@@ -12568,6 +12586,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.155.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Busca de CLIENTES enxerga as duas abas: buscando em ATIVOS, se há resultado no reservatório aparece a linha "N no reservatório →" no fim da lista (e vice-versa, "N nos ativos →") — tocou, pula pra outra aba com a mesma busca aplicada. Nunca mais "Nada encontrado" com o cliente existindo do outro lado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.155.0</span><span class="cl-ver-date">20/07/2026</span></div>
