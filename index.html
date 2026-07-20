@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.145.0</title>
+<title>VB - v1.146.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.145.0<br>20/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.146.1<br>20/07/2026</div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -8337,7 +8337,7 @@ function REN_abrir(){
   Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos').limit(10000),
     sb.from('financiamentos_hist').select('id,descricao,nome,qtd_parcelas,valor_parcela,data_inicio').limit(10000),
-    sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total').limit(10000),
+    sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total,custo,lucro_vb_pct').limit(10000),
     sb.from('parcela_baixas').select('*').limit(20000)
   ]).then(function(res){
     var semTabela=!!(res[3]&&res[3].error);
@@ -8347,7 +8347,15 @@ function REN_abrir(){
     var bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
     var map={}; itens.forEach(function(x){ map[REN_key(x)]=x; });
     var opInfo={};
-    (res[2].data||[]).forEach(function(r){ if(r.socio && Number(r.valor_socio)>0) opInfo['ven|'+String(r.id)]={socio:r.socio, vs:Number(r.valor_socio), vt:Number(r.valor_total)||0}; });
+    (res[2].data||[]).forEach(function(r){
+      if(!(r.socio && Number(r.valor_socio)>0)) return;
+      var vt2=Number(r.valor_total)||0, cu2=Number(r.custo)||0, vsC=Number(r.valor_socio)||0;
+      var luc2=Math.max(0, vt2-cu2);
+      var consig2=false; try{ consig2=!!VB_consigVen(r.socio, vsC, cu2, r.lucro_vb_pct); }catch(e){}
+      var pctVB2=(r.lucro_vb_pct!=null&&r.lucro_vb_pct!=='')?Number(r.lucro_vb_pct):50;
+      var vsTot=consig2?vsC:(vsC + luc2*(1-pctVB2/100)); // capital do sócio + lucro do sócio (consig: valor já é o total)
+      opInfo['ven|'+String(r.id)]={socio:r.socio, vs:Math.round(vsTot*100)/100, vt:vt2};
+    });
     REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo};
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
@@ -8396,9 +8404,6 @@ function REN_render(){
   function aba(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="flex:1;padding:9px;border-radius:12px;font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
   hh+='<div style="display:flex;gap:6px;margin-bottom:10px;">'+aba('aberto','ENTRADAS')+aba('rec','CONCLU\u00cdDAS')+aba('cli','CLIENTES')+'</div>';
   if(REN_aba==='rec'){
-    var pendN=0, pendV=0;
-    receb.forEach(function(x){ var b2=bx[REN_key(x)]; if(b2 && Number(b2.repasse_valor)>0 && !b2.repassado_em){ pendN++; pendV+=Number(b2.repasse_valor); } });
-    if(pendN) hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:9px;letter-spacing:2px;color:var(--red);font-weight:700;">A REPASSAR \u00b7 '+pendN+'</span><span style="font-size:12px;font-weight:700;color:var(--red);">'+HIST_fmtMoeda(pendV)+'</span></div>';
     if(!receb.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma parcela recebida ainda.</div>';
     else{
       var rs=receb.slice(); rs.sort(function(a,b){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b)].recebido_em||''); return av>bv?-1:1; });
@@ -8430,6 +8435,24 @@ function REN_render(){
   if(atr.length){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
     REN_ordena(atr).forEach(function(x){ hh+=card(x,true,false); });
+  }
+  var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && Number(b2.repasse_valor)>0 && !b2.repassado_em; });
+  if(repPend.length){
+    repPend.sort(function(a,b2){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b2)].recebido_em||''); return av<bv?-1:1; });
+    var repTot=0; repPend.forEach(function(x){ repTot+=Number(bx[REN_key(x)].repasse_valor)||0; });
+    hh+=secHdr('A REPASSAR \u00b7 '+repPend.length, HIST_fmtMoeda(repTot), true);
+    repPend.forEach(function(x){
+      var b2=bx[REN_key(x)], k2=REN_key(x);
+      var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
+      var dr=String(b2.recebido_em||x.venc).slice(0,10);
+      hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
+        +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
+        +'<div style="font-size:12px;font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx);">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+' \u00b7 <span style="color:var(--red);">'+HIST_fmtMoeda(Number(b2.repasse_valor))+'</span></div>'
+        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
+        +'</div>'
+        +'<button onclick="REN_repQuick(this,\''+k2+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
+        +'</div>';
+    });
   }
   hh+=secHdr('A VENCER \u00b7 '+venc.length, '');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
@@ -8603,6 +8626,15 @@ function REN_desfazFicha(k){
   if(!confirm(msg)) return;
   var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
   REN_desfazDireto(b.id);
+}
+function REN_repQuick(btn, k){
+  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
+  sb.from('parcela_baixas').update({repassado_em:new Date().toISOString()}).eq('id', b.id).then(function(res){
+    if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+    try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', '', HIST_fmtMoeda(Number(b.repasse_valor)||0)); }catch(e){}
+    VB_toast('Repasse registrado.'); REN_abrir();
+  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_repassar(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -12278,6 +12310,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Rateio do sócio CORRIGIDO (VB pegou): a fatia usava só o capital do sócio (valor_socio) e esquecia o lucro dele. Agora é (capital do sócio + lucro do sócio) ÷ valor da venda — sócio com 50% do relógio e 50% do lucro recebe exatamente metade de cada parcela, como manda a intuição. Consignação preservada: o valor do consignante já é o total dele. Vale pra tudo que deriva daí: linha da ficha, repasse pendente das próximas baixas e o valor sugerido no REPASSAR AO SÓCIO. Baixas antigas guardam o valor antigo — edita no EDITAR REPASSE se precisar</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Repasse mudou de casa: pendência escondida em CONCLUÍDAS contrariava a regra da fila — agora o bloco A REPASSAR mora na ENTRADAS, entre ATRASADAS e A VENCER, com total em vermelho. Card no formato SÓCIO · R$ valor, com cliente/parcela/data do recebimento embaixo, ✓ de dois toques marcando o repasse na hora (com o horário real) e toque abrindo a ficha pra ajustar valor/data/nota. Mais antigo primeiro — a dívida que envelhece sobe. O strip da CONCLUÍDAS saiu (redundante); os cards de lá seguem marcando REPASSE PENDENTE/repassado</div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.145.0</span><span class="cl-ver-date">20/07/2026</span></div>
