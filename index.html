@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.153.1</title>
+<title>VB - v1.154.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8235,7 +8235,7 @@ var VB_cliBase=null, VB_cliBaseTs=0;
 function VB_cliNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
 function VB_cliCarregar(cb){
   if(VB_cliBase && (Date.now()-VB_cliBaseTs)<120000){ cb(VB_cliBase); return; }
-  sb.from('clientes').select('id,nome').order('nome',{ascending:true}).limit(2000).then(function(res){
+  sb.from('clientes').select('id,nome,ativo').order('nome',{ascending:true}).limit(2000).then(function(res){
     if(!res.error){ VB_cliBase=res.data||[]; VB_cliBaseTs=Date.now(); }
     cb(VB_cliBase||[]);
   }).catch(function(){ cb(VB_cliBase||[]); });
@@ -8272,8 +8272,16 @@ function VB_cliAttach(inputId){
 function VB_cliOferecerCadastro(nome){
   var alvo=String(nome||'').trim(); if(!alvo) return;
   VB_cliCarregar(function(lista){
-    var ja=(lista||[]).some(function(c){ return VB_cliNorm(c.nome)===VB_cliNorm(alvo); });
-    if(ja) return;
+    var hit=null;
+    (lista||[]).some(function(c){ if(VB_cliNorm(c.nome)===VB_cliNorm(alvo)){ hit=c; return true; } return false; });
+    if(hit){
+      if(hit.ativo===false){
+        sb.from('clientes').update({ativo:true}).eq('id',hit.id).then(function(res){
+          if(!res.error){ VB_cliBase=null; VB_toast('Cliente ativado no cadastro (veio do reservatório SPC).'); VB_log('CLIENTES','ativou', hit.nome, 'primeira operação'); }
+        }).catch(function(){});
+      }
+      return;
+    }
     var ov=document.getElementById('vb-cli-novo');
     if(!ov){ ov=document.createElement('div'); ov.id='vb-cli-novo';
       ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100021;display:none;align-items:flex-end;justify-content:center;';
@@ -11422,7 +11430,7 @@ function CLI_decQual(c){
   return [q[0]||'', q[1]||'', q.slice(2).join(', ')||''];
 }
 function CLI_load(){
-  sb.from('clientes').select('*').order('nome',{ascending:true}).then(function(res){
+  sb.from('clientes').select('*').or('ativo.is.null,ativo.eq.true').order('nome',{ascending:true}).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
     CLI_rows=res.data||[]; CLI_render();
   });
@@ -12438,6 +12446,7 @@ function CTR_gerar(ov){
       if(CTR_cliSel){
         // cliente veio do cadastro: se você corrigiu algo no sheet, o cadastro é atualizado junto
         var _mudou=Object.keys(_pay).some(function(k){ return String(_pay[k]||'')!==String(CTR_cliSel[k]||''); });
+        if(CTR_cliSel.ativo===false){ _pay.ativo=true; _mudou=true; } // contrato = negócio real: sai do reservatório
         if(_mudou){
           var _det=VB_logDiff(CTR_cliSel,_pay)||'';
           sb.from('clientes').update(_pay).eq('id',CTR_cliSel.id).then(function(res2){
@@ -12467,6 +12476,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.154.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">RESERVATÓRIO SPC: as ~459 pessoas e empresas extraídas das consultas de SPC entram na base de clientes com ativo=false — invisíveis na lista de GESTÃO › CLIENTES, mas vivas nas sugestões de cliente da Venda, da Antecipação e na busca do Contrato. Requer rodar 2 SQLs no Supabase: spc_colunas.sql (colunas ativo/origem/tipo/telefone/email/spc) e spc_import.sql (os 459, reexecutável, quem já existe é pulado)</div>
+      <div class="cl-item">Promoção automática: a primeira operação real confirmada (venda ou antecipação — simulação não conta) ou contrato gerado com nome do reservatório ativa o cliente sozinho, com toast avisando. A folha CADASTRAR NA BASE ficou só pra nome que não existe em lugar nenhum. Bônus: o contrato já puxa CPF e endereço completos vindos do SPC — qualificação sem digitação pros 305 PF</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.153.1</span><span class="cl-ver-date">20/07/2026</span></div>
