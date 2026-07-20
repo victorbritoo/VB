@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.154.0</title>
+<title>VB - v1.155.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1348,6 +1348,10 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     </div>
   </div>
   <hr class="divider">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+    <button id="cli-aba-atv" onclick="CLI_setAba('ativos')" style="padding:8px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ATIVOS</button>
+    <button id="cli-aba-res" onclick="CLI_setAba('res')" style="padding:8px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">RESERVATÓRIO</button>
+  </div>
   <div id="cli-busca-wrap" style="display:none;margin-bottom:8px;">
     <input id="cli-busca" placeholder="BUSCAR NOME OU CPF" oninput="CLI_render()" style="width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;">
   </div>
@@ -4492,7 +4496,7 @@ function showScreen(name){
   if(name==='rec'){ REC_load(); }
   if(name==='mer'){ MER_load(); }
   if(name==='soc'){ SOC_load(); VB_telaAnterior='ges'; }
-  if(name==='cli'){ CLI_load(); VB_telaAnterior='ges'; }
+  if(name==='cli'){ CLI_aba='ativos'; CLI_pintaAbas(); var _fo=document.getElementById('cli-form-open'); if(_fo) _fo.style.display='flex'; CLI_load(); VB_telaAnterior='ges'; }
   if(name==='ges'){ VB_telaAnterior='home'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
   if(name==='ren'){ REN_abrir(); VB_telaAnterior='home'; }
@@ -11429,6 +11433,93 @@ function CLI_decQual(c){
   var q=(c.qualificacao||'').split(',').map(function(s){return s.trim();});
   return [q[0]||'', q[1]||'', q.slice(2).join(', ')||''];
 }
+var CLI_aba='ativos', CLI_resRows=null;
+function CLI_pintaAbas(){
+  var on='padding:8px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+  var off='padding:8px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
+  var bA=document.getElementById('cli-aba-atv'), bR=document.getElementById('cli-aba-res');
+  if(bA&&bR){ bA.style.cssText=(CLI_aba==='ativos')?on:off; bR.style.cssText=(CLI_aba==='res')?on:off; }
+}
+function CLI_setAba(a){
+  CLI_aba=a; CLI_pintaAbas();
+  var fo=document.getElementById('cli-form-open'); if(fo) fo.style.display=(a==='ativos')?'flex':'none';
+  if(a!=='ativos'){ var f=document.getElementById('cli-form'); if(f) f.style.display='none';
+    var w=document.getElementById('cli-busca-wrap'); if(w) w.style.display='block';
+    if(CLI_resRows===null){ CLI_resLoad(); return; } }
+  CLI_render();
+}
+function CLI_resLoad(){
+  var el=document.getElementById('cli-lista'); if(el) el.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;margin-top:20px;">Carregando...</div>';
+  sb.from('clientes').select('*').eq('ativo',false).order('nome',{ascending:true}).limit(2000).then(function(res){
+    if(res.error){ VB_toast('Erro: '+res.error.message); return; }
+    CLI_resRows=res.data||[];
+    var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length;
+    CLI_render();
+  }).catch(function(){ VB_toast('Sem conexão.'); });
+}
+function CLI_resRender(el,q){
+  var rows=(CLI_resRows||[]).slice();
+  if(q){ rows=rows.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }); }
+  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Reservatório vazio.')+'</div>'; return; }
+  var hh='';
+  rows.forEach(function(c){
+    var i=CLI_resRows.indexOf(c);
+    hh+='<div onclick="CLI_resFicha('+i+')" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:baseline;gap:8px;cursor:pointer;">'
+      +'<div style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CTR_esc(c.nome||'')+'</div>'
+      +(c.cidade?('<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);text-transform:uppercase;white-space:nowrap;">'+CTR_esc(c.cidade)+'</div>'):'')
+      +'</div>';
+  });
+  el.innerHTML=hh;
+}
+function CLI_resFicha(i){
+  var c=(CLI_resRows||[])[i]; if(!c) return;
+  var ov=document.getElementById('cli-res-ficha');
+  if(!ov){ ov=document.createElement('div'); ov.id='cli-res-ficha';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100022;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov); }
+  var spc=c.spc||{}; if(typeof spc==='string'){ try{ spc=JSON.parse(spc); }catch(e){ spc={}; } }
+  function li(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:0.5px solid var(--ln3);"><span style="font-size:9px;letter-spacing:1.5px;color:var(--so);font-weight:600;flex-shrink:0;padding-top:2px;">'+l+'</span><span style="font-size:12px;font-weight:600;color:var(--tx);text-align:right;text-transform:uppercase;word-break:break-word;">'+CTR_esc(v)+'</span></div>'):''; }
+  var end=[c.end1, c.numero?('Nº '+c.numero):null, c.end2].filter(Boolean).join(', ');
+  var cid=[c.bairro, c.cidade, c.uf].filter(Boolean).join(' · ');
+  var corpo=''
+    +li('TIPO', c.tipo==='pj'?'PESSOA JURÍDICA':'PESSOA FÍSICA')
+    +li(c.tipo==='pj'?'CNPJ':'CPF', c.cpf)
+    +li('DOCUMENTO', c.doc_num?((c.doc_tipo||'DOC')+' '+c.doc_num):null)
+    +li('TELEFONE', c.telefone)
+    +li('E-MAIL', c.email)
+    +li('ENDEREÇO', end)
+    +li('BAIRRO / CIDADE', cid)
+    +li('CEP', c.cep)
+    +li('NASCIMENTO', spc.nascimento)
+    +li('NOME DA MÃE', spc.mae)
+    +li('SITUAÇÃO CPF', spc.situacao_cpf)
+    +li('TEL. FIXO', spc.tel_fixo)
+    +li('FANTASIA', spc.fantasia)
+    +li('FUNDAÇÃO', spc.fundacao)
+    +li('ÚLTIMA CONSULTA', spc.ultima_consulta)
+    +li('QTD CONSULTAS', spc.qtd_consultas);
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;max-height:80vh;overflow-y:auto;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:4px;">RESERVATÓRIO SPC</div>'
+    +'<div style="text-align:center;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;text-transform:uppercase;">'+CTR_esc(c.nome||'')+'</div>'
+    +corpo
+    +'<button onclick="CLI_resAtivar('+i+')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:14px;font-family:-apple-system,sans-serif;">ATIVAR NO CADASTRO</button>'
+    +'<button onclick="document.getElementById(\'cli-res-ficha\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function CLI_resAtivar(i){
+  var c=(CLI_resRows||[])[i]; if(!c) return;
+  sb.from('clientes').update({ativo:true}).eq('id',c.id).then(function(res){
+    if(res.error){ VB_toast('Não ativou (sem conexão?).'); return; }
+    CLI_resRows.splice(i,1); VB_cliBase=null;
+    var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length;
+    var ov=document.getElementById('cli-res-ficha'); if(ov) ov.style.display='none';
+    VB_log('CLIENTES','ativou', c.nome, 'manual (reservatório)');
+    VB_toast('Cliente ativado no cadastro.');
+    CLI_load();
+  }).catch(function(){ VB_toast('Sem conexão.'); });
+}
 function CLI_load(){
   sb.from('clientes').select('*').or('ativo.is.null,ativo.eq.true').order('nome',{ascending:true}).then(function(res){
     if(res.error){ VB_toast('Erro: '+res.error.message); return; }
@@ -11438,6 +11529,7 @@ function CLI_load(){
 function CLI_render(){
   var el=document.getElementById('cli-lista'); if(!el) return;
   var q=((document.getElementById('cli-busca')||{}).value||'').toUpperCase();
+  if(CLI_aba==='res'){ CLI_resRender(el,q); return; }
   var rows=CLI_rows.slice();
   if(CLI_ordem==='recentes'){ rows.sort(function(a,b){ return String(b.created_at||'').localeCompare(String(a.created_at||'')); }); }
   if(q){ rows=rows.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }); }
@@ -12476,6 +12568,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.155.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">GESTÃO › CLIENTES ganhou abas: ATIVOS (sua lista de sempre) e RESERVATÓRIO · 452 (os do SPC). No reservatório a busca já abre aberta — nome ou CPF filtram ao vivo — e cada card mostra nome + cidade. Tocar abre a ficha de consulta: CPF/CNPJ, documento, telefone, e-mail, endereço completo e o bloco do SPC (nascimento, nome da mãe, situação do CPF, última consulta, qtd de consultas). Botão ATIVAR NO CADASTRO promove na mão, sem esperar a primeira operação. Ficha é só consulta — edição continua sendo privilégio de cliente ativo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.154.0</span><span class="cl-ver-date">20/07/2026</span></div>
