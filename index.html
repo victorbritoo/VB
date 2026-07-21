@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.173.1</title>
+<title>VB - v1.173.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12945,6 +12945,13 @@ function CTR_abrirForm(idx){
   try{
     sb.from('clientes').select('*').order('nome',{ascending:true}).then(function(res){
       if(!res.error && res.data) CTR_clientes=res.data;
+      // pré-preenche o DEVEDOR pelo cliente vinculado à venda (cliente_id; fallback: nome único)
+      try{
+        var _cli=null;
+        if(r.cliente_id!=null){ _cli=CTR_clientes.find(function(c){ return String(c.id)===String(r.cliente_id); }); }
+        if(!_cli && r.cliente){ var _m=CTR_clientes.filter(function(c){ return VB_cliNorm(c.nome)===VB_cliNorm(r.cliente); }); if(_m.length===1) _cli=_m[0]; }
+        if(_cli){ CTR_pegaCli(CTR_clientes.indexOf(_cli)); }
+      }catch(e){}
     });
   }catch(e){}
 }
@@ -13079,6 +13086,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.173.2</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Contrato agora puxa o cliente sozinho. Ao gerar contrato pelo card da venda, o DEVEDOR (nome, CPF, qualificação, documento, endereço completo) vem preenchido a partir do cliente vinculado à venda — resolvido pelo cliente_id (e, na falta, pelo nome quando é único). Antes abria tudo em branco e obrigava a buscar o cliente de novo, mesmo ele já estando cadastrado. Você ainda pode editar antes de gerar; as edições continuam sincronizando de volta pra ficha do cliente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.173.1</span><span class="cl-ver-date">21/07/2026</span></div>
