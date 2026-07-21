@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.167.1</title>
+<title>VB - v1.168.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3035,6 +3035,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   var horaStr=('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
   function _num(v){ var t=HIST_fmtMoeda(Number(v)||0); return String(t).replace(/^R\$\s*/,''); }
   function money(v){ return (v==null||v==='')?'—':'R$ '+_num(v); }
+  function moneyC(v){ if(v==null||v==='') return '—'; var s=_num(v); return 'R$ '+s.replace(/,00$/,''); } // centavos só quando existem
   function dt(v){ var d=HIST_fmtData(v); return (d&&d!=='--')?d:'—'; }
   function byDate(field){ return function(a,b){ var x=(a[field]||''),y=(b[field]||''); return x<y?-1:x>y?1:0; }; }
   function sum(arr,f){ return (arr||[]).reduce(function(a,r){ return a+(Number(f(r))||0); },0); }
@@ -3150,7 +3151,7 @@ function VB_relatorioPDF(dados, total, returnImages){
              {h:'Venda', x:345, w:84, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Custo', x:433, w:84, r:1, get:function(r){return (r.custo!=null)?money(r.custo):'—';}},
              {h:'Lucro', x:521, w:114, r:1, get:function(r){ if(r.custo==null) return '—'; var c=Number(r.custo)||0; var l=Number(r.valor_total||0)-c; return money(l)+(c>0?(' ('+Math.round(l/c*100)+'%)'):''); }},
-             {h:'Lucro VB', x:639, w:78, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return money(l*vPctVB(r)/100); }},
+             {h:'Lucro VB', x:639, w:78, r:1, get:function(r){ if(r.custo==null) return '—'; var l=Number(r.valor_total||0)-Number(r.custo||0); return moneyC(l*vPctVB(r)/100); }},
              {h:'Rend a.m.', x:721, w:59, r:1, get:function(r){ var v=vRend(r); return (v!=null)?(v.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'):'—'; }, cor:function(r){ var v=vRend(r); return (v!=null&&v<3.5)?'#c0392b':null; } } ],
       somaLabel:'TOTAL DE VENDAS', soma:function(r){return Number(r.valor_total)||0;},
       extraSelos:function(rows){
@@ -3329,24 +3330,24 @@ function VB_relatorioPDF(dados, total, returnImages){
 
   // fechamento: TOTAL GERAL
   (function(){
-    ensure(4 + 44 + 8 + (tAtraso>0?(34+8):0)); // reserva TOTAL GERAL + A COBRAR juntos: nunca separam nem geram página órfã
+    ensure(4 + 36 + 6 + (tAtraso>0?(28+6):0)); // reserva TOTAL GERAL + A COBRAR juntos, compactos: nunca separam nem geram página órfã
     var c=cur.ctx; cur.y+=4;
     var geral=tAnt+tFin+tVen; // volume de negócio; pagamentos são encontro de contas, ficam na seção deles
-    var boxW=W-2*pad, boxH=44, bx=pad, by=cur.y;
+    var boxW=W-2*pad, boxH=36, bx=pad, by=cur.y;
     c.fillStyle='#111'; c.fillRect(bx,by,boxW,boxH);
     c.fillStyle='#bbb'; c.font='700 9px -apple-system,Arial,sans-serif'; c.textAlign='left';
-    c.fillText('TOTAL GERAL  ·  '+total+' Opera'+(total===1?'ção':'ções'), bx+14, by+18);
-    c.fillStyle='#fff'; c.font='700 18px -apple-system,Arial,sans-serif'; c.textAlign='right';
-    c.fillText('R$ '+_num(geral), bx+boxW-14, by+29);
-    cur.y+=boxH+8;
+    c.fillText('TOTAL GERAL  ·  '+total+' Opera'+(total===1?'ção':'ções'), bx+14, by+15);
+    c.fillStyle='#fff'; c.font='700 17px -apple-system,Arial,sans-serif'; c.textAlign='right';
+    c.fillText('R$ '+_num(geral), bx+boxW-14, by+25);
+    cur.y+=boxH+6;
     if(tAtraso>0){
       var by2=cur.y;
-      c.strokeStyle='#c0392b'; c.lineWidth=1; c.strokeRect(bx,by2,boxW,34);
-      c.fillStyle='#c0392b'; c.font='700 9px -apple-system,Arial,sans-serif'; c.textAlign='left';
-      c.fillText('A COBRAR (ATRASADOS)', bx+14, by2+14);
-      c.font='700 15px -apple-system,Arial,sans-serif'; c.textAlign='right';
-      c.fillText('R$ '+_num(tAtraso), bx+boxW-14, by2+23);
-      cur.y+=34+8;
+      c.strokeStyle='#c0392b'; c.lineWidth=1; c.strokeRect(bx,by2,boxW,28);
+      c.fillStyle='#c0392b'; c.font='700 8px -apple-system,Arial,sans-serif'; c.textAlign='left';
+      c.fillText('A COBRAR (ATRASADOS)', bx+14, by2+12);
+      c.font='700 14px -apple-system,Arial,sans-serif'; c.textAlign='right';
+      c.fillText('R$ '+_num(tAtraso), bx+boxW-14, by2+20);
+      cur.y+=28+6;
     }
   })();
 
@@ -12900,6 +12901,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.168.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Lucro VB da tabela de vendas sem centavo redundante: R$ 12.500,00 vira R$ 12.500; centavos só aparecem quando existem de verdade (raro). Sem "K", sem arredondar — só solta o ",00". Demais colunas e todos os selos seguem com centavos</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.167.2</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Bloco de fecho compactado (94→76px) pra caber na página 1 depois dos Pagamentos — no relatório de hoje elimina a segunda folha que existia só pros totais</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.167.1</span><span class="cl-ver-date">21/07/2026</span></div>
