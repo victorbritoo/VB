@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.158.0</title>
+<title>VB - v1.160.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1445,7 +1445,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
   setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
-  setTimeout(function(){ try{ VB_autoteste(); }catch(e){} }, 4000);
+  setTimeout(function(){ try{ VB_autoteste(); VB_storageVigia(); }catch(e){} }, 4000);
 }
 function VB_showLogin(msg){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='flex';
@@ -2555,6 +2555,36 @@ function VB_shareJSON(dados, total, onDone){
   }catch(e){ onDone&&onDone(); }
 }
 // ===== Snapshot automático diário (vb_backups, retenção 14) =====
+/* === NÚCLEO ÚNICO DE DINHEIRO ===
+   Toda leitura de valor monetário passa por VB_dinheiroRaw (NaN se não há dígito).
+   As máscaras por módulo viram adaptadores finos (preservam o contrato de retorno
+   que os chamadores esperam: NaN, 0 ou null). Nova máscara na mão = errado. */
+function VB_dinheiroRaw(s){
+  if(typeof s==='number') return s;
+  var t=String(s==null?'':s).replace(/[R$\u00a0\s]/g,'');
+  var neg=t.indexOf('-')>=0;
+  t=t.replace(/[^0-9.,]/g,'');
+  if(!/[0-9]/.test(t)) return NaN;
+  t=t.replace(/\./g,'').replace(',', '.');
+  var n=parseFloat(t);
+  return neg?-n:n;
+}
+function VB_dinheiro(s){ var n=VB_dinheiroRaw(s); return isNaN(n)?0:n; }
+/* === VIGIA DO STORAGE (contratos assinados): checa 1x/semana, avisa acima de 400MB === */
+function VB_storageVigia(){
+  try{
+    var ult=Number(localStorage.getItem('vb_sto_chk')||0);
+    if(Date.now()-ult < 7*24*3600*1000) return;
+    sb.storage.from('contratos').list('', {limit:1000}).then(function(res){
+      localStorage.setItem('vb_sto_chk', String(Date.now()));
+      if(res.error||!res.data) return;
+      var tot=0; res.data.forEach(function(f){ tot+=Number((f.metadata&&f.metadata.size)||0); });
+      var mb=tot/1048576;
+      localStorage.setItem('vb_sto_mb', mb.toFixed(1));
+      if(mb>400) VB_toast('Storage do Supabase em '+mb.toFixed(0)+'MB de 500MB — hora de limpar contratos antigos ou subir de plano.');
+    }).catch(function(){});
+  }catch(e){}
+}
 /* === CONFERENTE DE BOOT (FASE 2): roda as regras canônicas com casos de resposta conhecida.
    Falhou = alguma função do app mudou de comportamento — os números das telas podem estar errados. === */
 var VB_autotesteFalhas=[];
@@ -2572,8 +2602,18 @@ function VB_autoteste(){
   });
   t('Termômetro de rendimento (VB_termometro)', function(){ var v=VB_termometro(1000,10000,2); return v!=null && Math.abs(v-5)<1e-9; });
   t('Leitura de dinheiro (PAG_parseBR)', function(){ return Math.abs(PAG_parseBR('1.234,56')-1234.56)<1e-9 && Math.abs(PAG_parseBR('10.000,00')-10000)<1e-9; });
+  t('Núcleo de dinheiro (VB_dinheiroRaw)', function(){ return Math.abs(VB_dinheiroRaw('R$ -1.234,56')+1234.56)<1e-9 && isNaN(VB_dinheiroRaw('')) && Math.abs(VB_dinheiro('abc'))<1e-9; });
+  t('Máscaras monetárias unificadas (9)', function(){
+    var ok=true; [ANT_parseBR,FIN_parseBR,VEN_parseBR,PAG_parseBR,QUIT_parseBR,INV_parseBR].forEach(function(f){ if(Math.abs(f('1.234,56')-1234.56)>1e-9) ok=false; });
+    return ok && Math.abs(REC_parseBR('1.234,56')-1234.56)<1e-9 && Math.abs(REN_num('1.234,56')-1234.56)<1e-9 && Math.abs(HIST_parseNum('1.234,56')-1234.56)<1e-9;
+  });
   t('Formatação de dinheiro (HIST_fmtMoeda)', function(){ var s=String(HIST_fmtMoeda(1234.56)).replace(/ /g,' '); return s.indexOf('1.234,56')>=0; });
   t('Rolagem de mês nas parcelas (REN_addMesISO)', function(){ return REN_addMesISO('2025-12-15',1)==='2026-01-15'; });
+  t('Identidade de cliente (VB_cliIdDe)', function(){
+    var bk=VB_cliBase; VB_cliBase=[{id:'1',nome:'JOAO SILVA'},{id:'2',nome:'MARIA'},{id:'3',nome:'MARIA'}];
+    var ok=(VB_cliIdDe('joao silva')==='1' && VB_cliIdDe('MARIA')===null && VB_cliIdDe('NINGUEM')===null);
+    VB_cliBase=bk; return ok;
+  });
   t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO'; });
   VB_autotesteFalhas=F;
   var el=document.getElementById('vb-autoteste'); if(el) el.style.display=F.length?'block':'none';
@@ -3520,10 +3560,7 @@ function HIST_dataNegDate(ymd){ if(!ymd) return null; var p=String(ymd).slice(0,
 // Converte "12.500,00" / "R$ 1.234" / "125" em número (ou null se não tiver dígito)
 function HIST_parseNum(s){
   if(!s) return null;
-  var t=(''+s).replace(/[^0-9.,]/g,'');
-  if(!/[0-9]/.test(t)) return null;
-  t=t.replace(/\./g,'').replace(',', '.');
-  var n=parseFloat(t);
+  var n=VB_dinheiroRaw(s);
   return isNaN(n)?null:n;
 }
 
@@ -4530,8 +4567,8 @@ function showScreen(name){
     if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
-  if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); }
-  if(name==='ven'){ VB_cliAttach('ven-cliente'); }
+  if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
+  if(name==='ven'){ VB_cliAttach('ven-cliente'); VB_cliCarregar(function(){}); }
   if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_expAbertos={};
     HIST_searchOpen=false; HIST_searchGlobal=false; HIST_searchTerm='';
     var _hs=document.getElementById('hist-search'); if(_hs) _hs.value='';
@@ -4614,7 +4651,7 @@ function autoCompleteDate(el){
 
 /* === FINANCIAMENTOS JS === */
 
-function FIN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function FIN_parseBR(s){ return VB_dinheiroRaw(s); }
 function FIN_formatBR(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function FIN_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
 
@@ -5256,7 +5293,7 @@ FIN_restoreSession();
 
 /* === VENDAS JS === */
 
-function VEN_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function VEN_parseBR(s){ return VB_dinheiroRaw(s); }
 function VEN_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function VEN_maskVal(el, cb){
   el.addEventListener('input', function(){
@@ -5870,6 +5907,7 @@ function VEN_confirmarOperacao(btn){
     data_venda: (function(){ var v=(document.getElementById('ven-dataVenda').value||'').trim(); var iso=v?toISO(v):null; if(iso) return iso; var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })(),
     custo: (function(){ var c=VEN_parseBR(document.getElementById('ven-custo').value); return (!isNaN(c)&&c>0)?c:null; })(),
     cliente: (document.getElementById('ven-cliente').value||'').trim().toUpperCase()||null,
+    cliente_id: VB_cliIdDe((document.getElementById('ven-cliente').value||'').trim()),
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
     lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null,
@@ -5955,7 +5993,7 @@ function VEN_codeB32(){ return 'VBVEN2:'+_b32enc(JSON.stringify(VEN_serializar()
 
 /* === ANTECIPAÇÃO JS === */
 
-function ANT_parseBR(s){return parseFloat((s||'').replace(/\./g,'').replace(',','.'))}
+function ANT_parseBR(s){ return VB_dinheiroRaw(s); }
 function ANT_formatBR(n){return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function ANT_maskVal(el,cb){
   el.addEventListener('input',function(){
@@ -6708,6 +6746,7 @@ function ANT_confirmarOperacao(btn){
 
   var row={
     cliente: cliente||null,
+    cliente_id: VB_cliIdDe(cliente),
     data_operacao: toISO(dataOpStr),
     modo: modo,
     simulacao: (typeof ANT_simFlag!=='undefined'?!!ANT_simFlag:false),
@@ -7196,7 +7235,7 @@ ANT_initData();
 var PAG_pagamentos = [];
 var PAG_counter = 0;
 
-function PAG_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function PAG_parseBR(s){ return VB_dinheiroRaw(s); }
 function PAG_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function PAG_maskVal(el, cb){
   el.addEventListener('input',function(){
@@ -8350,6 +8389,14 @@ function VB_cliAttach(inputId){
   el.addEventListener('focus', function(){ VB_cliCarregar(function(){}); render(); });
   el.addEventListener('blur', function(){ setTimeout(VB_cliSugFechar,250); });
 }
+function VB_cliIdDe(nome){
+  try{
+    var alvo=VB_cliNorm(nome); if(!alvo || !VB_cliBase) return null;
+    var hit=null, n=0;
+    VB_cliBase.forEach(function(c){ if(VB_cliNorm(c.nome)===alvo){ hit=c; n++; } });
+    return (n===1 && hit)?String(hit.id):null; // homônimo na base = não chuta
+  }catch(e){ return null; }
+}
 function VB_cliOferecerCadastro(nome){
   var alvo=String(nome||'').trim(); if(!alvo) return;
   VB_cliCarregar(function(lista){
@@ -8497,7 +8544,7 @@ function REN_addMesISO(iso, k){
   var last=new Date(y, m, 0).getDate(); if(d>last) d=last;
   return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
 }
-function REN_num(x){ if(typeof x==='number') return x; var n=Number(String(x||'').replace(/\./g,'').replace(',','.')); return isFinite(n)?n:(Number(x)||0); }
+function REN_num(x){ if(typeof x==='number') return x; var n=VB_dinheiroRaw(x); return isFinite(n)?n:0; }
 function VB_nomePU(nome){
   var s=String(nome||'').trim(); if(!s) return s;
   var ps=s.split(/\s+/);
@@ -10465,7 +10512,7 @@ document.addEventListener('touchstart', function(e){
 }, { passive: true });
 
 /* === QUITAÇÃO JS === */
-function QUIT_parseBR(s){ return parseFloat((s||'').replace(/[.]/g,'').replace(',','.')); }
+function QUIT_parseBR(s){ return VB_dinheiroRaw(s); }
 function QUIT_formatBR(n){ return isNaN(n)||n==null?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function QUIT_fmtDate(iso){
   if(!iso||iso.length<10) return '';
@@ -10700,7 +10747,7 @@ function QUIT_fecharTabela(){
 }
 
 /* === INVESTIDOR JS === */
-function INV_parseBR(s){ return parseFloat((s||'').replace(/\./g,'').replace(',','.')); }
+function INV_parseBR(s){ return VB_dinheiroRaw(s); }
 function INV_formatBR(n){ return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function INV_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
 function INV_round2(x){ return Math.round(x*100)/100; }
@@ -10968,7 +11015,7 @@ var REC_taCss='width:100%;min-height:44px;border:0.5px solid var(--ln);border-ra
 
 function REC_money(n){ n=Number(n)||0; return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function REC_valStr(n){ return (n!=null&&n!=='')?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
-function REC_parseBR(s){ if(s==null) return 0; s=(''+s).trim().replace(/\./g,'').replace(',','.'); var v=parseFloat(s); return isNaN(v)?0:v; }
+function REC_parseBR(s){ return VB_dinheiro(s); }
 function REC_esc(s){ return (s==null?'':(''+s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function REC_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function REC_isoToBR(iso){ if(!iso) return ''; var p=(''+iso).split('-'); if(p.length!==3) return ''; return p[2]+'/'+p[1]+'/'+p[0]; }
@@ -12691,6 +12738,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.160.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">SEGURANÇA FASE 3 (parte 1) — identidade de cliente por número: vendas e antecipações novas gravam cliente_id junto do nome, resolvido pela base quando o casamento é inequívoco (nome que existe uma vez só; homônimo não chuta e fica null). O nome vira etiqueta; a identidade é o número. Requer 1 SQL (colunas cliente_id). Parte 2 será a migração assistida do passado + Panorama preferindo o id</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.159.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Núcleo único de dinheiro: as 9 máscaras que liam "R$ 1.234,56" cada uma do seu jeito agora são adaptadores finos de UMA função central (VB_dinheiroRaw) — mesma leitura de dígitos em todo o app, contratos de retorno preservados (nenhum chamador muda). O conferente de boot ganhou 2 provas novas: o núcleo e a equivalência das 9</div>
+      <div class="cl-item">Vigia do Storage: 1x por semana o app mede o espaço dos contratos assinados no Supabase; passou de 400MB (dos 500 do plano grátis), toast avisando pra limpar ou subir de plano. Silêncio enquanto há folga</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.158.0</span><span class="cl-ver-date">20/07/2026</span></div>
