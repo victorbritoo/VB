@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.157.0</title>
+<title>VB - v1.158.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -448,6 +448,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
     <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.152.0<br>20/07/2026</div>
+    <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
@@ -1444,6 +1445,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
   setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
+  setTimeout(function(){ try{ VB_autoteste(); }catch(e){} }, 4000);
 }
 function VB_showLogin(msg){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='flex';
@@ -2553,6 +2555,45 @@ function VB_shareJSON(dados, total, onDone){
   }catch(e){ onDone&&onDone(); }
 }
 // ===== Snapshot automático diário (vb_backups, retenção 14) =====
+/* === CONFERENTE DE BOOT (FASE 2): roda as regras canônicas com casos de resposta conhecida.
+   Falhou = alguma função do app mudou de comportamento — os números das telas podem estar errados. === */
+var VB_autotesteFalhas=[];
+function VB_autoteste(){
+  var F=[];
+  function t(nome,fn){ try{ if(fn()!==true) F.push(nome); }catch(e){ F.push(nome+' — erro: '+((e&&e.message)||e)); } }
+  t('Filtro central de simulação (VB_antReais)', function(){ return VB_antReais([{simulacao:true},{a:1},{simulacao:false}]).length===2; });
+  t('Recebimentos ignora simulação (REN_coleta)', function(){
+    var sim={id:'t1',simulacao:true,valor_bruto:110,valor_liquido:100,cliente:'TESTE',nome:'TESTE',titulos:[{v:'50,00',d:'01/01/2027'},{v:'60,00',d:'01/02/2027'}]};
+    var real={id:'t2',valor_bruto:110,valor_liquido:100,cliente:'TESTE',nome:'TESTE',titulos:[{v:'50,00',d:'01/01/2027'},{v:'60,00',d:'01/02/2027'}]};
+    return REN_coleta([sim],[],[]).length===0 && REN_coleta([real],[],[]).length===2;
+  });
+  t('Regra canônica de consignação (VB_consigVen)', function(){
+    return VB_consigVen('X',10000,10000,100)===true && VB_consigVen('X',5000,10000,50)===false && VB_consigVen('X',10000,10000,50)===false;
+  });
+  t('Termômetro de rendimento (VB_termometro)', function(){ var v=VB_termometro(1000,10000,2); return v!=null && Math.abs(v-5)<1e-9; });
+  t('Leitura de dinheiro (PAG_parseBR)', function(){ return Math.abs(PAG_parseBR('1.234,56')-1234.56)<1e-9 && Math.abs(PAG_parseBR('10.000,00')-10000)<1e-9; });
+  t('Formatação de dinheiro (HIST_fmtMoeda)', function(){ var s=String(HIST_fmtMoeda(1234.56)).replace(/ /g,' '); return s.indexOf('1.234,56')>=0; });
+  t('Rolagem de mês nas parcelas (REN_addMesISO)', function(){ return REN_addMesISO('2025-12-15',1)==='2026-01-15'; });
+  t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO'; });
+  VB_autotesteFalhas=F;
+  var el=document.getElementById('vb-autoteste'); if(el) el.style.display=F.length?'block':'none';
+  if(F.length){ try{ console.warn('VB autoteste:', F); }catch(e){} }
+}
+function VB_autotesteDetalhe(){
+  if(!VB_autotesteFalhas.length){ VB_toast('Conferência em dia.'); return; }
+  var ov=document.getElementById('vb-autoteste-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='vb-autoteste-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100025;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov); }
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--red);font-weight:700;margin-bottom:10px;">CONFERÊNCIA DIVERGIU</div>'
+    +'<div style="font-size:12px;color:var(--tx);line-height:1.6;">'+VB_autotesteFalhas.map(function(f){ return '• '+CTR_esc(f); }).join('<br>')+'</div>'
+    +'<div style="font-size:11px;color:var(--mu2);margin-top:10px;line-height:1.5;">Uma regra interna não está se comportando como esperado — os números das telas podem estar errados. Me mostra esta lista no chat antes de confiar neles.</div>'
+    +'<button onclick="document.getElementById(\'vb-autoteste-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:14px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
 function VB_snapshotAuto(){
   try{
     sb.from('vb_backups').select('created_at').order('created_at',{ascending:false}).limit(1).then(function(res){
@@ -12650,6 +12691,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.158.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">SEGURANÇA FASE 2 — conferente de boot: 4s depois de abrir, o app roda 8 provas com resposta conhecida nas próprias regras que calculam suas telas (filtro de simulação, Recebimentos, consignação, termômetro, leitura e formatação de dinheiro, rolagem de mês das parcelas, nome curto). Tudo certo = silêncio total. Qualquer prova falhando = botão vermelho CONFERÊNCIA DIVERGIU na Home, que abre a lista do que não bateu pra você me mostrar. É o app conferindo a si mesmo antes de você confiar nos números</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.157.0</span><span class="cl-ver-date">20/07/2026</span></div>
