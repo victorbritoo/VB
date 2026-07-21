@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.161.0</title>
+<title>VB - v1.163.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1334,7 +1334,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <button onclick="showScreen('soc')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Sócios</span></button>
   <button onclick="showScreen('cli')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Clientes</span></button>
   <button onclick="showScreen('con')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Contratos</span></button>
-  <button onclick="MIG_abrir()" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Identidade</span></button>
+  <button id="ges-btn-mig" onclick="MIG_abrir()" style="display:none;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Identidade</span></button>
 </div>
 </div>
 
@@ -1446,7 +1446,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
   setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
-  setTimeout(function(){ try{ VB_autoteste(); VB_storageVigia(); }catch(e){} }, 4000);
+  setTimeout(function(){ try{ VB_autoteste(); VB_storageVigia(); MIG_silencioso(); }catch(e){} }, 4000);
 }
 function VB_showLogin(msg){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='flex';
@@ -4593,7 +4593,7 @@ function showScreen(name){
     CLI_buscaOn=false; var _cw=document.getElementById('cli-busca-wrap'); if(_cw) _cw.style.display='none';
     var _cb=document.getElementById('cli-busca'); if(_cb) _cb.value='';
     CLI_load(); VB_telaAnterior='ges'; }
-  if(name==='ges'){ VB_telaAnterior='home'; }
+  if(name==='ges'){ VB_telaAnterior='home'; var _bm=document.getElementById('ges-btn-mig'); if(_bm) _bm.style.display=(Number(localStorage.getItem('vb_mig_duv')||0)>0)?'flex':'none'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
   if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
@@ -8372,31 +8372,57 @@ function MIG_abrir(){
   ov.style.display='flex';
   MIG_carregar();
 }
-function MIG_carregar(){
-  Promise.all([
+function MIG_fetch(){
+  return Promise.all([
     sb.from('vendas').select('id,cliente,data_venda,valor_total').is('cliente_id',null).limit(10000),
     sb.from('antecipacoes').select('id,cliente,nome,data_operacao,valor_liquido').is('cliente_id',null).limit(10000),
     sb.from('clientes').select('id,nome,ativo').limit(3000)
-  ]).then(function(res){
-    var base=res[2].data||[];
-    MIG_autosLista=[]; MIG_duvidas=[]; MIG_semN=0;
-    (res[0].data||[]).forEach(function(r){ if(!r.cliente) return; var c=VB_migraCasa(r.cliente, base);
-      if(c.tipo==='auto') MIG_autosLista.push({tab:'ven',opId:r.id,cliId:String(c.hits[0].id)});
-      else if(c.tipo==='duvida') MIG_duvidas.push({tab:'ven',opId:r.id,nome:r.cliente,data:r.data_venda,valor:r.valor_total,hits:c.hits});
-      else MIG_semN++; });
-    (res[1].data||[]).forEach(function(r){ var nm=r.cliente||r.nome; if(!nm) return; var c=VB_migraCasa(nm, base);
-      if(c.tipo==='auto') MIG_autosLista.push({tab:'ant',opId:r.id,cliId:String(c.hits[0].id)});
-      else if(c.tipo==='duvida') MIG_duvidas.push({tab:'ant',opId:r.id,nome:nm,data:r.data_operacao,valor:r.valor_liquido,hits:c.hits});
-      else MIG_semN++; });
+  ]);
+}
+function MIG_classifica(res){
+  var base=res[2].data||[], autos=[], duvidas=[], semN=0;
+  (res[0].data||[]).forEach(function(r){ if(!r.cliente) return; var c=VB_migraCasa(r.cliente, base);
+    if(c.tipo==='auto') autos.push({tab:'ven',opId:r.id,cliId:String(c.hits[0].id)});
+    else if(c.tipo==='duvida') duvidas.push({tab:'ven',opId:r.id,nome:r.cliente,data:r.data_venda,valor:r.valor_total,hits:c.hits});
+    else semN++; });
+  (res[1].data||[]).forEach(function(r){ var nm=r.cliente||r.nome; if(!nm) return; var c=VB_migraCasa(nm, base);
+    if(c.tipo==='auto') autos.push({tab:'ant',opId:r.id,cliId:String(c.hits[0].id)});
+    else if(c.tipo==='duvida') duvidas.push({tab:'ant',opId:r.id,nome:nm,data:r.data_operacao,valor:r.valor_liquido,hits:c.hits});
+    else semN++; });
+  return {autos:autos, duvidas:duvidas, semN:semN};
+}
+function MIG_hubAtualiza(nDuv){
+  try{ localStorage.setItem('vb_mig_duv', String(nDuv||0)); }catch(e){}
+  var b=document.getElementById('ges-btn-mig'); if(b) b.style.display=(nDuv>0)?'flex':'none';
+}
+function MIG_carregar(){
+  MIG_fetch().then(function(res){
+    var c=MIG_classifica(res);
+    MIG_autosLista=c.autos; MIG_duvidas=c.duvidas; MIG_semN=c.semN;
+    MIG_hubAtualiza(MIG_duvidas.length);
     MIG_render();
   }).catch(function(){ VB_toast('Sem conexão.'); });
+}
+function MIG_silencioso(){
+  try{
+    var ult=Number(localStorage.getItem('vb_mig_chk')||0);
+    if(Date.now()-ult < 7*24*3600*1000) return;
+    MIG_fetch().then(function(res){
+      try{ localStorage.setItem('vb_mig_chk', String(Date.now())); }catch(e){}
+      var c=MIG_classifica(res);
+      MIG_hubAtualiza(c.duvidas.length);
+      if(c.autos.length){
+        MIG_exec(c.autos, function(ok){ if(ok){ try{ VB_log('CLIENTES','carimbou', c.autos.length+' operaç'+(c.autos.length===1?'ão':'ões'), 'migração silenciosa'); }catch(e){} } });
+      }
+    }).catch(function(){});
+  }catch(e){}
 }
 function MIG_render(){
   var ov=MIG_ov();
   var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;max-height:85vh;overflow-y:auto;">';
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:6px;">IDENTIDADE DE CLIENTES</div>';
   if(!MIG_autosLista.length && !MIG_duvidas.length){
-    hh+='<div style="text-align:center;font-size:12px;color:var(--mu);line-height:1.6;padding:8px 0;">Tudo carimbado.'+(MIG_semN?('<br>'+MIG_semN+' operação'+(MIG_semN===1?'':'ões')+' sem cadastro correspondente — seguem pelo nome.'):'')+'</div>';
+    hh+='<div style="text-align:center;font-size:12px;color:var(--mu);line-height:1.6;padding:8px 0;">Tudo carimbado.'+(MIG_semN?('<br>'+MIG_semN+' operaç'+(MIG_semN===1?'ão':'ões')+' sem cadastro correspondente — seguem pelo nome.'):'')+'</div>';
   } else {
     hh+='<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+MIG_autosLista.length+' casamento'+(MIG_autosLista.length===1?'':'s')+' óbvio'+(MIG_autosLista.length===1?'':'s')+' · '+MIG_duvidas.length+' duvidoso'+(MIG_duvidas.length===1?'':'s')+' · '+MIG_semN+' sem cadastro</div>';
     if(MIG_autosLista.length){
@@ -8432,7 +8458,7 @@ function MIG_carimbarAutos(btn){
   if(btn){ btn.disabled=true; btn.textContent='CARIMBANDO...'; }
   var n=MIG_autosLista.length;
   MIG_exec(MIG_autosLista, function(ok){
-    if(ok){ VB_toast(n+' operação'+(n===1?'':'ões')+' carimbada'+(n===1?'':'s')+'.'); try{ VB_log('CLIENTES','carimbou', n+' operações', 'migração automática'); }catch(e){} }
+    if(ok){ VB_toast(n+' operaç'+(n===1?'ão':'ões')+' carimbada'+(n===1?'':'s')+'.'); try{ VB_log('CLIENTES','carimbou', n+' operações', 'migração automática'); }catch(e){} }
     MIG_carregar();
   });
 }
@@ -9265,7 +9291,20 @@ function FM_load(){
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
       var _dv3=FM_dados.lucroTotal-FM_dados.prevLucro;
-      if(Math.abs(_dv3)>=0.005) _dl='<div style="font-size:10px;font-weight:600;color:var(--acc-tx);opacity:0.65;margin-top:3px;text-align:right;">'+(_dv3>0?'\u2191 +':'\u2193 \u2212')+HIST_fmtMoeda(Math.abs(_dv3))+' vs m\u00eas anterior</div>';
+      var _mesesAb=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+      var _pRef=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
+      var _mAb=_mesesAb[_pRef.getMonth()];
+      var _hj=new Date();
+      var _corrente=(FM_ref.getFullYear()===_hj.getFullYear() && FM_ref.getMonth()===_hj.getMonth());
+      var _basePos=(FM_dados.prevLucro>0.005);
+      var _txt='';
+      if(_corrente && _dv3<-0.005 && _basePos){
+        _txt=Math.round(FM_dados.lucroTotal/FM_dados.prevLucro*100)+'% de '+_mAb; // meta: quanto do mês anterior já foi batido
+      } else if(Math.abs(_dv3)>=0.005){
+        var _pctTx=_basePos?(' \u00b7 '+(_dv3>0?'+':'\u2212')+Math.abs(Math.round(_dv3/FM_dados.prevLucro*100))+'%'):'';
+        _txt=(_dv3>0?'\u2191 ':'\u2193 ')+HIST_fmtMoeda(Math.abs(_dv3))+_pctTx+' vs '+_mAb;
+      }
+      if(_txt) _dl='<div style="font-size:10px;font-weight:600;color:var(--acc-tx);opacity:0.65;margin-top:3px;text-align:right;">'+_txt+'</div>';
     }
     hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>'+_dl+'</div>';
     if(FM_dados.rend!=null){
@@ -12844,6 +12883,21 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.163.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Linha de meta do LUCRO DO MÊS, números na frente: mês corrente ainda abaixo da barra mostra "82% de jun" (quanto do mês anterior já foi batido); bateu — ou mês fechado — mostra "↑ R$ 95.812,58 · +290% vs jun". Percentual só aparece com base positiva no mês anterior; sem base, fica só a seta e o valor</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.162.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Identidade virou automática: o botão sumiu do hub GESTÃO. 1x por semana, no boot, o app carimba sozinho e em silêncio os casamentos óbvios (cliente cadastrado depois da operação, por exemplo). O botão Identidade só reaparece quando existem DUVIDOSOS esperando sua decisão — e some de novo quando você zera. Critério da casa: só ocupa a tela o que muda uma decisão</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.161.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Plural corrigido na folha de Identidade ("operaçãoões" → "operações")</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.161.0</span><span class="cl-ver-date">20/07/2026</span></div>
