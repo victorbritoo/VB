@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.172.0</title>
+<title>VB - v1.172.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1737,8 +1737,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   }
   // detalhe expandível: grade 2 colunas (rótulo em cima, valor embaixo)
   if(temExp){
-    h += '<div id="hist-exp-'+idx+'" style="display:none;margin-top:7px;padding:7px 0 0 23px;border-top:0.5px solid var(--ln3);">';
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;">';
+    h += '<div id="hist-exp-'+idx+'" style="display:none;margin-top:5px;padding:5px 0 0 23px;border-top:0.5px solid var(--ln3);">';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">';
     campos.forEach(function(c){
       h += '<div'+(c.w?' style="grid-column:1/-1;"':'')+'><div style="font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:700;text-transform:uppercase;">'+HIST_esc(c.l)+'</div>'+
            '<div style="font-size:13px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_esc(c.v)+'</div></div>';
@@ -4276,9 +4276,7 @@ function HIST_renderRows(tab, rows){
     }
     if(r._tab) rowBadge=HIST_tipoLabel(rtab);
     if(campos.length){
-      var _nrm=campos.filter(function(c){return !c.w;}).length;
-      if(_nrm%2===0) campos.push({l:'', v:''}); // espaçador: SALVO sempre na coluna direita
-      campos.push({l:'Salvo', v:carimboStr});
+      campos.push({l:'Salvo', v:carimboStr}); // sem espaçador: campos sobem e ocupam o vazio
     }
     html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2, (rtab==='ven' && typeof _snM!=='undefined' && !!_snM), (rtab==='ven' && rowBadge==='S'));
   });
@@ -4602,6 +4600,7 @@ function showScreen(name){
   if(name==='home'){ VB_updateBackupStatus(); }
   if(name==='rec'){ REC_load(); }
   if(name==='mer'){
+    VB_telaAnterior='home'; // estoque é botão direto da Home: voltar sempre vai pra Home (corrige trap Estoque→Vendidos→Abrir Venda→Voltar)
     var _mw=document.getElementById('mer-busca-wrap'); if(_mw) _mw.style.display='none';
     var _mi=document.getElementById('mer-busca'); if(_mi) _mi.value='';
     var _mb=document.getElementById('mer-busca-toggle'); if(_mb){ _mb.style.background='var(--sf)'; _mb.style.color='var(--ink)'; _mb.style.borderColor='var(--ln)'; }
@@ -5609,9 +5608,9 @@ function VEN_renderParcelas(){
     obsRow.id='ven-obs-row-'+p.id;
     obsRow.innerHTML='<input type="text" data-pid="'+p.id+'" data-field="obs" placeholder="COMENTÁRIO..." onclick="if(!this.value)this.select()" value="'+(p.obs||'')+'" style="width:100%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
     var trocaRow=document.createElement('div');
-    trocaRow.style.cssText='display:'+(p.troca?'flex':'none')+';align-items:center;gap:6px;padding:3px 28px 0 28px;';
+    trocaRow.style.cssText='display:'+(p.troca?'flex':'none')+';align-items:center;justify-content:center;gap:6px;padding:3px 28px 0 28px;';
     trocaRow.id='ven-troca-row-'+p.id;
-    trocaRow.innerHTML='<span style="font-size:11px;color:var(--acc);flex-shrink:0;">⇄</span><input type="text" data-pid="'+p.id+'" data-field="trocaModelo" placeholder="MODELO DO RELÓGIO (OPCIONAL)" value="'+((p.troca&&p.troca.modelo)||'')+'" style="flex:1;min-width:0;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;">';
+    trocaRow.innerHTML='<span style="font-size:11px;color:var(--acc);flex-shrink:0;">⇄</span><input type="text" data-pid="'+p.id+'" data-field="trocaModelo" placeholder="MODELO DO RELÓGIO (OPCIONAL)" value="'+((p.troca&&p.troca.modelo)||'')+'" style="flex:0 1 auto;width:auto;min-width:170px;max-width:100%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
     wrap.appendChild(row);
     wrap.appendChild(obsRow);
     wrap.appendChild(trocaRow);
@@ -5747,7 +5746,7 @@ function VEN_gerarTabela(){
   // Canvas — calcula altura dinâmica incluindo linhas de obs
   var W=390, esc=3, padH=18, padV=12;
   var altVB=34, altTit=28, altHead=22, altTot=22, altObs=7;
-  var altEnt = VEN_trocaLinhas.length ? (14 + VEN_trocaLinhas.length*18 + 10) : 0;
+  var altEnt = VEN_trocaLinhas.length ? (VEN_trocaLinhas.length*19 + 12) : 0;
   var altRow = Math.min(26, Math.max(16, Math.floor((700-padV*2-altVB-altTit-altHead-altTot)/(n||1))));
   var fs = Math.min(12, Math.max(8, Math.floor(altRow*0.52)));
   // Pre-calc total row height with obs
@@ -5802,17 +5801,25 @@ function VEN_gerarTabela(){
   // Cliente: só o modelo, centralizado. Foto do sócio (VEN_socioExtra): mostra o valor também (verdade p/ contabilidade).
   if(VEN_trocaLinhas.length){
     var _entComValor = !!VEN_socioExtra;
-    ctx.fillStyle='#888'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText('ENTRADA — RELÓGIO EM TROCA', W/2, y+11);
-    y+=14;
+    var _entLab = 'ENTRADA — RELÓGIO EM TROCA: ';
+    var _entAvail = W - padH*2;
     VEN_trocaLinhas.forEach(function(t){
-      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-      var _txt = t.modelo + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
-      ctx.fillText(_txt, W/2, y+13);
-      y+=18;
+      var _val = t.modelo + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
+      var _fL = fs-1, _fV = fs;
+      ctx.font='600 '+_fL+'px Helvetica,Arial,sans-serif'; var _wL=ctx.measureText(_entLab).width;
+      ctx.font='700 '+_fV+'px Helvetica,Arial,sans-serif'; var _wV=ctx.measureText(_val).width;
+      var _tot=_wL+_wV;
+      if(_tot > _entAvail){ var _k=_entAvail/_tot; _fL=Math.max(7,_fL*_k); _fV=Math.max(7,_fV*_k);
+        ctx.font='600 '+_fL+'px Helvetica,Arial,sans-serif'; _wL=ctx.measureText(_entLab).width;
+        ctx.font='700 '+_fV+'px Helvetica,Arial,sans-serif'; _wV=ctx.measureText(_val).width; _tot=_wL+_wV; }
+      var _sx=(W-_tot)/2;
+      ctx.textAlign='left';
+      ctx.fillStyle='#888'; ctx.font='600 '+_fL+'px Helvetica,Arial,sans-serif'; ctx.fillText(_entLab, _sx, y+12);
+      ctx.fillStyle='#111'; ctx.font='700 '+_fV+'px Helvetica,Arial,sans-serif'; ctx.fillText(_val, _sx+_wL, y+12);
+      y+=19;
     });
     ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
-    ctx.beginPath(); ctx.moveTo(padH,y+3); ctx.lineTo(W-padH,y+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padH,y+2); ctx.lineTo(W-padH,y+2); ctx.stroke();
     y+=10;
   }
 
@@ -5850,10 +5857,14 @@ function VEN_gerarTabela(){
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altTot);
   ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
   ctx.beginPath(); ctx.moveTo(padH,y); ctx.lineTo(W-padH,y); ctx.stroke();
-  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif';
-  if(VEN_trocaLinhas.length){ ctx.textAlign='left'; ctx.fillText('SALDO A PAGAR', padH+4, y+altTot*0.68); }
-  else { ctx.textAlign='center'; ctx.fillText('Total', c1, y+altTot*0.68); }
-  ctx.textAlign='center';
+  if(VEN_trocaLinhas.length){
+    ctx.fillStyle='#555'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('SALDO A PAGAR', c1, y+altTot*0.68);
+  } else {
+    ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Total', c1, y+altTot*0.68);
+  }
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
   ctx.fillText('R$ '+VEN_formatBR(total), c2, y+altTot*0.68);
   var yTableBottom = y + altTot;
 
@@ -12990,6 +13001,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.2</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Quatro lapidações de layout. (1) Cards do Histórico mais compactos: saiu o espaçador vazio que empurrava o SALVO pra direita (os campos sobem e ocupam o vazio) e o respiro vertical entre campos diminuiu — card encolhe ~15-20%. Campos longos (Parcelas, Notas) seguem em largura cheia. (2) A tirinha da troca na lista de parcelas agora fica centralizada, igual ao comentário. (3) Na foto, a entrada virou uma linha só: "ENTRADA — RELÓGIO EM TROCA: MODELO" (rótulo cinza + modelo em negrito); na foto do sócio acrescenta "· R$ valor", e a fonte encolhe sozinha se a linha ficar larga demais. (4) O rodapé "SALDO A PAGAR" passou pra cor e peso do cabeçalho PARCELA/VALOR/DATA e alinhado na coluna PARCELA; o valor continua legível em negrito</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.1</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Corrigido o trap de navegação Estoque → Vendidos → Abrir Venda → Voltar, que prendia você na tela do Estoque sem deixar voltar pra Home. Causa: ao entrar no Estoque o app não reancorava o "voltar" na Home (todas as outras telas principais já faziam isso); depois de abrir uma venda a partir do Estoque, o voltar ficava apontando pro próprio Estoque. Agora o Estoque sempre volta pra Home, como os outros módulos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.0</span><span class="cl-ver-date">21/07/2026</span></div>
