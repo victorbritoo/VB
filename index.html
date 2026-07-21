@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.172.6</title>
+<title>VB - v1.172.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -483,7 +483,6 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
          <button onclick="PIN_request('rec')">Recebimentos</button> -->
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
-    <div onclick="VB_logout()" style="text-align:center;margin-top:14px;font-size:10px;color:var(--so2);letter-spacing:1px;cursor:pointer;font-family:-apple-system,sans-serif;">SAIR</div>
   </div>
 </div>
 
@@ -5726,13 +5725,24 @@ function VEN_gerarTabela(){
   var VEN_trocaLinhas = [];
 
   if(VEN_modoPersonalizado){
-    var _trc = VEN_parcelas.filter(function(p){ return p.troca && (VEN_parseBR(p.valor)||0)>0; });
-    var _csh = VEN_parcelas.filter(function(p){ return !p.troca && p.valor && p.data && p.data.length===10; });
-    if(_csh.length===0 && _trc.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
-    _csh.forEach(function(p, i){
-      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.obs||'') });
-    });
-    VEN_trocaLinhas = _trc.map(function(p){ return { modelo:((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'), sn:((p.troca.sn||'').toUpperCase()), valor:(VEN_parseBR(p.valor)||0) }; });
+    if(VEN_socioExtra){
+      // SÓCIO: panorama cheio — a troca vira uma linha anotada na lista (como o "(A VISTA)"), Total cheio. Sem ENTRADA/SALDO.
+      var _allp = VEN_parcelas.filter(function(p){ return (VEN_parseBR(p.valor)||0)>0 && ((p.data && p.data.length===10) || p.troca); });
+      if(_allp.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
+      _allp.forEach(function(p, i){
+        var _lab = (p.obs||'');
+        if(p.troca){ var _m=((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'); _lab = 'TROCA '+_m + (p.obs?(' · '+p.obs):''); }
+        linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: (p.data||''), obs: _lab });
+      });
+    } else {
+      var _trc = VEN_parcelas.filter(function(p){ return p.troca && (VEN_parseBR(p.valor)||0)>0; });
+      var _csh = VEN_parcelas.filter(function(p){ return !p.troca && p.valor && p.data && p.data.length===10; });
+      if(_csh.length===0 && _trc.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
+      _csh.forEach(function(p, i){
+        linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.obs||'') });
+      });
+      VEN_trocaLinhas = _trc.map(function(p){ return { modelo:((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'), sn:((p.troca.sn||'').toUpperCase()), valor:(VEN_parseBR(p.valor)||0) }; });
+    }
   } else {
     var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
     var n       = parseInt(document.getElementById('ven-qtd').value||'0');
@@ -6081,6 +6091,15 @@ function VEN_confirmarOperacao(btn){
           _i++; proximo();
         });
       })();
+    })();
+    // SN da troca desce pro estoque quando editado depois (venda -> estoque, só quando a venda tem SN preenchido)
+    (function(){
+      var vendaId=VEN_currentOperationId; if(!vendaId) return;
+      VEN_parcelas.forEach(function(p){
+        if(p.troca && p.troca.mid && (p.troca.sn||'').trim()){
+          sb.from('mercadorias').update({sn:(p.troca.sn||'').toUpperCase()}).eq('id', p.troca.mid).then(function(){});
+        }
+      });
     })();
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven'); // foto atualizada: sem falso alarme ao voltar depois de salvar
@@ -13012,6 +13031,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.8</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Foto do SÓCIO agora mostra a troca como parcela anotada, não como abatimento. Na tabela do cliente a troca segue escondida (ENTRADA no topo + SALDO A PAGAR, sem revelar o valor). Na foto do sócio, a troca vira uma linha na lista com "(TROCA MODELO)" embaixo do valor — igual ao "(A VISTA)" — e o rodapé mostra o Total cheio da venda (não o saldo). Assim o sócio vê o panorama: como e quanto está entrando, e a totalidade da venda. Os blocos RESUMO e SÓCIO embaixo seguem iguais</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.7</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Dois ajustes. (1) Removido o "SAIR" da Home. Você continua logado (a sessão persiste); só saiu o botão de deslogar manual. (2) SN da troca agora desce pro estoque também quando você edita a venda depois: antes o SN só ia pra peça na criação (primeiro save) — se você adicionava o SN numa edição posterior, o estoque não atualizava. Agora, ao salvar a venda, o SN da troca sincroniza com a peça no estoque sempre que a venda tiver SN preenchido (e nunca apaga um SN que você digitou direto no estoque, porque só sincroniza quando o campo da venda tem valor)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.6</span><span class="cl-ver-date">21/07/2026</span></div>
