@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.160.0</title>
+<title>VB - v1.161.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1334,6 +1334,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <button onclick="showScreen('soc')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Sócios</span></button>
   <button onclick="showScreen('cli')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Clientes</span></button>
   <button onclick="showScreen('con')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Contratos</span></button>
+  <button onclick="MIG_abrir()" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Identidade</span></button>
 </div>
 </div>
 
@@ -2609,6 +2610,10 @@ function VB_autoteste(){
   });
   t('Formatação de dinheiro (HIST_fmtMoeda)', function(){ var s=String(HIST_fmtMoeda(1234.56)).replace(/ /g,' '); return s.indexOf('1.234,56')>=0; });
   t('Rolagem de mês nas parcelas (REN_addMesISO)', function(){ return REN_addMesISO('2025-12-15',1)==='2026-01-15'; });
+  t('Casamento de migração (VB_migraCasa)', function(){
+    var base=[{id:'1',nome:'CLEVERSON'},{id:'2',nome:'TONY DU CARRO'},{id:'3',nome:'MARIA'},{id:'4',nome:'MARIA'}];
+    return VB_migraCasa('cleverson',base).tipo==='auto' && VB_migraCasa('TONY DUCARRO',base).tipo==='duvida' && VB_migraCasa('MARIA',base).tipo==='duvida' && VB_migraCasa('ZE',base).tipo==='sem';
+  });
   t('Identidade de cliente (VB_cliIdDe)', function(){
     var bk=VB_cliBase; VB_cliBase=[{id:'1',nome:'JOAO SILVA'},{id:'2',nome:'MARIA'},{id:'3',nome:'MARIA'}];
     var ok=(VB_cliIdDe('joao silva')==='1' && VB_cliIdDe('MARIA')===null && VB_cliIdDe('NINGUEM')===null);
@@ -8251,7 +8256,7 @@ function GLB_ir(tipo, id){
     }
     if(tipo==='cli'){
       // consulta por cima da busca: ativo abre o Panorama, reservatório abre a ficha SPC
-      if(r.ativo===false){ CLI_resFichaAbrir(r); } else { CLIP_abrir(r.nome); }
+      if(r.ativo===false){ CLI_resFichaAbrir(r); } else { CLIP_abrir(r.nome, r.id); }
       return;
     }
     if(tipo==='soc'){
@@ -8341,6 +8346,104 @@ function FM_mesDe(r, tab){
   var v = tab==='ant'?r.data_operacao : tab==='fin'?(r.data_operacao||r.data_inicio) : tab==='ven'?(r.data_venda||r.data_primeira_parcela||String(r.created_at||'').split('T')[0]) : String(r.created_at||'').split('T')[0];
   return v?String(v).slice(0,7):null;
 }
+/* === MIGRAÇÃO DE IDENTIDADE (FASE 3 parte 2): carimbar cliente_id no passado === */
+function VB_migraCasa(nomeOp, base){
+  var alvo=VB_cliNorm(nomeOp); if(!alvo) return {tipo:'sem', hits:[]};
+  function ns(s){ return VB_cliNorm(s).replace(/\s+/g,''); }
+  var exatos=(base||[]).filter(function(c){ return VB_cliNorm(c.nome)===alvo; });
+  if(exatos.length===1) return {tipo:'auto', hits:exatos};
+  if(exatos.length>1) return {tipo:'duvida', hits:exatos};
+  var frouxos=(base||[]).filter(function(c){ return ns(c.nome)===ns(nomeOp); });
+  if(frouxos.length) return {tipo:'duvida', hits:frouxos};
+  return {tipo:'sem', hits:[]};
+}
+var MIG_autosLista=[], MIG_duvidas=[], MIG_semN=0;
+function MIG_ov(){
+  var ov=document.getElementById('mig-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='mig-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100016;display:none;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov); }
+  return ov;
+}
+function MIG_abrir(){
+  var ov=MIG_ov();
+  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Analisando o passado...</div></div>';
+  ov.style.display='flex';
+  MIG_carregar();
+}
+function MIG_carregar(){
+  Promise.all([
+    sb.from('vendas').select('id,cliente,data_venda,valor_total').is('cliente_id',null).limit(10000),
+    sb.from('antecipacoes').select('id,cliente,nome,data_operacao,valor_liquido').is('cliente_id',null).limit(10000),
+    sb.from('clientes').select('id,nome,ativo').limit(3000)
+  ]).then(function(res){
+    var base=res[2].data||[];
+    MIG_autosLista=[]; MIG_duvidas=[]; MIG_semN=0;
+    (res[0].data||[]).forEach(function(r){ if(!r.cliente) return; var c=VB_migraCasa(r.cliente, base);
+      if(c.tipo==='auto') MIG_autosLista.push({tab:'ven',opId:r.id,cliId:String(c.hits[0].id)});
+      else if(c.tipo==='duvida') MIG_duvidas.push({tab:'ven',opId:r.id,nome:r.cliente,data:r.data_venda,valor:r.valor_total,hits:c.hits});
+      else MIG_semN++; });
+    (res[1].data||[]).forEach(function(r){ var nm=r.cliente||r.nome; if(!nm) return; var c=VB_migraCasa(nm, base);
+      if(c.tipo==='auto') MIG_autosLista.push({tab:'ant',opId:r.id,cliId:String(c.hits[0].id)});
+      else if(c.tipo==='duvida') MIG_duvidas.push({tab:'ant',opId:r.id,nome:nm,data:r.data_operacao,valor:r.valor_liquido,hits:c.hits});
+      else MIG_semN++; });
+    MIG_render();
+  }).catch(function(){ VB_toast('Sem conexão.'); });
+}
+function MIG_render(){
+  var ov=MIG_ov();
+  var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;max-height:85vh;overflow-y:auto;">';
+  hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:6px;">IDENTIDADE DE CLIENTES</div>';
+  if(!MIG_autosLista.length && !MIG_duvidas.length){
+    hh+='<div style="text-align:center;font-size:12px;color:var(--mu);line-height:1.6;padding:8px 0;">Tudo carimbado.'+(MIG_semN?('<br>'+MIG_semN+' operação'+(MIG_semN===1?'':'ões')+' sem cadastro correspondente — seguem pelo nome.'):'')+'</div>';
+  } else {
+    hh+='<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+MIG_autosLista.length+' casamento'+(MIG_autosLista.length===1?'':'s')+' óbvio'+(MIG_autosLista.length===1?'':'s')+' · '+MIG_duvidas.length+' duvidoso'+(MIG_duvidas.length===1?'':'s')+' · '+MIG_semN+' sem cadastro</div>';
+    if(MIG_autosLista.length){
+      hh+='<button onclick="MIG_carimbarAutos(this)" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:12px;font-family:-apple-system,sans-serif;">CARIMBAR OS '+MIG_autosLista.length+' ÓBVIOS</button>';
+    }
+    if(MIG_duvidas.length){
+      hh+='<div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:4px 0 8px;">DUVIDOSOS — VOCÊ DECIDE</div>';
+      MIG_duvidas.forEach(function(d,i){
+        hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 12px;margin-bottom:8px;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;">'+CTR_esc(d.nome)+GLB_badge(d.tab==='ven'?'V':'A')+'</div>'
+          +'<div style="font-size:10px;color:var(--so);margin:2px 0 8px;">'+(d.data?HIST_fmtData(String(d.data).slice(0,10)):'')+' · '+HIST_fmtMoeda(Number(d.valor)||0)+'</div>'
+          +d.hits.map(function(c2){ return '<button onclick="MIG_escolhe('+i+',\''+CTR_esc(String(c2.id)).replace(/\'/g,'')+'\')" style="display:block;width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;text-transform:uppercase;">É '+CTR_esc(c2.nome)+(c2.ativo===false?' <span style="font-size:8px;color:var(--mu2);">(SPC)</span>':'')+'</button>'; }).join('')
+          +'<button onclick="MIG_pula('+i+')" style="display:block;width:100%;padding:8px;border:none;border-radius:10px;background:transparent;color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">PULAR</button>'
+          +'</div>';
+      });
+    }
+  }
+  hh+='<button onclick="document.getElementById(\'mig-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button></div>';
+  ov.innerHTML=hh;
+}
+function MIG_exec(lista, fim){
+  var i=0;
+  function passo(){
+    if(i>=lista.length){ fim(true); return; }
+    var lote=lista.slice(i,i+10); i+=10;
+    Promise.all(lote.map(function(u){ return sb.from(u.tab==='ven'?'vendas':'antecipacoes').update({cliente_id:u.cliId}).eq('id',u.opId); }))
+      .then(passo)
+      .catch(function(){ VB_toast('Falhou no meio — abra de novo, continua de onde parou.'); fim(false); });
+  }
+  passo();
+}
+function MIG_carimbarAutos(btn){
+  if(btn){ btn.disabled=true; btn.textContent='CARIMBANDO...'; }
+  var n=MIG_autosLista.length;
+  MIG_exec(MIG_autosLista, function(ok){
+    if(ok){ VB_toast(n+' operação'+(n===1?'':'ões')+' carimbada'+(n===1?'':'s')+'.'); try{ VB_log('CLIENTES','carimbou', n+' operações', 'migração automática'); }catch(e){} }
+    MIG_carregar();
+  });
+}
+function MIG_escolhe(i, cliId){
+  var d=MIG_duvidas[i]; if(!d) return;
+  MIG_exec([{tab:d.tab,opId:d.opId,cliId:cliId}], function(ok){
+    if(ok){ try{ VB_log('CLIENTES','carimbou', String(d.nome), 'migração confirmada'); }catch(e){} }
+    MIG_carregar();
+  });
+}
+function MIG_pula(i){ MIG_duvidas.splice(i,1); MIG_semN++; MIG_render(); }
 /* === CLIENTES: base única — sugestões no campo (Vendas + Antecipação) e cadastro rápido === */
 var VB_cliBase=null, VB_cliBaseTs=0;
 function VB_cliNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
@@ -8445,8 +8548,10 @@ function VB_cliOferecerCadastro(nome){
 }
 /* === PANORAMA DO CLIENTE: tudo derivado por nome — em aberto, cobrança, histórico, contratos === */
 function CLIP_esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function CLIP_abrir(nome){
+function CLIP_abrir(nome, cliId){
   var alvo=String(nome||'').trim().toUpperCase(); if(!alvo) return;
+  var alvoId=(cliId!=null)?String(cliId):null;
+  if(!alvoId){ try{ alvoId=VB_cliIdDe(nome); }catch(e){} }
   var ov=document.getElementById('clip-overlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='clip-overlay';
@@ -8457,14 +8562,15 @@ function CLIP_abrir(nome){
   ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--so2);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
   Promise.all([
-    sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at').limit(10000),
-    sb.from('vendas').select('id,cliente,nome,descricao,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda').limit(10000),
+    sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at').limit(10000),
+    sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
-    var ant=VB_antReais(res[0].data).filter(function(r){ return key(r.cliente||r.nome)===alvo; });
-    var ven=(res[1].data||[]).filter(function(r){ return key(r.cliente||r.nome||r.descricao)===alvo; });
+    var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
+    var ant=VB_antReais(res[0].data).filter(function(r){ return casa(r, r.cliente||r.nome); });
+    var ven=(res[1].data||[]).filter(function(r){ return casa(r, r.cliente||r.nome||r.descricao); });
     var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
     var hoje=REN_hojeISO();
     var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
@@ -12738,6 +12844,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.161.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">SEGURANÇA FASE 3 (parte 2) — GESTÃO › IDENTIDADE: a migração assistida do passado. O app analisa todas as vendas e antecipações sem carimbo, separa em óbvios (nome que existe uma vez na base → botão CARIMBAR OS N ÓBVIOS resolve em lote), duvidosos (homônimos e grafias tipo TONY DUCARRO vs TONY DU CARRO → você toca em "É FULANO" ou PULAR) e sem cadastro (seguem pelo nome). Reexecutável: abre de novo, continua de onde parou. FAÇA BACKUP MANUAL ANTES da primeira rodada</div>
+      <div class="cl-item">Panorama do Cliente passou a juntar pela identidade: operação carimbada casa pelo número (homônimo não mistura, renomear não desgruda); sem carimbo, cai pro nome como sempre. A busca da Home já abre o Panorama pelo número. Conferente ganhou a prova do casamento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.160.0</span><span class="cl-ver-date">20/07/2026</span></div>
