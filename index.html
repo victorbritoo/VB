@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.163.0</title>
+<title>VB - v1.164.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2527,8 +2527,8 @@ function VB_fetchFiltrado(onOk, onErr){
     var soTab = ((typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos') || (HIST_searchGlobal && HIST_searchTerm)) ? null : HIST_tabAtual; // escopo do menu (Aba/Todos); busca ativa = todos
     var out={}, tot=0;
     Object.keys(dados).forEach(function(tname){
-      if(tname==='mercadorias'){ out[tname]=dados[tname]||[]; return; } // referência p/ giro no relatório; não conta como operação
-      var tab=mapa[tname]||'ant';
+      if(!mapa[tname]){ out[tname]=dados[tname]||[]; return; } // só as 4 verticais são operação: o resto (mercadorias, clientes, sócios, log...) vai junto como referência, sem contar nem filtrar
+      var tab=mapa[tname];
       if(soTab && tab!==soTab){ out[tname]=[]; return; }
       var rows=(dados[tname]||[]).filter(function(r){ return VB_passaFiltro(tab,r); });
       out[tname]=rows; tot+=rows.length;
@@ -3058,6 +3058,10 @@ function VB_relatorioPDF(dados, total, returnImages){
   var ticket = total? (tAnt+tFin+tVen+tPag)/total : 0;
   var atrasados = ant.filter(function(r){ return (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); });
   var tAtraso = atrasados.reduce(function(a,r){ return a + (Number(r.valor_liquido)||0); }, 0);
+  var _lucAnt=0; ant.forEach(function(r){ if((Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0)){ var l=HIST_lucroRow('ant',r); if(l!=null) _lucAnt+=l; } });
+  var _lucFin=0; fin.forEach(function(r){ var l=HIST_lucroRow('fin',r); if(l!=null) _lucFin+=l; });
+  var _lucVenVB=0; ven.forEach(function(r){ if(r.custo==null) return; var l=Number(r.valor_total||0)-Number(r.custo||0); var vs9=Number(r.valor_socio)||0, c9=Number(r.custo)||0; if(r.socio&&vs9>0&&c9>0){ var p9=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; _lucVenVB+=l*(p9/100); } else { _lucVenVB+=l; } });
+  var _lucPer=_lucAnt+_lucFin+_lucVenVB;
 
   var _escTxt=(function(){
     var nomes={ant:'Antecipação',fin:'Financiamento',ven:'Vendas',pag:'Pagamentos'};
@@ -3135,7 +3139,7 @@ function VB_relatorioPDF(dados, total, returnImages){
       } },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:148, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
-             {h:'Cliente', x:193, w:72, get:function(r){return r.cliente?HIST_abrevNome(r.cliente):'—';}},
+             {h:'Cliente', x:193, w:72, get:function(r){return r.cliente?VB_nomePU(r.cliente):'—';}},
              {h:'Data', x:269, w:70, get:function(r){var d=vDataNeg(r); return d?dt(d):'—';}},
              {h:'Giro', x:343, w:30, r:1, get:function(r){var g=vGiro(r); return g!=null?(g+'d'):'—';}},
              {h:'Venda', x:377, w:98, r:1, get:function(r){return money(r.valor_total);}},
@@ -3202,12 +3206,15 @@ function VB_relatorioPDF(dados, total, returnImages){
       var _busca = (typeof HIST_searchGlobal!=='undefined' && HIST_searchGlobal && HIST_searchTerm);
       var _todos = _busca || (typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos');
       var _escTab = _todos ? 'todos' : (typeof HIST_tabAtual!=='undefined' ? HIST_tabAtual : 'todos');
-      var inds;
-      if(_escTab==='ven')      inds=[ ['VENDAS','R$ '+_num(tVen)], ['OPERAÇÕES', String(total)] ];
-      else if(_escTab==='fin') inds=[ ['FINANCIADO','R$ '+_num(tFin)], ['OPERAÇÕES', String(total)] ];
-      else if(_escTab==='pag') inds=[ ['OPERAÇÕES', String(total)] ];
-      else if(_escTab==='ant') inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
-      else                     inds=[ ['ANTECIPADO','R$ '+_num(tAnt)], ['FINANCIADO','R$ '+_num(tFin)], ['VENDAS','R$ '+_num(tVen)], ['ATRASADO','R$ '+_num(tAtraso)], ['OPERAÇÕES', String(total)] ];
+      function _cd(l,v){ return {l:l, t:'R$ '+_num(v), v:v}; }
+      var _cards;
+      if(_escTab==='ven')      _cards=[ _cd('VENDAS',tVen), _cd('LUCRO VB',_lucVenVB) ];
+      else if(_escTab==='fin') _cards=[ _cd('FINANCIADO',tFin), _cd('LUCRO',_lucFin) ];
+      else if(_escTab==='pag') _cards=[];
+      else if(_escTab==='ant') _cards=[ _cd('ANTECIPADO',tAnt), _cd('LUCRO',_lucAnt), _cd('ATRASADO',tAtraso) ];
+      else                     _cards=[ _cd('ANTECIPADO',tAnt), _cd('FINANCIADO',tFin), _cd('VENDAS',tVen), _cd('LUCRO',_lucPer), _cd('ATRASADO',tAtraso) ];
+      var inds=_cards.filter(function(c9){ return Math.abs(c9.v)>0.005; }).map(function(c9){ return [c9.l, c9.t]; });
+      inds.push(['OPERAÇÕES', String(total)]);
       var n=inds.length, gap=8, cw=(W-2*pad-(n-1)*gap)/n, ch=64;
       for(var i=0;i<n;i++){
         var cx=pad+i*(cw+gap);
@@ -3314,7 +3321,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   (function(){
     ensure(70);
     var c=cur.ctx; cur.y+=4;
-    var geral=tAnt+tFin+tVen+tPag;
+    var geral=tAnt+tFin+tVen; // volume de negócio; pagamentos são encontro de contas, ficam na seção deles
     var boxW=W-2*pad, boxH=44, bx=pad, by=cur.y;
     c.fillStyle='#111'; c.fillRect(bx,by,boxW,boxH);
     c.fillStyle='#bbb'; c.font='700 9px -apple-system,Arial,sans-serif'; c.textAlign='left';
@@ -12883,6 +12890,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.164.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Relatório, quatro melhorias: (1) card LUCRO no topo — antecipações + financiamento + lucro VB das vendas, o número que faltava no herói; (2) vertical zerada some dos cards (FINANCIADO R$ 0,00 não ocupa mais espaço, o grid se adapta); (3) cliente das vendas em primeiro + último nome no lugar das iniciais ("JOÃO A. L. A." → "JOÃO ALBUQUERQUE"); (4) TOTAL GERAL virou volume de negócio — antecipado + financiado + vendas — sem misturar pagamentos, que são encontro de contas e seguem na seção deles</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.163.1</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Contagem do Relatório corrigida: o card OPERAÇÕES e o TOTAL GERAL contavam TODAS as tabelas do banco (sócios, log e — depois do import — os 476 clientes), por isso o "496". Agora só as 4 verticais contam como operação; o resto viaja como referência sem entrar na conta. Seu relatório de hoje passa a dizer 13</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.163.0</span><span class="cl-ver-date">20/07/2026</span></div>
