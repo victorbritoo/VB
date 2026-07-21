@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.156.4</title>
+<title>VB - v1.157.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2693,8 +2693,8 @@ function VB_backupCompleto(){
     if(!total){ VB_toast('Nada para o relatório.'); return; }
     var imgs;
     try{ imgs = VB_relatorioPDF(dados, total, true); }catch(e){ VB_toast('Não consegui montar a capa.'); return; }
-    var emDia=function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); };
-    var atrasada=function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); };
+    var emDia=function(r){ return !VB_ehSimulacao(r) && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); };
+    var atrasada=function(r){ return !VB_ehSimulacao(r) && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); };
     var ordem=[
       {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'ant', filtro:emDia},
       {tbl:'antecipacoes', tab:'ant', date:'data_operacao', dkey:'atr', filtro:atrasada},
@@ -2958,7 +2958,7 @@ function VB_relatorioPDF(dados, total, returnImages){
     ctx.fillText(text,x,y);
   }
 
-  var ant=(dados['antecipacoes']||[]).filter(function(r){ return !r.simulacao; }), fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
+  var ant=VB_antReais(dados['antecipacoes']), fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
   var merMap={}; (dados['mercadorias']||[]).forEach(function(m){ if(m.venda_id) merMap[m.venda_id]=m; });
   function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
   function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
@@ -2984,7 +2984,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   })();
 
   var secoes=[
-    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
+    { key:'antecipacoes', titulo:'ANTECIPAÇÕES', date:'data_operacao', filter:function(r){ return !VB_ehSimulacao(r) && (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); },
       cols:[ {h:'Nome', x:pad, w:198, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:243, w:70, get:function(r){return dt(r.data_operacao);}},
              {h:'Bruto', x:318, w:102, r:1, get:function(r){return money(r.valor_bruto);}},
@@ -3009,7 +3009,7 @@ function VB_relatorioPDF(dados, total, returnImages){
           {label:'TARIFAS', texto:'R$ '+_num(tar)}
         ];
       } },
-    { key:'antecipacoes', titulo:'ATRASADOS (COBRANÇA)', date:'data_operacao', atraso:true, filter:function(r){ return !r.simulacao && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
+    { key:'antecipacoes', titulo:'ATRASADOS (COBRANÇA)', date:'data_operacao', atraso:true, filter:function(r){ return !VB_ehSimulacao(r) && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0); },
       cols:[ {h:'Cliente', x:pad, w:250, get:function(r){return (r.nome||r.cliente||'—');}},
              {h:'Data', x:320, w:90,  get:function(r){return dt(r.data_operacao);}},
              {h:'Bruto', x:430, w:160, r:1, get:function(r){return money(r.valor_bruto);}},
@@ -3383,7 +3383,7 @@ function HIST_renderTotal(tab, rows, term){
   var esc=(busca||fixo||filtro)?'geral':HIST_totEscopo;
   var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
   var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
-  rowsT=rowsT.filter(function(r){ return !(((r._tab||tab)==='ant') && r.simulacao); }); // simulação nunca soma
+  rowsT=rowsT.filter(function(r){ return !(((r._tab||tab)==='ant') && VB_ehSimulacao(r)); }); // simulação nunca soma
   if(!rowsT.length){ totalEl.style.display='none'; return; }
   var titulo='', tt=null;
   if(!busca && !fixo){
@@ -4017,7 +4017,7 @@ function HIST_renderRows(tab, rows){
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
   if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r));
-    if(rt==='ant' && r.simulacao){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
+    if(rt==='ant' && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
     bucketCount[bk]=(bucketCount[bk]||0)+1;
     if(!mixed){
       var mm=bucketMet[bk]||(bucketMet[bk]={v:0,l:0,temL:false});
@@ -8375,7 +8375,7 @@ function CLIP_abrir(nome){
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
-    var ant=(res[0].data||[]).filter(function(r){ return !r.simulacao && key(r.cliente||r.nome)===alvo; });
+    var ant=VB_antReais(res[0].data).filter(function(r){ return key(r.cliente||r.nome)===alvo; });
     var ven=(res[1].data||[]).filter(function(r){ return key(r.cliente||r.nome||r.descricao)===alvo; });
     var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
     var hoje=REN_hojeISO();
@@ -8457,6 +8457,19 @@ function REN_addMesISO(iso, k){
   return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
 }
 function REN_num(x){ if(typeof x==='number') return x; var n=Number(String(x||'').replace(/\./g,'').replace(',','.')); return isFinite(n)?n:(Number(x)||0); }
+function VB_nomePU(nome){
+  var s=String(nome||'').trim(); if(!s) return s;
+  var ps=s.split(/\s+/);
+  if(ps.length<2 || (ps.length<4 && s.length<=24)) return s;
+  return ps[0]+' '+ps[ps.length-1];
+}
+/* === FONTE ÚNICA DE ANTECIPAÇÕES REAIS ===
+   Regra de arquitetura: NENHUM consumidor escreve !r.simulacao na mão.
+   Toda tela/soma/relatório que consome antecipações passa por VB_antReais()
+   ou testa VB_ehSimulacao(). Consumidor novo que não usar isto está errado. */
+function VB_ehSimulacao(r){ return !!(r && r.simulacao); }
+function VB_antReais(rows){ return (rows||[]).filter(function(r){ return !VB_ehSimulacao(r); }); }
+function REN_vfa(tab){ return GLB_badge(tab==='ven'?'V':(tab==='fin'?'F':'A')); }
 function REN_coleta(ant, fin, ven){
   var out=[];
   function fecha(ops){ ops.forEach(function(p){ p.tot=ops.length; out.push(p); }); }
@@ -8474,7 +8487,7 @@ function REN_coleta(ant, fin, ven){
     fecha(ops);
   });
   (ant||[]).forEach(function(r){
-    if(r.simulacao) return; // simulação: fora do cronograma
+    if(VB_ehSimulacao(r)) return; // simulação: fora do cronograma
     if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return; // atrasada: já virou cobrança, fora do cronograma
     var cli=String(r.cliente||r.nome||'\u2014').toUpperCase();
     var ops=[];
@@ -8561,7 +8574,7 @@ function REN_render(){
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(x.cliente)+'</span><span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomePU(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +'</div>'
       +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
@@ -8573,7 +8586,7 @@ function REN_render(){
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln3);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;opacity:0.75;">'
       +'<div onclick="REN_ficha(\''+REN_key(x)+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(x.cliente)+'</span><span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 '+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomePU(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 '+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(Number(b.valor_recebido)!==Number(x.valor)?(' \u00b7 parcela '+HIST_fmtMoeda(x.valor)):'')+(b.nota?(' \u00b7 '+CLIP_esc(b.nota)):'')+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(Number(b.repasse_valor)>0&&!b.repassado_em) return '<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor))+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+'</div>'; return ''; })()
       +'</div>'
@@ -8608,7 +8621,7 @@ function REN_render(){
     if(!cliArr.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma exposi\u00e7\u00e3o em aberto.</div>';
     else cliArr.forEach(function(c2){
       hh+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;cursor:pointer;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+CLIP_esc(c2.nome)+' \u203a</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(c2.total)+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+CLIP_esc(VB_nomePU(c2.nome))+' \u203a</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(c2.total)+'</span></div>'
         +'<div style="font-size:10px;color:var(--so);margin-top:2px;">'+c2.n+' parcela'+(c2.n===1?'':'s')+' \u00b7 pr\u00f3x '+HIST_fmtData(c2.prox)+(c2.atr>0?(' \u00b7 <span style="color:var(--red);font-weight:700;">ATRASADO '+HIST_fmtMoeda(c2.atr)+'</span>'):'')+'</div>'
         +'</div>';
     });
@@ -8634,7 +8647,7 @@ function REN_render(){
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
         +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
         +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:var(--red);">'+HIST_fmtMoeda(Number(b2.repasse_valor))+'</span></span></div>'
-        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
+        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomePU(x.cliente))+REN_vfa(x.tab)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
         +'</div>'
         +'<button onclick="REN_repQuick(this,\''+k2+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
         +'</div>';
@@ -8954,7 +8967,7 @@ function REN_desfaz(btn, baixaId){
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
-    var ant=filtra(res[0].data,'ant').filter(function(r){ return !r.simulacao; }), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
+    var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
@@ -12637,6 +12650,21 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.157.0</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">SEGURANÇA FASE 1 — fonte única de antecipações reais: a regra "simulação não conta" saiu de 10 lugares espalhados e virou duas funções centrais (VB_antReais / VB_ehSimulacao) que Recebimentos, Fechamento, Panorama, Relatório e as somas do Histórico agora chamam. Tela nova que consumir antecipações usa a mesma porta e já nasce protegida contra lucro fantasma. Nada muda na tela — muda o que impede o bug de amanhã</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.6</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Badge de vertical no Recebimentos: pill V / F / A (venda, financiamento, antecipação) colado no nome, nas entradas e nas concluídas — a natureza da cobrança num relance. Aba CLIENTES fica sem (o card agrega verticais misturadas). Mesmo pill da busca da Home; nunca aparece junto dos S/C/I do estoque</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.5</span><span class="cl-ver-date">20/07/2026</span></div>
+      <div class="cl-item">Nomes longos nas listas do Recebimentos viram primeiro + último ("JOÃO ADRIANO LOPES ALBUQUERQUE" → "JOÃO ALBUQUERQUE") — só quando o nome tem 4+ palavras ou passa de 24 caracteres; apelidos e nomes curtos ("TONY DU CARRO") ficam intocados. Vale pra entradas, concluídas e aba CLIENTES; a ficha continua com o nome completo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.156.4</span><span class="cl-ver-date">20/07/2026</span></div>
