@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.168.0</title>
+<title>VB - v1.169.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5987,8 +5987,9 @@ function VEN_confirmarOperacao(btn){
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
-    if(!ehAtualizacao){ try{ if(VEN_resumoSocioDados(row)) setTimeout(function(){ VEN_resumoSocioSheet(row); }, 600); }catch(e){} }
-    var _temResumo=false; try{ _temResumo=(!ehAtualizacao && !!VEN_resumoSocioDados(row)); }catch(e){}
+    var _dcHint=(typeof VEN_merDataCompra!=='undefined')?VEN_merDataCompra:null;
+    if(!ehAtualizacao){ try{ if(VEN_resumoSocioDados(row,_dcHint)) setTimeout(function(){ VEN_resumoSocioSheet(row,_dcHint); }, 600); }catch(e){} }
+    var _temResumo=false; try{ _temResumo=(!ehAtualizacao && !!VEN_resumoSocioDados(row,_dcHint)); }catch(e){}
     if(row.cliente && !_temResumo){ setTimeout(function(){ VB_cliOferecerCadastro(row.cliente); }, 400); }
     if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='ven') showScreen('hist'); }, 350); }
   }).catch(function(e){
@@ -10450,7 +10451,7 @@ function VEN_rendCalc(){
 }
 // ===== Resumo da operação pro sócio (vendas em sociedade) =====
 var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null;
-function VEN_resumoSocioDados(r){
+function VEN_resumoSocioDados(r, dcHint){
   if(!r) return null;
   var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
   if(!(r.socio && vs>0 && c>0 && vs<=c)) return null;
@@ -10482,6 +10483,7 @@ function VEN_resumoSocioDados(r){
     var dv=new Date(+vv[0],+vv[1]-1,+vv[2]); if(isNaN(dv.getTime())) return;
     var dias=0;
     var dc=(typeof HIST_merCompra==='object'&&HIST_merCompra)?HIST_merCompra[String(r.id)]:null;
+    if(!dc) dc=dcHint||((typeof VEN_merDataCompra!=='undefined')?VEN_merDataCompra:null)||null; // resumo logo após salvar: o mapa ainda não tem o vínculo novo; usa a data que a tela de edição já tem em mãos
     if(dc){ var pp=String(dc).split('T')[0].split('-'); if(pp.length===3){ var d0=new Date(+pp[0],+pp[1]-1,+pp[2]); if(!isNaN(d0.getTime())){ dias=(dv-d0)/86400000; if(!isFinite(dias)||dias<0) dias=0; diasEst=Math.round(dias); } } }
     var soma=0, peso=0;
     parc.forEach(function(p){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(p.d); if(m&&p.v>0){ var d2=new Date(+m[3],+m[2]-1,+m[1]); var dd=(d2-dv)/86400000; if(dd<0)dd=0; soma+=p.v*dd; peso+=p.v; } });
@@ -10531,8 +10533,8 @@ function VEN_resumoSocioCopiar(d){
     } else fallback();
   }catch(e){ fallback(); }
 }
-function VEN_resumoSocioSheet(r){
-  var d=VEN_resumoSocioDados(r);
+function VEN_resumoSocioSheet(r, dcHint){
+  var d=VEN_resumoSocioDados(r, dcHint);
   if(!d){ VB_toast('Essa venda n\u00e3o \u00e9 sociedade.'); return; }
   VEN_resumoAtual=d; VEN_resumoAtualRow=r;
   var old=document.getElementById('vb-rsoc-sheet'); if(old) old.remove();
@@ -11950,7 +11952,7 @@ function CLI_fichaRender(){
         s+='<select id="clif-'+k+'" oninput="CLI_fichaSync()" style="'+IN+'border-radius:10px;">'
           +_ops.map(function(t){ return '<option value="'+t[0]+'"'+(t[0]===v?' selected':'')+'>'+t[1]+'</option>'; }).join('')+'</select>';
       } else {
-        s+='<input id="clif-'+k+'" value="'+CTR_esc(v).replace(/"/g,'&quot;')+'" oninput="'+(k==='cpf'?'CLI_maskCPF(this);':(k==='cep'?'CLI_cepInput(this);':''))+'CLI_fichaSync()" '+(k==='uf'?'maxlength="2"':'')+' style="'+IN+'">';
+        s+='<input id="clif-'+k+'" value="'+CTR_esc(v).replace(/"/g,'&quot;')+'" oninput="'+(k==='cpf'?'CLI_maskCPF(this);':(k==='cep'?'CLI_cepInput(this);':''))+'CLI_fichaSync()" '+((k==='cpf'||k==='cep')?'inputmode="numeric" ':'')+(k==='uf'?'maxlength="2"':'')+' style="'+IN+'">';
       }
     } else {
       s+='<div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:2px;min-height:15px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;">'+(CTR_esc(v)||'<span style=\'color:var(--so2)\'>—</span>')+'</div>';
@@ -12901,6 +12903,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.169.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Bug do rendimento inflado no resumo/foto do sócio, corrigido: logo após salvar a venda, o resumo não enxergava a data de compra do relógio (o mapa venda→mercadoria ainda não tinha o vínculo recém-criado), então contava estoque ZERO — ciclo despencava e o rendimento estourava (o caso 20,24%/0,7m que devia ser ~4,15%/3,4m). Agora o resumo usa a data de compra que a própria tela de edição já tem em mãos quando o mapa ainda não carregou. A tela de edição e o Histórico já estavam certos; era só o resumo imediato</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.168.1</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">CPF e CEP da ficha de edição do cliente abrem o teclado numérico (faltava o inputmode nesses dois campos gerados dinamicamente — o formulário de cadastro já tinha)</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.168.0</span><span class="cl-ver-date">21/07/2026</span></div>
