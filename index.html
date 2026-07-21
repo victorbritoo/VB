@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.174.0</title>
+<title>VB - v1.174.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12846,7 +12846,7 @@ function CTR_dacaoItens(trocas){
     var vTxt='R$ '+CTR_fmtV(t.v)+' ('+CTR_extensoReais(t.v)+')';
     var segs=[[0,'A título de entrada, o DEVEDOR dá em pagamento ao CREDOR, que aceita, o relógio Marca/Modelo '],[1,modelo]];
     if(sn){ segs.push([0,', SN: ']); segs.push([1,sn]); }
-    segs.push([0,', avaliado de comum acordo em ']); segs.push([1,vTxt]); segs.push([0,', quitando parte do preço da venda.']);
+    segs.push([0,', no valor de ']); segs.push([1,vTxt]); segs.push([0,', quitando parte do preço da venda.']);
     xml+=CTR_item(segs);
   });
   return xml;
@@ -13025,8 +13025,8 @@ function CTR_gerar(ov){
     var _allparc=CTR_parcelasDaVenda(r);
     var _trocas=_allparc.filter(function(p){ return p.t; });
     var parcelas=_allparc.filter(function(p){ return !p.t; });
-    // Opção A: com troca, a dívida confessada é só o saldo a vencer (soma das parcelas em dinheiro); o relógio entra como dação em pagamento (item a).
-    var total = _trocas.length ? parcelas.reduce(function(a,p){ return a+p.v; },0) : (Number(r.valor_total)||0);
+    // Transparente (Opção B): a dívida confessada é o preço cheio da venda; o relógio da troca entra como forma de pagamento no item a), com valor. 80k = relógio + parcelas.
+    var total = Number(r.valor_total)||0;
     var dvBR=r.data_venda?HIST_fmtData(r.data_venda):null;
     var vals={
       '{{DEVEDOR_NOME}}':nome,
@@ -13104,6 +13104,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.174.2</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Contrato com troca agora é totalmente transparente (Opção B). A Cláusula 1ª confessa o preço cheio da venda (ex.: R$ 80.000), e a Cláusula 4ª detalha as formas de pagamento: item a) o relógio recebido como entrada, com o valor explícito ("no valor de R$ 45.000..."), e as parcelas em dinheiro em b), c). Os números reconciliam (venda = relógio + parcelas) e batem com a tabela embutida. Substitui as versões anteriores que escondiam o valor ou confessavam só o saldo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.174.1</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">O item a) da dação no contrato deixou de mostrar o valor que você avaliou o relógio do cliente. Agora só descreve a peça ("relógio Marca/Modelo X, SN: Y, quitando parte do preço da venda"), sem o "avaliado em R$...". O valor do contrato continua sendo só o saldo a vencer na Cláusula 1ª (as parcelas em dinheiro). Assim o cliente não vê a avaliação do usado dele, igual na tabela do cliente</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.174.0</span><span class="cl-ver-date">21/07/2026</span></div>
