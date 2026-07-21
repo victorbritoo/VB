@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.171.1</title>
+<title>VB - v1.172.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5799,15 +5799,16 @@ function VEN_gerarTabela(){
   y+=altTit;
 
   // Entrada — relógio(s) em troca (abatimento antes do saldo)
+  // Cliente: só o modelo, centralizado. Foto do sócio (VEN_socioExtra): mostra o valor também (verdade p/ contabilidade).
   if(VEN_trocaLinhas.length){
-    ctx.fillStyle='#888'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-    ctx.fillText('ENTRADA — RELÓGIO EM TROCA', padH, y+11);
+    var _entComValor = !!VEN_socioExtra;
+    ctx.fillStyle='#888'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('ENTRADA — RELÓGIO EM TROCA', W/2, y+11);
     y+=14;
     VEN_trocaLinhas.forEach(function(t){
-      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
-      ctx.fillText(t.modelo, padH, y+13);
-      ctx.textAlign='right';
-      ctx.fillText('R$ '+VEN_formatBR(t.valor), W-padH, y+13);
+      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+      var _txt = t.modelo + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
+      ctx.fillText(_txt, W/2, y+13);
       y+=18;
     });
     ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
@@ -5850,7 +5851,7 @@ function VEN_gerarTabela(){
   ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
   ctx.beginPath(); ctx.moveTo(padH,y); ctx.lineTo(W-padH,y); ctx.stroke();
   ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif';
-  if(VEN_trocaLinhas.length){ ctx.textAlign='left'; ctx.fillText('Saldo a pagar', padH+4, y+altTot*0.68); }
+  if(VEN_trocaLinhas.length){ ctx.textAlign='left'; ctx.fillText('SALDO A PAGAR', padH+4, y+altTot*0.68); }
   else { ctx.textAlign='center'; ctx.fillText('Total', c1, y+altTot*0.68); }
   ctx.textAlign='center';
   ctx.fillText('R$ '+VEN_formatBR(total), c2, y+altTot*0.68);
@@ -6037,7 +6038,10 @@ function VEN_confirmarOperacao(btn){
       var dv=row.data_venda;
       var vendaLabel=(row.descricao||'').toUpperCase();
       var cli=(row.cliente||'').toUpperCase();
-      var forn='TROCA — VENDA '+(vendaLabel||'?')+(cli?(' · '+cli):'');
+      var _mdlLimpo=((row.descricao||'').toUpperCase()).replace(/\bSN[:.\s]*[A-Z0-9-]+/g,'').replace(/\b(19|20)\d{2}\b/g,'').replace(/\s{2,}/g,' ').replace(/[\s·,;-]+$/,'').trim();
+      var _cliParts=(row.cliente||'').toUpperCase().trim().split(/\s+/).filter(Boolean);
+      var _cliCurto=_cliParts.length>1?(_cliParts[0]+' '+_cliParts[_cliParts.length-1]):(_cliParts[0]||'');
+      var forn='TROCA — '+(_mdlLimpo||'?')+(_cliCurto?(' · '+_cliCurto):'');
       var _i=0;
       (function proximo(){
         if(_i>=pend.length){
@@ -9952,6 +9956,8 @@ function MER_abrir(id){
           vh+=lin('Lucro '+String(v.socio).toUpperCase()+' ('+(100-_pV2)+'%)', 'R$ '+MER_fmtBR(_lu*((100-_pV2)/100)));
         }
         vh+=lin('Pagamento', MER_resumoParcelas(v));
+        var _trTroca=(Array.isArray(v.parcelas)?v.parcelas.filter(function(p){return p&&p.t;}):[]);
+        if(_trTroca.length){ vh+=lin('Recebeu em Troca', _trTroca.map(function(p){return (p.t.m||'RELÓGIO EM TROCA');}).join(' · ')); }
         vh+=lin('Notas', v.notas||'');
         vh+='</div>';
         vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:10px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
@@ -10140,7 +10146,7 @@ function MER_viewEditar(id){
   var ehBaixa=((r.status||'')==='vendida' && !r.venda_id);
   var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;">';
   hh+=MER_viewCampoIn('Modelo','mer-e-modelo',cx.modelo);
-  hh+=MER_viewCampoIn('Ano','mer-e-ano',cx.ano);
+  hh+=MER_viewCampoIn('Ano','mer-e-ano',cx.ano,'inputmode="numeric" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,4);MER_viewTocou()"');
   hh+=MER_viewCampoIn('SN','mer-e-sn',cx.sn);
   hh+=MER_viewCampoIn('Acompanha','mer-e-infos',r.infos||'');
   hh+='</div><div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
@@ -12984,6 +12990,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Seis lapidações na troca. (1+3) Na tabela do CLIENTE a entrada agora aparece centralizada e SEM o valor — o cliente vê que o relógio dele entrou no negócio, mas não vê por quanto você pegou; some o "R$ X" da linha da troca. Na foto do SÓCIO continua completo (modelo · valor), porque ali é a verdade pra contabilidade. (2) Rodapé "SALDO A PAGAR" em maiúsculo. (4) "De Quem Comprei" do relógio recebido encurtado: "TROCA — SUB STARBUCKS · LUCAS UCHOA" (modelo sem ano nem SN; cliente só primeiro nome + último sobrenome) — vale pras trocas novas. (5) Campo Ano na edição do estoque abre teclado numérico (4 dígitos). (6) Ficha do relógio vendido ganhou a linha "Recebeu em Troca: MODELO" no bloco VENDA, lida da parcela de troca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.171.1</span><span class="cl-ver-date">21/07/2026</span></div>
