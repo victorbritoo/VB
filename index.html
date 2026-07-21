@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.172.3</title>
+<title>VB - v1.172.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1611,7 +1611,7 @@ function HIST_carregarVen(r){
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true;
     VEN_parcelas=[]; VEN_parcelaCounter=0;
-    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),mid:(p.t.mid||null)}:null)}); });
+    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),sn:(p.t.sn||''),mid:(p.t.mid||null)}:null)}); });
     VEN_renderParcelas(); VEN_mostrarLista(true);
     VEN_syncFromParcelas();
   } else {
@@ -3416,7 +3416,7 @@ function HIST_imgVen(r){
   _histSetVal('ven-tabelaDesc', (r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
-    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),mid:(p.t.mid||null)}:null)}); });
+    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),sn:(p.t.sn||''),mid:(p.t.mid||null)}:null)}); });
   } else {
     VEN_modoPersonalizado=false;
     _histSetVal('ven-qtd', r.quantidade_parcelas?String(r.quantidade_parcelas):'');
@@ -4214,7 +4214,7 @@ function HIST_renderRows(tab, rows){
       var _meuL=_lvL, _meuCap=_c;
       if(_lvL!=null && _temSocio){ var _pVBc=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; _meuL=_lvL*(_pVBc/100); _meuCap=_c-_vs; }
       if(_meuL!=null){ var _pctS=(_meuCap>0)?(' <span style="color:var(--so);">('+Math.round(_meuL/_meuCap*100)+'%)</span>'):''; _l2.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_meuL))+'</span>'+_pctS); }
-      if(r.cliente) _l2.push(HIST_nomeFit(r.cliente));
+      if(r.cliente) _l2.push(HIST_nomeFit(VB_nomePU(r.cliente)));
       if(_l2.length) linha2=_l2.join('<span style="color:var(--so2);"> · </span>');
       if(_lvL!=null && _temSocio){ campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)}); campos.push({l:'Lucro sócio', v:HIST_fmtMoeda(_lvL-_meuL)}); }
       (function(){
@@ -4225,7 +4225,7 @@ function HIST_renderRows(tab, rows){
         var _tm=VB_termometro(_meuL, _cap, _cic); if(_tm==null) return;
         campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')});
       })();
-      if(r.cliente) campos.push({l:'Cliente', v:r.cliente});
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePU(r.cliente)});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
@@ -4468,7 +4468,7 @@ function VEN_assinatura(){
     (typeof VEN_socioNome!=='undefined'?(VEN_socioNome||''):''),
     (typeof VEN_socioValor!=='undefined'?VEN_socioValor:0),
     (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
-    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs,(p.troca?(p.troca.modelo||'⇄'):'')];}):[])]);
+    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs,(p.troca?('⇄'+(p.troca.modelo||'')+'|'+(p.troca.sn||'')):'')];}):[])]);
 }
 function PAG_assinatura(){
   return JSON.stringify([VB_val('pag-total'),VB_val('pag-nome'),
@@ -5610,7 +5610,7 @@ function VEN_renderParcelas(){
     var trocaRow=document.createElement('div');
     trocaRow.style.cssText='display:'+(p.troca?'flex':'none')+';align-items:center;justify-content:center;gap:6px;padding:3px 28px 0 28px;';
     trocaRow.id='ven-troca-row-'+p.id;
-    trocaRow.innerHTML='<span style="font-size:11px;color:var(--acc);flex-shrink:0;">⇄</span><input type="text" data-pid="'+p.id+'" data-field="trocaModelo" placeholder="MODELO DO RELÓGIO (OPCIONAL)" value="'+((p.troca&&p.troca.modelo)||'')+'" style="flex:0 1 auto;width:auto;min-width:170px;max-width:100%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
+    trocaRow.innerHTML='<span style="font-size:11px;color:var(--acc);flex-shrink:0;">⇄</span><input type="text" data-pid="'+p.id+'" data-field="trocaModelo" placeholder="MODELO" value="'+((p.troca&&p.troca.modelo)||'')+'" style="flex:0 1 auto;width:auto;min-width:110px;max-width:55%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;"><input type="text" data-pid="'+p.id+'" data-field="trocaSn" placeholder="SN" value="'+((p.troca&&p.troca.sn)||'')+'" style="flex:0 1 auto;width:auto;min-width:75px;max-width:40%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
     wrap.appendChild(row);
     wrap.appendChild(obsRow);
     wrap.appendChild(trocaRow);
@@ -5642,6 +5642,15 @@ function VEN_renderParcelas(){
       this.value=this.value.toUpperCase();
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p && p.troca){ p.troca.modelo=this.value; VEN_modoPersonalizado=true; }
+    });
+  });
+
+  // Troca SN listener
+  lista.querySelectorAll('[data-field="trocaSn"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      this.value=this.value.toUpperCase();
+      var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
+      if(p && p.troca){ p.troca.sn=this.value; VEN_modoPersonalizado=true; }
     });
   });
 
@@ -5681,7 +5690,7 @@ function VEN_trocaToggle(id){
     p.troca=null;
     if(tinhaMid) VB_toast('Relógio segue no estoque — trate na mão.');
   } else {
-    p.troca={modelo:'', mid:null};
+    p.troca={modelo:'', sn:'', mid:null};
   }
   VEN_modoPersonalizado=true;
   VEN_renderParcelas();
@@ -5723,7 +5732,7 @@ function VEN_gerarTabela(){
     _csh.forEach(function(p, i){
       linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.obs||'') });
     });
-    VEN_trocaLinhas = _trc.map(function(p){ return { modelo:((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'), valor:(VEN_parseBR(p.valor)||0) }; });
+    VEN_trocaLinhas = _trc.map(function(p){ return { modelo:((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'), sn:((p.troca.sn||'').toUpperCase()), valor:(VEN_parseBR(p.valor)||0) }; });
   } else {
     var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
     var n       = parseInt(document.getElementById('ven-qtd').value||'0');
@@ -5802,10 +5811,10 @@ function VEN_gerarTabela(){
   // Cliente: só o modelo, centralizado. Foto do sócio (VEN_socioExtra): mostra o valor também (verdade p/ contabilidade).
   if(VEN_trocaLinhas.length){
     var _entComValor = !!VEN_socioExtra;
-    var _entLab = 'RELÓGIO EM TROCA: ';
+    var _entLab = 'ENTRADA: ';
     var _entAvail = W - padH*2;
     VEN_trocaLinhas.forEach(function(t){
-      var _val = t.modelo + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
+      var _val = t.modelo + (t.sn ? (' · SN: '+t.sn) : '') + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
       var _fL = fs-1, _fV = fs;
       ctx.font='600 '+_fL+'px Helvetica,Arial,sans-serif'; var _wL=ctx.measureText(_entLab).width;
       ctx.font='700 '+_fV+'px Helvetica,Arial,sans-serif'; var _wV=ctx.measureText(_val).width;
@@ -5973,7 +5982,7 @@ function VEN_confirmarOperacao(btn){
   var total=VEN_parseBR(document.getElementById('ven-total').value);
   var qtd=parseInt(document.getElementById('ven-qtd').value||'0');
   var parcela=VEN_parseBR(document.getElementById('ven-parcela').value);
-  var parcelasPayload = VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),mid:(p.troca.mid||null)}:undefined)}; }) : null;
+  var parcelasPayload = VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),sn:(p.troca.sn||''),mid:(p.troca.mid||null)}:undefined)}; }) : null;
 
   if(!(total>0)){ VB_toast('Preencha a venda antes de confirmar.'); return; }
 
@@ -6057,7 +6066,7 @@ function VEN_confirmarOperacao(btn){
       var _i=0;
       (function proximo(){
         if(_i>=pend.length){
-          var pl=VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),mid:(p.troca.mid||null)}:undefined)}; });
+          var pl=VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),sn:(p.troca.sn||''),mid:(p.troca.mid||null)}:undefined)}; });
           sb.from('vendas').update({parcelas:pl}).eq('id',vendaId).then(function(){ VEN_snapshot=VEN_assinatura(); VB_dirtyPaintTela('ven'); });
           VB_toast(pend.length===1?'Relógio da troca criado no estoque.':pend.length+' relógios de troca criados no estoque.');
           return;
@@ -6065,7 +6074,7 @@ function VEN_confirmarOperacao(btn){
         var p=pend[_i];
         var modelo=(p.troca.modelo||'').toUpperCase();
         var custo=VEN_parseBR(p.valor)||0;
-        var mrow={ descricao:(modelo||'RELÓGIO EM TROCA'), modelo:(modelo||null), custo:(custo>0?custo:null), data_compra:dv, fornecedor:forn, pagamento:'TROCA', status:'estoque', venda_troca_id:vendaId };
+        var mrow={ descricao:(modelo||'RELÓGIO EM TROCA'), modelo:(modelo||null), sn:((p.troca.sn||'').toUpperCase()||null), custo:(custo>0?custo:null), data_compra:dv, fornecedor:forn, pagamento:'TROCA', status:'estoque', venda_troca_id:vendaId };
         sb.from('mercadorias').insert(mrow).select().then(function(rm){
           if(!rm.error && rm.data && rm.data[0]){ p.troca.mid=rm.data[0].id; try{ VB_log('ESTOQUE','criou',(modelo||'RELÓGIO EM TROCA'),'Entrada por troca · venda '+(vendaLabel||'')); }catch(e){} }
           else if(rm.error){ VB_toast('Troca não criou no estoque: '+(rm.error.message||rm.error.code||'erro')); console.log('troca insert error:', rm.error); }
@@ -13003,6 +13012,21 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.6</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Rótulo da troca na foto mudou de "RELÓGIO EM TROCA:" para "ENTRADA:" (ex.: "ENTRADA: AIRKING 2021"). SN e o "· R$ valor" da foto do sócio continuam na mesma linha</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.5</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Cliente no card de venda agora aparece como primeiro nome + último sobrenome ("LUCAS FELIZARDO GUERREIRO UCHOA" → "LUCAS UCHOA"), tanto no cabeçalho recolhido quanto no campo CLIENTE expandido — acaba a quebra em duas linhas. Nomes curtos (ex.: "TONY DU CARRO") ficam inteiros. Só o display do card; o nome gravado segue completo (é o que vale pro contrato). Antecipação e financiamento não foram tocados</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.4</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">SN do relógio da troca: a tirinha da troca ganhou um campo SN opcional ao lado do modelo. O SN aparece na tabela ("RELÓGIO EM TROCA: MODELO · SN: XXXX") e já nasce preenchido na ficha do relógio no estoque — você não redigita. Fica tudo documentado: qual peça específica entrou na troca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.3</span><span class="cl-ver-date">21/07/2026</span></div>
