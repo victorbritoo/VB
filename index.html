@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.173.2</title>
+<title>VB - v1.174.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12836,6 +12836,21 @@ function CTR_esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function CTR_run(rpr,t){ return '<w:r>'+rpr+'<w:t xml:space="preserve">'+CTR_esc(t)+'</w:t></w:r>'; }
 function CTR_item(segs){ var s='<w:p>'+CTR_PPR; segs.forEach(function(x){ s+=CTR_run(x[0]?CTR_RPR_BU:CTR_RPR_PL, x[1]); }); return s+'</w:p>'; }
 function CTR_fmtV(v){ return v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+// ---- itens de dação em pagamento (relógios recebidos em troca) — Opção A ----
+function CTR_dacaoItens(trocas){
+  if(!trocas || !trocas.length) return '';
+  var xml='';
+  trocas.forEach(function(t){
+    var modelo=String((t.t&&t.t.m)||'RELÓGIO EM TROCA').toUpperCase();
+    var sn=String((t.t&&t.t.sn)||'').toUpperCase();
+    var vTxt='R$ '+CTR_fmtV(t.v)+' ('+CTR_extensoReais(t.v)+')';
+    var segs=[[0,'A título de entrada, o DEVEDOR dá em pagamento ao CREDOR, que aceita, o relógio Marca/Modelo '],[1,modelo]];
+    if(sn){ segs.push([0,', SN: ']); segs.push([1,sn]); }
+    segs.push([0,', avaliado de comum acordo em ']); segs.push([1,vTxt]); segs.push([0,', quitando parte do preço da venda.']);
+    xml+=CTR_item(segs);
+  });
+  return xml;
+}
 // ---- Cláusula 4ª a partir das parcelas [{v,d}] ----
 function CTR_itensClausula(parcelas, dataVendaBR){
   // agrupar sequências mensais de mesmo valor e mesmo dia
@@ -12871,7 +12886,7 @@ function CTR_parcelasDaVenda(r){
   try{
     var pj=r.parcelas ? (typeof r.parcelas==='string'?JSON.parse(r.parcelas):r.parcelas) : null;
     if(pj && pj.length){
-      pj.forEach(function(p){ var v=Number(String(p.v).replace(/\./g,'').replace(',','.'))||Number(p.v)||0; if(v>0&&p.d) out.push({v:v,d:p.d}); });
+      pj.forEach(function(p){ var v=Number(String(p.v).replace(/\./g,'').replace(',','.'))||Number(p.v)||0; if(v>0&&p.d) out.push({v:v,d:p.d,t:(p.t||null)}); });
       if(out.length) return out;
     }
   }catch(e){}
@@ -13007,8 +13022,11 @@ function CTR_gerar(ov){
     var dec=new TextDecoder(), enc=new TextEncoder();
     var doc=dec.decode(parts['word/document.xml']);
     var hd=dec.decode(parts['word/header1.xml']);
-    var total=Number(r.valor_total)||0;
-    var parcelas=CTR_parcelasDaVenda(r);
+    var _allparc=CTR_parcelasDaVenda(r);
+    var _trocas=_allparc.filter(function(p){ return p.t; });
+    var parcelas=_allparc.filter(function(p){ return !p.t; });
+    // Opção A: com troca, a dívida confessada é só o saldo a vencer (soma das parcelas em dinheiro); o relógio entra como dação em pagamento (item a).
+    var total = _trocas.length ? parcelas.reduce(function(a,p){ return a+p.v; },0) : (Number(r.valor_total)||0);
     var dvBR=r.data_venda?HIST_fmtData(r.data_venda):null;
     var vals={
       '{{DEVEDOR_NOME}}':nome,
@@ -13031,7 +13049,7 @@ function CTR_gerar(ov){
     if(!String(vals['{{SN}}']||'').trim()){ doc=doc.replace(/<w:t[^>]*>SN\.<\/w:t>/,'<w:t xml:space="preserve"></w:t>').replace(/<w:t[^>]*>: \{\{SN\}\}\.<\/w:t>/,'<w:t xml:space="preserve">.</w:t>'); delete vals['{{SN}}']; doc=doc.split('{{SN}}').join(''); }
     Object.keys(vals).forEach(function(k){ doc=doc.split(k).join(CTR_esc(vals[k])); hd=hd.split(k).join(CTR_esc(vals[k])); });
     var mark='<w:p>'+CTR_PPR+'<w:r><w:t>{{ITENS}}</w:t></w:r></w:p>';
-    doc=doc.replace(mark, CTR_itensClausula(parcelas, dvBR));
+    doc=doc.replace(mark, CTR_dacaoItens(_trocas)+CTR_itensClausula(parcelas, dvBR));
     parts['word/document.xml']=enc.encode(doc);
     parts['word/header1.xml']=enc.encode(hd);
     if(foto) parts['word/media/image1.jpg']=foto;
@@ -13086,6 +13104,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.174.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Contrato trata a troca como dação em pagamento (Opção A, redação validada com o advogado). Quando a venda tem troca, o relógio recebido deixa de figurar como parcela em dinheiro e vira o item "a)" da Cláusula 4ª — "A título de entrada, o DEVEDOR dá em pagamento ao CREDOR, que aceita, o relógio Marca/Modelo X, SN: Y, avaliado de comum acordo em R$ Z, quitando parte do preço da venda" (cada relógio vira um item). E o valor da dívida confessada (Cláusula 1ª) passa a ser só o saldo a vencer — a soma das parcelas em dinheiro (ex.: R$ 35.000 no lugar de R$ 80.000). Sem troca, o contrato sai como antes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.173.2</span><span class="cl-ver-date">21/07/2026</span></div>
