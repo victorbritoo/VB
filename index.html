@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.169.0</title>
+<title>VB - v1.170.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1611,7 +1611,7 @@ function HIST_carregarVen(r){
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true;
     VEN_parcelas=[]; VEN_parcelaCounter=0;
-    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
+    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),mid:(p.t.mid||null)}:null)}); });
     VEN_renderParcelas(); VEN_mostrarLista(true);
     VEN_syncFromParcelas();
   } else {
@@ -3416,7 +3416,7 @@ function HIST_imgVen(r){
   _histSetVal('ven-tabelaDesc', (r.descricao||''));
   if(r.modo==='personalizado' && r.parcelas && r.parcelas.length){
     VEN_modoPersonalizado=true; VEN_parcelas=[]; VEN_parcelaCounter=0;
-    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||'')}); });
+    r.parcelas.forEach(function(p){ VEN_parcelaCounter++; VEN_parcelas.push({id:VEN_parcelaCounter,valor:(p.v||''),data:(p.d||''),obs:(p.o||''),troca:(p.t?{modelo:(p.t.m||''),mid:(p.t.mid||null)}:null)}); });
   } else {
     VEN_modoPersonalizado=false;
     _histSetVal('ven-qtd', r.quantidade_parcelas?String(r.quantidade_parcelas):'');
@@ -4470,7 +4470,7 @@ function VEN_assinatura(){
     (typeof VEN_socioNome!=='undefined'?(VEN_socioNome||''):''),
     (typeof VEN_socioValor!=='undefined'?VEN_socioValor:0),
     (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
-    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs];}):[])]);
+    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs,(p.troca?(p.troca.modelo||'⇄'):'')];}):[])]);
 }
 function PAG_assinatura(){
   return JSON.stringify([VB_val('pag-total'),VB_val('pag-nome'),
@@ -5585,7 +5585,7 @@ function VEN_renderParcelas(){
     wrap.style.cssText = 'margin-bottom:4px;';
 
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 20px 20px;gap:6px;align-items:end;';
+    row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 18px 18px 18px;gap:5px;align-items:end;';
     var obsOpen = p.obs ? 'block' : 'none';
     row.innerHTML =
       '<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;align-self:center;">'+String(p.id).padStart(2,'0')+'</span>'+
@@ -5602,14 +5602,19 @@ function VEN_renderParcelas(){
         '<span data-dias="'+p.id+'" style="font-size:9px;color:var(--so);flex-shrink:0;">'+VEN_diasTxt(p.data)+'</span>'+
       '</div>'+
       '<button data-obsbtn="'+p.id+'" onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:var(--so);cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
-      '<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
+      '<button data-trocabtn="'+p.id+'" onclick="VEN_trocaToggle('+p.id+')" style="border:none;background:none;font-size:14px;color:'+(p.troca?'var(--acc)':'var(--so)')+';cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;" title="Troca">⇄</button>'+'<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
     obsRow.style.cssText='display:'+obsOpen+';padding:2px 28px 0 28px;';
     obsRow.id='ven-obs-row-'+p.id;
     obsRow.innerHTML='<input type="text" data-pid="'+p.id+'" data-field="obs" placeholder="COMENTÁRIO..." onclick="if(!this.value)this.select()" value="'+(p.obs||'')+'" style="width:100%;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;text-align:center;">';
+    var trocaRow=document.createElement('div');
+    trocaRow.style.cssText='display:'+(p.troca?'flex':'none')+';align-items:center;gap:6px;padding:3px 28px 0 28px;';
+    trocaRow.id='ven-troca-row-'+p.id;
+    trocaRow.innerHTML='<span style="font-size:11px;color:var(--acc);flex-shrink:0;">⇄</span><input type="text" data-pid="'+p.id+'" data-field="trocaModelo" placeholder="MODELO DO RELÓGIO (OPCIONAL)" value="'+((p.troca&&p.troca.modelo)||'')+'" style="flex:1;min-width:0;border:none;border-bottom:0.5px solid var(--ln3);background:transparent;outline:none;font-size:11px;color:var(--mu);text-transform:uppercase;font-family:-apple-system,sans-serif;">';
     wrap.appendChild(row);
     wrap.appendChild(obsRow);
+    wrap.appendChild(trocaRow);
     lista.appendChild(wrap);
   });
 
@@ -5629,6 +5634,15 @@ function VEN_renderParcelas(){
       this.value=this.value.toUpperCase();
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p){ p.obs=this.value; VEN_modoPersonalizado=true; }
+    });
+  });
+
+  // Troca modelo listener
+  lista.querySelectorAll('[data-field="trocaModelo"]').forEach(function(el){
+    el.addEventListener('input',function(){
+      this.value=this.value.toUpperCase();
+      var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
+      if(p && p.troca){ p.troca.modelo=this.value; VEN_modoPersonalizado=true; }
     });
   });
 
@@ -5660,11 +5674,27 @@ function VEN_renderParcelas(){
   var _al=VEN_autoLista; VEN_autoLista=function(){ _al.apply(this,arguments); try{ VEN_updateLucro(); }catch(e){} };
 })();
 
+function VEN_trocaToggle(id){
+  var p=VEN_parcelas.find(function(x){ return x.id===id; });
+  if(!p) return;
+  if(p.troca){
+    var tinhaMid=!!p.troca.mid;
+    p.troca=null;
+    if(tinhaMid) VB_toast('Relógio segue no estoque — trate na mão.');
+  } else {
+    p.troca={modelo:'', mid:null};
+  }
+  VEN_modoPersonalizado=true;
+  VEN_renderParcelas();
+}
 function VEN_removerParcela(id){
+  var _p=VEN_parcelas.find(function(x){ return x.id===id; });
+  var _mid=(_p&&_p.troca&&_p.troca.mid)||null;
   VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
   VEN_modoPersonalizado=true;
   VEN_renderParcelas();
   VEN_syncFromParcelas();
+  if(_mid) VB_toast('Relógio segue no estoque — trate na mão.');
 }
 
 // ── GERAR TABELA ─────────────────────────────────────────────────────────────
@@ -5689,7 +5719,7 @@ function VEN_gerarTabela(){
     var rows = VEN_parcelas.filter(function(p){ return p.valor && p.data && p.data.length===10; });
     if(rows.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
     rows.forEach(function(p, i){
-      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: p.obs||'' });
+      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.troca?('TROCA'+(p.troca.modelo?(' — '+p.troca.modelo.toUpperCase()):'')+(p.obs?(' · '+p.obs):'')):(p.obs||'')) });
     });
   } else {
     var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
@@ -5907,7 +5937,7 @@ function VEN_confirmarOperacao(btn){
   var total=VEN_parseBR(document.getElementById('ven-total').value);
   var qtd=parseInt(document.getElementById('ven-qtd').value||'0');
   var parcela=VEN_parseBR(document.getElementById('ven-parcela').value);
-  var parcelasPayload = VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||'')}; }) : null;
+  var parcelasPayload = VEN_modoPersonalizado ? VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),mid:(p.troca.mid||null)}:undefined)}; }) : null;
 
   if(!(total>0)){ VB_toast('Preencha a venda antes de confirmar.'); return; }
 
@@ -5975,6 +6005,34 @@ function VEN_confirmarOperacao(btn){
           });
         });
       }
+    })();
+    // troca: cada parcela marcada como troca vira mercadoria no estoque (porteiro por parcela: só cria se não tem mid)
+    (function(){
+      var vendaId=VEN_currentOperationId; if(!vendaId) return;
+      var pend=VEN_parcelas.filter(function(p){ return p.troca && !p.troca.mid; });
+      if(!pend.length) return;
+      var dv=row.data_venda;
+      var vendaLabel=(row.descricao||'').toUpperCase();
+      var cli=(row.cliente||'').toUpperCase();
+      var forn='TROCA — VENDA '+(vendaLabel||'?')+(cli?(' · '+cli):'');
+      var _i=0;
+      (function proximo(){
+        if(_i>=pend.length){
+          var pl=VEN_parcelas.map(function(p){ return {v:(p.valor||''),d:(p.data||''),o:(p.obs||''),t:(p.troca?{m:(p.troca.modelo||''),mid:(p.troca.mid||null)}:undefined)}; });
+          sb.from('vendas').update({parcelas:pl}).eq('id',vendaId).then(function(){ VEN_snapshot=VEN_assinatura(); VB_dirtyPaintTela('ven'); });
+          VB_toast(pend.length===1?'Relógio da troca criado no estoque.':pend.length+' relógios de troca criados no estoque.');
+          return;
+        }
+        var p=pend[_i];
+        var modelo=(p.troca.modelo||'').toUpperCase();
+        var custo=VEN_parseBR(p.valor)||0;
+        var mrow={ descricao:(modelo||'RELÓGIO EM TROCA'), modelo:(modelo||null), custo:(custo>0?custo:null), data_compra:dv, fornecedor:forn, pagamento:'TROCA', status:'estoque', venda_troca_id:vendaId };
+        sb.from('mercadorias').insert(mrow).select().then(function(rm){
+          if(!rm.error && rm.data && rm.data[0]){ p.troca.mid=rm.data[0].id; try{ VB_log('ESTOQUE','criou',(modelo||'RELÓGIO EM TROCA'),'Entrada por troca · venda '+(vendaLabel||'')); }catch(e){} }
+          else if(rm.error){ VB_toast('Troca não criou no estoque: '+(rm.error.message||rm.error.code||'erro')); console.log('troca insert error:', rm.error); }
+          _i++; proximo();
+        });
+      })();
     })();
     VEN_updateConfirmarBtnLabel();
     VEN_snapshot = VEN_assinatura(); VB_dirtyPaintTela('ven'); // foto atualizada: sem falso alarme ao voltar depois de salvar
@@ -12905,7 +12963,9 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.169.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.170.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Troca de relógio como pagamento de parcela: o ícone ⇄ em cada linha da parcela marca que aquela prestação será quitada com um relógio. Toca no ⇄, abre a tirinha do modelo (opcional — vira "RELÓGIO EM TROCA" se em branco). Ao salvar a venda, o app cria sozinho a mercadoria no estoque: custo = valor da parcela, data de compra = data da venda, fornecedor = "TROCA — VENDA [modelo] · [cliente]", vínculo à venda de origem (venda_troca_id). SN, ano e foto ficam em branco pra completar depois no estoque. Só o modelo é obrigatório; troca 100% VB por enquanto (sócio do recebido se ajusta na ficha do estoque). Porteiro por parcela: re-salvar a venda nunca duplica a peça. Tirar o ⇄ (ou apagar a parcela) de uma peça já criada deixa ela no estoque e avisa — nada é apagado automático. O capital da troca entra como estoque parado a 0%, então o rendimento real só fecha quando você vender o recebido — o efeito aparece no RENDIMENTO DO CAPITAL do Fechamento. A tabela do cliente mostra a parcela como "(TROCA — MODELO)"</div>
+    </div><span class="cl-ver-date">21/07/2026</span></div>
       <div class="cl-item">Bug do rendimento inflado no resumo/foto do sócio, corrigido: logo após salvar a venda, o resumo não enxergava a data de compra do relógio (o mapa venda→mercadoria ainda não tinha o vínculo recém-criado), então contava estoque ZERO — ciclo despencava e o rendimento estourava (o caso 20,24%/0,7m que devia ser ~4,15%/3,4m). Agora o resumo usa a data de compra que a própria tela de edição já tem em mãos quando o mapa ainda não carregou. A tela de edição e o Histórico já estavam certos; era só o resumo imediato</div>
     </div>
 
