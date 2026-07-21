@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.172.2</title>
+<title>VB - v1.172.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5704,12 +5704,13 @@ function VEN_fecharTabela(){
   var dica = document.getElementById('ven-tabelaImagemDica'); if(dica) dica.style.display='none';
 
   if(HIST_voltaParaHist){ HIST_voltaParaHist=false; showScreen('hist'); }
+  if(VEN_fotoVoltaSocio){ var _rsoc=VEN_fotoVoltaSocio; VEN_fotoVoltaSocio=null; setTimeout(function(){ try{ VEN_resumoSocioSheet(_rsoc); }catch(e){} }, 80); }
   VB_shareNomeOverride=null; VB_shareApelido=false;
 }
 
 var VB_fotoSocioDados=null;
 function VEN_gerarTabela(){
-  if(typeof VEN_socioExtra==='undefined' || !VEN_socioExtra) VB_fotoSocioDados=null;
+  if(typeof VEN_socioExtra==='undefined' || !VEN_socioExtra){ VB_fotoSocioDados=null; VEN_fotoVoltaSocio=null; }
   var desc    = (document.getElementById('ven-tabelaDesc').value||'').trim().toUpperCase();
   var titulo  = desc || 'TABELA DE PARCELAS';
   var linhas  = [];
@@ -5801,7 +5802,7 @@ function VEN_gerarTabela(){
   // Cliente: só o modelo, centralizado. Foto do sócio (VEN_socioExtra): mostra o valor também (verdade p/ contabilidade).
   if(VEN_trocaLinhas.length){
     var _entComValor = !!VEN_socioExtra;
-    var _entLab = 'ENTRADA — RELÓGIO EM TROCA: ';
+    var _entLab = 'RELÓGIO EM TROCA: ';
     var _entAvail = W - padH*2;
     VEN_trocaLinhas.forEach(function(t){
       var _val = t.modelo + (_entComValor ? (' · R$ '+VEN_formatBR(t.valor)) : '');
@@ -10548,7 +10549,7 @@ function VEN_rendCalc(){
     +'</span>';
 }
 // ===== Resumo da operação pro sócio (vendas em sociedade) =====
-var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null;
+var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null, VEN_fotoVoltaSocio=null;
 function VEN_resumoSocioDados(r, dcHint){
   if(!r) return null;
   var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
@@ -10659,6 +10660,7 @@ function VEN_resumoSocioSheet(r, dcHint){
       }
     }catch(e){}
     VEN_socioExtra=VEN_resumoAtual; VB_fotoSocioDados=VEN_resumoAtual;
+    VEN_fotoVoltaSocio=VEN_resumoAtualRow; // fechar a foto reabre a folha do sócio
     try{
       if(VB_telaAtual!=='ven'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarVen(VEN_resumoAtualRow); }
       VEN_gerarTabela();
@@ -13001,6 +13003,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.3</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Dois ajustes. (1) Na foto, a linha da troca perdeu o "ENTRADA —": fica só "RELÓGIO EM TROCA: MODELO". (2) Corrigido o fluxo do resumo do sócio: antes, SÓCIO → FOTO → FECHAR jogava você de volta no Histórico; agora, fechar a foto do sócio reabre a folha do sócio (pra copiar o texto ou reenviar), com o Histórico atrás. A tabela do cliente comum segue fechando direto, sem reabrir nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.2</span><span class="cl-ver-date">21/07/2026</span></div>
