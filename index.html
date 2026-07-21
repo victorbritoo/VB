@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.170.0</title>
+<title>VB - v1.171.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5714,13 +5714,16 @@ function VEN_gerarTabela(){
   var desc    = (document.getElementById('ven-tabelaDesc').value||'').trim().toUpperCase();
   var titulo  = desc || 'TABELA DE PARCELAS';
   var linhas  = [];
+  var VEN_trocaLinhas = [];
 
   if(VEN_modoPersonalizado){
-    var rows = VEN_parcelas.filter(function(p){ return p.valor && p.data && p.data.length===10; });
-    if(rows.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
-    rows.forEach(function(p, i){
-      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.troca?('TROCA'+(p.troca.modelo?(' — '+p.troca.modelo.toUpperCase()):'')+(p.obs?(' · '+p.obs):'')):(p.obs||'')) });
+    var _trc = VEN_parcelas.filter(function(p){ return p.troca && (VEN_parseBR(p.valor)||0)>0; });
+    var _csh = VEN_parcelas.filter(function(p){ return !p.troca && p.valor && p.data && p.data.length===10; });
+    if(_csh.length===0 && _trc.length===0){ VB_toast('Preencha valor e data de todas as parcelas.'); return; }
+    _csh.forEach(function(p, i){
+      linhas.push({ parc: String(i+1).padStart(2,'0'), valor: 'R$ '+(p.valor||'0,00'), data: p.data, obs: (p.obs||'') });
     });
+    VEN_trocaLinhas = _trc.map(function(p){ return { modelo:((p.troca.modelo||'').toUpperCase()||'RELÓGIO EM TROCA'), valor:(VEN_parseBR(p.valor)||0) }; });
   } else {
     var pmt     = VEN_parseBR(document.getElementById('ven-parcela').value);
     var n       = parseInt(document.getElementById('ven-qtd').value||'0');
@@ -5744,11 +5747,12 @@ function VEN_gerarTabela(){
   // Canvas — calcula altura dinâmica incluindo linhas de obs
   var W=390, esc=3, padH=18, padV=12;
   var altVB=34, altTit=28, altHead=22, altTot=22, altObs=7;
-  var altRow = Math.min(26, Math.max(16, Math.floor((700-padV*2-altVB-altTit-altHead-altTot)/n)));
+  var altEnt = VEN_trocaLinhas.length ? (14 + VEN_trocaLinhas.length*18 + 10) : 0;
+  var altRow = Math.min(26, Math.max(16, Math.floor((700-padV*2-altVB-altTit-altHead-altTot)/(n||1))));
   var fs = Math.min(12, Math.max(8, Math.floor(altRow*0.52)));
   // Pre-calc total row height with obs
   var totalRowH = linhas.reduce(function(a,l){ return a+(l.obs&&l.obs.trim()?altRow+altObs:altRow); },0);
-  var H = padV*2 + altVB + altTit + altHead + totalRowH + altTot + 8;
+  var H = padV*2 + altVB + altTit + altEnt + altHead + totalRowH + altTot + 8;
   var socioBlkH = 0;
   if(VEN_socioExtra){
     // RESUMO hdr+div, CUSTO+VENDA, faixa LUCRO, MARGEM(+REND+CICLO), div pontilhado, SÓCIO 2 linhas, CAPITAL, faixa LUCRO
@@ -5794,6 +5798,23 @@ function VEN_gerarTabela(){
   ctx.beginPath(); ctx.moveTo(padH,y+altTit-3); ctx.lineTo(W-padH,y+altTit-3); ctx.stroke();
   y+=altTit;
 
+  // Entrada — relógio(s) em troca (abatimento antes do saldo)
+  if(VEN_trocaLinhas.length){
+    ctx.fillStyle='#888'; ctx.font='600 '+(fs-1)+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+    ctx.fillText('ENTRADA — RELÓGIO EM TROCA', padH, y+11);
+    y+=14;
+    VEN_trocaLinhas.forEach(function(t){
+      ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(t.modelo, padH, y+13);
+      ctx.textAlign='right';
+      ctx.fillText('R$ '+VEN_formatBR(t.valor), W-padH, y+13);
+      y+=18;
+    });
+    ctx.strokeStyle='#ddd'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(padH,y+3); ctx.lineTo(W-padH,y+3); ctx.stroke();
+    y+=10;
+  }
+
   // Header — sans-serif explícito
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altHead);
   ctx.fillStyle='#555'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
@@ -5828,8 +5849,10 @@ function VEN_gerarTabela(){
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altTot);
   ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8;
   ctx.beginPath(); ctx.moveTo(padH,y); ctx.lineTo(W-padH,y); ctx.stroke();
-  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Total', c1, y+altTot*0.68);
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica,Arial,sans-serif';
+  if(VEN_trocaLinhas.length){ ctx.textAlign='left'; ctx.fillText('Saldo a pagar', padH+4, y+altTot*0.68); }
+  else { ctx.textAlign='center'; ctx.fillText('Total', c1, y+altTot*0.68); }
+  ctx.textAlign='center';
   ctx.fillText('R$ '+VEN_formatBR(total), c2, y+altTot*0.68);
   var yTableBottom = y + altTot;
 
@@ -8775,7 +8798,7 @@ function REN_coleta(ant, fin, ven){
     var rot=(r.descricao||r.nome||'VENDA');
     var ops=[];
     if(Array.isArray(r.parcelas)&&r.parcelas.length){
-      r.parcelas.forEach(function(p,ix){ var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d) ops.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:ix}); });
+      var _dn=0; r.parcelas.forEach(function(p,ix){ if(p.t) return; var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d){ ops.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:ix, dnum:_dn}); _dn++; } });
     } else {
       var n=Number(r.quantidade_parcelas)||0, vp=Number(r.valor_parcela)||0;
       var d1=r.data_primeira_parcela?String(r.data_primeira_parcela).slice(0,10):null;
@@ -8802,7 +8825,7 @@ function REN_coleta(ant, fin, ven){
   return out;
 }
 function REN_key(x){ return x.tab+'|'+x.opId+'|'+x.idx; }
-function REN_nm(x){ return ('0'+(x.idx+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
+function REN_nm(x){ var _d=(x.dnum!=null?x.dnum:x.idx); return ('0'+(_d+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
 function REN_repDef(oi, x){ if(!oi) return 0; if(oi.fixo!=null) return Math.round(Number(oi.fixo)*100)/100; return (oi.vt>0)?Math.round(oi.vs/oi.vt*x.valor*100)/100:0; }
 function REN_rotCurto(r){ return String(r||'').replace(/\bSN[:.\s]*[A-Z0-9-]+/gi,'').replace(/\s{2,}/g,' ').replace(/[\s\u00b7,;-]+$/,'').trim(); }
 var REN_sort='data', REN_aba='aberto', REN_cache=null, REN_erroBx='', REN_fichaVoltar=null, REN_recOrig=null, REN_busca='', REN_buscaOn=false;
@@ -12963,7 +12986,9 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.170.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.171.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Troca vira ENTRADA na tabela do cliente: em vez de aparecer como uma parcela no meio da lista, o relógio recebido sai como abatimento no topo — "ENTRADA — RELÓGIO EM TROCA" com modelo e valor — e as parcelas listadas passam a ser só o dinheiro, renumeradas. O rodapé da tabela deixa de dizer "Total" e passa a "Saldo a pagar" (= total − troca). Só apresentação na foto do cliente; venda, estoque e rendimento intactos. Além disso: a parcela de troca sai do cronograma de Recebimentos (ela já foi quitada com o relógio na hora, então não pode contar como dinheiro a receber e não infla mais o TOTAL A RECEBER nem o Panorama do cliente). A numeração "N de M" das parcelas restantes fica correta, e a chave de baixa das parcelas antigas continua estável</div>
+    </div><span class="cl-ver-date">21/07/2026</span></div>
       <div class="cl-item">Troca de relógio como pagamento de parcela: o ícone ⇄ em cada linha da parcela marca que aquela prestação será quitada com um relógio. Toca no ⇄, abre a tirinha do modelo (opcional — vira "RELÓGIO EM TROCA" se em branco). Ao salvar a venda, o app cria sozinho a mercadoria no estoque: custo = valor da parcela, data de compra = data da venda, fornecedor = "TROCA — VENDA [modelo] · [cliente]", vínculo à venda de origem (venda_troca_id). SN, ano e foto ficam em branco pra completar depois no estoque. Só o modelo é obrigatório; troca 100% VB por enquanto (sócio do recebido se ajusta na ficha do estoque). Porteiro por parcela: re-salvar a venda nunca duplica a peça. Tirar o ⇄ (ou apagar a parcela) de uma peça já criada deixa ela no estoque e avisa — nada é apagado automático. O capital da troca entra como estoque parado a 0%, então o rendimento real só fecha quando você vender o recebido — o efeito aparece no RENDIMENTO DO CAPITAL do Fechamento. A tabela do cliente mostra a parcela como "(TROCA — MODELO)"</div>
     </div><span class="cl-ver-date">21/07/2026</span></div>
       <div class="cl-item">Bug do rendimento inflado no resumo/foto do sócio, corrigido: logo após salvar a venda, o resumo não enxergava a data de compra do relógio (o mapa venda→mercadoria ainda não tinha o vínculo recém-criado), então contava estoque ZERO — ciclo despencava e o rendimento estourava (o caso 20,24%/0,7m que devia ser ~4,15%/3,4m). Agora o resumo usa a data de compra que a própria tela de edição já tem em mãos quando o mapa ainda não carregou. A tela de edição e o Histórico já estavam certos; era só o resumo imediato</div>
