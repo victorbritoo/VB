@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.172.8</title>
+<title>VB - v1.173.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6115,7 +6115,7 @@ function VEN_confirmarOperacao(btn){
     var _dcHint=(typeof VEN_merDataCompra!=='undefined')?VEN_merDataCompra:null;
     if(!ehAtualizacao){ try{ if(VEN_resumoSocioDados(row,_dcHint)) setTimeout(function(){ VEN_resumoSocioSheet(row,_dcHint); }, 600); }catch(e){} }
     var _temResumo=false; try{ _temResumo=(!ehAtualizacao && !!VEN_resumoSocioDados(row,_dcHint)); }catch(e){}
-    if(row.cliente && !_temResumo){ setTimeout(function(){ VB_cliOferecerCadastro(row.cliente); }, 400); }
+    if(row.cliente){ VB_cliGarantir(row.cliente); }
     if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='ven') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -6936,7 +6936,7 @@ function ANT_confirmarOperacao(btn){
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ANT_simFlag ? (ehAtualizacao?'Simulação atualizada.':'Simulação salva.') : (ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.'));
-    if(!ANT_simFlag && cliente){ setTimeout(function(){ VB_cliOferecerCadastro(cliente); }, 400); }
+    if(!ANT_simFlag && cliente){ VB_cliGarantir(cliente); }
     if(ehAtualizacao && VB_telaAnterior==='hist'){ setTimeout(function(){ if(VB_telaAtual==='ant') showScreen('hist'); }, 350); }
   }).catch(function(e){
     if(btn) btn.disabled=false;
@@ -8670,6 +8670,28 @@ function VB_cliIdDe(nome){
     return (n===1 && hit)?String(hit.id):null; // homônimo na base = não chuta
   }catch(e){ return null; }
 }
+function VB_cliGarantir(nome){
+  // Fantasma silencioso: nome fora da base vira cadastro (nome+ativo, sem CPF/endereço) e as operações com esse nome grudam pelo cliente_id.
+  var alvo=String(nome||'').trim(); if(!alvo) return;
+  VB_cliCarregar(function(lista){
+    var hit=null;
+    (lista||[]).some(function(c){ if(VB_cliNorm(c.nome)===VB_cliNorm(alvo)){ hit=c; return true; } return false; });
+    if(hit){
+      var hid=String(hit.id);
+      if(hit.ativo===false){ sb.from('clientes').update({ativo:true}).eq('id',hit.id).then(function(res){ if(!res.error){ VB_cliBase=null; try{ VB_log('CLIENTES','ativou',hit.nome,'primeira operação'); }catch(e){} } }).catch(function(){}); }
+      sb.from('vendas').update({cliente_id:hid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+      sb.from('antecipacoes').update({cliente_id:hid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+      return;
+    }
+    sb.from('clientes').insert({nome:alvo.toUpperCase(), ativo:true}).select().then(function(res){
+      if(res.error||!res.data||!res.data[0]) return; // falha silenciosa
+      var nid=String(res.data[0].id); VB_cliBase=null;
+      try{ VB_log('CLIENTES','criou',alvo.toUpperCase(),'automático · a completar'); }catch(e){}
+      sb.from('vendas').update({cliente_id:nid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+      sb.from('antecipacoes').update({cliente_id:nid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+    }).catch(function(){});
+  });
+}
 function VB_cliOferecerCadastro(nome){
   var alvo=String(nome||'').trim(); if(!alvo) return;
   VB_cliCarregar(function(lista){
@@ -10133,18 +10155,32 @@ function MER_possCalc(){
 }
 function MER_syncVenda(_r0, payload, desc){
   // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
-  if(!(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id)) return;
-  var _novoV={custo:payload.custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
-  sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
-    var _vOld=(rq.data&&rq.data[0])||null;
-    sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
-      if(!rv.error && rv.data && rv.data.length){
-        var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
-        VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' \u00b7 '+_dv2):''));
-        VB_toast('Venda vinculada atualizada.');
-      }
+  if(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
+    var _novoV={custo:payload.custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
+    sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
+      var _vOld=(rq.data&&rq.data[0])||null;
+      sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
+        if(!rv.error && rv.data && rv.data.length){
+          var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
+          VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' \u00b7 '+_dv2):''));
+          VB_toast('Venda vinculada atualizada.');
+        }
+      });
     });
-  });
+  }
+  // sincronia estoque -> venda (TROCA): a peça recebida propaga o SN pra parcela da venda de origem (via venda_troca_id)
+  if(_r0 && _r0.venda_troca_id){
+    var _newSn=(payload.sn||'');
+    sb.from('vendas').select('id,parcelas').eq('id', _r0.venda_troca_id).then(function(rq2){
+      var _v=(rq2.data&&rq2.data[0])||null; if(!_v || !Array.isArray(_v.parcelas)) return;
+      var _mudou=false;
+      var _pl=_v.parcelas.map(function(p){
+        if(p && p.t && String(p.t.mid)===String(_r0.id) && (p.t.sn||'')!==_newSn){ p.t.sn=_newSn; _mudou=true; }
+        return p;
+      });
+      if(_mudou){ sb.from('vendas').update({parcelas:_pl}).eq('id', _v.id).then(function(){ VB_toast('SN da troca sincronizado na venda.'); }).catch(function(){}); }
+    }).catch(function(){});
+  }
 }
 var MER_viewEdit=false, MER_viewEditRow=null, MER_viewSnap0='';
 function MER_eVal(id){ var el=document.getElementById(id); return el?(el.value||''):''; }
@@ -11873,7 +11909,8 @@ function CLI_decQual(c){
   var q=(c.qualificacao||'').split(',').map(function(s){return s.trim();});
   return [q[0]||'', q[1]||'', q.slice(2).join(', ')||''];
 }
-var CLI_aba='ativos', CLI_resRows=null, CLI_pendFichaId=null;
+var CLI_aba='ativos', CLI_resRows=null, CLI_pendFichaId=null, CLI_pendMode=false;
+function CLI_pendToggle(){ CLI_pendMode=!CLI_pendMode; CLI_render(); }
 function CLI_pintaAbas(){
   var on='padding:8px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
   var off='padding:8px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
@@ -11996,7 +12033,18 @@ function CLI_render(){
   if(q){ rows=rows.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }); }
   var hint='';
   if(q){ if(CLI_resRows===null){ CLI_resFetchSilent(); } else { var nR=CLI_matchQ(CLI_resRows,q); if(nR) hint=CLI_hintOutraAba('res',nR); } }
-  if(!rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(q?'Nada encontrado.':'Nenhum cliente cadastrado.')+'</div>'+hint; return; }
+  // PENDÊNCIA: ativos sem CPF e sem endereço (a completar)
+  var _pend=CLI_rows.filter(function(c){ return !((c.cpf||'').trim()) && !((c.end1||'').trim()); });
+  var pendBar='';
+  if(!q){
+    if(CLI_pendMode){
+      rows=rows.filter(function(c){ return !((c.cpf||'').trim()) && !((c.end1||'').trim()); });
+      pendBar='<div onclick="CLI_pendToggle()" style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--acc);font-weight:600;cursor:pointer;padding:3px 0 9px;">\u2190 TODOS \u00b7 '+_pend.length+' A COMPLETAR</div>';
+    } else if(_pend.length){
+      pendBar='<div onclick="CLI_pendToggle()" style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so2);font-weight:600;cursor:pointer;padding:3px 0 9px;">'+_pend.length+' CLIENTE'+(_pend.length>1?'S':'')+' A COMPLETAR \u2192</div>';
+    }
+  }
+  if(!rows.length){ el.innerHTML=pendBar+'<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">'+(CLI_pendMode?'Tudo completo.':(q?'Nada encontrado.':'Nenhum cliente cadastrado.'))+'</div>'+hint; return; }
   var hh='';
   rows.forEach(function(c){
     var i=CLI_rows.indexOf(c);
@@ -12008,7 +12056,7 @@ function CLI_render(){
       +'<button onclick="CLI_del(this,'+i+')" style="border:none;background:transparent;color:var(--so2);font-size:17px;cursor:pointer;padding:4px 6px;">\u00d7</button>'
       +'</div>';
   });
-  el.innerHTML=hh+hint;
+  el.innerHTML=pendBar+hh+hint;
 }
 // ---- FICHA (padrão do estoque): view -> EDITAR vira editor com estado sujo e guarda de saída ----
 var CLI_fichaIdx=null, CLI_fichaEdit=false, CLI_fichaOrig=null;
@@ -13031,6 +13079,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.173.1</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">SN da troca agora sincroniza nos dois sentidos. Já descia da venda pro estoque (quando você editava o SN na tirinha da troca); agora também sobe do estoque pra venda: ao salvar a ficha do relógio recebido no estoque com um SN novo, ele atualiza sozinho a parcela de troca da venda de origem (pelo vínculo venda_troca_id). Assim o SN fica igual dos dois lados, edite onde editar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.173.0</span><span class="cl-ver-date">21/07/2026</span></div>
+      <div class="cl-item">Pendência de cliente (Vendas + Antecipação). Você vende/antecipa digitando qualquer nome, igual antes — mas agora, se o nome não está na base, o app cria o cadastro sozinho e em silêncio (nome + ativo, sem CPF/endereço) e gruda a operação nele pelo cliente_id (não pela grafia). Acabou o prompt "CLIENTE NOVO". Em GESTÃO › Clientes aparece uma linha discreta "N clientes a completar →" (só quando há pendência; some ao zerar) — toca e a lista filtra os que estão sem CPF e sem endereço; completa a ficha e ele sai da pendência, já ligado às operações antigas. Como o vínculo é pelo número de identidade, trocar o nome curto pelo completo nunca desgruda a venda. Base única: o mesmo cliente serve venda e antecipação. Financiamento fica pra depois (ainda não grava cliente_id). Sem SQL novo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.172.8</span><span class="cl-ver-date">21/07/2026</span></div>
