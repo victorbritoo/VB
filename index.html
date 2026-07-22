@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.175.6</title>
+<title>VB - v1.176.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.6<br>22/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.176.0<br>22/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -885,6 +885,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
       <button onclick="VEN_limpar()" style="padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;">LIMPAR</button>
       <button onclick="VEN_gerarTabela()" style="padding:9px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);font-family:-apple-system,sans-serif;font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;">GERAR TABELA</button>
     </div>
+    <button id="ven-chipSim" onclick="VEN_toggleSim()" style="display:block;margin:10px auto 0;padding:6px 16px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">SIMULAÇÃO</button>
     <button id="ven-btnConfirmar" onclick="VEN_confirmarOperacao(this)" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:14px;background:var(--sf);font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
   </div>
 
@@ -1588,6 +1589,7 @@ function HIST_carregarVen(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   VEN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
+  VEN_simFlag=!!r.simulacao; try{VEN_paintSimChip();}catch(e){}
   document.getElementById('ven-custo').value = r.custo!=null ? VEN_formatBR(Number(r.custo)) : '';
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
@@ -3044,7 +3046,7 @@ function VB_relatorioPDF(dados, total, returnImages){
     ctx.fillText(text,x,y);
   }
 
-  var ant=VB_antReais(dados['antecipacoes']), fin=dados['financiamentos_hist']||[], ven=dados['vendas']||[], pag=dados['pagamentos']||[];
+  var ant=VB_antReais(dados['antecipacoes']), fin=dados['financiamentos_hist']||[], ven=(dados['vendas']||[]).filter(function(r){ return !VB_ehSimulacao(r); }), pag=dados['pagamentos']||[];
   var merMap={}; (dados['mercadorias']||[]).forEach(function(m){ if(m.venda_id) merMap[m.venda_id]=m; });
   function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
   function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
@@ -3486,7 +3488,7 @@ function HIST_renderTotal(tab, rows, term){
   var esc=(busca||fixo||filtro)?'geral':HIST_totEscopo;
   var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
   var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
-  rowsT=rowsT.filter(function(r){ return !(((r._tab||tab)==='ant') && VB_ehSimulacao(r)); }); // simulação nunca soma
+  rowsT=rowsT.filter(function(r){ var _rt=(r._tab||tab); return !((_rt==='ant'||_rt==='ven') && VB_ehSimulacao(r)); }); // simulação nunca soma
   if(!rowsT.length){ totalEl.style.display='none'; return; }
   var titulo='', tt=null;
   if(!busca && !fixo){
@@ -3639,7 +3641,7 @@ function HIST_sectionHeader(label, first, count, met){
   // Régua canônica dos cabeçalhos de mês (Histórico = Recebimentos = Vendidos)
   var dir='';
   if(met){
-    dir='<span style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.v)+'</span>'
+    dir='<span style="white-space:nowrap;">'+(met.vlbl?'<span style="font-size:10px;font-weight:600;color:var(--so);">'+met.vlbl+'</span>':'')+'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.v)+'</span>'
       +(met.temL?('<span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 L: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.l)+'</span>'):'')
       +'</span>';
     label=label+(count?(' \u00b7 '+count):'');
@@ -4125,11 +4127,11 @@ function HIST_renderRows(tab, rows){
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
   if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r));
-    if(rt==='ant' && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
+    if((rt==='ant'||rt==='ven') && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
     bucketCount[bk]=(bucketCount[bk]||0)+1;
     if(!mixed){
       var mm=bucketMet[bk]||(bucketMet[bk]={v:0,l:0,temL:false});
-      if(rt==='ant'){ mm.v += (HIST_antSub==='atr') ? HIST_atrHoje(r) : (Number(r.valor_bruto)||0); }
+      if(rt==='ant'){ if(HIST_antSub==='atr'){ mm.v += HIST_atrHoje(r); } else { mm.v += (Number(r.valor_liquido)||0); mm.vlbl='Líq: '; } }
       else if(rt==='pag'){ var vt=Number(r.valor_total)||0; if(!vt){ (r.pagamentos||[]).forEach(function(p){ vt+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); }); } mm.v+=vt; }
       else { mm.v += Number(r[HIST_valCol(rt)])||0; }
       var jj=HIST_lucroRow(rt, r);
@@ -4217,6 +4219,7 @@ function HIST_renderRows(tab, rows){
       var _temSocio=(r.socio && _vs>0 && _c>0 && _vs<=_c);
       var _consig=VB_consigVen(r.socio, _vs, _c, r.lucro_vb_pct);
       if(_temSocio) rowBadge=_consig?'C':'S';
+      if(r.simulacao) rowBadge='SIM';
       var _l2=[];
       if(r.valor_total!=null) _l2.push('<span style="color:var(--tx);">'+HIST_esc(HIST_valCurto(r.valor_total))+'</span>');
       var _meuL=_lvL, _meuCap=_c;
@@ -5407,6 +5410,7 @@ function VEN_limpar(){
   VB_autoGrow(document.getElementById('ven-notas'));
   VEN_currentOperationId = null;
   VEN_merVinculo = null;
+  VEN_simFlag=false; try{VEN_paintSimChip();}catch(e){}
   VEN_dataVendaHoje();
   VB_carimboTS = null;
   VEN_updateConfirmarBtnLabel();
@@ -5990,11 +5994,16 @@ VEN_initTabela();
 
 /* === VENDAS: SALVAR/CARREGAR via código + QR === */
 var VEN_currentOperationId = null;
+var VEN_simFlag=false;
 function VEN_updateConfirmarBtnLabel(){
   var b=document.getElementById('ven-btnConfirmar');
   if(!b) return;
-  b.textContent = VEN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+  b.textContent = VEN_simFlag ? (VEN_currentOperationId?'✓ ATUALIZAR SIMULAÇÃO':'✓ SALVAR SIMULAÇÃO') : (VEN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO');
 }
+function VEN_paintSimChip(){ var c=document.getElementById('ven-chipSim'); if(!c) return;
+  if(VEN_simFlag){ c.style.borderStyle='solid'; c.style.borderColor='var(--lnk)'; c.style.color='var(--tx)'; c.style.background='var(--sf)'; c.style.fontWeight='700'; }
+  else { c.style.borderStyle='dashed'; c.style.borderColor='var(--ln)'; c.style.color='var(--mu2)'; c.style.background='transparent'; c.style.fontWeight='500'; } }
+function VEN_toggleSim(){ VEN_simFlag=!VEN_simFlag; VEN_paintSimChip(); VEN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('ven'); }
 var VEN_nomeChecked=false;
 function VEN_confirmarOperacao(btn){
   VB_carimboTS = null;
@@ -6038,7 +6047,8 @@ function VEN_confirmarOperacao(btn){
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
     lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null,
-    notas: (document.getElementById('ven-notas').value||'').trim().toUpperCase()||null
+    notas: (document.getElementById('ven-notas').value||'').trim().toUpperCase()||null,
+    simulacao: VEN_simFlag
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
@@ -6060,6 +6070,7 @@ function VEN_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
     // vínculo com o estoque: baixa o item puxado e mantém a data da venda em sincronia
     (function(){
+      if(row.simulacao) return;
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var dv=row.data_venda;
       if(VEN_merVinculo){
@@ -6082,6 +6093,7 @@ function VEN_confirmarOperacao(btn){
     })();
     // troca: cada parcela marcada como troca vira mercadoria no estoque (porteiro por parcela: só cria se não tem mid)
     (function(){
+      if(row.simulacao) return;
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var pend=VEN_parcelas.filter(function(p){ return p.troca && !p.troca.mid; });
       if(!pend.length) return;
@@ -6113,11 +6125,36 @@ function VEN_confirmarOperacao(btn){
     })();
     // SN da troca desce pro estoque quando editado depois (venda -> estoque, só quando a venda tem SN preenchido)
     (function(){
+      if(row.simulacao) return;
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       VEN_parcelas.forEach(function(p){
         if(p.troca && p.troca.mid && (p.troca.sn||'').trim()){
           sb.from('mercadorias').update({sn:(p.troca.sn||'').toUpperCase()}).eq('id', p.troca.mid).then(function(){});
         }
+      });
+    })();
+    (function(){
+      if(!row.simulacao) return;
+      var vendaId=VEN_currentOperationId; if(!vendaId) return;
+      var comMid=VEN_parcelas.filter(function(p){ return p.troca && p.troca.mid; });
+      if(!comMid.length) return;
+      comMid.forEach(function(p){
+        var mid=p.troca.mid;
+        sb.from('mercadorias').select('id,status,venda_troca_id,descricao').eq('id', mid).single().then(function(rq){
+          var m=rq&&rq.data; if(!m) return;
+          var intocado=((m.status||'estoque')==='estoque') && String(m.venda_troca_id||'')===String(vendaId);
+          if(intocado){
+            sb.from('mercadorias').delete().eq('id', mid).then(function(rd){
+              if(rd.error) return;
+              p.troca.mid=null;
+              try{ VB_log('ESTOQUE','apagou', m.descricao||'REL\u00d3GIO EM TROCA', 'Venda virou simula\u00e7\u00e3o'); }catch(e){}
+              var pl=VEN_parcelas.map(function(pp){ return {v:(pp.valor||''),d:(pp.data||''),o:(pp.obs||''),t:(pp.troca?{m:(pp.troca.modelo||''),sn:(pp.troca.sn||''),mid:(pp.troca.mid||null)}:undefined)}; });
+              sb.from('vendas').update({parcelas:pl}).eq('id',vendaId).then(function(){ VB_toast('Rel\u00f3gio da troca saiu do estoque (simula\u00e7\u00e3o).'); });
+            });
+          } else {
+            VB_toast('Rel\u00f3gio da troca j\u00e1 foi mexido \u2014 deixei no estoque.');
+          }
+        });
       });
     })();
     VEN_updateConfirmarBtnLabel();
@@ -9377,7 +9414,7 @@ function REN_desfaz(btn, baixaId){
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
-    var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven'), pag=filtra(res[3].data,'pag');
+    var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven').filter(function(r){ return !VB_ehSimulacao(r); }), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
@@ -13160,6 +13197,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.176.0</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">SIMULAÇÃO na venda (igual antecipação). Botão SIMULAÇÃO no formulário: marcada, a venda vira uma promessa — aparece no Histórico com badge SIM, fica FORA de todos os números reais (cabeçalho do mês, card preto, Fechamento e Relatório) e, o principal, NÃO cria o relógio da troca no estoque. Requer SQL já rodado: alter table vendas add column simulacao boolean default false</div>
+      <div class="cl-item">Efetivar (opção A): abre a venda, desliga o SIMULAÇÃO, salva — nesse instante o relógio da troca nasce no estoque. E o caminho inverso é simétrico: ligar o SIMULAÇÃO numa venda já real REMOVE o relógio da troca do estoque, com guarda — só apaga se ele ainda estiver intocado e tiver nascido dessa venda; se já foi vendido ou mexido, deixa no lugar e avisa</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.7</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">Cabeçalho do mês na Antecipação (OPERAÇÕES): o número da direita passou de Bruto pra Líquido, com o rótulo Líq: — agora bate com as linhas ("Líq:") e com o L: do lucro (ex.: Líq: R$ 305.849,31 · L: R$ 32.325,69). Só na Antecipação; Vendas e Financiamento seguem como estavam. O card preto de baixo continua mostrando o BRUTO operado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.6</span><span class="cl-ver-date">22/07/2026</span></div>
