@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.175.1</title>
+<title>VB - v1.175.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.1<br>22/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.4<br>22/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -820,7 +820,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
         <span></span>
       </div>
       <div id="ven-listaParcelas"></div>
-      <button data-fast="1" onclick="VEN_repetirParcela()" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
+      <button data-fast="1" onclick="VEN_repetirParcela(this)" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
     </div>
   </div>
 
@@ -3968,7 +3968,7 @@ function HIST_lucroRow(tab, r){
   return null;
 }
 
-var HIST_merCompra=null;
+var HIST_merCompra=null, HIST_conStatus=null;
 function HIST_cicloVenda(dcIso, r){
   var dv=null;
   if(r.data_venda){ var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length===3) dv=new Date(+vv[0],+vv[1]-1,+vv[2]); }
@@ -4002,6 +4002,14 @@ function HIST_fetch(term){
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).then(function(q2){
       HIST_merCompra={};
       if(!q2.error) (q2.data||[]).forEach(function(m){ if(m.venda_id) HIST_merCompra[String(m.venda_id)]=m.data_compra||null; });
+      if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
+    });
+  }
+  if(tab==='ven' && HIST_conStatus===null){
+    HIST_conStatus='loading';
+    sb.from('contratos').select('venda_id,assinado_em').not('venda_id','is',null).then(function(q3){
+      HIST_conStatus={};
+      if(!q3.error) (q3.data||[]).forEach(function(c){ if(c.venda_id) HIST_conStatus[String(c.venda_id)]={ass:c.assinado_em||null}; });
       if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
     });
   }
@@ -4262,6 +4270,8 @@ function HIST_renderRows(tab, rows){
           campos.push({l:'Custo '+(r.socio||'').toUpperCase()+' ('+_pcS+'%)', v:HIST_fmtMoeda(_vs)});
         }
       }
+      var _cs=(HIST_conStatus&&typeof HIST_conStatus==='object')?HIST_conStatus[String(r.id)]:null;
+      if(_cs) campos.push({l:'Contrato', v:(_cs.ass?('Assinado · '+HIST_fmtData(String(_cs.ass).slice(0,10))):'Gerado')});
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
       if(r.notas) campos.push({l:'Notas', v:r.notas, w:1});
 
@@ -5534,7 +5544,8 @@ function VEN_autoLista(){
   if(qtd>0){ VEN_popularParcelas(); VEN_mostrarLista(true); }
   else { VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false); }
 }
-function VEN_repetirParcela(){
+function VEN_repetirParcela(btn){
+  var _ry0=(btn&&btn.getBoundingClientRect)?btn.getBoundingClientRect().top:null;
   var last=VEN_parcelas[VEN_parcelas.length-1];
   VEN_parcelaCounter++;
   var novo={id:VEN_parcelaCounter, valor:(last?last.valor:''), data:'', obs:''};
@@ -5548,6 +5559,7 @@ function VEN_repetirParcela(){
   VEN_parcelas.push(novo);
   VEN_modoPersonalizado=true;
   VEN_renderParcelas(); VEN_syncFromParcelas(); VEN_mostrarLista(true);
+  if(btn && _ry0!=null){ try{ var _ry1=btn.getBoundingClientRect().top; var _rd=_ry1-_ry0; if(_rd) window.scrollBy(0,_rd); }catch(e){} }
 }
 
 function VEN_popularParcelas(){
@@ -5579,7 +5591,7 @@ function VEN_popularParcelas(){
 function VEN_renderParcelas(){
   var lista = document.getElementById('ven-listaParcelas');
   lista.innerHTML = '';
-  VEN_parcelas.forEach(function(p){
+  VEN_parcelas.forEach(function(p,_ix){
     var wrap = document.createElement('div');
     wrap.style.cssText = 'margin-bottom:4px;';
 
@@ -5587,7 +5599,7 @@ function VEN_renderParcelas(){
     row.style.cssText = 'display:grid;grid-template-columns:20px 1fr 1fr 18px 18px 18px;gap:5px;align-items:end;';
     var obsOpen = p.obs ? 'block' : 'none';
     row.innerHTML =
-      '<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;align-self:center;">'+String(p.id).padStart(2,'0')+'</span>'+
+      '<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;align-self:center;">'+String(_ix+1).padStart(2,'0')+'</span>'+
       '<div style="display:flex;align-items:baseline;justify-content:center;gap:1px;border-bottom:0.5px solid var(--ln);padding-bottom:2px;">'+
         '<span style="font-size:10px;color:var(--mu2);">R$</span>'+
         '<input type="text" inputmode="numeric" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
@@ -5601,7 +5613,7 @@ function VEN_renderParcelas(){
         '<span data-dias="'+p.id+'" style="font-size:9px;color:var(--so);flex-shrink:0;">'+VEN_diasTxt(p.data)+'</span>'+
       '</div>'+
       '<button data-obsbtn="'+p.id+'" onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:var(--so);cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
-      '<button data-trocabtn="'+p.id+'" onclick="VEN_trocaToggle('+p.id+')" style="border:none;background:none;font-size:14px;color:'+(p.troca?'var(--acc)':'var(--so)')+';cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;" title="Troca">⇄</button>'+'<button onclick="VEN_removerParcela('+p.id+')" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
+      '<button data-trocabtn="'+p.id+'" onclick="VEN_trocaToggle('+p.id+')" style="border:none;background:none;font-size:14px;color:'+(p.troca?'var(--acc)':'var(--so)')+';cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;" title="Troca">⇄</button>'+'<button onclick="VEN_removerParcela('+p.id+',this)" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
     obsRow.style.cssText='display:'+obsOpen+';padding:2px 28px 0 28px;';
@@ -5695,7 +5707,8 @@ function VEN_trocaToggle(id){
   VEN_modoPersonalizado=true;
   VEN_renderParcelas();
 }
-function VEN_removerParcela(id){
+function VEN_removerParcela(id, btn){
+  if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--red)'; VB_toast('Toque de novo para apagar a parcela.'); setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--so2)'; } },2500); return; }
   var _p=VEN_parcelas.find(function(x){ return x.id===id; });
   var _mid=(_p&&_p.troca&&_p.troca.mid)||null;
   VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
@@ -13137,6 +13150,22 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.4</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">+ REPETIR ÚLTIMA parou de fugir do dedo: ao tocar, a parcela nova entra no fim (ordem intacta) e a página rola exatamente a altura que o botão desceu — então ele fica parado no mesmo ponto da tela. Martelar acerta sempre, sem lista de rolagem e sem inverter a ordem</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.3</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">Card da venda (Histórico): novo campo CONTRATO no expandido — mostra "Gerado" quando existe o .docx e "Assinado · DD/MM" quando tem o PDF assinado; venda sem contrato não mostra a linha. O estado vem de uma consulta leve à tabela contratos, feita uma vez por sessão ao abrir VENDAS (mesmo esquema da data de compra do relógio)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.2</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">Parcelas da venda: o número da linha agora é a posição (01, 02, 03…) e renumera sozinho ao apagar — antes seguia um id interno e pulava (01, 02, 07…). O REPETIR ÚLTIMA passa a continuar da contagem certa</div>
+      <div class="cl-item">Parcelas da venda: o × de apagar agora pede dois toques (vira ✓ vermelho + "toque de novo pra apagar", 2,5s) — acabou a exclusão acidental por toque errado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.1</span><span class="cl-ver-date">22/07/2026</span></div>
