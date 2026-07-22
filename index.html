@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.175.0</title>
+<title>VB - v1.175.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.0<br>22/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.1<br>22/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -4164,6 +4164,7 @@ function HIST_renderRows(tab, rows){
         linha2=_la.join('<span style="color:var(--so2);"> · </span>');
         campos.push({l:'Bruto', v:HIST_fmtMoeda(_bru)});
       }
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePU(r.cliente)});
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
@@ -11879,6 +11880,7 @@ function CLI_cepInput(el){
   var d=(el.value||'').replace(/\D/g,'');
   if(d.length!==8) return;
   if((el.id||'')==='cli-cep') CLI_formReveal();
+  if((el.id||'')==='clif-cep' && typeof CLI_fichaReveal==='function') CLI_fichaReveal();
   fetch('https://viacep.com.br/ws/'+d+'/json/').then(function(r){ return r.json(); }).then(function(j){
     if(!j || j.erro) return;
     var ids = {e1:pfx+'-end1',e2:pfx+'-bairro',cid:pfx+'-cidade',uf:pfx+'-uf'};
@@ -12090,6 +12092,7 @@ var CLI_CAMPOS=[
 ];
 function CLI_ficha(i){ CLI_fichaIdx=i; CLI_fichaEdit=false; CLI_fichaNovoMode=false; CLI_fichaRender(); }
 function CLI_fichaNovo(){ CLI_fichaIdx=null; CLI_fichaNovoMode=true; CLI_fichaEdit=true; CLI_fichaRender(); }
+function CLI_fichaReveal(){ var r=document.getElementById('clif-resto'); if(r) r.style.display=''; var s=document.getElementById('clif-semcep'); if(s) s.style.display='none'; }
 function CLI_fichaVals(){
   var c=CLI_rows[CLI_fichaIdx]||{}, q=CLI_decQual(c), d=CLI_decEnd1(c);
   return {nome:c.nome||'', nacionalidade:q[0]||'brasileiro', estado_civil:q[1]||'', profissao:q[2]||'',
@@ -12152,8 +12155,10 @@ function CLI_fichaRender(){
   var body='<div style="display:grid;grid-template-columns:1fr;gap:6px;">'+campo('nome','NOME',1)+'</div>'
     +'<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px;margin-top:6px;">'+campo('cpf','CPF')+campo('estado_civil','ESTADO CIVIL')+campo('profissao','PROFISSÃO')+'</div>'
     +'<div style="display:grid;grid-template-columns:74px 1.4fr 1fr;gap:6px;margin-top:6px;">'+campo('doc_tipo','DOC.')+campo('doc_num','Nº DOCUMENTO')+campo('cep','CEP')+'</div>'
+    +(CLI_fichaNovoMode?'<div id="clif-resto" style="display:none;">':'')
     +'<div style="display:grid;grid-template-columns:2fr 66px 1.2fr;gap:6px;margin-top:6px;">'+campo('end1','ENDEREÇO')+campo('numero','Nº')+campo('end2','COMPLEMENTO')+'</div>'
     +'<div style="display:grid;grid-template-columns:1.3fr 1.3fr 56px;gap:6px;margin-top:6px;">'+campo('bairro','BAIRRO')+campo('cidade','CIDADE')+campo('uf','UF')+'</div>'
+    +(CLI_fichaNovoMode?'</div><div id="clif-semcep" onclick="CLI_fichaReveal()" style="text-align:center;font-size:9px;letter-spacing:1.5px;color:var(--so2);font-weight:600;cursor:pointer;padding:6px 0 2px;">ENDEREÇO SEM CEP</div>':'')
     +(CLI_fichaEdit?('<div style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:6px;">'+campo('nacionalidade','NACIONALIDADE',1)+'</div>'):'');
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">'+(CLI_fichaNovoMode?'NOVO CLIENTE':'FICHA DO CLIENTE')+'</div>'
@@ -12719,10 +12724,15 @@ function CON_render(){
   if(!CON_rows.length){ el.innerHTML='<div style="text-align:center;color:var(--so);font-size:12px;margin-top:20px;">Nenhum contrato gerado.</div>'; return; }
   el.innerHTML=CON_rows.map(function(c,i){
     var dt=(c.created_at||'').slice(0,10).split('-').reverse().join('/');
+    var _cdesc=(c.descricao?(' \u00b7 '+CTR_esc(c.descricao.length>16?c.descricao.slice(0,16).trim()+'\u2026':c.descricao)):'');
+    var _cval=(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'');
+    var _cstatus=c.assinado_em?'<b>\u2713 ASSINADO</b>':CON_aguarda(c).replace(/^ \u00b7 /,'');
+    var _corf=CON_orfaos[String(c.id)]?'<b>VENDA EXCLU\u00cdDA</b>':'';
+    var _cright=[_cstatus,_corf].filter(Boolean).join(' \u00b7 ');
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">'
       +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="CON_ficha('+i+')">'
       +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CTR_esc(c.cliente_nome||'')+'</div>'
-      +'<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+dt+(c.descricao?(' \u00b7 '+CTR_esc(c.descricao.length>16?c.descricao.slice(0,16).trim()+'\u2026':c.descricao)):'')+(c.valor_total?(' \u00b7 R$ '+CTR_fmtV(Number(c.valor_total))):'')+(c.assinado_em?' \u00b7 <b>\u2713 ASSINADO</b>':CON_aguarda(c))+(CON_orfaos[String(c.id)]?' \u00b7 <b>VENDA EXCLU\u00cdDA</b>':'')+'</div>'
+      +'<div style="display:flex;align-items:baseline;gap:6px;margin-top:1px;">'+'<div style="flex:1;min-width:0;font-size:9px;letter-spacing:0.5px;color:var(--so);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dt+_cdesc+_cval+'</div>'+(_cright?('<div style="flex-shrink:0;font-size:9px;letter-spacing:0.5px;color:var(--so);text-transform:uppercase;white-space:nowrap;">'+_cright+'</div>'):'')+'</div>'
       +'</div>'
       +'<button onclick="CON_del(this,'+i+')" style="border:none;background:transparent;color:var(--so2);font-size:17px;cursor:pointer;padding:4px 6px;">\u00d7</button>'
       +'</div>';
@@ -13127,6 +13137,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.1</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">Ficha de NOVO CLIENTE: endereço fica escondido, aparecendo só o CEP. Ao completar o CEP, os campos abrem já preenchidos pelo ViaCEP; quem não tem CEP toca em ENDEREÇO SEM CEP pra digitar na mão — igual ao formulário antigo. Na edição de cliente existente, o endereço continua sempre visível</div>
+      <div class="cl-item">Lista de contratos: nome do relógio parou de quebrar linha de vez — o ✓ ASSINADO (ou AGUARDANDO) fica fixo à direita e a parte da esquerda (data · relógio · valor) trunca com … quando não cabe. Uma linha, sempre</div>
+      <div class="cl-item">Card da antecipação (Histórico): expandido agora mostra o CLIENTE (nome + último sobrenome), igual ao card da venda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.0</span><span class="cl-ver-date">22/07/2026</span></div>
