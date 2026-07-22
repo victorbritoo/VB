@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.175.4</title>
+<title>VB - v1.175.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.4<br>22/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.175.6<br>22/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -4172,7 +4172,7 @@ function HIST_renderRows(tab, rows){
         linha2=_la.join('<span style="color:var(--so2);"> · </span>');
         campos.push({l:'Bruto', v:HIST_fmtMoeda(_bru)});
       }
-      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePU(r.cliente)});
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePUS(r.cliente)});
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
@@ -5613,7 +5613,7 @@ function VEN_renderParcelas(){
         '<span data-dias="'+p.id+'" style="font-size:9px;color:var(--so);flex-shrink:0;">'+VEN_diasTxt(p.data)+'</span>'+
       '</div>'+
       '<button data-obsbtn="'+p.id+'" onclick="VEN_toggleObs('+p.id+',this)" style="border:none;background:none;font-size:12px;color:var(--so);cursor:pointer;padding:0;line-height:1;flex-shrink:0;align-self:center;" title="Comentário">ⓘ</button>'+
-      '<button data-trocabtn="'+p.id+'" onclick="VEN_trocaToggle('+p.id+')" style="border:none;background:none;font-size:14px;color:'+(p.troca?'var(--acc)':'var(--so)')+';cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;" title="Troca">⇄</button>'+'<button onclick="VEN_removerParcela('+p.id+',this)" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
+      '<button data-trocabtn="'+p.id+'" onclick="VEN_trocaToggle('+p.id+')" style="border:none;background:none;font-size:14px;color:'+(p.troca?'var(--acc)':'var(--so)')+';cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;" title="Troca">⇄</button>'+'<button data-xid="'+p.id+'" onclick="VEN_removerParcela('+p.id+',this)" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;text-align:center;align-self:center;">×</button>';
     // Obs row
     var obsRow = document.createElement('div');
     obsRow.style.cssText='display:'+obsOpen+';padding:2px 28px 0 28px;';
@@ -5711,10 +5711,15 @@ function VEN_removerParcela(id, btn){
   if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--red)'; VB_toast('Toque de novo para apagar a parcela.'); setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--so2)'; } },2500); return; }
   var _p=VEN_parcelas.find(function(x){ return x.id===id; });
   var _mid=(_p&&_p.troca&&_p.troca.mid)||null;
+  var _y0=(btn&&btn.getBoundingClientRect)?btn.getBoundingClientRect().top:null;
+  var _dix=VEN_parcelas.findIndex(function(x){ return x.id===id; });
+  var _nextP=(_dix>=0)?(VEN_parcelas[_dix+1]||VEN_parcelas[_dix-1]||null):null;
+  var _nextId=_nextP?_nextP.id:null;
   VEN_parcelas = VEN_parcelas.filter(function(p){ return p.id!==id; });
   VEN_modoPersonalizado=true;
   VEN_renderParcelas();
   VEN_syncFromParcelas();
+  if(_nextId!=null && _y0!=null){ try{ var _lst=document.getElementById('ven-listaParcelas'); var _tg=_lst&&_lst.querySelector('[data-xid="'+_nextId+'"]'); if(_tg){ var _dd=_tg.getBoundingClientRect().top-_y0; if(_dd) window.scrollBy(0,_dd); } }catch(e){} }
   if(_mid) VB_toast('Relógio segue no estoque — trate na mão.');
 }
 
@@ -8862,6 +8867,11 @@ function VB_nomePU(nome){
   var ps=s.split(/\s+/);
   if(ps.length<2 || (ps.length<4 && s.length<=24)) return s;
   return ps[0]+' '+ps[ps.length-1];
+}
+function VB_nomePUS(nome){
+  var s=String(nome||'').trim(); if(!s) return s;
+  var ps=s.split(/\s+/);
+  return ps.length<2?s:(ps[0]+' '+ps[ps.length-1]);
 }
 /* === FONTE ÚNICA DE ANTECIPAÇÕES REAIS ===
    Regra de arquitetura: NENHUM consumidor escreve !r.simulacao na mão.
@@ -13150,6 +13160,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.6</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">CLIENTE no card da antecipação agora é sempre primeiro + último nome (ex.: EDUARDO PINHEIRO). Antes usava a regra preguiçosa que mantinha nomes de 3 palavras inteiros. A venda segue como estava</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.5</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">Apagar parcela agora é o espelho do REPETIR: ao apagar, o × da próxima parcela desce pro lugar onde você tocou, então dá pra ir apagando do mesmo ponto sem o dedo perseguir a lista (a página compensa o scroll na medida). Com o dois-toques, cada exclusão é armar + confirmar, mas sem sair do lugar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.175.4</span><span class="cl-ver-date">22/07/2026</span></div>
