@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.176.0</title>
+<title>VB - v1.176.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.176.0<br>22/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.176.1<br>22/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -497,7 +497,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
 
   <!-- SELETOR SIMULAÇÃO / QUITAÇÃO -->
   <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;margin-bottom:8px;">
-    <button id="fin-seg-sim" onclick="FIN_setModo('sim')" style="padding:9px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:var(--acc-tx);font-weight:600;cursor:pointer;">SIMULAÇÃO</button>
+    <button id="fin-seg-sim" onclick="FIN_setModo('sim')" style="padding:9px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:var(--acc-tx);font-weight:600;cursor:pointer;">FINANCIAMENTO</button>
     <button id="fin-seg-quit" onclick="FIN_setModo('quit')" style="padding:9px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:var(--mu);font-weight:600;cursor:pointer;">QUITAÇÃO ANTECIPADA</button>
   </div>
   <hr class="divider">
@@ -662,6 +662,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
     <button onclick="FIN_compartilharTabela()" style="width:100%;padding:9px;border:0.5px solid var(--ln);border-radius:14px;background:var(--sf);font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;">GERAR TABELA</button>
   </div>
 
+  <button id="fin-chipSim" onclick="FIN_toggleSim()" style="display:block;margin:10px auto 0;padding:6px 16px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">SIMULAÇÃO</button>
   <button id="fin-btnConfirmar" onclick="FIN_confirmarOperacao(this)" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:14px;background:var(--sf);font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:700;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">✓ CONFIRMAR OPERAÇÃO</button>
 
   </div><!-- fim fin-modo-sim -->
@@ -1534,6 +1535,7 @@ function HIST_carregarFin(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   FIN_currentOperationId = r.id;
   VB_carimboTS = r.created_at||null;
+  FIN_simFlag=!!r.simulacao; try{FIN_paintSimChip();}catch(e){}
   // Set all fields before triggering recalc
   if(r.descricao) document.getElementById('fin-tabelaDesc').value = r.descricao;
   if(r.valor_financiado){ document.getElementById('fin-valor').value = FIN_formatBR(Number(r.valor_financiado)); }
@@ -3046,7 +3048,7 @@ function VB_relatorioPDF(dados, total, returnImages){
     ctx.fillText(text,x,y);
   }
 
-  var ant=VB_antReais(dados['antecipacoes']), fin=dados['financiamentos_hist']||[], ven=(dados['vendas']||[]).filter(function(r){ return !VB_ehSimulacao(r); }), pag=dados['pagamentos']||[];
+  var ant=VB_antReais(dados['antecipacoes']), fin=(dados['financiamentos_hist']||[]).filter(function(r){ return !VB_ehSimulacao(r); }), ven=(dados['vendas']||[]).filter(function(r){ return !VB_ehSimulacao(r); }), pag=dados['pagamentos']||[];
   var merMap={}; (dados['mercadorias']||[]).forEach(function(m){ if(m.venda_id) merMap[m.venda_id]=m; });
   function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
   function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
@@ -3488,7 +3490,7 @@ function HIST_renderTotal(tab, rows, term){
   var esc=(busca||fixo||filtro)?'geral':HIST_totEscopo;
   var _n=new Date(), nowYM=_n.getFullYear()+'-'+('0'+(_n.getMonth()+1)).slice(-2);
   var rowsT=(esc==='mes') ? rows.filter(function(r){ return HIST_dataNeg(tab,r).slice(0,7)===nowYM; }) : rows;
-  rowsT=rowsT.filter(function(r){ var _rt=(r._tab||tab); return !((_rt==='ant'||_rt==='ven') && VB_ehSimulacao(r)); }); // simulação nunca soma
+  rowsT=rowsT.filter(function(r){ var _rt=(r._tab||tab); return !((_rt==='ant'||_rt==='ven'||_rt==='fin') && VB_ehSimulacao(r)); }); // simulação nunca soma
   if(!rowsT.length){ totalEl.style.display='none'; return; }
   var titulo='', tt=null;
   if(!busca && !fixo){
@@ -4127,7 +4129,7 @@ function HIST_renderRows(tab, rows){
   var grouping=(HIST_sortCol==='data'), lastBucket=null;
   var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
   if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r));
-    if((rt==='ant'||rt==='ven') && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
+    if((rt==='ant'||rt==='ven'||rt==='fin') && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
     bucketCount[bk]=(bucketCount[bk]||0)+1;
     if(!mixed){
       var mm=bucketMet[bk]||(bucketMet[bk]={v:0,l:0,temL:false});
@@ -4199,8 +4201,9 @@ function HIST_renderRows(tab, rows){
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
+      if(r.simulacao) rowBadge='SIM';
       if(r.tem_investidor){
-        rowBadge='I';
+        if(!r.simulacao) rowBadge='I';
         var _nomeI=(r.investidor_nome||'INVESTIDOR').toUpperCase();
         if(r.investidor_parcela!=null) campos.push({l:'Parcela '+_nomeI, v:HIST_fmtMoeda(r.investidor_parcela)});
         if(r.vb_parcela!=null) campos.push({l:'Parcela VB', v:HIST_fmtMoeda(r.vb_parcela)});
@@ -5148,11 +5151,16 @@ function FIN_restoreSession(){
 }
 
 var FIN_currentOperationId = null;
+var FIN_simFlag=false;
 function FIN_updateConfirmarBtnLabel(){
   var b=document.getElementById('fin-btnConfirmar');
   if(!b) return;
-  b.textContent = FIN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO';
+  b.textContent = FIN_simFlag ? (FIN_currentOperationId?'✓ ATUALIZAR SIMULAÇÃO':'✓ SALVAR SIMULAÇÃO') : (FIN_currentOperationId ? '✓ ATUALIZAR OPERAÇÃO' : '✓ CONFIRMAR OPERAÇÃO');
 }
+function FIN_paintSimChip(){ var c=document.getElementById('fin-chipSim'); if(!c) return;
+  if(FIN_simFlag){ c.style.borderStyle='solid'; c.style.borderColor='var(--lnk)'; c.style.color='var(--tx)'; c.style.background='var(--sf)'; c.style.fontWeight='700'; }
+  else { c.style.borderStyle='dashed'; c.style.borderColor='var(--ln)'; c.style.color='var(--mu2)'; c.style.background='transparent'; c.style.fontWeight='500'; } }
+function FIN_toggleSim(){ FIN_simFlag=!FIN_simFlag; FIN_paintSimChip(); FIN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('fin'); }
 var FIN_nomeChecked=false;
 function FIN_confirmarOperacao(btn){
   VB_carimboTS = null;
@@ -5199,7 +5207,8 @@ function FIN_confirmarOperacao(btn){
     investidor_pct: _invPct,
     investidor_parcela: _invD? _invD.pi : null,
     vb_parcela: _invD? _invD.pv : null,
-    investidor_aporte: _invD? _invD.valorOP : null
+    investidor_aporte: _invD? _invD.valorOP : null,
+    simulacao: FIN_simFlag
   };
 
   var ehAtualizacao = !!FIN_currentOperationId;
@@ -5241,6 +5250,7 @@ function FIN_confirmarOperacao(btn){
 function FIN_limpar(){
   FIN_snapshot = null;
   FIN_currentOperationId = null;
+  FIN_simFlag=false; try{FIN_paintSimChip();}catch(e){}
   VB_carimboTS = null;
   FIN_updateConfirmarBtnLabel();
   FIN_lastEdited='';
@@ -9414,7 +9424,7 @@ function REN_desfaz(btn, baixaId){
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
-    var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin'), ven=filtra(res[2].data,'ven').filter(function(r){ return !VB_ehSimulacao(r); }), pag=filtra(res[3].data,'pag');
+    var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin').filter(function(r){ return !VB_ehSimulacao(r); }), ven=filtra(res[2].data,'ven').filter(function(r){ return !VB_ehSimulacao(r); }), pag=filtra(res[3].data,'pag');
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
@@ -13197,6 +13207,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.176.1</span><span class="cl-ver-date">22/07/2026</span></div>
+      <div class="cl-item">SIMULAÇÃO agora também no Financiamento. Pra não colidir com o seletor de cálculo, ele passou a se chamar FINANCIAMENTO / QUITAÇÃO ANTECIPADA (era SIMULAÇÃO / QUITAÇÃO), e "SIMULAÇÃO" virou a flag de promessa — igual venda e antecipação: badge SIM no Histórico e fora de todos os números reais (cabeçalho do mês, card preto, Fechamento e Relatório). Requer SQL já rodado: alter table financiamentos_hist add column simulacao boolean default false</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.176.0</span><span class="cl-ver-date">22/07/2026</span></div>
