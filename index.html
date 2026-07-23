@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.176.3</title>
+<title>VB - v1.176.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.176.3<br>23/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.176.4<br>23/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -1582,13 +1582,14 @@ function HIST_carregarAnt(r){
     if(ANT_modoPersonalizado) ANT_toggleModo();
     ANT_recalc();
   }
+  ANT_updateConfirmarBtnLabel();
+  ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant');
   if(r.modo==='personalizado'){
     var _hoje=new Date();
     document.getElementById('ant-dataOperacao').value=('0'+_hoje.getDate()).slice(-2)+'/'+('0'+(_hoje.getMonth()+1)).slice(-2)+'/'+_hoje.getFullYear();
     try{ ANT_recalcPersonalizado(); }catch(e){}
+    VB_dirtyPaintTela('ant');
   }
-  ANT_updateConfirmarBtnLabel();
-  ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant');
   VB_telaAnterior = 'hist';
   showScreen('ant');
 }
@@ -4511,8 +4512,14 @@ var VB_dirtyBtn={fin:'fin-btnConfirmar', ant:'ant-btnConfirmar', ven:'ven-btnCon
 function VB_dirtyPaintTela(tela){
   var id=VB_dirtyBtn[tela]; if(!id) return;
   var b=document.getElementById(id); if(!b) return;
-  if(VB_temAlteracaoManual(tela)){ b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; }
+  var c=VB_guardCfg[tela];
+  var ehEdicao = !!(c && c.getId && c.getId());
+  var sujo = VB_temAlteracaoManual(tela);
+  if(sujo){ b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; }
   else { b.style.background='var(--sf)'; b.style.color='var(--tx)'; }
+  var travar = ehEdicao && !sujo;   // edição sem alteração: trava; nova operação ou com alteração: libera
+  b.style.pointerEvents = travar ? 'none' : '';
+  b.style.opacity = travar ? '0.45' : '';
 }
 // qualquer digitação nas telas de edição repinta o botão (padrão do Estoque, 1.76.0)
 (function(){
@@ -13212,6 +13219,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.176.4</span><span class="cl-ver-date">23/07/2026</span></div>
+      <div class="cl-item">Botões ATUALIZAR OPERAÇÃO (Antecipação, Financiamento, Vendas, Pagamentos): quando você abre uma operação e NÃO muda nada, o botão agora fica apagado e não deixa tocar — antes dava pra salvar sem alteração nenhuma. Assim que você mexe em algo, ele acende e libera. Operação nova segue liberada normalmente (é o CONFIRMAR)</div>
+      <div class="cl-item">Ajuste ligado ao anterior: na antecipação personalizada, como a DATA OP. vira hoje ao abrir, isso conta como alteração — o botão já nasce aceso e liberado pra você salvar o recálculo até hoje, se quiser</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.176.3</span><span class="cl-ver-date">23/07/2026</span></div>
