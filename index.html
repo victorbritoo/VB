@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.182.0</title>
+<title>VB - v1.182.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.182.0<br>27/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.182.1<br>27/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -3958,6 +3958,24 @@ function VB_consigVen(socio, vs, c, pct){
   if(Math.round(vs/c*100)!==100) return false;
   return (pct==null) || (Number(pct)>=100);
 }
+/* Entrada: 1a parcela cai ate 5 dias da venda (fechou hoje, pagou amanha / na segunda).
+   Acima disso a proxima parcela natural e 30 dias, entao nao ha ambiguidade. */
+function VB_ehEntrada(r){
+  if(!r || !r.data_venda) return false;
+  var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length!==3) return false;
+  var dv=new Date(+vv[0],+vv[1]-1,+vv[2]); if(isNaN(dv.getTime())) return false;
+  var d1=null, ps=r.parcelas;
+  try{ if(typeof ps==='string') ps=JSON.parse(ps); }catch(e){ ps=null; }
+  if(ps && ps.length && ps[0]){
+    var _pd=ps[0].d||ps[0].data||'';
+    var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(_pd).trim());
+    if(m) d1=new Date(+m[3],+m[2]-1,+m[1]);
+  }
+  if(!d1 && r.data_primeira_parcela){ var pp=String(r.data_primeira_parcela).split('T')[0].split('-'); if(pp.length===3) d1=new Date(+pp[0],+pp[1]-1,+pp[2]); }
+  if(!d1 || isNaN(d1.getTime())) return false;
+  var dd=(d1-dv)/86400000;
+  return dd>=0 && dd<=5;
+}
 function VB_termometro(lucro, capital, meses){
   lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
   if(!isFinite(lucro)||!isFinite(capital)||!isFinite(meses)||capital<=0||meses<=0) return null;
@@ -4267,7 +4285,8 @@ function HIST_renderRows(tab, rows){
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
-      var _qtdP=(r.quantidade_parcelas?r.quantidade_parcelas+'\u00d7':'');
+      var _nP=Number(r.quantidade_parcelas)||0;
+      var _qtdP=(_nP?((_nP>1&&VB_ehEntrada(r))?('1+'+(_nP-1)+'\u00d7'):(_nP+'\u00d7')):'');
       (function(){
         var arr=r.parcelas;
         if(arr && arr.length){
@@ -10223,7 +10242,7 @@ function MER_resumoParcelas(v){
     if(vals.length){
       var todasIguais=vals.every(function(x){ return Math.abs(x-vals[0])<0.005; });
       if(vals.length===1) return 'À vista R$ '+MER_fmtBR(vals[0]);
-      if(todasIguais) return vals.length+'× R$ '+MER_fmtBR(vals[0]);
+      if(todasIguais) return ((vals.length>1&&VB_ehEntrada(v))?('1+'+(vals.length-1)):String(vals.length))+'× R$ '+MER_fmtBR(vals[0]);
       var resto=vals.slice(1);
       var restoIgual=resto.every(function(x){ return Math.abs(x-resto[0])<0.005; });
       if(restoIgual) return 'R$ '+MER_fmtBR(vals[0])+' + '+resto.length+'× R$ '+MER_fmtBR(resto[0]);
@@ -10233,7 +10252,7 @@ function MER_resumoParcelas(v){
   }
   var q=Number(v.quantidade_parcelas)||0, vp=Number(v.valor_parcela)||0;
   if(q===1 && (vp>0||Number(v.valor_total)>0)) return 'À vista R$ '+MER_fmtBR(vp>0?vp:Number(v.valor_total));
-  if(q>1 && vp>0) return q+'× R$ '+MER_fmtBR(vp);
+  if(q>1 && vp>0) return (VB_ehEntrada(v)?('1+'+(q-1)):String(q))+'× R$ '+MER_fmtBR(vp);
   return '';
 }
 var MER_vendaCache=null;
@@ -13379,6 +13398,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.182.1</span><span class="cl-ver-date">27/07/2026</span></div>
+      <div class="cl-item">Venda com entrada agora aparece como 1+2× em vez de 3×, no card do Histórico e na ficha do relógio — do jeito que você fala. Conta como entrada a 1ª parcela que cai até 5 dias depois da venda, o que cobre o caso comum de fechar num dia e o cliente matar no seguinte, ou fechar na sexta e pagar na segunda. Acima disso a próxima parcela natural é 30 dias, então não há risco de confundir. Venda sem entrada segue mostrando 3×, e a tabela do cliente e o contrato continuam listando as parcelas uma a uma, sem alteração</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.182.0</span><span class="cl-ver-date">27/07/2026</span></div>
