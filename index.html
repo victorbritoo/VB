@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.182.1</title>
+<title>VB - v1.183.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.182.1<br>27/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.183.0<br>27/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -4049,7 +4049,7 @@ function HIST_fetch(term){
     HIST_conStatus='loading';
     sb.from('contratos').select('venda_id,assinado_em').not('venda_id','is',null).then(function(q3){
       HIST_conStatus={};
-      if(!q3.error) (q3.data||[]).forEach(function(c){ if(c.venda_id) HIST_conStatus[String(c.venda_id)]={ass:c.assinado_em||null}; });
+      if(!q3.error) (q3.data||[]).forEach(function(c){ if(!c.venda_id) return; var _k=String(c.venda_id), _cur=HIST_conStatus[_k]; if(!_cur || (!_cur.ass && c.assinado_em)) HIST_conStatus[_k]={ass:c.assinado_em||null}; });
       if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
     });
   }
@@ -12843,7 +12843,15 @@ function CON_fichaObj(c, aoGerarNovo){
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
   ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f); }); });
-  var bn=ov.querySelector('#conf-novo'); if(bn) bn.addEventListener('click',function(){ ov.remove(); aoGerarNovo(); });
+  var bn=ov.querySelector('#conf-novo');
+  if(bn){ var _armN=false; bn.addEventListener('click',function(){
+    if(c.assinado_em && !_armN){
+      _armN=true; bn.textContent='J\u00c1 EXISTE ASSINADO \u2014 TOQUE DE NOVO'; bn.style.color='var(--red)'; bn.style.borderColor='var(--red)';
+      setTimeout(function(){ _armN=false; if(bn){ bn.textContent='GERAR NOVO CONTRATO'; bn.style.color='var(--tx)'; bn.style.borderColor='var(--ln3)'; } },3000);
+      return;
+    }
+    ov.remove(); aoGerarNovo();
+  }); }
   var ba=ov.querySelector('#conf-anexar');
   if(ba) ba.addEventListener('click',function(){
     var inp=document.createElement('input'); inp.type='file'; inp.accept='application/pdf';
@@ -12939,8 +12947,14 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
     var fr=new FileReader();
     fr.onload=function(){
       var b64=String(fr.result).split(',')[1]||'';
-      sb.from('contratos').insert({cliente_nome:nome, cpf:cpf||null, descricao:marca||null, valor_total:total||null, fname:fname, arquivo_b64:b64, venda_id:vendaId||null}).then(function(res){
+      sb.from('contratos').insert({cliente_nome:nome, cpf:cpf||null, descricao:marca||null, valor_total:total||null, fname:fname, arquivo_b64:b64, venda_id:vendaId||null}).select('id').then(function(res){
         if(res.error){ VB_toast('Contrato N\u00c3O salvo na Gest\u00e3o: '+res.error.message); return; }
+        try{ HIST_conStatus=null; }catch(e){}
+        var _novoId=(res.data&&res.data[0])?res.data[0].id:null;
+        if(vendaId && _novoId){
+          /* rascunho nao assinado da mesma venda sai: um contrato por venda. Assinado nunca e apagado. */
+          sb.from('contratos').delete().eq('venda_id',vendaId).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
+        }
         VB_toast('Contrato salvo em Gestão \u203a Contratos.');
 
       });
@@ -13199,8 +13213,12 @@ function CTR_parcelasDaVenda(r){
 // ---- UI ----
 function CTR_abrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
-  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').eq('venda_id',r0.id).order('created_at',{ascending:false}).limit(1).then(function(res){
-    if(!res.error && res.data && res.data.length){ CON_fichaObj(res.data[0]); }
+  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').eq('venda_id',r0.id).order('created_at',{ascending:false}).then(function(res){
+    var arr=(!res.error && res.data)?res.data:[];
+    if(arr.length){
+      var _pref=arr.filter(function(x){ return x.assinado_em; })[0] || arr[0]; /* assinado manda, mesmo que exista um mais novo */
+      CON_fichaObj(_pref, function(){ CTR_abrirForm(idx); });
+    }
     else { CTR_abrirForm(idx); }
   });
 }
@@ -13398,6 +13416,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.183.0</span><span class="cl-ver-date">27/07/2026</span></div>
+      <div class="cl-item">Contrato refeito depois de mexer na venda: tocando em CONTRATO no card, agora aparece GERAR NOVO CONTRATO dentro da ficha — antes o botão não existia por ali e você teria que apagar o contrato na Gestão para poder refazer</div>
+      <div class="cl-item">Contrato não assinado é rascunho: ao gerar um novo, o rascunho anterior daquela venda é substituído, em vez de acumular. A Gestão volta a ter um contrato por venda, sem dúvida sobre qual é o bom</div>
+      <div class="cl-item">Contrato assinado nunca é substituído nem apagado. Se você mandar gerar um novo por cima de um assinado, o botão pede confirmação em dois toques avisando que já existe assinado — e, havendo mais de um contrato na mesma venda, é sempre o assinado que o card abre e que manda no status. Alteração na venda depois da assinatura deveria virar aditivo, não troca silenciosa do documento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.182.1</span><span class="cl-ver-date">27/07/2026</span></div>
