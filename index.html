@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.181.1</title>
+<title>VB - v1.182.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.181.1<br>27/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.182.0<br>27/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -4255,7 +4255,13 @@ function HIST_renderRows(tab, rows){
         var _dc=((HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null)||(r.data_compra||null);
         var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
         var _tm=VB_termometro(_meuL, _cap, _cic); if(_tm==null) return;
-        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')});
+        var _temTroca=(r.parcelas||[]).some(function(p){ return p && p.t; });
+        if(_cic<0.5){
+          var _mgC=(_cap>0)?(_meuL/_cap*100):null;
+          campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u00b7 com troca':''), w:1});
+        } else {
+        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' · com troca':'')});
+        }
       })();
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomePU(r.cliente)});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
@@ -5538,8 +5544,14 @@ function VEN_updateLucro(){
     var _meuL=_ok?((t-c)*_pV2/100):null;
     var _cic=VEN_cicloMeses();
     var _tm=(_ok&&_meuC>0&&_cic)?VB_termometro(_meuL,_meuC,_cic):null;
-    if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'
+    var _curto=(_cic!=null && _cic<0.5);
+    if(_tm!=null && _curto){
+      var _mg=(_meuC>0)?(_meuL/_meuC*100):null;
+      rd.innerHTML='<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
+        +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
+      rd.style.display='block';
+    } else if(_tm!=null){
+      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
         +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
       rd.style.display='block';
     } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
@@ -5607,6 +5619,9 @@ function VEN_syncFromParcelas(){
     for(var i=1;i<count;i++){ if(Math.abs((VEN_parseBR(VEN_parcelas[i].valor)||0)-v0)>0.005){ iguais=false; break; } }
   }
   document.getElementById('ven-parcela').value = (soma > 0 && count > 0) ? (iguais ? VEN_formatBR(soma/count) : '—') : '';
+  /* PRIMEIRO VENCIMENTO espelha a 1a parcela (uma via so: o campo reflete a lista, nao comanda) */
+  var _pv=document.getElementById('ven-tabelaData');
+  if(_pv && count>0){ var _d1=(VEN_parcelas[0].data||'').trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(_d1) && _pv.value!==_d1) _pv.value=_d1; }
   VEN_updateLucro();
 }
 
@@ -13364,6 +13379,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.182.0</span><span class="cl-ver-date">27/07/2026</span></div>
+      <div class="cl-item">Venda de liquidação rápida (ciclo abaixo de 15 dias) deixa de mostrar taxa ao mês e passa a mostrar a MARGEM sobre o capital: em vez de "103,53% a.m. · ciclo 0m", agora sai "MARGEM 4,8% · À VISTA". Motivo: taxa mensal calculada sobre um ciclo de um ou dois dias explode e não significa nada — ali você não alugou capital no tempo, girou mercadoria, e a pergunta certa é quanto ganhou sobre o custo. Vale no card do Histórico e no formulário</div>
+      <div class="cl-item">Junto disso, o alerta vermelho de rendimento fraco (3,5% a.m.) deixa de valer nessas vendas de ciclo curto, onde a régua não faz sentido. Venda parcelada de verdade — 30, 60, 90 dias — segue mostrando % a.m. e ciclo como sempre, que é o que permite comparar relógio com antecipação e financiamento. Nenhuma conta de lucro, custo ou estoque foi alterada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.181.2</span><span class="cl-ver-date">27/07/2026</span></div>
+      <div class="cl-item">PRIMEIRO VENCIMENTO agora espelha a data da 1ª parcela automaticamente. Antes os dois podiam divergir (campo em 23/07 e parcela em 24/07) e era o campo, não a parcela, que ficava gravado — contaminando o cronograma e o cálculo de ciclo. O espelho é de via única, da lista para o campo: o campo passou a ser reflexo da lista, nunca o comando dela, para não reabrir a porta do problema que apagava as parcelas</div>
+      <div class="cl-item">Rendimento de venda com troca agora sai marcado com COM TROCA, no card e no formulário. A conta não mudou — o alerta é de leitura: quando boa parte do valor volta como relógio e não como dinheiro, o prazo médio despenca e o percentual dispara (ex.: 103,53% a.m. com ciclo de 1,4 dia). O capital não girou, trocou de roupa: o resultado de verdade só aparece quando o relógio recebido for vendido</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.181.1</span><span class="cl-ver-date">27/07/2026</span></div>
