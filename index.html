@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.180.0</title>
+<title>VB - v1.180.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -447,7 +447,7 @@ input::placeholder, textarea::placeholder{ color:var(--ph); opacity:1; font-weig
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.180.0<br>26/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.180.1<br>26/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -1791,6 +1791,7 @@ function HIST_clickItem(el){
   else { HIST_abrirOperacao(idx); }
 }
 var MER_fichaDoHist=false;
+var MER_viewId=null, MER_reabrirId=null;
 function HIST_abrirRelogio(idx){
   var r=HIST_rowsCache[idx]; if(!r||!r.id) return;
   MER_fichaDoHist=true;
@@ -4635,6 +4636,13 @@ function showScreen(name){
     if(_sm && _sm.style.display==='block'){ MER_dirtyGuard(function(){ showScreen(name); }); return; }
   }
   if(name==='home' && GLB_reabrir){ GLB_reabrir=false; setTimeout(function(){ var ov=document.getElementById('glb-overlay'); if(ov) ov.style.display='flex'; },260); }
+  if(name==='mer' && MER_reabrirId){
+    var _rid=MER_reabrirId; MER_reabrirId=null;
+    (function tenta(n){ setTimeout(function(){
+      var achou=(typeof MER_rows!=='undefined') && (MER_rows||[]).some(function(x){ return String(x.id)===String(_rid); });
+      if(achou){ try{ MER_abrir(_rid); }catch(e){} } else if(n>0){ tenta(n-1); }
+    },260); })(6);
+  }
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
@@ -10032,6 +10040,7 @@ function MER_toggleForm(force){
 function MER_abrir(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
+  MER_viewId=id;
   // vendas das passagens deste SN: busca as que faltam no mapa e redesenha (uma vez)
   (function(){
     var snF=((r.marca||r.modelo||r.ano||r.sn)?(r.sn||''):(MER_desmontar(r.descricao||'').sn||'')).toUpperCase();
@@ -10435,6 +10444,7 @@ function MER_abrirVenda(id){
   HIST_carregarVen(v);
   HIST_voltaParaHist=_doHist&&!_daBusca;
   VB_telaAnterior = _daBusca ? 'home' : (_doHist ? 'hist' : 'mer'); // volta pra onde a ficha nasceu
+  MER_reabrirId = (!_daBusca && !_doHist) ? MER_viewId : null; // voltando pro Estoque, reabre a ficha do relógio
 }
 function MER_viewFechar(){
   if(MER_viewEdit && MER_viewDirty()){
@@ -13328,6 +13338,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.180.1</span><span class="cl-ver-date">26/07/2026</span></div>
+      <div class="cl-item">Estoque: ao abrir a ficha de um relógio, tocar em ABRIR VENDA e voltar, o app agora reabre a ficha do relógio onde você estava — antes largava você na lista de VENDIDOS e obrigava a procurar o item de novo. Mesmo comportamento que a busca geral já tinha. Quando a ficha foi aberta pelo Histórico ou pela busca, o retorno segue como era</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.180.0</span><span class="cl-ver-date">26/07/2026</span></div>
