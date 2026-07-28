@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.195.0</title>
+<title>VB - v1.195.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.195.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.195.2<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -10363,15 +10363,17 @@ function MER_possibilidades(r){
 
   if(!consig && !(cap>0)) return hh+'</div>';
 
-  hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
+  var _ab=(MER_possAberto!=null && String(MER_possAberto)===String(r.id));
+  if(_ab) setTimeout(function(){ try{ MER_possCalc(); }catch(e){} },0);
+  hh+='<div id="mer-poss-exp" style="display:'+(_ab?'block':'none')+';margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
     +'<div style="display:flex;gap:6px;justify-content:center;margin-bottom:7px;">'
       +'<button id="mer-poss-m1" onclick="event.stopPropagation();MER_possModoSet(\'1\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">1+N</button>'
       +'<button id="mer-poss-m0" onclick="event.stopPropagation();MER_possModoSet(\'0\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--sf2);color:var(--mu2);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">0+N</button>'
     +'</div><div id="mer-poss-tab"></div></div>';
   return hh+'</div>';
 }
-var MER_possModo='1';
-function MER_possToggle(){ var e=document.getElementById('mer-poss-exp'); if(!e) return; var ab=(e.style.display==='none'); e.style.display=ab?'block':'none'; if(ab) MER_possCalc(); }
+var MER_possModo='1', MER_possAberto=null; /* id do relogio com o bloco aberto */
+function MER_possToggle(){ var e=document.getElementById('mer-poss-exp'); if(!e) return; var ab=(e.style.display==='none'); e.style.display=ab?'block':'none'; MER_possAberto=ab?MER_viewId:null; if(ab) MER_possCalc(); }
 function MER_possModoSet(m){ MER_possModo=m;
   var b1=document.getElementById('mer-poss-m1'), b0=document.getElementById('mer-poss-m0');
   if(b1&&b0){ var on='background:var(--acc);color:var(--acc-tx);font-weight:700;', off='background:var(--sf2);color:var(--mu2);font-weight:600;';
@@ -10383,18 +10385,29 @@ function MER_possCalc(){
   var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
   var sem=(MER_possModo==='0'), out='';
   /* % a.m. efetivo de cada op\u00e7\u00e3o; ciclo curto (<15d) nao mostra taxa — o numero estoura. */
-  /* Taxa que o capital empregado rende naquele parcelamento:
-     a entrada abate o custo e as parcelas seguintes amortizam o saldo. */
+  /* Taxa que o capital empregado rende naquele parcelamento.
+     Projeta as parcelas no calendario real (meses tem 28 a 31 dias),
+     a mesma base da tela de venda — assim os dois numeros batem. */
   function _am(total, N, semEntrada){
     var qt=semEntrada?N:(N+1), p=total/qt;
-    var saldo=semEntrada? d.c : (d.c-p);
-    var r=VB_taxaImplicita(saldo, p, N);
-    if(r==null) return '';
-    return ' <span style="color:var(--so);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.)</span>';
+    var hoje=new Date(), fl=[{m:0, v:-d.c}];
+    for(var k=0;k<qt;k++){
+      var off=semEntrada?(k+1):k;
+      var dt=new Date(hoje.getFullYear(), hoje.getMonth()+off, hoje.getDate());
+      fl.push({m:Math.max(0,(dt-hoje)/86400000/30), v:p});
+    }
+    var r=VB_irrFluxo(fl);
+    if(r==null||!isFinite(r)) return '';
+    return ' <span style="color:var(--so2);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.)</span>';
   }
-  out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
-    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA</span>'
-    +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(d.VP)+' <span style="color:var(--so);">\u00b7 +'+Math.round((d.VP-d.c)/d.c*100)+'%</span></span></div>';
+  function _linha(rot, extra, preco, pct, forte){
+    return '<div style="display:flex;align-items:baseline;gap:8px;font-size:12px;margin-top:3px;'+(forte?'font-weight:700;':'')+'">'
+      +'<span style="flex:1;min-width:0;white-space:nowrap;color:'+(forte?'var(--tx)':'var(--tx)')+';">'+rot+extra+'</span>'
+      +'<span style="text-align:right;white-space:nowrap;color:'+(forte?'var(--ink)':'var(--tx)')+';font-variant-numeric:tabular-nums;">R$ '+MER_fmtBR(preco)+'</span>'
+      +'<span style="width:44px;text-align:right;white-space:nowrap;color:var(--so2);font-weight:400;font-variant-numeric:tabular-nums;">+'+pct+'%</span>'
+      +'</div>';
+  }
+  out+=_linha('\u00c0 VISTA','',d.VP,Math.round((d.VP-d.c)/d.c*100),false);
   for(var N=1;N<=10;N++){
     var n=N+1;                                   /* 1+N: n pagamentos, o 1o hoje */
     var p=sem ? (d.VP/(MER_fatorPV(N)/(1+MER_TX)))/1 : (d.VP/MER_fatorPV(n));
@@ -10402,10 +10415,7 @@ function MER_possCalc(){
     var tot=p*(sem?N:n);
     var mk=Math.round((tot-d.c)/d.c*100);
     var base=(!sem && N===4);
-    out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;'+(base?'font-weight:700;':'')+'">'
-      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x'+_am(tot, N, sem)+'</span>'
-      +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(tot)+' <span style="color:var(--so);font-weight:400;">\u00b7 +'+mk+'%</span></span>'
-      +'</div>';
+    out+=_linha((sem?'0+':'1+')+N+'x', _am(tot, N, sem), tot, mk, base);
   }
   tb.innerHTML=out;
 }
@@ -10584,6 +10594,7 @@ function MER_abrirVenda(id){
   MER_reabrirId = (!_daBusca && !_doHist) ? MER_viewId : null; // voltando pro Estoque, reabre a ficha do relógio
 }
 function MER_viewFechar(){
+  MER_possAberto=null;
   if(MER_viewEdit && MER_viewDirty()){
     if(MER_viewFecharArmado){ MER_viewFecharArmado=false; }
     else {
@@ -13522,6 +13533,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.195.2</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Tabela de preços mais legível: o prazo ficou no tom escuro do texto e a taxa entre parênteses no cinza claro, já que o prazo é o que o olho varre e a taxa é apoio</div>
+      <div class="cl-item">Valores da direita alinhados de verdade. Preço e percentual eram um texto só, então as vírgulas e os por cento nunca formavam coluna. Agora cada um tem sua coluna com largura reservada e algarismos de largura fixa, e os centavos alinham verticalmente</div>
+      <div class="cl-item">Indo para a venda e voltando, a tabela reabre como você deixou, em vez de recolher sozinha. A memória vale só para aquele relógio e enquanto você fica indo e vindo — fechando a ficha, tudo volta ao normal</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.195.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A taxa da tabela de preços não batia com a da tela de venda — 10,05 contra 9,77 por cento. A causa era o calendário: a tabela contava meses redondos de trinta dias, a venda usava as datas de verdade. De 28 de julho a 28 de novembro são 123 dias, ou 4,1 meses, não 4 — o dinheiro demora um pouco mais e a taxa cai. Agora a tabela projeta as parcelas no calendário real, na mesma base da venda, e os dois números coincidem</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.195.0</span><span class="cl-ver-date">28/07/2026</span></div>
