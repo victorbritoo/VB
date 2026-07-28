@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.192.0</title>
+<title>VB - v1.193.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.192.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.193.0<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -10297,6 +10297,8 @@ function MER_resumoParcelas(v){
 var MER_vendaCache=null;
 var MER_CENARIOS=[{rot:'\u00c0 VISTA', pct:13, n:1},{rot:'1+4', pct:15, n:5},{rot:'1+9', alvo:7.5, n:10}]; // margens da auditoria de 12/07; 1+9 pela escada (sem histórico próprio)
 var MER_possDados=null;
+var MER_TX=0.03;  /* taxa de financiamento do VB: 3% a.m. */
+function MER_fatorPV(n){ var s=0; for(var k=0;k<n;k++) s+=1/Math.pow(1+MER_TX,k); return s; } /* n pagamentos, o 1o hoje */
 function MER_possibilidades(r){
   MER_possDados=null;
   var c=Number(r.custo)||0; if(!(c>0)) return '';
@@ -10304,23 +10306,19 @@ function MER_possibilidades(r){
   var consig=VB_consigVen(r.socio, r.valor_socio, r.custo, null);
   var temS=(r.socio&&vs>0&&vs<=c);
   var cap=consig?0:(temS?(c-vs):c);
-  var pV=temS?50:100;
   var dias=(r.data_compra?MER_dias(r.data_compra):0)||0; if(dias<0) dias=0;
   var MK=20;
-  /* Ancora: 20% de markup em 1+4 no DIA 0 -> define o rendimento-alvo.
-     Dai em diante o preco sobe com os dias parados para manter esse rendimento. */
-  var R0=(c*(MK/100)*(pV/100))/(cap||c)/2;
-  MER_possDados={c:c, cap:cap, pV:pV, dias:dias, R0:R0};
+  /* Margem de trading (20% em 1+4 no dia 0) trazida a valor presente = preco a vista.
+     Capital parado corrige a vista pela taxa; parcelar e financiar esse valor a MER_TX. */
+  var VP0=(c*(1+MK/100)/5)*MER_fatorPV(5);
+  var VP=VP0*Math.pow(1+MER_TX, dias/30);
+  MER_possDados={c:c, cap:cap, VP:VP};
 
-  function precoDe(N, semEntrada){
-    var cic=(dias + 15*(semEntrada?(N+1):N))/30;
-    return c + R0*(cap||c)*cic/(pV/100);
-  }
-  var pBase=consig?(c*(1+MK/100)):precoDe(4,false);
+  var pBase=consig?(c*(1+MK/100)):(VP/MER_fatorPV(5))*5;
   var mkBase=Math.round((pBase-c)/c*100);
 
   var hh='<div'+(consig?'':' onclick="MER_possToggle()"')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;'+(consig?'':'cursor:pointer;')+'">'
-    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">PRE\u00c7O SUGERIDO ('+MK+'% MARKUP)'+(consig?'':' \u00b7 '+dias+'D EM ESTOQUE')+'</div>'
+    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;text-align:center;">PRE\u00c7O SUGERIDO ('+MK+'% MARKUP)'+(consig?'':' \u00b7 '+dias+'D EM ESTOQUE')+'</div>'
     +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
       +'<span style="font-size:17px;font-weight:700;color:var(--ink);white-space:nowrap;">R$ '+MER_fmtBR(pBase)+(consig?'':' <span style="font-size:11px;color:var(--so);font-weight:400;">+'+mkBase+'%</span>')+'</span>'
       +'<span style="font-size:12px;color:var(--tx);white-space:nowrap;">1+4x de R$ '+MER_fmtBR(pBase/5)+'</span>'
@@ -10335,14 +10333,10 @@ function MER_possibilidades(r){
   if(!(cap>0)) return hh+'</div>';
 
   hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
-    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:6px;">MESMO RENDIMENTO \u00b7 '+(R0*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% A.M.</div>'
     +'<div style="display:flex;gap:6px;justify-content:center;margin-bottom:7px;">'
       +'<button id="mer-poss-m1" onclick="event.stopPropagation();MER_possModoSet(\'1\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">1+N</button>'
       +'<button id="mer-poss-m0" onclick="event.stopPropagation();MER_possModoSet(\'0\')" style="padding:4px 14px;border:0.5px solid var(--ln);border-radius:9px;background:var(--sf2);color:var(--mu2);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">0+N</button>'
-    +'</div><div id="mer-poss-tab"></div>';
-  var lim=Math.round((c*(MK/100)*(pV/100)/cap/0.035)*30-60);
-  if(lim>0) hh+='<div style="font-size:10px;color:'+(dias>lim?'var(--red)':'var(--so)')+';margin-top:7px;text-align:center;'+(dias>lim?'font-weight:700;':'')+'">'+(dias>lim?('parado h\u00e1 '+dias+'d \u2014 20% j\u00e1 rende menos que 3,5% a.m.'):('a 20% aguenta at\u00e9 '+lim+'d parado'))+'</div>';
-  hh+='</div>';
+    +'</div><div id="mer-poss-tab"></div></div>';
   return hh+'</div>';
 }
 var MER_possModo='1';
@@ -10357,14 +10351,19 @@ function MER_possModoSet(m){ MER_possModo=m;
 function MER_possCalc(){
   var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
   var sem=(MER_possModo==='0'), out='';
+  out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
+    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA</span>'
+    +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(d.VP)+' <span style="color:var(--so);">\u00b7 +'+Math.round((d.VP-d.c)/d.c*100)+'%</span></span></div>';
   for(var N=1;N<=10;N++){
-    var cic=(d.dias + 15*(sem?(N+1):N))/30;
-    var pN=d.c + d.R0*(d.cap||d.c)*cic/(d.pV/100);
-    var mk=Math.round((pN-d.c)/d.c*100);
+    var n=N+1;                                   /* 1+N: n pagamentos, o 1o hoje */
+    var p=sem ? (d.VP/(MER_fatorPV(N)/(1+MER_TX)))/1 : (d.VP/MER_fatorPV(n));
+    if(sem){ p=d.VP/(MER_fatorPV(N)/(1+MER_TX)); }
+    var tot=p*(sem?N:n);
+    var mk=Math.round((tot-d.c)/d.c*100);
     var base=(!sem && N===4);
     out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;'+(base?'font-weight:700;':'')+'">'
       +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x</span>'
-      +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(pN)+' <span style="color:var(--so);font-weight:400;">\u00b7 +'+mk+'%</span></span>'
+      +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(tot)+' <span style="color:var(--so);font-weight:400;">\u00b7 +'+mk+'%</span></span>'
       +'</div>';
   }
   tb.innerHTML=out;
@@ -13482,6 +13481,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.193.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">O cálculo do preço parcelado foi refeito pelo método correto, que é o que você já usava na prática: os 20 por cento de markup em 1+4 no dia zero viram um preço à vista trazido a valor presente pela sua taxa de 3 por cento ao mês, e cada prazo é esse mesmo valor financiado à mesma taxa. Antes eu exigia o rendimento de 10 por cento ao mês em qualquer prazo, o que fazia o preço explodir — em 1+9 pedia 304 mil onde o certo são 271 mil</div>
+      <div class="cl-item">O raciocínio por trás: margem de trading e juros não são a mesma coisa. Os 20 por cento pagam o negócio em si — achar a peça, negociar, correr risco, atender — e são uma remuneração de uma vez, não uma taxa que corre no tempo. Parcelar em mais vezes é prestar outro serviço, crédito, e crédito se cobra à taxa de crédito. Curiosidade: o preço à vista que sai desse cálculo é o custo mais 13 por cento, exatamente o cenário À VISTA que o app já trazia antes</div>
+      <div class="cl-item">Os dias parados corrigem o preço à vista pela mesma taxa, porque capital parado tem custo de oportunidade. Saíram da tela a linha de MESMO RENDIMENTO e o aviso de quantos dias a peça aguenta, e o título ficou centralizado. A tabela abre com À VISTA no topo e vai até 1+10x, com seletor de com e sem entrada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.192.0</span><span class="cl-ver-date">28/07/2026</span></div>
