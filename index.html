@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.188.0</title>
+<title>VB - v1.188.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.188.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.188.1<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -1456,6 +1456,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
   setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
+  try{ VB_apelidosCarrega(); }catch(e){}
   setTimeout(function(){ try{ VB_autoteste(); VB_storageVigia(); MIG_silencioso(); }catch(e){} }, 4000);
 }
 function VB_showLogin(msg){
@@ -4215,7 +4216,7 @@ function HIST_renderRows(tab, rows){
         linha2=_la.join('<span style="color:var(--so2);"> · </span>');
         campos.push({l:'Bruto', v:HIST_fmtMoeda(_bru)});
       }
-      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePUS(r.cliente)});
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
@@ -4267,7 +4268,7 @@ function HIST_renderRows(tab, rows){
       var _meuL=_lvL, _meuCap=_c;
       if(_lvL!=null && _temSocio){ var _pVBc=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; _meuL=_lvL*(_pVBc/100); _meuCap=_c-_vs; }
       if(_meuL!=null){ var _pctS=(_meuCap>0)?(' <span style="color:var(--so);">('+Math.round(_meuL/_meuCap*100)+'%)</span>'):''; _l2.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_meuL))+'</span>'+_pctS); }
-      if(r.cliente) _l2.push(HIST_nomeFit(VB_nomePU(r.cliente)));
+      if(r.cliente) _l2.push(HIST_nomeFit(VB_nomeCurto(r.cliente)));
       if(_l2.length) linha2=_l2.join('<span style="color:var(--so2);"> · </span>');
       if(_lvL!=null && _temSocio){ campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)}); }
       (function(){
@@ -4284,7 +4285,7 @@ function HIST_renderRows(tab, rows){
         campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' · com troca':'')});
         }
       })();
-      if(r.cliente) campos.push({l:'Cliente', v:VB_nomePU(r.cliente)});
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
       if(_snM && _snM[1]) campos.push({l:'SN', v:_snM[1]});
       if(r.data_venda) campos.push({l:'Data da venda', v:HIST_fmtData(r.data_venda)});
       if(dataOp && dataOp!=='--') campos.push({l:'1ª parcela', v:dataOp});
@@ -4319,7 +4320,7 @@ function HIST_renderRows(tab, rows){
           campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
           campos.push({l:'Custo VB ('+_pcVB+'%)', v:HIST_fmtMoeda(_cVB)});
           campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
-          campos.push({l:'Custo '+(r.socio||'').toUpperCase()+' ('+_pcS+'%)', v:HIST_fmtMoeda(_vs)});
+          campos.push({l:'Custo '+VB_nomeCurto(r.socio||'').toUpperCase()+' ('+_pcS+'%)', v:HIST_fmtMoeda(_vs)});
         }
       }
       var _cs=(HIST_conStatus&&typeof HIST_conStatus==='object')?HIST_conStatus[String(r.id)]:null;
@@ -5553,7 +5554,7 @@ function VEN_updateLucro(){
         var lV = lucro*(pV/100), lS = lucro*(pS/100);
         var cV = c-VEN_socioValor;
         mg.innerHTML='<span style="color:var(--tx);font-weight:700;">VB ('+pV+'%):</span> R$ '+VEN_formatBR(cV)+' (Lucro R$ '+VEN_formatBR(lV)+')'
-            +'<br><span style="color:var(--tx);font-weight:700;">'+HIST_esc(VEN_socioNome)+' ('+pS+'%):</span> R$ '+VEN_formatBR(VEN_socioValor)+' (Lucro R$ '+VEN_formatBR(lS)+')';
+            +'<br><span style="color:var(--tx);font-weight:700;">'+HIST_esc(VB_nomeCurto(VEN_socioNome))+' ('+pS+'%):</span> R$ '+VEN_formatBR(VEN_socioValor)+' (Lucro R$ '+VEN_formatBR(lS)+')';
         mg.style.display='block';
       } else { mg.style.display='none'; mg.innerHTML=''; }
     }
@@ -8293,7 +8294,7 @@ function SOC_render(){
   SOC_rows.forEach(function(r){
     html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:8px;">'
       +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="SOC_abrir(\''+r.id+'\')">'
-        +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+SOC_esc(r.nome)+'</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+SOC_esc(VB_nomeCurto(r.nome))+'</div>'
         +(r.telefone?('<div style="font-size:11px;color:var(--tx);margin-top:1px;">'+SOC_esc(r.telefone)+'</div>'):'')
       +'</div>'
       +(r._derivado?'':'<button onclick="SOC_editar(\''+r.id+'\')" title="Editar" style="border:0.5px solid var(--ln);border-radius:8px;background:var(--sf);cursor:pointer;width:24px;height:24px;flex-shrink:0;padding:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>')
@@ -9612,7 +9613,7 @@ function FM_calcMes(ym, res, _merMap){
       if(temSocio){ var nm=String(v.socio).toUpperCase(); venPartes[nm]=(venPartes[nm]||0)+l*((100-pVB)/100); }
     });
     var partes=[['Lucro VB', venLucVB]];
-    Object.keys(venPartes).sort().forEach(function(nm){ if(venPartes[nm]) partes.push(['Lucro '+nm, venPartes[nm]]); });
+    Object.keys(venPartes).sort().forEach(function(nm){ if(venPartes[nm]) partes.push(['Lucro '+VB_nomeCurto(nm), venPartes[nm]]); });
     var dVen={n:ven.length, tot:soma(ven,function(r){return Number(r.valor_total);}), luc:lucroDe(ven,'ven'), lucVB:venLucVB, partes:partes};
     var dPag={n:pag.length, tot:soma(pag,function(r){return Number(r.valor_total);})};
     // Rendimento do capital no mês: média ponderada por capital-tempo (= soma dos lucros / soma de capital x ciclo)
@@ -13502,6 +13503,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.188.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Onde aparece nome de pessoa, agora vale o apelido quando existe: divisão do lucro na venda, cliente nos cards de venda e antecipação, rótulo de custo por sócio, lista de sócios e o Fechamento. Sem apelido cadastrado, segue primeiro e último nome. O nome completo continua onde é obrigatório — contrato, ficha do cliente e cadastro</div>
+      <div class="cl-item">Isso resolve de imediato a linha da divisão do lucro, que com nome completo quebrava em duas linhas, e deixa o Fechamento legível para quem tem nome comprido. O mapa de apelidos passou a carregar já na abertura do app, não só ao entrar no Estoque</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.188.0</span><span class="cl-ver-date">28/07/2026</span></div>
