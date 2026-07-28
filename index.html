@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.188.2</title>
+<title>VB - v1.189.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.188.2<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.189.1<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -8450,8 +8450,8 @@ function SOC_abrir(id){
     ] : [['Operações','0']]);
     if(nE) hh+=bloco('EM ESTOQUE', [
       ['Relógios', String(nE)],
-      ['Custo Total', HIST_fmtMoeda(custoE)],
-      ['Capital do Sócio Parado', HIST_fmtMoeda(capE)]
+      ['Capital do Sócio', HIST_fmtMoeda(capE)],
+      ['Capital VB', HIST_fmtMoeda(Math.max(0,(Number(custoE)||0)-(Number(capE)||0)))]
     ]);
     body.innerHTML=hh;
   });
@@ -8951,8 +8951,7 @@ function CLIP_abrir(nome, cliId){
     sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
-    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000),
-    sb.from('mercadorias').select('id,descricao,custo,socio,valor_socio,status,data_compra').limit(5000)
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
@@ -9010,25 +9009,6 @@ function CLIP_abrir(nome, cliId){
     innH+=ln('Total negociado', HIST_fmtMoeda(negociado));
     innH+=ln('<b>Lucro VB gerado</b>', HIST_fmtMoeda(lucVB));
     hh+=bl('HIST\u00d3RICO', innH);
-    // RELÓGIOS EM SOCIEDADE / CONSIGNAÇÃO
-    var _mer=((res[4]&&res[4].data)||[]).filter(function(m){ return key(m.socio)===alvo; });
-    /* em estoque (exposicao aberta) antes de vendido; dentro de cada bloco, do mais novo pro mais antigo */
-    _mer.sort(function(a,b){
-      var ea=(a.status==='vendida')?1:0, eb=(b.status==='vendida')?1:0;
-      if(ea!==eb) return ea-eb;
-      var da=String(a.data_compra||''), db=String(b.data_compra||'');
-      return da<db?1:da>db?-1:0;
-    });
-    if(_mer.length){
-      var innM='';
-      _mer.forEach(function(m){
-        var _c=Number(m.custo)||0, _vs=Number(m.valor_socio)||0;
-        var _cg=VB_consigVen(m.socio, _vs, _c, null);
-        var _st=(m.status==='vendida')?'VENDIDO':'EM ESTOQUE';
-        innM+=ln(CLIP_esc(m.descricao||'RELÓGIO'), (_cg?'CONSIGNADO':(_vs>0?HIST_fmtMoeda(_vs):'SÓCIO'))+' · '+_st);
-      });
-      hh+=bl('RELÓGIOS \u00b7 '+_mer.length, innM);
-    }
     // CONTRATOS
     if(con.length){
       var innK='';
@@ -9863,7 +9843,7 @@ function SOC_extratoFoto(){
         var pcap=(o.capital>0 && o.lucro!=null)?Math.round(o.lucro/o.capital*100):null;
         return {nome:o.nome, data:o.data+(o.custo!=null?('  ·  Custo '+HIST_fmtMoeda(o.custo)):'')+(o.capital?('  ·  Sócio '+HIST_fmtMoeda(o.capital)+((o.custo>0)?(' ('+Math.round(o.capital/o.custo*100)+'%)'):'')):''), dir:HIST_fmtMoeda(o.total), dir2:(o.lucro!=null?('Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pcap!=null?(' ('+pcap+'%)'):'')):null)};
       }),
-      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+      (function(){ var nm=VB_nomeCurto(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
         'Total de Vendas: '+HIST_fmtMoeda(d.totV),
         'Capital Investido '+nm+': '+HIST_fmtMoeda(d.capV),
         'Lucro '+nm+': '+HIST_fmtMoeda(d.lucroS)+((d.capV>0&&d.lucroS>0)?(' ('+Math.round(d.lucroS/d.capV*100)+'%)'):'')]; })());
@@ -9879,7 +9859,7 @@ function SOC_extratoFoto(){
         var pf=(o.aporte>0 && o.lucro!=null)?Math.round(o.lucro/o.aporte*100):null;
         return {nome:o.nome, data:o.data+'  ·  Aporte '+HIST_fmtMoeda(o.aporte), dir:HIST_fmtMoeda(o.retorno), dir2:'Lucro Sócio '+HIST_fmtMoeda(o.lucro)+(pf!=null?(' ('+pf+'%)'):'')};
       }),
-      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+      (function(){ var nm=VB_nomeCurto(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
         'Total de Retornos: '+HIST_fmtMoeda(d.retorno),
         'Capital Investido '+nm+': '+HIST_fmtMoeda(d.aporte),
         'Lucro '+nm+': '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]; })());
@@ -9890,9 +9870,9 @@ function SOC_extratoFoto(){
         var pct=(o.custo>0&&o.capital>0)?Math.round(o.capital/o.custo*100):null;
         return {nome:o.nome, data:(o.data||'')+(o.dias!=null?('  ·  '+o.dias+'d em estoque'):''), dir:'Custo '+HIST_fmtMoeda(o.custo), dir2:(o.consig?'Consignado':(o.capital>0?('Sócio '+HIST_fmtMoeda(o.capital)+(pct!=null?(' ('+pct+'%)'):'')):null))};
       }),
-      (function(){ var nm=(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
-        'Custo em Estoque: '+HIST_fmtMoeda(d.custoE),
-        'Capital '+nm+' Parado: '+HIST_fmtMoeda(d.capE)]; })());
+      (function(){ var nm=VB_nomeCurto(d.nome||'SÓCIO').toUpperCase(); return ['TOTAL',
+        'Capital '+nm+': '+HIST_fmtMoeda(d.capE),
+        'Capital VB: '+HIST_fmtMoeda(Math.max(0,(Number(d.custoE)||0)-(Number(d.capE)||0)))]; })());
   }
   if(!temV && !temC && !temF && !temE){
     c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
@@ -13505,6 +13485,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.189.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">No extrato, o bloco de estoque passou a separar os dois bolsos: capital do sócio e capital VB, em vez de custo total e capital parado. O custo total somava o dinheiro dele com o seu num número só, que não respondia pergunta de ninguém — quem lê quer saber quanto é dele, e a diferença agora aparece nomeada em vez de ficar implícita. A palavra parado saiu; vale na tela e na foto</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.189.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Cliente e sócio voltaram a ser assuntos separados: o panorama do cliente não mostra mais os relógios em que a pessoa é sócia ou consignante. Isso é vida de sócio e vive na tela de SÓCIOS, com o extrato. O panorama volta a responder só o que a pessoa fez como cliente — antecipações, vendas e contratos</div>
+      <div class="cl-item">Na foto do extrato, o apelido passa a ser usado nas linhas de total, onde o nome se repetia três vezes e ocupava quase a largura inteira. O cabeçalho do documento mantém o nome completo, que é quem o extrato identifica</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.188.2</span><span class="cl-ver-date">28/07/2026</span></div>
