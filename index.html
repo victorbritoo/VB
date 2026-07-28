@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.193.0</title>
+<title>VB - v1.193.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.193.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.193.1<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -10312,7 +10312,7 @@ function MER_possibilidades(r){
      Capital parado corrige a vista pela taxa; parcelar e financiar esse valor a MER_TX. */
   var VP0=(c*(1+MK/100)/5)*MER_fatorPV(5);
   var VP=VP0*Math.pow(1+MER_TX, dias/30);
-  MER_possDados={c:c, cap:cap, VP:VP};
+  MER_possDados={c:c, cap:cap, VP:VP, dias:dias};
 
   var pBase=consig?(c*(1+MK/100)):(VP/MER_fatorPV(5))*5;
   var mkBase=Math.round((pBase-c)/c*100);
@@ -10351,8 +10351,14 @@ function MER_possModoSet(m){ MER_possModo=m;
 function MER_possCalc(){
   var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
   var sem=(MER_possModo==='0'), out='';
+  /* % a.m. efetivo de cada op\u00e7\u00e3o; ciclo curto (<15d) nao mostra taxa — o numero estoura. */
+  function _am(total, pmDias){
+    var cic=(d.dias+pmDias)/30; if(!(cic>=0.5)) return '';
+    var r=(total-d.c)/d.cap/cic*100;
+    return ' <span style="color:var(--so);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% a.m.)</span>';
+  }
   out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
-    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA</span>'
+    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA'+_am(d.VP,0)+'</span>'
     +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(d.VP)+' <span style="color:var(--so);">\u00b7 +'+Math.round((d.VP-d.c)/d.c*100)+'%</span></span></div>';
   for(var N=1;N<=10;N++){
     var n=N+1;                                   /* 1+N: n pagamentos, o 1o hoje */
@@ -10362,7 +10368,7 @@ function MER_possCalc(){
     var mk=Math.round((tot-d.c)/d.c*100);
     var base=(!sem && N===4);
     out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;'+(base?'font-weight:700;':'')+'">'
-      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x</span>'
+      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x'+_am(tot, 15*(sem?(N+1):N))+'</span>'
       +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(tot)+' <span style="color:var(--so);font-weight:400;">\u00b7 +'+mk+'%</span></span>'
       +'</div>';
   }
@@ -13481,6 +13487,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.193.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Cada linha da tabela de preços passou a mostrar o rendimento que aquela opção gera, ao lado do prazo — 1+4x com 9,5 por cento ao mês, 1+9x com 6,3 por cento. Fica visível o que a tabela sempre disse por baixo: parcelar mais rende menos ao mês, porque a mesma margem se espalha por mais tempo. Opção de ciclo muito curto não mostra taxa, pelo mesmo motivo de sempre — dividir por quase zero estoura o número</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.193.0</span><span class="cl-ver-date">28/07/2026</span></div>
