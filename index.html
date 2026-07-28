@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.195.3</title>
+<title>VB - v1.196.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2510,9 +2510,37 @@ function VB_exportarZip(){
   }, function(){ VB_toast('Não consegui ler as operações (sem conexão?).'); });
 }
 
+/* Busca a tabela inteira em paginas de 1000, sem teto. Devolve null se qualquer pagina falhar,
+   para o backup nunca sair pela metade sem avisar. Ordena por id: sem ordem estavel o range
+   pode repetir ou pular linha. Se a tabela nao tiver id, refaz sem ordem. */
+var VB_PAG=1000;
+function VB_fetchPag(tabela, cols){
+  return new Promise(function(resolve){
+    var acc=[], de=0, semOrdem=false;
+    (function proxima(){
+      var q=sb.from(tabela).select(cols);
+      if(!semOrdem) q=q.order('id',{ascending:true});
+      q.range(de, de+VB_PAG-1).then(function(r){
+        if(r.error){
+          if(!semOrdem && de===0){ semOrdem=true; proxima(); return; } /* tabela sem coluna id */
+          resolve(null); return;
+        }
+        var rows=r.data||[];
+        acc=acc.concat(rows);
+        if(rows.length<VB_PAG){ resolve(acc); return; }
+        de+=VB_PAG;
+        if(de>500000){ resolve(acc); return; } /* trava contra laco infinito */
+        proxima();
+      }).catch(function(){
+        if(!semOrdem && de===0){ semOrdem=true; proxima(); return; }
+        resolve(null);
+      });
+    })();
+  });
+}
 function VB_fetchTudo(onOk, onErr){
   var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
-  Promise.all(tabelas.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
+  Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
     var dados={}, total=0;
@@ -2753,7 +2781,16 @@ function VB_snapshotShare(id){
 function VB_backupJSON(){
   VB_toast('Gerando backup…');
   VB_fetchTudo(function(dados, total){
-    VB_shareJSON(dados, total, function(){ VB_toast(total+' operações no backup. Salve na pasta OPs.'); });
+    /* o log vem fora do VB_fetchTudo de proposito: aquele e compartilhado com o snapshot
+       diario (que e gravado de volta no banco) e com os relatorios. So o backup manual leva a trilha. */
+    VB_fetchPag('log','*').then(function(logs){
+      if(logs){
+        dados.log=logs;
+        VB_shareJSON(dados, total, function(){ VB_toast(total+' operações e '+logs.length+' registros. Salve na pasta OPs.'); });
+      } else {
+        VB_shareJSON(dados, total, function(){ VB_toast(total+' operações no backup. O histórico não entrou.'); });
+      }
+    });
   }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
 }
 
@@ -2912,7 +2949,7 @@ function VB_diffCampos(a,b){
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
   var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
-  Promise.all(tabs.map(function(t){ return sb.from(t).select(t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').limit(10000).then(function(r){ return {t:t, rows:(r.error?null:r.data)}; }); }))
+  Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
     res.forEach(function(x){
@@ -13537,6 +13574,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.196.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">O backup passou a levar o histórico de alterações. O app anotava toda mudança que você faz numa operação, mas essa trilha ficava só no banco: restaurando um backup você recuperava os negócios e perdia o registro do que tinha sido mexido. Agora vai junto</div>
+      <div class="cl-item">O backup não tem mais teto. Antes ele lia no máximo dez mil linhas por tabela e, se passasse disso, cortava o resto em silêncio — o arquivo sairia incompleto sem nenhum aviso. Agora ele lê em pedaços até acabar, seja qual for o tamanho. A conferência da restauração usa a mesma leitura</div>
+      <div class="cl-item">Se qualquer pedaço falhar no meio, o backup avisa em vez de entregar um arquivo pela metade</div>
+      <div class="cl-item">O histórico de alterações entra só no backup que você salva no iCloud — fica fora da foto automática diária e dos relatórios, que não têm o que fazer com ele. Restaurando, ele é ignorado: trilha é registro do passado, não negócio a recriar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.195.3</span><span class="cl-ver-date">28/07/2026</span></div>
