@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.186.3</title>
+<title>VB - v1.187.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.186.3<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.187.0<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -8267,9 +8267,21 @@ function SOC_maskTel(el){
 }
 function SOC_load(){
   var lista=document.getElementById('soc-lista');
-  sb.from('socios').select('*').order('nome',{ascending:true}).then(function(res){
+  Promise.all([
+    sb.from('socios').select('*').order('nome',{ascending:true}),
+    sb.from('vendas').select('socio').limit(10000),
+    sb.from('mercadorias').select('socio').limit(10000)
+  ]).then(function(_rs){
+    var res=_rs[0];
     if(res.error){ if(lista) lista.innerHTML='<div style="text-align:center;color:var(--red2);font-size:12px;margin-top:24px;">'+SOC_esc(res.error.message)+'</div>'; return; }
     SOC_rows=res.data||[];
+    var _tem={}; SOC_rows.forEach(function(s){ _tem[String(s.nome||'').trim().toUpperCase()]=1; });
+    var _extra={};
+    [(_rs[1]&&_rs[1].data)||[], (_rs[2]&&_rs[2].data)||[]].forEach(function(arr){
+      arr.forEach(function(o){ var n=String(o.socio||'').trim(); if(!n) return; var k=n.toUpperCase(); if(!_tem[k]) _extra[k]=n; });
+    });
+    Object.keys(_extra).sort().forEach(function(k){ SOC_rows.push({id:'op:'+_extra[k], nome:_extra[k], telefone:null, _derivado:true}); });
+    SOC_rows.sort(function(a,b){ return String(a.nome||'').localeCompare(String(b.nome||'')); });
     SOC_render();
   });
 }
@@ -8284,8 +8296,8 @@ function SOC_render(){
         +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+SOC_esc(r.nome)+'</div>'
         +(r.telefone?('<div style="font-size:11px;color:var(--tx);margin-top:1px;">'+SOC_esc(r.telefone)+'</div>'):'')
       +'</div>'
-      +'<button onclick="SOC_editar(\''+r.id+'\')" title="Editar" style="border:0.5px solid var(--ln);border-radius:8px;background:var(--sf);cursor:pointer;width:24px;height:24px;flex-shrink:0;padding:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>'
-      +'<button data-socdel="'+r.id+'" onclick="SOC_delArm(this,\''+r.id+'\')" style="border:none;border-radius:8px;background:var(--acc);color:var(--acc-tx);font-size:14px;font-weight:700;cursor:pointer;width:24px;height:24px;flex-shrink:0;line-height:1;padding:0;">×</button>'
+      +(r._derivado?'':'<button onclick="SOC_editar(\''+r.id+'\')" title="Editar" style="border:0.5px solid var(--ln);border-radius:8px;background:var(--sf);cursor:pointer;width:24px;height:24px;flex-shrink:0;padding:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>')
+      +(r._derivado?'':'<button data-socdel="'+r.id+'" onclick="SOC_delArm(this,\''+r.id+'\')" style="border:none;border-radius:8px;background:var(--acc);color:var(--acc-tx);font-size:14px;font-weight:700;cursor:pointer;width:24px;height:24px;flex-shrink:0;line-height:1;padding:0;">×</button>')
     +'</div>';
   });
   lista.innerHTML=html;
@@ -8939,7 +8951,8 @@ function CLIP_abrir(nome, cliId){
     sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
-    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000),
+    sb.from('mercadorias').select('id,descricao,custo,socio,valor_socio,status,data_compra').limit(5000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
@@ -8997,6 +9010,18 @@ function CLIP_abrir(nome, cliId){
     innH+=ln('Total negociado', HIST_fmtMoeda(negociado));
     innH+=ln('<b>Lucro VB gerado</b>', HIST_fmtMoeda(lucVB));
     hh+=bl('HIST\u00d3RICO', innH);
+    // RELÓGIOS EM SOCIEDADE / CONSIGNAÇÃO
+    var _mer=((res[4]&&res[4].data)||[]).filter(function(m){ return key(m.socio)===alvo; });
+    if(_mer.length){
+      var innM='';
+      _mer.forEach(function(m){
+        var _c=Number(m.custo)||0, _vs=Number(m.valor_socio)||0;
+        var _cg=VB_consigVen(m.socio, _vs, _c, null);
+        var _st=(m.status==='vendida')?'VENDIDO':'EM ESTOQUE';
+        innM+=ln(CLIP_esc(m.descricao||'RELÓGIO'), (_cg?'CONSIGNADO':(_vs>0?HIST_fmtMoeda(_vs):'SÓCIO'))+' · '+_st);
+      });
+      hh+=bl('RELÓGIOS \u00b7 '+_mer.length, innM);
+    }
     // CONTRATOS
     if(con.length){
       var innK='';
@@ -13471,6 +13496,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.187.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A tela SÓCIOS deixou de ser um cadastro à parte e virou um reflexo: além de quem já estava lá, agora aparece automaticamente todo mundo que tem sociedade ou consignação em alguma venda ou relógio. Isso fechou um buraco aberto na unificação — quem você escolhia da lista de clientes como consignante não aparecia, e por tabela ficava sem extrato. Quem entra por operação não tem botão de editar nem de excluir, porque não há cadastro antigo por trás; o extrato funciona igual</div>
+      <div class="cl-item">O PANORAMA do cliente passou a mostrar também os relógios em que a pessoa é sócia ou consignante, com o valor da parte dela e se está em estoque ou já vendido. Antes olhava só antecipações, vendas e contratos, então quem só tinha relógio consigo aparecia vazio</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.186.3</span><span class="cl-ver-date">28/07/2026</span></div>
