@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.194.0</title>
+<title>VB - v1.195.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.194.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.195.0<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -3980,6 +3980,28 @@ function VB_ehEntrada(r){
 }
 /* ERRO (constituicao de avisos): usuario ve frase humana; detalhe tecnico vai pro console. */
 function VB_erro(det, msg){ try{ console.error('VB:', det); }catch(e){} VB_toast(msg||'N\u00e3o deu certo. Tente de novo.'); }
+/* Taxa implicita: saldo a cobrir hoje virando N parcelas iguais. */
+function VB_taxaImplicita(saldo, parcela, n){
+  saldo=Number(saldo); parcela=Number(parcela); n=Number(n);
+  if(!(saldo>0)||!(parcela>0)||!(n>0)) return null;
+  if(parcela*n<=saldo) return null;
+  var lo=0, hi=3;
+  for(var k=0;k<200;k++){ var i=(lo+hi)/2, s=0;
+    for(var j=1;j<=n;j++) s+=parcela/Math.pow(1+i,j);
+    if(s>saldo) lo=i; else hi=i; }
+  return (lo+hi)/2*100;
+}
+/* Taxa implicita de um fluxo qualquer: [{m:meses, v:valor}], saida negativa. */
+function VB_irrFluxo(fluxo){
+  if(!fluxo||fluxo.length<2) return null;
+  var soma=0; fluxo.forEach(function(x){ soma+=Number(x.v)||0; });
+  if(!(soma>0)) return null;
+  var lo=-0.9, hi=3;
+  for(var k=0;k<250;k++){ var i=(lo+hi)/2, s=0;
+    for(var j=0;j<fluxo.length;j++) s+=(Number(fluxo[j].v)||0)/Math.pow(1+i, Number(fluxo[j].m)||0);
+    if(s>0) lo=i; else hi=i; }
+  return (lo+hi)/2*100;
+}
 function VB_termometro(lucro, capital, meses){
   lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
   if(!isFinite(lucro)||!isFinite(capital)||!isFinite(meses)||capital<=0||meses<=0) return null;
@@ -5579,6 +5601,21 @@ function VEN_updateLucro(){
       rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
         +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
       rd.style.display='block';
+    } else if(_ok && c>0 && !(_meuC>0)){
+      /* consignado: capital do VB e zero. Mostra a taxa que o dinheiro empregado rende no parcelamento. */
+      var _fl=[{m:0, v:-c}];
+      var _dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+      (VEN_parcelas||[]).forEach(function(p){
+        var _v=VEN_parseBR(p.valor||''); if(!(_v>0)) return;
+        var _mm=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.data||'').trim()); if(!_mm) return;
+        var _d2=new Date(+_mm[3],+_mm[2]-1,+_mm[1]);
+        _fl.push({m:Math.max(0,(_d2-_dv)/86400000/30), v:_v});
+      });
+      var _ti=(_fl.length>1)?VB_irrFluxo(_fl):null;
+      if(_ti!=null && isFinite(_ti)){
+        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO DO CAPITAL</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_ti.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 capital do consignante.</span>';
+        rd.style.display='block';
+      } else { rd.style.display='none'; rd.innerHTML=''; }
     } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
     try{ if((document.getElementById('ven-rend-box')||{}).style.display==='block') VEN_rendCalc(); }catch(e){}
   }
@@ -10346,14 +10383,17 @@ function MER_possCalc(){
   var tb=document.getElementById('mer-poss-tab'); var d=MER_possDados; if(!tb||!d) return;
   var sem=(MER_possModo==='0'), out='';
   /* % a.m. efetivo de cada op\u00e7\u00e3o; ciclo curto (<15d) nao mostra taxa — o numero estoura. */
-  function _am(total, pmDias){
-    if(d.consig || !(d.cap>0)) return '';
-    var cic=(d.dias+pmDias)/30; if(!(cic>=0.5)) return '';
-    var r=(total-d.c)/d.cap/cic*100;
-    return ' <span style="color:var(--so);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% a.m.)</span>';
+  /* Taxa que o capital empregado rende naquele parcelamento:
+     a entrada abate o custo e as parcelas seguintes amortizam o saldo. */
+  function _am(total, N, semEntrada){
+    var qt=semEntrada?N:(N+1), p=total/qt;
+    var saldo=semEntrada? d.c : (d.c-p);
+    var r=VB_taxaImplicita(saldo, p, N);
+    if(r==null) return '';
+    return ' <span style="color:var(--so);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.)</span>';
   }
   out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;">'
-    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA'+_am(d.VP,0)+'</span>'
+    +'<span style="color:var(--mu);white-space:nowrap;">\u00c0 VISTA</span>'
     +'<span style="text-align:right;color:var(--tx);white-space:nowrap;">R$ '+MER_fmtBR(d.VP)+' <span style="color:var(--so);">\u00b7 +'+Math.round((d.VP-d.c)/d.c*100)+'%</span></span></div>';
   for(var N=1;N<=10;N++){
     var n=N+1;                                   /* 1+N: n pagamentos, o 1o hoje */
@@ -10363,7 +10403,7 @@ function MER_possCalc(){
     var mk=Math.round((tot-d.c)/d.c*100);
     var base=(!sem && N===4);
     out+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;'+(base?'font-weight:700;':'')+'">'
-      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x'+_am(tot, 15*(sem?(N+1):N))+'</span>'
+      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">'+(sem?'0+':'1+')+N+'x'+_am(tot, N, sem)+'</span>'
       +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(tot)+' <span style="color:var(--so);font-weight:400;">\u00b7 +'+mk+'%</span></span>'
       +'</div>';
   }
@@ -13482,6 +13522,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.195.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A tabela de preços passou a mostrar a taxa que o capital rende em cada parcelamento, calculada do jeito certo: a entrada abate o custo e as parcelas seguintes amortizam o saldo. No consignado de 65 mil vendido em 1+4x, os 15.600 de entrada deixam 49.400 a cobrir, que voltam como quatro parcelas de 15.600 — isso é 10,05 por cento ao mês. A conta anterior era uma média que errava nos extremos: em 1+1x dava 29,8 por cento onde o correto são 34,97</div>
+      <div class="cl-item">Vender consignado deixou de ser cego. Como o capital empregado é do consignante e não seu, a tela de venda não mostrava rendimento nenhum ao simular. Agora aparece RENDIMENTO DO CAPITAL, calculado sobre o fluxo real das parcelas que você está montando — com os valores e as datas que estiverem na tela, atualizando conforme você mexe. Fica vermelho abaixo de 3,5 por cento ao mês, como o resto do app</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.194.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Na tabela do consignado, onde não cabia o rendimento ao mês, agora aparecem os juros embutidos em cada prazo — quanto daquele preço é juro puro sobre o valor à vista. Em 1+9x são dez mil e cento e sessenta e seis reais de juros; em 1+4x, quatro mil e quatrocentos e treze. É o número da negociação, e não depende de saber de quem é o capital</div>
+      <div class="cl-item">A peça própria segue com o rendimento ao mês, que ali faz sentido porque o dinheiro parado é seu. Cada ficha mostra a conta que responde a pergunta dela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.194.0</span><span class="cl-ver-date">28/07/2026</span></div>
