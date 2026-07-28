@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.193.1</title>
+<title>VB - v1.194.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.193.1<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.194.0<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -10311,26 +10311,20 @@ function MER_possibilidades(r){
   /* Margem de trading (20% em 1+4 no dia 0) trazida a valor presente = preco a vista.
      Capital parado corrige a vista pela taxa; parcelar e financiar esse valor a MER_TX. */
   var VP0=(c*(1+MK/100)/5)*MER_fatorPV(5);
-  var VP=VP0*Math.pow(1+MER_TX, dias/30);
-  MER_possDados={c:c, cap:cap, VP:VP, dias:dias};
+  var VP=consig? VP0 : VP0*Math.pow(1+MER_TX, dias/30);
+  MER_possDados={c:c, cap:cap, VP:VP, dias:dias, consig:consig};
 
-  var pBase=consig?(c*(1+MK/100)):(VP/MER_fatorPV(5))*5;
+  var pBase=(VP/MER_fatorPV(5))*5;
   var mkBase=Math.round((pBase-c)/c*100);
 
-  var hh='<div'+(consig?'':' onclick="MER_possToggle()"')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;'+(consig?'':'cursor:pointer;')+'">'
+  var hh='<div onclick="MER_possToggle()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;cursor:pointer;">'
     +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;text-align:center;">PRE\u00c7O SUGERIDO ('+MK+'% MARKUP)'+(consig?'':' \u00b7 '+dias+'D EM ESTOQUE')+'</div>'
     +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
-      +'<span style="font-size:17px;font-weight:700;color:var(--ink);white-space:nowrap;">R$ '+MER_fmtBR(pBase)+(consig?'':' <span style="font-size:11px;color:var(--so);font-weight:400;">+'+mkBase+'%</span>')+'</span>'
+      +'<span style="font-size:17px;font-weight:700;color:var(--ink);white-space:nowrap;">R$ '+MER_fmtBR(pBase)+' <span style="font-size:11px;color:var(--so);font-weight:400;">+'+mkBase+'%</span></span>'
       +'<span style="font-size:12px;color:var(--tx);white-space:nowrap;">1+4x de R$ '+MER_fmtBR(pBase/5)+'</span>'
     +'</div>';
 
-  if(consig){
-    hh+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:7px;border-top:0.5px solid var(--ln2);padding-top:6px;">';
-    [15,25,30].forEach(function(p){ hh+='<span style="white-space:nowrap;">+'+p+'% R$ '+MER_fmtBR(c*(1+p/100))+'</span>'; });
-    hh+='</div><div style="font-size:10px;color:var(--so);margin-top:6px;text-align:center;">Dono recebe R$ '+MER_fmtBR(c)+'</div>';
-    return hh+'</div>';
-  }
-  if(!(cap>0)) return hh+'</div>';
+  if(!consig && !(cap>0)) return hh+'</div>';
 
   hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
     +'<div style="display:flex;gap:6px;justify-content:center;margin-bottom:7px;">'
@@ -10353,6 +10347,7 @@ function MER_possCalc(){
   var sem=(MER_possModo==='0'), out='';
   /* % a.m. efetivo de cada op\u00e7\u00e3o; ciclo curto (<15d) nao mostra taxa — o numero estoura. */
   function _am(total, pmDias){
+    if(d.consig || !(d.cap>0)) return '';
     var cic=(d.dias+pmDias)/30; if(!(cic>=0.5)) return '';
     var r=(total-d.c)/d.cap/cic*100;
     return ' <span style="color:var(--so);font-weight:400;">('+r.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% a.m.)</span>';
@@ -13487,6 +13482,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.194.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Relógio consignado ganhou a mesma tabela de preços da peça própria, com À VISTA e todos os prazos até 1+10x, no lugar da fileira chapada de três markups. Você vende consignado do mesmo jeito, em 1+4 ou mais, e o preço também precisa subir com o prazo — não havia razão para a ferramenta ser pior ali</div>
+      <div class="cl-item">Duas coisas não aparecem no consignado, e por motivo: o rendimento ao mês, porque não há capital seu para render, e a correção pelos dias parados, porque o dinheiro parado não é o seu. Saiu também o DONO RECEBE, que só repetia o CUSTO logo acima</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.193.1</span><span class="cl-ver-date">28/07/2026</span></div>
