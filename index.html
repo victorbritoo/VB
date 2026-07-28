@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.191.0</title>
+<title>VB - v1.191.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.191.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.191.1<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -10306,34 +10306,45 @@ function MER_possibilidades(r){
   var cap=consig?0:(temS?(c-vs):c);
   var pV=temS?50:100;
   var dias=(r.data_compra?MER_dias(r.data_compra):0)||0; if(dias<0) dias=0;
-  var MK=20;                       /* markup padrao do VB */
-  var preco=c*(1+MK/100), parc=preco/5;   /* 1+4 iguais */
-  MER_possDados={c:c, cap:cap, pV:pV, dias:dias};
+  var MK=20, preco=c*(1+MK/100), parc=preco/5;
 
-  var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">'
-    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">PRE\u00c7O A '+MK+'%</div>'
+  var hh='<div'+(consig?'':' onclick="MER_possToggle()"')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;'+(consig?'':'cursor:pointer;')+'">'
+    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">PRE\u00c7O A '+MK+'%'+(consig?'':' \u00b7 '+dias+'d EM ESTOQUE')+'</div>'
     +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
       +'<span style="font-size:17px;font-weight:700;color:var(--ink);white-space:nowrap;">R$ '+MER_fmtBR(preco)+'</span>'
       +'<span style="font-size:12px;color:var(--tx);white-space:nowrap;">1+4 \u00b7 5\u00d7 R$ '+MER_fmtBR(parc)+'</span>'
-    +'</div>'
-    +'<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:7px;border-top:0.5px solid var(--ln2);padding-top:6px;">';
-  [15,25,30].forEach(function(p){
-    hh+='<span style="white-space:nowrap;">+'+p+'% R$ '+MER_fmtBR(c*(1+p/100))+'</span>';
-  });
-  hh+='</div>';
+    +'</div>';
 
   if(consig){
-    hh+='<div style="font-size:10px;color:var(--so);margin-top:6px;text-align:center;">Dono recebe R$ '+MER_fmtBR(c)+'</div>';
-  } else if(cap>0){
-    /* aviso so quando a peca ja passou do prazo em que 20% deixa de compensar */
-    var luc=c*(MK/100)*(pV/100);
-    var limD=Math.round((luc/cap/0.035)*30-60);
-    if(dias>limD){
-      hh+='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:6px;text-align:center;">'+dias+'d parado \u2014 a '+MK+'% j\u00e1 rende menos que 3,5% a.m.</div>';
-    }
+    hh+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:7px;border-top:0.5px solid var(--ln2);padding-top:6px;">';
+    [15,25,30].forEach(function(p){ hh+='<span style="white-space:nowrap;">+'+p+'% R$ '+MER_fmtBR(c*(1+p/100))+'</span>'; });
+    hh+='</div><div style="font-size:10px;color:var(--so);margin-top:6px;text-align:center;">Dono recebe R$ '+MER_fmtBR(c)+'</div>';
+    return hh+'</div>';
   }
+  if(!(cap>0)) return hh+'</div>';
+
+  /* Rendimento do padrao (1+4 a 20%) vira o alvo; os outros prazos empatam com ele. */
+  var cic4=(dias+60)/30;
+  var R=(c*(MK/100)*(pV/100))/cap/cic4;
+  var lim=Math.round((c*(MK/100)*(pV/100)/cap/0.035)*30-60);
+
+  hh+='<div id="mer-poss-exp" style="display:none;margin-top:8px;border-top:0.5px solid var(--ln2);padding-top:8px;">'
+    +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;text-align:center;margin-bottom:6px;">MESMO RENDIMENTO \u00b7 '+(R*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'% A.M.</div>';
+  for(var N=1;N<=10;N++){
+    var cicN=(dias+15*N)/30;
+    var pN=c + R*cap*cicN/(pV/100);
+    var mkN=Math.round((pN-c)/c*100);
+    var base=(N===4);
+    hh+='<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:3px;'+(base?'font-weight:700;':'')+'">'
+      +'<span style="color:'+(base?'var(--tx)':'var(--mu)')+';white-space:nowrap;">1+'+N+'</span>'
+      +'<span style="text-align:right;color:'+(base?'var(--ink)':'var(--tx)')+';white-space:nowrap;">R$ '+MER_fmtBR(pN)+' <span style="color:var(--so);font-weight:400;">+'+mkN+'%</span></span>'
+      +'</div>';
+  }
+  if(lim>0) hh+='<div style="font-size:10px;color:'+(dias>lim?'var(--red)':'var(--so)')+';margin-top:7px;text-align:center;'+(dias>lim?'font-weight:700;':'')+'">'+(dias>lim?('parado h\u00e1 '+dias+'d \u2014 20% j\u00e1 rende menos que 3,5% a.m.'):('a 20% aguenta at\u00e9 '+lim+'d parado'))+'</div>';
+  hh+='</div>';
   return hh+'</div>';
 }
+function MER_possToggle(){ var e=document.getElementById('mer-poss-exp'); if(e) e.style.display=(e.style.display==='none'?'block':'none'); }
 function MER_syncVenda(_r0, payload, desc){
   // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
   if(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
@@ -13447,6 +13458,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.191.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A tabela de preços voltou, agora ancorada no seu padrão em vez de alvos genéricos. O 1+4 a 20 por cento define o rendimento daquela peça, e os outros prazos mostram o preço que empata com ele: menos parcelas custam menos, mais parcelas custam mais, e o rendimento fica igual em todos. A linha do 1+4 vem destacada como base. Toque no bloco para abrir</div>
+      <div class="cl-item">O tempo entra na conta sozinho: quanto mais dias a peça acumula em estoque, menor o rendimento da base e mais achatada fica a diferença entre os prazos — porque a espera passa a pesar mais que o parcelamento. Embaixo, quantos dias a peça ainda aguenta a 20 por cento antes de furar a régua dos 3,5 por cento ao mês, virando aviso vermelho quando já passou</div>
+      <div class="cl-item">Em consignado a tabela não aparece: sem capital seu, não há rendimento a igualar. Ali fica o preço, a parcela, os degraus de markup e o valor que o dono recebe</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.191.0</span><span class="cl-ver-date">28/07/2026</span></div>
