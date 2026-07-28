@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.183.1</title>
+<title>VB - v1.184.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.183.1<br>27/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.184.0<br>27/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -1297,11 +1297,11 @@ body{ text-transform:uppercase; }
       </div>
       <div class="two-col" style="margin-top:6px;">
         <div style="padding-right:12px;text-align:center;">
-          <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">SÓCIO</div>
+          <div id="mer-lbl-socio" style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">SÓCIO</div>
           <input id="mer-socio" type="text" placeholder="—" readonly onclick="SOC_openPicker(function(n){document.getElementById('mer-socio').value=n; MER_dirtyPaint();})" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:2px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;cursor:pointer;">
         </div>
         <div style="padding-left:12px;border-left:0.5px solid var(--ln2);text-align:center;">
-          <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO<span id="mer-vsocio-pct"></span></div>
+          <div id="mer-lbl-parte" style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;">PARTE DO SÓCIO<span id="mer-vsocio-pct"></span></div>
           <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
             <span style="font-size:11px;color:var(--mu2);">R$</span>
             <input id="mer-valorSocio" type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" style="border:none;background:transparent;outline:none;font-size:14px;font-weight:700;color:var(--tx);width:100px;text-align:center;font-family:-apple-system,sans-serif;">
@@ -8056,8 +8056,13 @@ function MER_pctLive(){
   var c=VEN_parseBR((document.getElementById('mer-custo')||{}).value||'');
   var v=VEN_parseBR((document.getElementById('mer-valorSocio')||{}).value||'');
   sp.textContent = (c>0 && v>0) ? ' ('+Math.round(v/c*100)+'%)' : '';
+  /* Regra canonica: parte = custo inteiro -> consignacao; qualquer racha -> sociedade. */
+  var _consig=(c>0 && v>0 && v>=c);
+  var l1=document.getElementById('mer-lbl-socio'); if(l1) l1.textContent=_consig?'CONSIGNANTE':'S\u00d3CIO';
+  var l2=document.getElementById('mer-lbl-parte'); if(l2) l2.childNodes[0].nodeValue=_consig?'VALOR DO CONSIGNANTE':'PARTE DO S\u00d3CIO';
 }
 function MER_load(){
+  try{ VB_apelidosCarrega(); }catch(e){}
   var hoje=new Date();
   var el=document.getElementById('mer-data');
   if(el && !el.value) el.value=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
@@ -8217,13 +8222,14 @@ function SOC_openPicker(cb){
   ov.style.display='flex';
   var l=document.getElementById('soc-pick-lista');
   l.innerHTML='<div style="text-align:center;color:var(--so2);font-size:12px;padding:12px;">Carregando...</div>';
-  sb.from('socios').select('*').order('nome',{ascending:true}).then(function(res){
-    var rows=(res.error?[]:(res.data||[]));
+  sb.from('clientes').select('id,nome,apelido,cpf,ativo').order('nome',{ascending:true}).limit(3000).then(function(res){
+    var rows=(res.error?[]:(res.data||[])).filter(function(c){ return c.ativo!==false && (c.nome||'').trim(); });
     SOC_rows=rows;
     var html='<button onclick="SOC_pickSel(\'\')" style="display:block;width:100%;text-align:center;padding:9px;margin-bottom:8px;border:0.5px dashed var(--ln0);border-radius:12px;background:transparent;font-size:11px;letter-spacing:1px;font-weight:600;color:var(--tx);cursor:pointer;font-family:-apple-system,sans-serif;">SEM SÓCIO (LIMPAR)</button>';
-    if(!rows.length){ l.innerHTML=html+'<div style="text-align:center;color:var(--so2);font-size:12px;padding:12px;">Nenhum sócio cadastrado. Adicione abaixo.</div>'; return; }
+    if(!rows.length){ l.innerHTML=html+'<div style="text-align:center;color:var(--so2);font-size:12px;padding:12px;">Nenhum cliente cadastrado. Adicione abaixo.</div>'; return; }
     rows.forEach(function(r){
-      html+='<button onclick="SOC_pickSel(\''+String(r.nome).replace(/'/g,"\\'")+'\')" style="display:block;width:100%;text-align:center;padding:11px;margin-bottom:5px;border:0.5px solid var(--ln2);border-radius:12px;background:var(--sf);font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;font-family:-apple-system,sans-serif;">'+SOC_esc(r.nome)+(r.telefone?('<span style="font-weight:400;color:var(--tx);font-size:11px;"> · '+SOC_esc(r.telefone)+'</span>'):'')+'</button>';
+      var _ape=(r.apelido||'').trim();
+      html+='<button onclick="SOC_pickSel(\''+String(r.nome).replace(/'/g,"\\'")+'\')" style="display:block;width:100%;text-align:center;padding:11px;margin-bottom:5px;border:0.5px solid var(--ln2);border-radius:12px;background:var(--sf);font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;font-family:-apple-system,sans-serif;">'+SOC_esc(_ape||r.nome)+(_ape?('<span style="font-weight:400;color:var(--tx);font-size:11px;"> \u00b7 '+SOC_esc(r.nome)+'</span>'):(r.cpf?('<span style="font-weight:400;color:var(--tx);font-size:11px;"> \u00b7 '+SOC_esc(r.cpf)+'</span>'):''))+'</button>';
     });
     l.innerHTML=html;
   });
@@ -8241,7 +8247,7 @@ function SOC_pickAddNovo(){
   var n=document.getElementById('soc-pick-novo');
   var nome=((n&&n.value)||'').trim().toUpperCase();
   if(!nome){ VB_toast('Digite o nome.'); return; }
-  sb.from('socios').insert({nome:nome}).select().then(function(res){
+  sb.from('clientes').insert({nome:nome}).select().then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_toast('Sócio cadastrado.');
     var cb=SOC_pickCb; SOC_pickFechar();
@@ -9016,6 +9022,22 @@ function REN_addMesISO(iso, k){
   return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
 }
 function REN_num(x){ if(typeof x==='number') return x; var n=VB_dinheiroRaw(x); return isFinite(n)?n:0; }
+var VB_apelidos=null;
+function VB_apelidosCarrega(){
+  if(VB_apelidos!==null) return;
+  VB_apelidos='loading';
+  sb.from('clientes').select('nome,apelido').limit(3000).then(function(res){
+    VB_apelidos={};
+    if(!res.error) (res.data||[]).forEach(function(c){ if(c.nome && c.apelido) VB_apelidos[String(c.nome).trim().toUpperCase()]=String(c.apelido).trim(); });
+    try{ if(typeof VB_telaAtual!=='undefined' && VB_telaAtual==='mer') MER_load(); }catch(e){}
+  });
+}
+/* Nome curto: apelido quando existe, senao primeiro + ultimo. */
+function VB_nomeCurto(nome){
+  var n=String(nome||'').trim(); if(!n) return n;
+  if(VB_apelidos && typeof VB_apelidos==='object'){ var a=VB_apelidos[n.toUpperCase()]; if(a) return a; }
+  return VB_nomePU(n);
+}
 function VB_nomePU(nome){
   var s=String(nome||'').trim(); if(!s) return s;
   var ps=s.split(/\s+/);
@@ -10036,8 +10058,8 @@ function MER_render(){
           +(r.socio?(function(){
               var pctS=(Number(r.custo)>0&&r.valor_socio)?Math.round(Number(r.valor_socio)/Number(r.custo)*100):null;
               var _vv2=r.venda_id?MER_vendasMap[r.venda_id]:null;
-              if(VB_consigVen(r.socio, r.valor_socio, r.custo, _vv2?_vv2.lucro_vb_pct:null)) return '<div style="font-size:10px;color:var(--so);margin-top:1px;">Consignado: '+HIST_esc(r.socio)+'</div>';
-              return '<div style="font-size:10px;color:var(--so);margin-top:1px;">Sócio: '+HIST_esc(r.socio)+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((pctS!=null)?(' ('+pctS+'%)'):'')):'')+'</div>';
+              if(VB_consigVen(r.socio, r.valor_socio, r.custo, _vv2?_vv2.lucro_vb_pct:null)) return '<div style="font-size:10px;color:var(--so);margin-top:1px;">Consignado: '+HIST_esc(VB_nomeCurto(r.socio))+'</div>';
+              return '<div style="font-size:10px;color:var(--so);margin-top:1px;">Sócio: '+HIST_esc(VB_nomeCurto(r.socio))+(r.valor_socio?(' · R$ '+MER_fmtBR(r.valor_socio)+((pctS!=null)?(' ('+pctS+'%)'):'')):'')+'</div>';
             })():'')
           ))
         +'</div>'
@@ -12302,6 +12324,7 @@ function CLI_fichaReveal(){ var r=document.getElementById('clif-resto'); if(r) r
 function CLI_fichaVals(){
   var c=CLI_rows[CLI_fichaIdx]||{}, q=CLI_decQual(c), d=CLI_decEnd1(c);
   return {nome:c.nome||'', nacionalidade:q[0]||'brasileiro', estado_civil:q[1]||'', profissao:q[2]||'',
+    apelido:c.apelido||'',
     cpf:c.cpf||'', doc_tipo:c.doc_tipo||'RG', doc_num:c.doc_num||'', cep:c.cep||'',
     end1:d.e1, numero:d.num, end2:d.e2, bairro:d.bai, cidade:c.cidade||'', uf:c.uf||''};
 }
@@ -12402,7 +12425,7 @@ function CLI_fichaRender(){
     }
     return s+'</div>';
   }
-  var body='<div style="display:grid;grid-template-columns:1fr;gap:6px;">'+campo('nome','NOME',1)+'</div>'+(_stub?'<div id="clif-sug" style="margin-top:4px;"></div>':'')
+  var body='<div style="display:grid;grid-template-columns:1fr;gap:6px;">'+campo('nome','NOME',1)+'</div>'+'<div style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:6px;">'+campo('apelido','APELIDO')+'</div>'+(_stub?'<div id="clif-sug" style="margin-top:4px;"></div>':'')
     +'<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px;margin-top:6px;">'+campo('cpf','CPF')+campo('estado_civil','ESTADO CIVIL')+campo('profissao','PROFISSÃO')+'</div>'
     +'<div style="display:grid;grid-template-columns:74px 1.4fr 1fr;gap:6px;margin-top:6px;">'+campo('doc_tipo','DOC.')+campo('doc_num','Nº DOCUMENTO')+campo('cep','CEP')+'</div>'
     +(_ocultaEnd?'<div id="clif-resto" style="display:none;">':'')
@@ -12428,6 +12451,7 @@ function CLI_fichaRender(){
 }
 function CLI_montar(g){
   var pay={nome:g('nome').toUpperCase(), nacionalidade:(g('nacionalidade')||'brasileiro'), estado_civil:g('estado_civil')||null, profissao:g('profissao')||null,
+    apelido:g('apelido')||null,
     cpf:g('cpf')||null, doc_tipo:g('doc_num')?g('doc_tipo'):null, doc_num:(g('doc_num')||'').toUpperCase()||null,
     end1:(g('end1')||'').toUpperCase()||null, numero:(g('numero')||'').toUpperCase()||null, end2:(g('end2')||'').toUpperCase()||null,
     bairro:(g('bairro')||'').toUpperCase()||null, cidade:(g('cidade')||'').toUpperCase()||null, uf:(g('uf')||'').toUpperCase()||null, cep:g('cep')||null};
@@ -12463,6 +12487,12 @@ function CLI_fichaSalvar(ov){
       if(_nn){
         sb.from('vendas').update({cliente:_nn}).eq('cliente_id', c.id).then(function(){}).catch(function(){});
         sb.from('antecipacoes').update({cliente:_nn}).eq('cliente_id', c.id).then(function(){}).catch(function(){});
+        var _antigo=String(c.nome||'').trim();
+        if(_antigo && _antigo.toUpperCase()!==_nn){ /* mesma pessoa como socio/consignante */
+          sb.from('vendas').update({socio:_nn}).eq('socio', _antigo).then(function(){}).catch(function(){});
+          sb.from('mercadorias').update({socio:_nn}).eq('socio', _antigo).then(function(){}).catch(function(){});
+        }
+        try{ VB_apelidos=null; }catch(e){}
       }
     }catch(e){}
     VB_toast('Cliente atualizado.');
@@ -13418,6 +13448,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.184.0</span><span class="cl-ver-date">27/07/2026</span></div>
+      <div class="cl-item">Cadastro de pessoas passa a ser um só. Ao escolher sócio ou consignante — na venda, no estoque ou no investidor — a lista que abre agora é a de CLIENTES, não mais o cadastro pobre de sócios que só tinha nome e telefone. Com isso a mesma pessoa deixa de existir em dois lugares, e o sócio passa a ter CPF, documento e endereço por trás, o que abre caminho para contrato de consignação. Requer SQL já rodado: alter table clientes add column apelido text</div>
+      <div class="cl-item">Novo campo APELIDO na ficha do cliente. Onde o espaço é curto, o app mostra o apelido; sem apelido, mostra primeiro e último nome. Vale na lista do estoque, onde antes aparecia o nome completo do sócio ou consignante</div>
+      <div class="cl-item">No cadastro do relógio, o rótulo agora se corrige sozinho: quando a parte do sócio cobre o custo inteiro ele vira CONSIGNANTE e VALOR DO CONSIGNANTE; com qualquer racha de lucro, volta a SÓCIO e PARTE DO SÓCIO. É a regra canônica de sempre, agora dita na tela em vez de ficar só no número</div>
+      <div class="cl-item">Renomear um cliente agora atualiza também as vendas e os relógios em que ele aparece como sócio ou consignante, além das operações em que é cliente. Nada do histórico foi migrado: as operações seguem guardando o nome, e o cadastro antigo de sócios continua intacto — só a porta de entrada mudou</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.183.1</span><span class="cl-ver-date">27/07/2026</span></div>
