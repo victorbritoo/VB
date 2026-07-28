@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.187.0</title>
+<title>VB - v1.188.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -296,7 +296,7 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
 </div>
 
 <!-- VISUALIZADOR DE FOTO (Fechamento / Extrato do Sócio) -->
-<div id="vb-foto-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:100012;overflow-y:auto;padding:32px 16px 40px;">
+<div id="vb-foto-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:100030;overflow-y:auto;padding:32px 16px 40px;">
   <img id="vb-foto-img" style="width:100%;max-width:390px;margin:0 auto;display:block;border-radius:8px;box-shadow:0 2px 16px rgba(0,0,0,0.12);">
   <div style="max-width:390px;margin:14px auto 0;text-align:center;">
     <div style="font-size:12px;letter-spacing:1px;color:var(--mu);margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM PARA SALVAR</div>
@@ -455,7 +455,7 @@ body{ text-transform:uppercase; }
   <div class="card">
 
     <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--so2);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.187.0<br>28/07/2026</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--so2);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.188.0<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -4471,7 +4471,7 @@ function VB_toast(msg){
     if(!t){
       t=document.createElement('div');
       t.id='vb-toast';
-      t.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--acc);color:var(--acc-tx);font-family:-apple-system,sans-serif;font-size:13px;font-weight:500;padding:11px 18px;border-radius:12px;z-index:100000;max-width:82%;text-align:center;line-height:1.35;box-shadow:0 6px 24px rgba(0,0,0,0.3);opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
+      t.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--acc);color:var(--acc-tx);font-family:-apple-system,sans-serif;font-size:13px;font-weight:500;padding:11px 18px;border-radius:12px;z-index:100040;max-width:82%;text-align:center;line-height:1.35;box-shadow:0 6px 24px rgba(0,0,0,0.3);opacity:0;transition:opacity 0.18s ease;pointer-events:none;';
       document.body.appendChild(t);
     }
     t.textContent=msg;
@@ -8439,7 +8439,6 @@ function SOC_abrir(id){
     ] : [['Operações','0']]);
     if(nC) hh+=bloco('CONSIGNAÇÕES', [
       ['Operações', String(nC)],
-      ['Total Vendido', HIST_fmtMoeda(totC)],
       ['Repasses', HIST_fmtMoeda(repC)]
     ]);
     hh+=bloco('FINANCIAMENTOS (INVESTIDOR)', nF? [
@@ -9012,6 +9011,13 @@ function CLIP_abrir(nome, cliId){
     hh+=bl('HIST\u00d3RICO', innH);
     // RELÓGIOS EM SOCIEDADE / CONSIGNAÇÃO
     var _mer=((res[4]&&res[4].data)||[]).filter(function(m){ return key(m.socio)===alvo; });
+    /* em estoque (exposicao aberta) antes de vendido; dentro de cada bloco, do mais novo pro mais antigo */
+    _mer.sort(function(a,b){
+      var ea=(a.status==='vendida')?1:0, eb=(b.status==='vendida')?1:0;
+      if(ea!==eb) return ea-eb;
+      var da=String(a.data_compra||''), db=String(b.data_compra||'');
+      return da<db?1:da>db?-1:0;
+    });
     if(_mer.length){
       var innM='';
       _mer.forEach(function(m){
@@ -9863,8 +9869,8 @@ function SOC_extratoFoto(){
   }
   if(temC){
     secao('CONSIGNAÇÕES · '+d.nC+(d.nC===1?' OPERAÇÃO':' OPERAÇÕES')+periodo(d.cOps),
-      d.cOps.map(function(o){ return {nome:o.nome, data:o.data, dir:HIST_fmtMoeda(o.total), dir2:'Repasse '+HIST_fmtMoeda(o.repasse)}; }),
-      ['TOTAL', HIST_fmtMoeda(d.totC)+'  ·  Repasses '+HIST_fmtMoeda(d.repC)]);
+      d.cOps.map(function(o){ return {nome:o.nome, data:o.data, dir:HIST_fmtMoeda(o.repasse)}; }),
+      ['TOTAL', 'Repasses '+HIST_fmtMoeda(d.repC)]);
   }
   if(temF){
     secao('FINANCIAMENTOS (INVESTIDOR) · '+d.nF+(d.nF===1?' OPERAÇÃO':' OPERAÇÕES')+periodo(d.fOps),
@@ -13496,6 +13502,23 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.188.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">O extrato deixou de expor sua margem ao consignante. No bloco de CONSIGNAÇÕES, o valor de venda aparecia ao lado do repasse — na tela e na foto, peça por peça e no total. A diferença entre os dois é exatamente quanto você ganhou em cima do relógio dele. Agora a consignação mostra só o repasse, que é o que ele tem a receber e a única coisa que lhe diz respeito</div>
+      <div class="cl-item">A distinção que sustenta isso: sócio entra com capital e divide o lucro, então tem direito de ver o resultado; consignante banca o custo inteiro e não divide lucro nenhum, então resultado não é assunto dele. Quem é os dois, como o Emanuel, continua vendo cada bloco com o que lhe cabe — sociedade com capital e lucro, consignação só com repasse</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.187.2</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A foto abria atrás da folha que a gerou — visível no extrato do sócio, mas valia para qualquer foto pedida de dentro de uma folha. A camada da visualização estava abaixo da camada das folhas; agora ela fica acima de todas</div>
+      <div class="cl-item">No caminho apareceu um problema pior e silencioso: os avisos estavam na camada mais baixa de todas, então todo aviso disparado de dentro de uma folha — salvar cliente, apagar contrato, dar baixa — ficava escondido atrás dela e você nunca via a confirmação. Agora o aviso fica por cima de tudo, inclusive da foto</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.187.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Os relógios no panorama do cliente vinham sem ordem nenhuma — a busca tinha saído sem ordenação e o banco devolvia como queria. Agora vêm com os EM ESTOQUE na frente e os VENDIDOS depois, cada bloco do mais recente para o mais antigo pela data da compra. O corte por situação é proposital: relógio em estoque é capital da pessoa ainda parado com você, vendido é história</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.187.0</span><span class="cl-ver-date">28/07/2026</span></div>
