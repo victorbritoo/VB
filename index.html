@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.205.0</title>
+<title>VB - v1.205.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9533,6 +9533,23 @@ function REN_render(){
     var cliArr=Object.keys(porCli).map(function(k3){ var p=porCli[k3]; return {nome:k3, total:p.total, n:p.n, prox:p.prox, atr:p.atr}; });
     cliArr.sort(function(a,b){ return b.total-a.total; });
     var _cart=0; cliArr.forEach(function(c9){ _cart+=c9.total; });
+    var _cartVB=0; abertas.forEach(function(x){ _cartVB+=_vbDe(x); });
+    /* o card fecha a lista e acrescenta o que so existe aqui: a forma da carteira.
+       Top 3 e nao top 5 porque tres da pra guardar de cabeca; cinco vira estatistica. */
+    if(cliArr.length){
+      var _mai=(_cart>0)?(cliArr[0].total/_cart*100):0;
+      var _t3s=0; cliArr.slice(0,3).forEach(function(c8){ _t3s+=c8.total; });
+      var _t3=(_cart>0)?(_t3s/_cart*100):0;
+      var _fmtP=function(v){ return v.toLocaleString('pt-BR',{maximumFractionDigits:0})+'%'; };
+      var _vbTx=(Math.abs(_cart-_cartVB)>0.005)?('<div style="font-size:11px;font-weight:600;color:var(--acc-tx);opacity:0.75;margin-top:1px;text-align:right;">('+HIST_fmtMoeda(_cartVB)+' VB)</div>'):'';
+      hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_cart)+'</span></div>'
+        +_vbTx
+        +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+cliArr.length+' cliente'+(cliArr.length===1?'':'s')
+          +(cliArr.length>1?(' \u00b7 maior '+_fmtP(_mai)):'')
+          +(cliArr.length>3?(' \u00b7 top 3: '+_fmtP(_t3)):'')
+        +'</div></div>';
+    }
     if(!cliArr.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma exposi\u00e7\u00e3o em aberto.</div>';
     else cliArr.forEach(function(c2){
       hh+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;cursor:pointer;">'
@@ -14118,6 +14135,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.205.1</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">A aba CLIENTES de Recebimentos ganhou o card preto de total, como as outras duas. Além do total e da parte que é sua, ele traz o que só existe nesta tela: quantos clientes, quanto pesa o maior e quanto pesam os três maiores juntos</div>
+      <div class="cl-item">Com um cliente só, o card não mostra percentual algum; com até três, mostra apenas o maior. Não faz sentido dizer que os três maiores são cem por cento de três</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.205.0</span><span class="cl-ver-date">29/07/2026</span></div>
