@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.205.1</title>
+<title>VB - v1.205.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9469,7 +9469,6 @@ function REN_abrir(){
 function REN_render(){
   var body=document.getElementById('ren-body'); if(!body||!REN_cache) return;
   var itens=REN_cache.itens, bx=REN_cache.bx, hoje=REN_hojeISO();
-  var d7=(function(){ var d=new Date(); d.setDate(d.getDate()+7); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
   var abertas=REN_filtra(itens.filter(function(x){ return !bx[REN_key(x)]; }));
   var receb=REN_filtra(itens.filter(function(x){ return !!bx[REN_key(x)]; }));
   var atr=abertas.filter(function(x){ return x.venc<hoje; });
@@ -9477,7 +9476,6 @@ function REN_render(){
   function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repAlvo(oiX,x):0); }
   var totAb=0, totAbVB=0; abertas.forEach(function(x){ totAb+=REN_falta(x); totAbVB+=_vbDe(x); });
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
-  var s7=0, n7=0, s7vb=0; venc.forEach(function(x){ if(x.venc<=d7){ s7+=REN_falta(x); n7++; s7vb+=_vbDe(x); } });
   function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
@@ -9541,14 +9539,18 @@ function REN_render(){
       var _t3s=0; cliArr.slice(0,3).forEach(function(c8){ _t3s+=c8.total; });
       var _t3=(_cart>0)?(_t3s/_cart*100):0;
       var _fmtP=function(v){ return v.toLocaleString('pt-BR',{maximumFractionDigits:0})+'%'; };
-      var _vbTx=(Math.abs(_cart-_cartVB)>0.005)?('<div style="font-size:11px;font-weight:600;color:var(--acc-tx);opacity:0.75;margin-top:1px;text-align:right;">('+HIST_fmtMoeda(_cartVB)+' VB)</div>'):'';
+      var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;';
+      var _R='font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;';
+      var _vbTx=(Math.abs(_cart-_cartVB)>0.005)?('<div style="'+_L+'"><span style="'+_R+'">VB</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+HIST_fmtMoeda(_cartVB)+'</span></div>'):'';
+      var _conc='';
+      if(cliArr.length>1){
+        _conc='<div style="'+_L+'"><span style="'+_R+'">'+cliArr.length+' CLIENTES</span>'
+          +'<span style="font-size:10px;font-weight:700;color:var(--acc-tx);opacity:0.6;">MAIOR '+_fmtP(_mai)
+          +(cliArr.length>3?(' \u00b7 TOP 3 '+_fmtP(_t3)):'')+'</span></div>';
+      }
       hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_cart)+'</span></div>'
-        +_vbTx
-        +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+cliArr.length+' cliente'+(cliArr.length===1?'':'s')
-          +(cliArr.length>1?(' \u00b7 maior '+_fmtP(_mai)):'')
-          +(cliArr.length>3?(' \u00b7 top 3: '+_fmtP(_t3)):'')
-        +'</div></div>';
+        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="'+_R+'">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_cart)+'</span></div>'
+        +_vbTx+_conc+'</div>';
     }
     if(!cliArr.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma exposi\u00e7\u00e3o em aberto.</div>';
     else cliArr.forEach(function(c2){
@@ -9561,10 +9563,10 @@ function REN_render(){
         +'</div>';
     });
   } else {
-  var _heroVB=(Math.abs(totAb-totAbVB)>0.005)?('<div style="font-size:11px;font-weight:600;color:var(--acc-tx);opacity:0.75;margin-top:1px;text-align:right;">('+HIST_fmtMoeda(totAbVB)+' VB)</div>'):'';
-  var _s7vbTx=(n7&&Math.abs(s7-s7vb)>0.005)?(' ('+HIST_fmtMoeda(s7vb)+' VB)'):'';
-  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB
-    +'<div style="font-size:10px;color:var(--acc-tx);opacity:0.6;margin-top:3px;text-align:right;">'+(n7?('vence em 7 dias: '+HIST_fmtMoeda(s7)+_s7vbTx+' \u00b7 '+n7+'x'):'nada vence esta semana')+'</div></div>';
+  /* Dois pares rotulo-valor. A linha de 7 dias saiu: com 75 parcelas mensais quase toda semana
+     tem algo vencendo, entao ela nunca mudava de estado - e a lista logo abaixo ja vem por data. */
+  var _heroVB=(Math.abs(totAb-totAbVB)>0.005)?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">VB</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+HIST_fmtMoeda(totAbVB)+'</span></div>'):'';
+  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+'</div>';
   hh+='<div style="display:flex;gap:6px;">'+chip('data','DATA')+chip('valor','VALOR')+chip('cliente','CLIENTE')+'</div>';
   if(atr.length){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
@@ -14135,6 +14137,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.205.2</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Os cards de total de Recebimentos ficaram em pares rótulo e valor, sem parênteses. A parte que é sua deixou de ser um parêntese pendurado e virou uma linha própria, alinhada com o total</div>
+      <div class="cl-item">Saiu a linha de vence em 7 dias. Com setenta e cinco parcelas quase todas mensais, sempre há algo vencendo na semana — um número que nunca muda de estado não avisa nada, e a lista logo abaixo já vem ordenada por data</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.205.1</span><span class="cl-ver-date">29/07/2026</span></div>
