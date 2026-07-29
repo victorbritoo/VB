@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.197.2</title>
+<title>VB - v1.198.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3215,7 +3215,7 @@ function VB_relatorioPDF(dados, total, returnImages){
       } },
     { key:'vendas', titulo:'VENDAS', date:'created_at',
       cols:[ {h:'Nome', x:pad, w:130, get:function(r){return (vSemSN(r.nome||r.descricao)||'—')+vSufixo(r);}},
-             {h:'Cliente', x:175, w:66, get:function(r){return r.cliente?VB_nomePU(r.cliente):'—';}},
+             {h:'Cliente', x:175, w:66, get:function(r){return r.cliente?VB_nomeCurto(r.cliente):'—';}},
              {h:'Data', x:245, w:62, get:function(r){var d=vDataNeg(r); return d?dt(d):'—';}},
              {h:'Giro', x:311, w:30, r:1, get:function(r){var g=vGiro(r); return g!=null?(g+'d'):'—';}},
              {h:'Venda', x:345, w:84, r:1, get:function(r){return money(r.valor_total);}},
@@ -4381,8 +4381,8 @@ function HIST_renderRows(tab, rows){
       if(r.custo!=null){ campos.push({l:'Custo', v:HIST_fmtMoeda(r.custo)}); }
       if(_temSocio && _lvL!=null && _c>0){
         if(_consig){
-          campos.push({l:'Consignação', v:(r.socio||'')});
-          campos.push({l:'Repasse '+(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
+          campos.push({l:'Consignação', v:VB_nomeCurto(r.socio||'')});
+          campos.push({l:'Repasse '+VB_nomeCurto(r.socio||'').toUpperCase(), v:HIST_fmtMoeda(_vs)});
         } else {
           var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
           var _pS=100-_pVB;
@@ -4390,7 +4390,7 @@ function HIST_renderRows(tab, rows){
           var _cVB=_c-_vs; var _pcVB=Math.round(_cVB/_c*100), _pcS=Math.round(_vs/_c*100);
           campos.push({l:'Lucro VB ('+_pVB+'%)', v:HIST_fmtMoeda(_lVB)});
           campos.push({l:'Custo VB ('+_pcVB+'%)', v:HIST_fmtMoeda(_cVB)});
-          campos.push({l:'Lucro '+(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
+          campos.push({l:'Lucro '+VB_nomeCurto(r.socio||'').toUpperCase()+' ('+_pS+'%)', v:HIST_fmtMoeda(_lS)});
           campos.push({l:'Custo '+VB_nomeCurto(r.socio||'').toUpperCase()+' ('+_pcS+'%)', v:HIST_fmtMoeda(_vs)});
         }
       }
@@ -9233,10 +9233,10 @@ function REN_abrir(){
       var consig2=false; try{ consig2=!!VB_consigVen(r.socio, vsC, cu2, r.lucro_vb_pct); }catch(e){}
       var pctVB2=(r.lucro_vb_pct!=null&&r.lucro_vb_pct!=='')?Number(r.lucro_vb_pct):50;
       var vsTot=consig2?vsC:(vsC + luc2*(1-pctVB2/100)); // capital do sócio + lucro do sócio (consig: valor já é o total)
-      opInfo['ven|'+String(r.id)]={socio:r.socio, vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO'};
+      opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO'};
     });
     (res[1].data||[]).forEach(function(r){
-      if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
+      if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:VB_nomeCurto(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
     });
     REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo};
     REN_render();
@@ -9263,7 +9263,7 @@ function REN_render(){
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomePU(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +'</div>'
       +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
@@ -9275,7 +9275,7 @@ function REN_render(){
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln3);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;opacity:0.75;">'
       +'<div onclick="REN_ficha(\''+REN_key(x)+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomePU(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 '+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 '+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(Number(b.valor_recebido)!==Number(x.valor)?(' \u00b7 parcela '+HIST_fmtMoeda(x.valor)):'')+(b.nota?(' \u00b7 '+CLIP_esc(b.nota)):'')+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(Number(b.repasse_valor)>0&&!b.repassado_em) return '<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor))+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+'</div>'; return ''; })()
       +'</div>'
@@ -9310,7 +9310,7 @@ function REN_render(){
     if(!cliArr.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma exposi\u00e7\u00e3o em aberto.</div>';
     else cliArr.forEach(function(c2){
       hh+='<div onclick="CLIP_abrir(this.getAttribute(\'data-n\'))" data-n="'+CLIP_esc(c2.nome).replace(/"/g,'&quot;')+'" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;cursor:pointer;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+CLIP_esc(VB_nomePU(c2.nome))+' \u203a</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(c2.total)+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+CLIP_esc(VB_nomeCurto(c2.nome))+' \u203a</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(c2.total)+'</span></div>'
         +'<div style="font-size:10px;color:var(--so);margin-top:2px;">'+c2.n+' parcela'+(c2.n===1?'':'s')+' \u00b7 pr\u00f3x '+HIST_fmtData(c2.prox)+(c2.atr>0?(' \u00b7 <span style="color:var(--red);font-weight:700;">ATRASADO '+HIST_fmtMoeda(c2.atr)+'</span>'):'')+'</div>'
         +'</div>';
     });
@@ -9336,7 +9336,7 @@ function REN_render(){
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
         +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
         +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:var(--red);">'+HIST_fmtMoeda(Number(b2.repasse_valor))+'</span></span></div>'
-        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomePU(x.cliente))+REN_vfa(x.tab)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
+        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
         +'</div>'
         +'<button onclick="REN_repQuick(this,\''+k2+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
         +'</div>';
@@ -9412,7 +9412,7 @@ function REN_ficha(k, exp){
   tl=pre+tl+pos;
   var hh='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">PARCELA</div>';
-  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(x.cliente))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco('PARCELA',REN_nm(x))+'</div>';
   if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' (parcela '+HIST_fmtMoeda(x.valor)+')'):''))+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   if(b){
@@ -9470,7 +9470,7 @@ function REN_editRec(k){
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">EDITAR RECEBIMENTO</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><input id="renb-valor" inputmode="decimal" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="'+IN+'"></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
@@ -9543,7 +9543,7 @@ function REN_repassar(k){
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(b.repassado_em?'EDITAR REPASSE':'REPASSAR')+'</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+(oi?CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 ':'')+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+(oi?CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 ':'')+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><input id="renr-valor" inputmode="decimal" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="'+IN+'"></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input id="renr-data" inputmode="numeric" maxlength="10" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
@@ -9626,7 +9626,7 @@ function REN_editBaixa(k){
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(x.cliente)+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><input id="renb-valor" inputmode="decimal" value="'+Number(x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="'+IN+'"></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
@@ -9882,7 +9882,7 @@ function SOC_extratoFoto(){
   c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
   c.fillText('E X T R A T O   D O   S Ó C I O', PAD, 96);
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
-  c.fillText((d.nome||'').toUpperCase(), PAD, 146);
+  c.fillText(VB_nomeCurto(d.nome||'').toUpperCase(), PAD, 146);
   var temP=!!(d.fDe||d.fAte);
   if(temP){
     var pTxt = d.fDe&&d.fAte ? ('Período: '+d.fDe+' – '+d.fAte) : (d.fDe ? ('Período: a partir de '+d.fDe) : ('Período: até '+d.fAte));
@@ -10346,7 +10346,7 @@ function MER_abrir(id){
         if(_lu!=null && v.socio && _vs2>0){
           var _pV2=(v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50;
           vh+=lin('Lucro VB ('+_pV2+'%)', 'R$ '+MER_fmtBR(_lu*(_pV2/100)));
-          vh+=lin('Lucro '+String(v.socio).toUpperCase()+' ('+(100-_pV2)+'%)', 'R$ '+MER_fmtBR(_lu*((100-_pV2)/100)));
+          vh+=lin('Lucro '+VB_nomeCurto(String(v.socio)).toUpperCase()+' ('+(100-_pV2)+'%)', 'R$ '+MER_fmtBR(_lu*((100-_pV2)/100)));
         }
         vh+=lin('Pagamento', MER_resumoParcelas(v));
         var _trTroca=(Array.isArray(v.parcelas)?v.parcelas.filter(function(p){return p&&p.t;}):[]);
@@ -11050,7 +11050,7 @@ function VEN_resumoSocioDados(r, dcHint){
     if(isFinite(m2)&&m2>0) cic=m2;
   })();
   var rend=(cic&&c>0)?VB_termometro(l, c, cic):null; // rendimento do NEGÓCIO: lucro total sobre custo total
-  return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(r.socio).toUpperCase(),
+  return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(VB_nomeCurto(r.socio)).toUpperCase(),
     dataVenda:(r.data_venda?HIST_fmtData(r.data_venda):null), total:Number(r.valor_total)||0,
     parc:parc, custo:c, lucroTot:l, margem:(c>0?(l/c*100):null), cic:cic, rend:rend, diasEst:diasEst,
     capS:vs, lucroS:lS, pctS:(vs>0?(lS/vs*100):null), racha:(100-pVB) };
@@ -13652,6 +13652,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.198.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Quem tem apelido cadastrado aparece pelo apelido em todo lugar de leitura rápida. Antes era irregular: no mesmo card da venda, CUSTO já dizia ROMULO LEITE e LUCRO ainda dizia o nome inteiro</div>
+      <div class="cl-item">Passaram a usar apelido: card da venda no Histórico (consignação, repasse e lucro do sócio), card da peça vendida no Estoque, A RECEBER (listas, agrupamento por cliente, ficha e folhas de baixa e repasse), Relatório de vendas, título do Extrato do Sócio e a foto e o resumo da venda</div>
+      <div class="cl-item">Continuam com nome completo: contrato, ficha e cadastro do cliente, e a exportação CSV — são os lugares onde o nome identifica a pessoa, não serve só de rótulo</div>
+      <div class="cl-item">A busca e o botão que abre a ficha do cliente continuam usando o nome completo por trás. Encurtar só acontece na hora de mostrar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.197.2</span><span class="cl-ver-date">29/07/2026</span></div>
