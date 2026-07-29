@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.200.1</title>
+<title>VB - v1.200.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9112,7 +9112,9 @@ function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.get
 function REN_brToISO(s){
   s=String(s||'').trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  var p=s.split('/'); if(p.length!==3) return null;
+  var p=s.split('/');
+  if(p.length===2 && p[0] && p[1]) p.push(String(new Date().getFullYear())); /* 29/07 vira 29/07 do ano corrente */
+  if(p.length!==3) return null;
   var y=p[2]; if(y.length===2) y='20'+y;
   return y+'-'+('0'+p[1]).slice(-2)+'-'+('0'+p[0]).slice(-2);
 }
@@ -9328,7 +9330,7 @@ function REN_render(){
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
-      +(REN_parcial(x)?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">RECEBIDO '+HIST_fmtMoeda(REN_pagoTot(x))+' \u00b7 FALTAM '+HIST_fmtMoeda(REN_falta(x))+'</div>'):'')
+      +(REN_parcial(x)?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(REN_pagoTot(x))+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_falta(x))+'</div>'):'')
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +'</div>'
       +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
@@ -9495,14 +9497,14 @@ function REN_ficha(k, exp){
     var _rv=Number(b.repasse_valor)||REN_repAlvo(oi, x);
     if(_rv>0||b.repassado_em){
       var _rtx=b.repassado_em?('PAGO '+HIST_fmtData(String(b.repassado_em).slice(0,10))+' \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor)||_rv)):('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv));
-      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:11px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div>'+(b.repasse_nota?('<div style="font-size:9px;color:var(--so2);">'+CLIP_esc(b.repasse_nota)+'</div>'):'')+'</div>';
+      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div>'+(b.repasse_nota?('<div style="font-size:9px;color:var(--so2);">'+CLIP_esc(b.repasse_nota)+'</div>'):'')+'</div>';
     }
   }
   if(oi){
     var pr=REN_repAlvo(oi, x);
     var pct=(x.valor>0&&pr>0)?(pr/x.valor*100):null;
     var pctTx=(pct!=null)?(' ('+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):'';
-    _bSoc='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:11px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+'</div></div>';
+    _bSoc='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+'</div></div>';
   }
   if(_bSoc && _bRep) hh+='<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:2px 10px;">'+_bSoc+_bRep+'</div>';
   else hh+=(_bSoc||_bRep);
@@ -9519,7 +9521,7 @@ function REN_ficha(k, exp){
     ph+='<div style="border-top:0.5px solid var(--ln3);margin-top:6px;"></div>'
       +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:4px;font-weight:700;">'
       +'<span style="color:var(--tx);">'+HIST_fmtMoeda(REN_pagoTot(x))+'</span>'
-      +(REN_falta(x)>0?('<span style="color:var(--red);font-size:10px;">FALTAM '+HIST_fmtMoeda(REN_falta(x))+'</span>'):'<span style="color:var(--mu);font-size:10px;">QUITADA</span>')
+      +(REN_falta(x)>0?('<span style="color:var(--red);font-size:10px;">RESTA: '+HIST_fmtMoeda(REN_falta(x))+'</span>'):'<span style="color:var(--mu);font-size:10px;">QUITADA</span>')
       +'</div>';
     hh+='<div style="border-top:0.5px solid var(--ln3);margin-top:2px;padding-top:6px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:1px;text-align:center;">PAGAMENTOS</div>'+ph+'</div>';
   })();
@@ -9912,7 +9914,7 @@ function REN_editBaixa(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(_ja>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:'+(_ja>0?'4px':'12px')+';">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
-    +(_ja>0?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">J\u00c1 RECEBIDO '+HIST_fmtMoeda(_ja)+' \u00b7 FALTAM '+HIST_fmtMoeda(_falta)+'</div>'):'')
+    +(_ja>0?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">PAGO: '+HIST_fmtMoeda(_ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(_falta)+'</div>'):'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;">R$</span><input id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:right;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
@@ -13943,6 +13945,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.200.2</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Data digitada sem o ano passou a completar com o ano corrente. Digitar 29/07 dava data inválida em silêncio, porque o app só aceitava dia, mês e ano</div>
+      <div class="cl-item">SÓCIO e REPASSE na ficha da parcela ficaram do mesmo tamanho dos campos de cima. Estavam um ponto menores sem motivo</div>
+      <div class="cl-item">Parcela recebida pela metade passou a dizer PAGO: e RESTA: com dois-pontos, na lista, na folha de pagamento e no rodapé do bloco de pagamentos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.200.1</span><span class="cl-ver-date">29/07/2026</span></div>
