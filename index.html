@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.202.0</title>
+<title>VB - v1.202.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9220,7 +9220,7 @@ function VB_apelidosCarrega(){
   VB_apelidos='loading';
   sb.from('clientes').select('nome,apelido').limit(3000).then(function(res){
     VB_apelidos={};
-    if(!res.error) (res.data||[]).forEach(function(c){ if(c.nome && c.apelido) VB_apelidos[String(c.nome).trim().toUpperCase()]=String(c.apelido).trim(); });
+    if(!res.error) (res.data||[]).forEach(function(c){ if(c.nome && c.apelido) VB_apelidos[String(c.nome).trim().toUpperCase()]=String(c.apelido).trim().toUpperCase(); });
     try{ if(typeof VB_telaAtual!=='undefined' && VB_telaAtual==='mer') MER_load(); }catch(e){}
   });
 }
@@ -12993,7 +12993,8 @@ function CLI_fichaRender(){
   var ov=document.createElement('div');
   ov.id='vb-clif-sheet';
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
-  var IN='width:100%;box-sizing:border-box;padding:8px 6px;border:0.5px solid var(--lnk);border-radius:999px;background:var(--sf2);color:var(--tx);font-size:12px;margin-top:3px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
+  /* altura fixa nos dois: sem isso o seletor nativo fica mais baixo que o campo de texto na mesma linha */
+  var IN='width:100%;box-sizing:border-box;height:33px;padding:0 8px;border:0.5px solid var(--lnk);border-radius:999px;background:var(--sf2);color:var(--tx);font-size:12px;margin-top:3px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
   function campo(k,lbl,full){
     var v=vals[k], s='<div style="'+(full?'grid-column:1/-1;':'')+'min-width:0;">'
       +'<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;text-align:center;">'+lbl+'</div>';
@@ -13001,7 +13002,7 @@ function CLI_fichaRender(){
       if(k==='doc_tipo' || k==='estado_civil'){
         var _ops = (k==='doc_tipo') ? [['RG','RG'],['CNH','CNH'],['Passaporte','PASS.']] : [['','—'],['casado','CASADO'],['solteiro','SOLTEIRO'],['viúvo','VIÚVO'],['divorciado','DIVORCIADO']];
         if(k==='estado_civil' && v && !_ops.some(function(o){return o[0]===v;})) _ops.push([v, v.toUpperCase()]);
-        s+='<select id="clif-'+k+'" oninput="CLI_fichaSync()" style="'+IN+'border-radius:10px;">'
+        s+='<select id="clif-'+k+'" oninput="CLI_fichaSync()" style="'+IN+'">'
           +_ops.map(function(t){ return '<option value="'+t[0]+'"'+(t[0]===v?' selected':'')+'>'+t[1]+'</option>'; }).join('')+'</select>';
       } else {
         s+='<input id="clif-'+k+'" value="'+CTR_esc(v).replace(/"/g,'&quot;')+'" oninput="'+(k==='cpf'?'CLI_maskCPF(this);':(k==='cep'?'CLI_cepInput(this);':''))+'CLI_fichaSync();'+((_stub&&(k==='nome'||k==='cpf'))?'CLI_fichaBuscaReserva();':'')+'" '+((k==='cpf'||k==='cep')?'inputmode="numeric" ':'')+(k==='uf'?'maxlength="2"':'')+' style="'+IN+'">';
@@ -13078,7 +13079,7 @@ function CLI_fichaSalvar(ov){
           sb.from('vendas').update({socio:_nn}).eq('socio', _antigo).then(function(){}).catch(function(){});
           sb.from('mercadorias').update({socio:_nn}).eq('socio', _antigo).then(function(){}).catch(function(){});
         }
-        try{ VB_apelidos=null; }catch(e){}
+        try{ VB_apelidos=null; VB_apelidosCarrega(); }catch(e){}
       }
     }catch(e){}
     VB_toast('Cliente atualizado.');
@@ -14039,6 +14040,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.202.1</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Corrigido: salvar a ficha de qualquer cliente derrubava a lista de apelidos e nada a recarregava. A partir dali todo apelido do app parava de aparecer e voltava a mostrar primeiro e último nome, até você fechar e abrir. Era por isso que ROMULO LEITE virava ROMULO CARVALHO depois de mexer em outro cliente</div>
+      <div class="cl-item">Apelido gravado em minúsculo passou a ser mostrado em maiúsculo. Na tela o CSS já corrigia, mas na foto da venda e no extrato do sócio, que são desenhados, o minúsculo aparecia</div>
+      <div class="cl-item">Na ficha do cliente, os seletores de estado civil e tipo de documento tinham canto quadrado e altura menor que os campos de texto ao lado. Agora todos têm a mesma altura e o mesmo canto arredondado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.202.0</span><span class="cl-ver-date">29/07/2026</span></div>
