@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.200.3</title>
+<title>VB - v1.201.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3538,6 +3538,42 @@ var HIST_sortCol='data';
 var HIST_sortDir='desc';
 var HIST_exporting=false;
 // Coluna de nome por aba (Pagamentos não tem -> null)
+/* Colunas que a busca varre. Antes só pegava nome e descricao, entao procurar pelo cliente
+   ou pelo socio de uma venda nao achava nada. */
+function HIST_buscaCols(tab){
+  if(tab==='ant') return ['nome','cliente'];
+  if(tab==='fin') return ['nome','descricao','investidor_nome'];
+  if(tab==='ven') return ['nome','descricao','cliente','socio','identificacao','notas'];
+  return ['nome'];
+}
+/* O apelido nao esta gravado na operacao, so em clientes. Entao viramos o mapa do avesso:
+   quem tem apelido parecido com o termo entra na busca pelo NOME COMPLETO dele. */
+function HIST_colsPessoa(tab){
+  if(tab==='ant') return ['cliente'];
+  if(tab==='ven') return ['cliente','socio'];
+  if(tab==='fin') return ['investidor_nome'];
+  return [];
+}
+function HIST_orsApelido(tab, termo){
+  var cols=HIST_colsPessoa(tab);
+  if(!cols.length) return [];
+  if(!VB_apelidos || typeof VB_apelidos!=='object') return [];
+  var t=String(termo||'').trim().toUpperCase();
+  if(t.length<2) return [];
+  var nomes=[];
+  Object.keys(VB_apelidos).forEach(function(nm){
+    var ap=String(VB_apelidos[nm]||'').toUpperCase();
+    if(ap && ap.indexOf(t)>=0 && nomes.indexOf(nm)<0) nomes.push(nm);
+  });
+  if(!nomes.length) return [];
+  nomes=nomes.slice(0,8); /* trava pro filtro nao virar um texto gigante */
+  var ors=[];
+  nomes.forEach(function(nm){
+    var s=String(nm).replace(/[,*()]/g,' ');
+    cols.forEach(function(c2){ ors.push(c2+'.ilike.%'+s+'%'); });
+  });
+  return ors;
+}
 function HIST_nameCol(tab){ return tab==='ant'?'cliente':((tab==='fin'||tab==='ven')?'descricao':null); }
 function HIST_tabela(tab){ return tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos'; }
 function HIST_valCol(tab){ return tab==='ant'?'valor_bruto':tab==='fin'?'valor_financiado':'valor_total'; }
@@ -4132,9 +4168,8 @@ function HIST_fetch(term){
   var col=HIST_nameCol(tab), valCol=HIST_valCol(tab);
   if(term){
     var safe=term.replace(/[,*()]/g,' ');
-    var ors=['nome.ilike.%'+safe+'%'];
-    if(col) ors.push(col+'.ilike.%'+safe+'%');
-    if(tab==='ven') ors.push('identificacao.ilike.%'+safe+'%');
+    var ors=HIST_buscaCols(tab).map(function(c2){ return c2+'.ilike.%'+safe+'%'; });
+    ors=ors.concat(HIST_orsApelido(tab, term));
     var num=HIST_parseNum(term);
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(ors.length) q=q.or(ors.join(','));
@@ -4200,10 +4235,9 @@ function HIST_fetchGlobal(term){
   var safe=term.replace(/[,*()]/g,' ');
   var num=HIST_parseNum(term);
   Promise.all(tabs.map(function(tb){
-    var col=HIST_nameCol(tb), valCol=HIST_valCol(tb);
-    var ors=['nome.ilike.%'+safe+'%'];
-    if(col) ors.push(col+'.ilike.%'+safe+'%');
-    if(tb==='vendas') ors.push('identificacao.ilike.%'+safe+'%');
+    var valCol=HIST_valCol(tb);
+    var ors=HIST_buscaCols(tb).map(function(c2){ return c2+'.ilike.%'+safe+'%'; });
+    ors=ors.concat(HIST_orsApelido(tb, term));
     if(num!=null && valCol) ors.push(valCol+'.eq.'+num);
     if(!ors.length) return Promise.resolve({tb:tb, rows:[]});
     var q=sb.from(HIST_tabela(tb)).select('*').or(ors.join(','));
@@ -13950,6 +13984,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.201.1</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">A busca do Histórico passou a entender apelido. O apelido não fica gravado na operação, só no cadastro do cliente, então o app procura quem tem apelido parecido com o que você digitou e busca pelo nome completo dessa pessoa. Digitar EMANUEL FILHO acha as operações gravadas como EMANUEL MARCIANO TAVARES FILHO</div>
+      <div class="cl-item">Vale para cliente e sócio nas vendas, cliente nas antecipações e investidor nos financiamentos</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.201.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">A busca do Histórico passou a procurar pelo cliente e pelo sócio. Em vendas ela só olhava o nome do relógio e a descrição, então procurar por ALBU não achava as vendas do João Albuquerque. Agora varre cliente, sócio, identificação e notas; em financiamentos varre também o investidor</div>
+      <div class="cl-item">A linha que mandava buscar pela identificação comparava a aba com vendas, mas o código chama essa aba de ven — nunca rodava. Corrigido junto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.200.3</span><span class="cl-ver-date">29/07/2026</span></div>
