@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.201.1</title>
+<title>VB - v1.202.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9071,7 +9071,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
-    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx').limit(20000)
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
@@ -9089,16 +9089,41 @@ function CLIP_abrir(nome, cliId, voltarK){
     // cobrança
     var totCob=0; var cobL=antAtr.map(function(r){ var v=HIST_atrHoje(r); totCob+=v; return {rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), valor:v}; });
     // histórico + lucro VB gerado
-    var negociado=0, lucVB=0;
-    ant.forEach(function(r){ negociado+=Number(r.valor_bruto)||0; var l=HIST_lucroRow('ant', r); if(l!=null) lucVB+=l; });
+    /* Lucro separado por vertical. Somar valor de venda com valor de face de titulo daria um
+       numero grande e sem significado; o lucro, sim, e dinheiro seu nos dois casos. */
+    var antBruto=0, antLuc=0, venTot=0, venLuc=0;
+    var antL=[], venL=[];
+    ant.forEach(function(r){
+      var b2=Number(r.valor_bruto)||0; antBruto+=b2;
+      var l=HIST_lucroRow('ant', r)||0; antLuc+=l;
+      antL.push({rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), data:String(r.data_operacao||r.created_at||'').slice(0,10), bruto:b2, liq:Number(r.valor_liquido)||0, luc:l});
+    });
     ven.forEach(function(v){
-      negociado+=Number(v.valor_total)||0;
-      var l=HIST_lucroRow('ven', v); if(l==null) return;
-      var c=Number(v.custo)||0, vs=Number(v.valor_socio)||0;
-      var consig=VB_consigVen(v.socio, vs, c, v.lucro_vb_pct);
-      var temS=(v.socio && vs>0 && !consig);
-      var p=temS?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
-      lucVB+=l*(p/100);
+      var t=Number(v.valor_total)||0; venTot+=t;
+      var l=HIST_lucroRow('ven', v);
+      var meu=0;
+      if(l!=null){
+        var c=Number(v.custo)||0, vs=Number(v.valor_socio)||0;
+        var consig=VB_consigVen(v.socio, vs, c, v.lucro_vb_pct);
+        var temS=(v.socio && vs>0 && !consig);
+        var pp=temS?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
+        meu=l*(pp/100); venLuc+=meu;
+      }
+      venL.push({rot:REN_rotCurto(v.descricao||v.nome||'VENDA'), data:String(v.data_venda||v.created_at||'').slice(0,10), total:t, luc:meu});
+    });
+    var lucVB=antLuc+venLuc;
+    /* Pontualidade: so parcelas com baixa, comparando o recebimento com o vencimento. */
+    var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; });
+    var pgN=0, pgDia=0, pgAtr=0, pgDias=0;
+    ((res[3]&&res[3].data)||[]).forEach(function(b3){
+      if(!_ops[b3.op_tab+'|'+String(b3.op_id)]) return;
+      if(!b3.venc || !b3.recebido_em) return;
+      pgN++;
+      var dRec=String(b3.recebido_em).slice(0,10), dVen=String(b3.venc).slice(0,10);
+      if(dRec<=dVen){ pgDia++; return; }
+      pgAtr++;
+      var dd2=Math.round((new Date(dRec+'T00:00:00')-new Date(dVen+'T00:00:00'))/86400000);
+      if(isFinite(dd2)&&dd2>0) pgDias+=dd2;
     });
     function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4); }
     function bl(t, inner){ return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;"><div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">'+t+'</div>'+inner+'</div>'; }
@@ -9106,12 +9131,40 @@ function CLIP_abrir(nome, cliId, voltarK){
     var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>';
     hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
+    /* linha com valor a direita e o lucro logo abaixo, em cinza */
+    function lnLuc(esq, dir, luc){
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;">'
+        +'<span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span>'
+        +'<span style="color:var(--tx);font-weight:600;white-space:nowrap;">'+dir+'</span></div>'
+        +(luc!=null?('<div style="text-align:right;font-size:10px;color:var(--so2);font-weight:600;">LUCRO: '+HIST_fmtMoeda(luc)+'</div>'):'');
+    }
+    // RESULTADO
+    var innR=ln('<b>Lucro total</b>', '<b>'+HIST_fmtMoeda(lucVB)+'</b>');
+    if(venL.length) innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
+    if(antL.length) innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
+    hh+=bl('RESULTADO', innR);
+    // RELÓGIOS
+    if(venL.length){
+      var innV='';
+      venL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
+      venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc); });
+      innV+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Vendido</b>', HIST_fmtMoeda(venTot))+ln('<b>Lucro</b>', HIST_fmtMoeda(venLuc));
+      hh+=bl('REL\u00d3GIOS \u00b7 '+venL.length, innV);
+    }
+    // ANTECIPAÇÕES
+    if(antL.length){
+      var innA='';
+      antL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
+      antL.forEach(function(a2){ innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc); });
+      innA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Antecipado</b>', HIST_fmtMoeda(antBruto))+ln('<b>Lucro</b>', HIST_fmtMoeda(antLuc));
+      hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA);
+    }
     // EM ABERTO
     var inner='';
     if(!fut.length) inner+='<div style="font-size:11px;color:var(--so2);margin-top:5px;">Nada a vencer.</div>';
     else{
       var mostra=fut.slice(0,12);
-      mostra.forEach(function(x){ var atrX=(x.venc<hoje); inner+=ln((atrX?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):fdt(x.venc))+' \u00b7 '+CLIP_esc(x.rot), HIST_fmtMoeda(x.valor), atrX); });
+      mostra.forEach(function(x){ var atrX=(x.venc<hoje); inner+=ln((atrX?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):fdt(x.venc))+' \u00b7 '+CLIP_esc(REN_rotCurto(x.rot)||x.rot), HIST_fmtMoeda(x.valor), atrX); });
       if(fut.length>12) inner+='<div style="font-size:10px;color:var(--so2);margin-top:5px;">+'+(fut.length-12)+' parcelas</div>';
       inner+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total a vencer</b>', HIST_fmtMoeda(totFut));
     }
@@ -9122,13 +9175,15 @@ function CLIP_abrir(nome, cliId, voltarK){
       innC+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total em cobran\u00e7a</b>', HIST_fmtMoeda(totCob), true);
       hh+=bl('EM COBRAN\u00c7A \u00b7 '+antAtr.length, innC);
     }
-    // HISTÓRICO
-    var innH='';
-    innH+=ln('Antecipa\u00e7\u00f5es', String(ant.length));
-    innH+=ln('Vendas', String(ven.length));
-    innH+=ln('Total negociado', HIST_fmtMoeda(negociado));
-    innH+=ln('<b>Lucro VB gerado</b>', HIST_fmtMoeda(lucVB));
-    hh+=bl('HIST\u00d3RICO', innH);
+    // COMO ELE PAGA
+    if(pgN>0){
+      var innP='';
+      innP+=ln('Parcelas pagas', String(pgN));
+      innP+=ln('Em dia', String(pgDia));
+      innP+=ln('Com atraso', pgAtr>0?('<span style="color:var(--red);font-weight:700;">'+pgAtr+'</span>'):'0');
+      if(pgAtr>0) innP+=ln('Atraso m\u00e9dio', Math.round(pgDias/pgAtr)+' dias');
+      hh+=bl('COMO ELE PAGA', innP);
+    }
     // CONTRATOS
     if(con.length){
       var innK='';
@@ -13984,6 +14039,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.202.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">O Panorama do Cliente passou a separar o que o cliente rendeu por vertical. Antes havia um LUCRO VB GERADO único que misturava relógio com antecipação e não dizia de onde vinha</div>
+      <div class="cl-item">Bloco RESULTADO no topo com o lucro total e a quebra em relógios e antecipações. Abaixo, um bloco para cada vertical: cada venda com data, valor e o lucro que ela te deu; cada antecipação com data, valor de face e lucro. Cada bloco fecha com o seu total</div>
+      <div class="cl-item">Saiu o TOTAL NEGOCIADO, que somava valor de venda de relógio com valor de face de título de terceiro. São grandezas diferentes e o número não significava nada. O lucro, esse sim, soma</div>
+      <div class="cl-item">Bloco COMO ELE PAGA: quantas parcelas ele já pagou, quantas em dia, quantas com atraso e o atraso médio. O dado sempre existiu na baixa e não aparecia em lugar nenhum</div>
+      <div class="cl-item">Os nomes em A VENCER pararam de ser cortados: o número de série sai do rótulo, como já acontece em Recebimentos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.201.1</span><span class="cl-ver-date">29/07/2026</span></div>
