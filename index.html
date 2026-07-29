@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.199.2</title>
+<title>VB - v1.199.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8589,7 +8589,7 @@ function GLB_dataOp(tipo, r){
   return String(d||r.created_at||'').split('T')[0];
 }
 function GLB_badge(letra){
-  return ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:1px;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:2px;white-space:nowrap;">'+letra+'</span>';
+  return ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:0;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:2px;white-space:nowrap;text-align:center;">'+letra+'</span>';
 }
 function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no título, nome em cinza
   try{
@@ -9020,7 +9020,7 @@ function VB_cliOferecerCadastro(nome){
 }
 /* === PANORAMA DO CLIENTE: tudo derivado por nome — em aberto, cobrança, histórico, contratos === */
 function CLIP_esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function CLIP_abrir(nome, cliId){
+function CLIP_abrir(nome, cliId, voltarK){
   var alvo=String(nome||'').trim().toUpperCase(); if(!alvo) return;
   var alvoId=(cliId!=null)?String(cliId):null;
   if(!alvoId){ try{ alvoId=VB_cliIdDe(nome); }catch(e){} }
@@ -9102,7 +9102,7 @@ function CLIP_abrir(nome, cliId){
       hh+=bl('CONTRATOS \u00b7 '+con.length, innK);
     }
     hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Casado pelo nome nas opera\u00e7\u00f5es \u2014 grafias diferentes contam como clientes diferentes. Parcelas baixadas ficam fora do EM ABERTO; vencidas sem baixa aparecem em vermelho. Financiamentos ficam fora (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
-    hh+='<button onclick="document.getElementById(\'clip-overlay\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
+    hh+='<button onclick="'+(voltarK?('document.getElementById(\'clip-overlay\').style.display=\'none\';REN_ficha(\''+voltarK+'\')'):'document.getElementById(\'clip-overlay\').style.display=\'none\'')+'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
     hh+='</div>';
     ov.innerHTML=hh;
   });
@@ -9300,7 +9300,6 @@ function REN_render(){
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'<span style="white-space:nowrap;flex:none;">&nbsp;\u00b7 <span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Parcela '+REN_nm(x)+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
-      +(function(){ var pv=REN_repPrev(x); if(pv==null) return ''; return '<div style="font-size:9px;letter-spacing:0.3px;color:var(--so2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">REPASSE COMBINADO \u00b7 '+HIST_fmtMoeda(pv)+'</div>'; })()
       +'</div>'
       +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
       +'</div>';
@@ -9443,9 +9442,9 @@ function REN_ficha(k, exp){
     /* largura fixa em cada peca: mesmo formato de antes, mas as colunas nao dancam entre as linhas */
     var _c1='display:inline-block;min-width:84px;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(y.valor)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span></span>'
-      +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>'
-      +(_seu!=null?('<div style="font-size:9px;color:var(--so2);font-weight:600;margin-top:1px;">SEU: '+HIST_fmtMoeda(_seu)+'</div>'):'');
+      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(y.valor)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span>'
+        +(_seu!=null?('<span style="font-size:9px;color:var(--so2);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
+      +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>';
   });
   var pre='', pos='';
   var _vt=' \u00b7 <span style="text-decoration:underline;">ver todas</span>';
@@ -9483,7 +9482,7 @@ function REN_ficha(k, exp){
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'padding:13px;">DAR BAIXA</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
   hh+='<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">ABRIR OPERA\u00c7\u00c3O</button>';
-  hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\');" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">PANORAMA DO CLIENTE</button>';
+  hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">PANORAMA DO CLIENTE</button>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
   ov.innerHTML=hh; ov.style.display='flex';
@@ -9608,15 +9607,30 @@ function REN_prevSheet(k){
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:14px;">'+CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 '+CLIP_esc(REN_rotCurto(x.rot)||x.rot)+'</div>'
     +linhas
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
-    +'<button onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
+    +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
     +'<button onclick="REN_prevCompletar()" style="'+BS+'">COMPLETAR NA \u00daLTIMA</button>'
     +'<button onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
-    +'<button onclick="document.getElementById(\'ren-prev-ov\').style.display=\'none\'" style="'+BS+'">FECHAR</button>'
+    +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
+  REN_prevIni=REN_prevLeitura();
   REN_prevSoma();
 }
-var REN_prevCtx=null;
+var REN_prevCtx=null, REN_prevIni=null;
+/* Estado atual dos campos, pra saber se houve mudanca de verdade. */
+function REN_prevLeitura(){
+  var c=REN_prevCtx; if(!c) return '';
+  return c.ps.map(function(i, ix){
+    if(REN_cache.bx[REN_key(i)]) return '-';
+    var inp=document.getElementById('renp-'+ix);
+    return inp?String(REN_num(inp.value)||0):'-';
+  }).join('|');
+}
+function REN_prevVoltar(){
+  var c=REN_prevCtx;
+  var ov=document.getElementById('ren-prev-ov'); if(ov) ov.style.display='none';
+  if(c && c.voltar) REN_ficha(c.voltar);
+}
 function REN_prevSoma(){
   var c=REN_prevCtx; if(!c) return;
   var el=document.getElementById('renp-conf'); if(!el) return;
@@ -9635,6 +9649,14 @@ function REN_prevSoma(){
   var seu=Math.round((bruto-soma)*100)/100;
   var L='display:flex;justify-content:space-between;align-items:baseline;';
   var R='font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;';
+  var bs=document.getElementById('renp-salvar');
+  if(bs){
+    var sujo=(REN_prevIni!=null && REN_prevLeitura()!==REN_prevIni);
+    bs.style.pointerEvents=sujo?'auto':'none';
+    bs.style.background=sujo?'var(--acc)':'var(--sf2)';
+    bs.style.color=sujo?'var(--acc-tx)':'var(--mu2)';
+    bs.style.border=sujo?'none':'0.5px solid var(--ln3)';
+  }
   el.innerHTML='<div style="'+L+'"><span style="'+R+'">'+CLIP_esc(String(c.oi.socio).toUpperCase())+':</span>'
       +'<span style="font-size:11px;font-weight:700;color:'+(fecha?'var(--tx)':'var(--red)')+';">'+HIST_fmtMoeda(soma)+' DE '+HIST_fmtMoeda(alvo)
       +(fecha?'':(' \u00b7 '+(falta>0?'FALTAM ':'SOBRAM ')+HIST_fmtMoeda(Math.abs(falta))))+'</span></div>'
@@ -13818,6 +13840,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.3</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">O selo de letra única (V, F, A) estava com a letra encostada à esquerda dentro da pílula: o espaçamento entre letras sobrava depois da única letra e empurrava tudo. Centralizado</div>
+      <div class="cl-item">Saíu a linha REPASSE COMBINADO do card na lista de recebimentos</div>
+      <div class="cl-item">Em PARCELAS DA OPERAÇÃO, o quanto é seu passou a se chamar VB e ficou na mesma linha do valor, em vez de uma linha só pra ele</div>
+      <div class="cl-item">Na folha do repasse combinado, SALVAR fica apagado até você mudar algum valor, como nos outros formulários. O FECHAR virou VOLTAR e leva de volta à parcela, não à lista</div>
+      <div class="cl-item">O botão do Panorama do Cliente também volta para a parcela quando foi aberto a partir dela. Tocar fora continua fechando de vez</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.2</span><span class="cl-ver-date">29/07/2026</span></div>
