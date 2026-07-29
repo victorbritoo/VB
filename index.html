@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.197.1</title>
+<title>VB - v1.197.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -91,6 +91,8 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
 .vb-screen{display:none;min-height:100vh;}
 /* Total do Estoque: encolhe para uma linha enquanto a lista rola e volta inteiro ao chegar no fim. */
 #mer-total{transition:padding 0.18s ease;}
+#mer-total-wrap{pointer-events:none;}
+#mer-total-wrap>#mer-total{pointer-events:auto;}
 #mer-total.enc{padding-top:6px;padding-bottom:6px;}
 #mer-total.enc .mer-tot-x{display:none;}
 /* === FINANCIAMENTOS === */
@@ -1337,7 +1339,9 @@ body{ text-transform:uppercase; }
   <div id="mer-lista"><div style="text-align:center;color:var(--so2);font-size:12px;margin-top:24px;">Carregando...</div></div>
 
   <!-- TOTAL EM ESTOQUE -->
-  <div id="mer-total" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:var(--acc);border-radius:14px;padding:10px 16px;align-items:center;justify-content:space-between;color:var(--acc-tx);"></div>
+  <div id="mer-total-wrap" style="display:none;position:sticky;bottom:8px;margin-top:10px;flex-direction:column;justify-content:flex-end;">
+    <div id="mer-total" style="display:flex;background:var(--acc);border-radius:14px;padding:10px 16px;align-items:center;justify-content:space-between;color:var(--acc-tx);"></div>
+  </div>
   <div id="mer-total-fim" style="height:10px;"></div>
 </div>
 </div>
@@ -10200,8 +10204,24 @@ function MER_render(){
         +'</span>';
     }
     tot.style.display='flex';
+    var _w=document.getElementById('mer-total-wrap'); if(_w) _w.style.display='flex';
+    MER_totMedir();
     MER_totStickyInit();
   }
+}
+/* O wrapper reserva SEMPRE a altura do total cheio; so o pill preto encolhe, deixando espaco
+   transparente acima. Sem isso a barra encolhia, o documento encurtava, a sentinela entrava na tela,
+   a barra crescia e o ciclo recomecava - a barra piscava. */
+function MER_totMedir(){
+  var tot=document.getElementById('mer-total');
+  var wrap=document.getElementById('mer-total-wrap');
+  if(!tot || !wrap) return;
+  var encolhido=tot.classList.contains('enc');
+  tot.classList.remove('enc');
+  wrap.style.minHeight='';
+  var alt=tot.offsetHeight;
+  if(alt>0) wrap.style.minHeight=alt+'px';
+  if(encolhido) tot.classList.add('enc');
 }
 /* A sentinela fica logo abaixo do total. Fora da tela = ainda rolando, entao o total encolhe;
    visivel = chegou no fim da lista, o total pousa e volta inteiro. */
@@ -13632,6 +13652,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.197.2</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">A barra de total do Estoque estava piscando. A barra encolhia, a página ficava mais curta, o gatilho que manda expandir entrava na tela, a barra crescia, a página voltava a crescer e o gatilho saía — um ciclo que se alimentava sozinho. Agora o espaço da barra cheia fica sempre reservado e só a faixa preta encolhe dentro dele, então a altura da página nunca muda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.197.1</span><span class="cl-ver-date">28/07/2026</span></div>
