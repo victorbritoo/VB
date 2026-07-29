@@ -83,12 +83,18 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.203.0</title>
+<title>VB - v1.204.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
 input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
 .vb-screen{display:none;min-height:100vh;}
+/* Escala de tipografia dos cards. Quatro papeis, quatro estilos - antes o rotulo de bloco
+   aparecia em dez combinacoes diferentes de tamanho e espacamento. */
+.vb-rot{font-size:9px;letter-spacing:1px;font-weight:700;color:var(--so);}
+.vb-tit{font-size:12px;font-weight:700;color:var(--tx);}
+.vb-val{font-size:11px;font-weight:600;}
+.vb-det{font-size:9px;font-weight:600;color:var(--so2);}
 /* Total do Estoque: encolhe para uma linha enquanto a lista rola e volta inteiro ao chegar no fim. */
 #mer-total{transition:padding 0.18s ease;}
 #mer-total-wrap{pointer-events:none;}
@@ -9054,6 +9060,13 @@ function VB_cliOferecerCadastro(nome){
 }
 /* === PANORAMA DO CLIENTE: tudo derivado por nome — em aberto, cobrança, histórico, contratos === */
 function CLIP_esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+var CLIP_blN=0;
+function CLIP_tog(id){
+  var b=document.getElementById(id); if(!b) return;
+  var aberto=(b.style.display!=='none');
+  b.style.display=aberto?'none':'block';
+  var c=document.getElementById(id+'-c'); if(c) c.textContent=aberto?'\u2304':'\u2303';
+}
 function CLIP_abrir(nome, cliId, voltarK){
   var alvo=String(nome||'').trim().toUpperCase(); if(!alvo) return;
   var alvoId=(cliId!=null)?String(cliId):null;
@@ -9126,8 +9139,23 @@ function CLIP_abrir(nome, cliId, voltarK){
       if(isFinite(dd2)&&dd2>0) pgDias+=dd2;
     });
     function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4); }
-    function bl(t, inner){ return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;"><div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;">'+t+'</div>'+inner+'</div>'; }
-    function ln(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+dir+'</span></div>'; }
+    /* bl(titulo, conteudo, resumo, nLinhas). Passando nLinhas o bloco fica recolhivel: ate 4 linhas
+       nasce aberto, acima disso nasce fechado - a regra so age quando o bloco atrapalha. */
+    function bl(t, inner, resumo, nLin){
+      CLIP_blN++;
+      var id='clipb-'+CLIP_blN;
+      var recolhivel=(nLin!=null);
+      var aberto=(!recolhivel) || (nLin<=4);
+      var chev=recolhivel?('<span id="'+id+'-c" style="color:var(--so2);margin-left:5px;">'+(aberto?'\u2303':'\u2304')+'</span>'):'';
+      return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
+        +'<div '+(recolhivel?('onclick="CLIP_tog(\''+id+'\')" style="cursor:pointer;'):'style="')+'display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
+          +'<span class="vb-rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t+chev+'</span>'
+          +(resumo?('<span class="vb-rot" style="color:var(--tx);white-space:nowrap;">'+resumo+'</span>'):'')
+        +'</div>'
+        +'<div id="'+id+'"'+(aberto?'':' style="display:none;"')+'>'+inner+'</div>'
+      +'</div>';
+    }
+    function ln(esq, dir, red){ return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+dir+'</span></div>'; }
     var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>';
     hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
@@ -9136,10 +9164,10 @@ function CLIP_abrir(nome, cliId, voltarK){
        e da pra comparar relógio de 65 mil com relógio de 200 mil */
     function lnLuc(esq, dir, luc, base, sufixo){
       var pct=(luc!=null && base>0)?(luc/base*100):null;
-      return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;">'
+      return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">'
         +'<span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span>'
         +'<span style="color:var(--tx);font-weight:600;white-space:nowrap;">'+dir+'</span></div>'
-        +(luc!=null?('<div style="text-align:right;font-size:10px;color:var(--so2);font-weight:600;">LUCRO: '+HIST_fmtMoeda(luc)
+        +(luc!=null?('<div class="vb-det" style="text-align:right;">LUCRO: '+HIST_fmtMoeda(luc)
             +(pct!=null?(' \u00b7 '+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% '+sufixo):'')+'</div>'):'');
     }
     // RESULTADO
@@ -9158,7 +9186,7 @@ function CLIP_abrir(nome, cliId, voltarK){
       venL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
       venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc, v2.total, 'DA VENDA'); });
       innV+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Vendido</b>', HIST_fmtMoeda(venTot))+ln('<b>Lucro</b>', HIST_fmtMoeda(venLuc));
-      hh+=bl('REL\u00d3GIOS \u00b7 '+venL.length, innV);
+      hh+=bl('REL\u00d3GIOS \u00b7 '+venL.length, innV, HIST_fmtMoeda(venTot), venL.length);
     }
     // ANTECIPAÇÕES
     if(antL.length){
@@ -9166,7 +9194,7 @@ function CLIP_abrir(nome, cliId, voltarK){
       antL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
       antL.forEach(function(a2){ innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc, a2.bruto, 'DO BRUTO'); });
       innA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Antecipado</b>', HIST_fmtMoeda(antBruto))+ln('<b>Lucro</b>', HIST_fmtMoeda(antLuc));
-      hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA);
+      hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA, HIST_fmtMoeda(antBruto), antL.length);
     }
     // EM ABERTO
     var inner='';
@@ -9177,12 +9205,12 @@ function CLIP_abrir(nome, cliId, voltarK){
       if(fut.length>12) inner+='<div style="font-size:10px;color:var(--so2);margin-top:5px;">+'+(fut.length-12)+' parcelas</div>';
       inner+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total a vencer</b>', HIST_fmtMoeda(totFut));
     }
-    hh+=bl('A VENCER \u00b7 '+fut.length, inner);
+    hh+=bl('A VENCER \u00b7 '+fut.length, inner, HIST_fmtMoeda(totFut), fut.length);
     // COBRANÇA
     if(antAtr.length){
       var innC=''; cobL.forEach(function(x){ innC+=ln(CLIP_esc(x.rot), HIST_fmtMoeda(x.valor), true); });
       innC+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total em cobran\u00e7a</b>', HIST_fmtMoeda(totCob), true);
-      hh+=bl('EM COBRAN\u00c7A \u00b7 '+antAtr.length, innC);
+      hh+=bl('EM COBRAN\u00c7A \u00b7 '+antAtr.length, innC, HIST_fmtMoeda(totCob), antAtr.length);
     }
     // COMO ELE PAGA
     if(pgN>0){
@@ -9197,9 +9225,8 @@ function CLIP_abrir(nome, cliId, voltarK){
     if(con.length){
       var innK='';
       con.forEach(function(c3){ innK+=ln(CLIP_esc(c3.descricao||'CONTRATO'), c3.assinado_em?'\u2713 ASSINADO':'AGUARDANDO'); });
-      hh+=bl('CONTRATOS \u00b7 '+con.length, innK);
+      hh+=bl('CONTRATOS \u00b7 '+con.length, innK, (function(){ var na=0; con.forEach(function(c4){ if(c4.assinado_em) na++; }); return na+' ASSINADO'+(na===1?'':'S'); })(), con.length);
     }
-    hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Casado pelo nome nas opera\u00e7\u00f5es \u2014 grafias diferentes contam como clientes diferentes. Parcelas baixadas ficam fora do EM ABERTO; vencidas sem baixa aparecem em vermelho. Financiamentos ficam fora (a opera\u00e7\u00e3o n\u00e3o guarda cliente).</div>';
     hh+='<button onclick="'+(voltarK?('document.getElementById(\'clip-overlay\').style.display=\'none\';REN_ficha(\''+voltarK+'\')'):'document.getElementById(\'clip-overlay\').style.display=\'none\'')+'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
     hh+='</div>';
     ov.innerHTML=hh;
@@ -14077,6 +14104,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.204.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">No Panorama do Cliente, as listas viraram blocos recolhíveis. RESULTADO e COMO ELE PAGA ficam sempre abertos, porque são o motivo de você abrir a tela. Relógios, antecipações, a vencer, cobrança e contratos recolhem</div>
+      <div class="cl-item">O cabeçalho fechado responde sozinho: RELÓGIOS · 2 com o total vendido ao lado, A VENCER · 8 com o total, CONTRATOS · 2 com quantos estão assinados. O panorama fechado cabe numa tela e conta a história inteira</div>
+      <div class="cl-item">Bloco com até quatro linhas nasce aberto; acima disso nasce fechado. Em cliente pequeno nada recolhe, porque não atrapalha</div>
+      <div class="cl-item">Começo da padronização de tipografia: quatro estilos para quatro papéis — rótulo, título, valor e detalhe. O rótulo de bloco aparecia em dez combinações de tamanho e espaçamento pela aplicação. O Panorama é o primeiro a usar a escala</div>
+      <div class="cl-item">Saiu o texto de quatro linhas no pé do panorama explicando como as operações são casadas pelo nome</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.203.0</span><span class="cl-ver-date">29/07/2026</span></div>
