@@ -83,12 +83,16 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.196.0</title>
+<title>VB - v1.197.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
 input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
 .vb-screen{display:none;min-height:100vh;}
+/* Total do Estoque: encolhe para uma linha enquanto a lista rola e volta inteiro ao chegar no fim. */
+#mer-total{transition:padding 0.18s ease;}
+#mer-total.enc{padding-top:6px;padding-bottom:6px;}
+#mer-total.enc .mer-tot-x{display:none;}
 /* === FINANCIAMENTOS === */
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -331,8 +335,11 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
     <div id="mer-view-body" style="margin-top:12px;"></div>
     <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
     <button id="mer-view-editar" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
+    <button id="mer-view-baixa" style="display:none;width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">BAIXA MANUAL</button>
+    <button id="mer-view-voltar" style="display:none;width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VOLTAR AO ESTOQUE</button>
     <button id="mer-view-cancelar" style="display:none;width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>
     <button onclick="MER_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
+    <button id="mer-view-excluir" style="width:100%;margin-top:14px;padding:6px;border:none;background:transparent;font-size:10px;letter-spacing:2px;color:var(--so2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EXCLUIR</button>
   </div>
 </div>
 
@@ -1331,6 +1338,7 @@ body{ text-transform:uppercase; }
 
   <!-- TOTAL EM ESTOQUE -->
   <div id="mer-total" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:var(--acc);border-radius:14px;padding:10px 16px;align-items:center;justify-content:space-between;color:var(--acc-tx);"></div>
+  <div id="mer-total-fim" style="height:10px;"></div>
 </div>
 </div>
 
@@ -10080,7 +10088,7 @@ function MER_render(){
           html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 4px 4px;flex-wrap:wrap;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+_lblG+' \u00b7 '+gN+'</span><span style="white-space:nowrap;"><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gT)+'</span><span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 L: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gL)+'</span><span style="font-size:10px;font-weight:600;color:var(--so);"> \u00b7 VB: </span><span style="font-size:11px;font-weight:700;color:var(--tx);">R$ '+MER_fmtBR(gVB)+'</span></span></div>';
         }
       }
-      html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">' 
+      html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;">' 
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +((MER_tab==='vendida'&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
@@ -10152,10 +10160,6 @@ function MER_render(){
             })():'')
           ))
         +'</div>'
-        +(MER_tab==='estoque'
-          ? '<button data-merid="'+r.id+'" onclick="MER_baixa(this)" title="Dar baixa (vendida)" style="border:0.5px solid var(--ln);border-radius:8px;background:var(--sf);font-size:13px;color:var(--ink);cursor:pointer;width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">✓</button>'
-            +'<button data-merdel="'+r.id+'" onclick="MER_del(this)" style="border:none;border-radius:8px;background:var(--acc);font-size:14px;font-weight:700;color:var(--acc-tx);cursor:pointer;width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;">×</button>'
-          : '<button data-merid="'+r.id+'" onclick="MER_voltar(this)" title="Voltar ao estoque" style="border:0.5px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--ink);cursor:pointer;width:24px;height:24px;padding:0;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></button>')
         +'</div>';
     });
     lista.innerHTML=html;
@@ -10184,19 +10188,33 @@ function MER_render(){
       tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
         +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
           +'<span style="color:var(--so);font-weight:600;">TOTAL: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(vendaTot)+'</span>'
-          +(temLucro?('<br><span style="color:var(--so);font-weight:600;">LUCRO: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroTot)+'</span>'
-            +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span>'):'')
+          +(temLucro?('<span class="mer-tot-x"><br><span style="color:var(--so);font-weight:600;">LUCRO: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroTot)+'</span>'
+            +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span></span>'):'')
         +'</span>';
     } else {
       tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
         +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
           +'<span style="color:var(--so);font-weight:600;">TOTAL: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
-          +(socios>0?('<br><span style="color:var(--so);font-weight:600;">SÓCIOS: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(socios)+'</span>'
-            +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma-socios)+'</span>'):'')
+          +(socios>0?('<span class="mer-tot-x"><br><span style="color:var(--so);font-weight:600;">SÓCIOS: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(socios)+'</span>'
+            +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma-socios)+'</span></span>'):'')
         +'</span>';
     }
     tot.style.display='flex';
+    MER_totStickyInit();
   }
+}
+/* A sentinela fica logo abaixo do total. Fora da tela = ainda rolando, entao o total encolhe;
+   visivel = chegou no fim da lista, o total pousa e volta inteiro. */
+var MER_totObs=null;
+function MER_totStickyInit(){
+  if(MER_totObs || !window.IntersectionObserver) return;
+  var fim=document.getElementById('mer-total-fim');
+  var tot=document.getElementById('mer-total');
+  if(!fim || !tot) return;
+  MER_totObs=new IntersectionObserver(function(ents){
+    ents.forEach(function(en){ tot.classList.toggle('enc', !en.isIntersecting); });
+  },{root:null, threshold:0});
+  MER_totObs.observe(fim);
 }
 var MER_editId=null;
 function MER_toggleForm(force){
@@ -10335,13 +10353,31 @@ function MER_abrir(id){
   MER_viewEdit=false; MER_viewEditRow=null;
   _be.textContent='EDITAR'; _be.disabled=false;
   var _bcX=document.getElementById('mer-view-cancelar'); if(_bcX) _bcX.style.display='none';
+  var _bb=document.getElementById('mer-view-baixa');
+  var _bvo=document.getElementById('mer-view-voltar');
+  var _bx=document.getElementById('mer-view-excluir');
+  if(_bb) _bb.dataset.armed='';
+  if(_bvo) _bvo.dataset.armed='';
+  if(_bx){ _bx.dataset.armed=''; _bx.textContent='EXCLUIR'; _bx.style.color='var(--so2)'; _bx.style.display='block';
+    _bx.onclick=function(){ MER_arm(_bx,'TOQUE DE NOVO','Toque de novo para excluir.',function(){ MER_viewFechar(); MER_delExec(id); }); }; }
   if(r.status!=='vendida'){
     _bv.style.display='block';
     _bv.onclick=function(){ MER_venderItem(id); };
     _be.style.background='var(--sf)'; _be.style.color='var(--tx2)'; _be.style.border='0.5px solid var(--ln)';
+    if(_bvo) _bvo.style.display='none';
+    if(_bb){ _bb.style.display='block';
+      /* a folha de baixa ja confirma com DAR BAIXA, entao aqui basta um toque */
+      _bb.onclick=function(){ MER_viewFechar(); MER_baixaSheet(id); }; }
   } else {
     _bv.style.display='none';
     _be.style.background='var(--acc)'; _be.style.color='var(--acc-tx)'; _be.style.border='none';
+    if(_bb) _bb.style.display='none';
+    if(_bvo){ _bvo.style.display='block';
+      _bvo.onclick=function(){
+        var m=MER_rows.find(function(x){ return String(x.id)===String(id); });
+        if(m && m.venda_id){ MER_viewFechar(); MER_voltarConfirm(m); return; } /* venda vinculada tem folha propria */
+        MER_arm(_bvo,'TOQUE DE NOVO','Toque de novo para voltar.',function(){ MER_viewFechar(); MER_voltarExec(id,false,null); });
+      }; }
   }
   document.getElementById('mer-view-editar').onclick=function(){ MER_viewEditar(id); };
   document.getElementById('mer-view-overlay').style.display='flex';
@@ -10549,6 +10585,9 @@ function MER_viewEditar(id){
   if(r.status!=='vendida') hh+='<div id="mer-poss-card">'+MER_possibilidades(r)+'</div>';
   document.getElementById('mer-view-body').innerHTML=hh;
   var _bv=document.getElementById('mer-view-vender'); if(_bv) _bv.style.display='none';
+  ['mer-view-baixa','mer-view-voltar','mer-view-excluir'].forEach(function(bid){
+    var b=document.getElementById(bid); if(b){ b.style.display='none'; b.dataset.armed=''; }
+  });
   var _be=document.getElementById('mer-view-editar');
   _be.textContent='SALVAR ALTERA\u00c7\u00d5ES';
   _be.onclick=MER_viewSalvar;
@@ -10820,6 +10859,25 @@ function MER_add(btn){
     VB_log('ESTOQUE', editava?'editou':'criou', desc, editava?(_detEd||VB_logDet({custo:custo||0})):VB_logDet({custo:custo||0}));
     if(editava) MER_syncVenda(_r0, payload, desc);
     VB_toast(editava?'Alterações salvas.':'Mercadoria no estoque.');
+    MER_load();
+  });
+}
+/* Dois toques em botao de folha. Guarda rotulo e cor, e se desarma sozinho em 2,5s. */
+function MER_arm(btn, rotulo, aviso, exec){
+  if(!btn) return;
+  if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.lbl0||btn.textContent; btn.style.color=btn.dataset.cor0||''; exec(); return; }
+  btn.dataset.armed='1'; btn.dataset.lbl0=btn.textContent; btn.dataset.cor0=btn.style.color;
+  btn.textContent=rotulo; btn.style.color='var(--red2)';
+  if(aviso) VB_toast(aviso);
+  setTimeout(function(){
+    if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.lbl0; btn.style.color=btn.dataset.cor0||''; }
+  },2500);
+}
+function MER_delExec(id){
+  sb.from('mercadorias').delete().eq('id',id).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
+    try{ var _md=MER_rows.find(function(x){return String(x.id)===String(id);}); VB_log('ESTOQUE','apagou', (_md&&_md.descricao)||'', VB_logDet(_md)); }catch(e){}
+    VB_toast('Exclu\u00edda.');
     MER_load();
   });
 }
@@ -13574,6 +13632,20 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.197.1</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">A barra de total do Estoque encolhe para uma linha enquanto você rola a lista e volta inteira, com sócios e VB, ao chegar no fim. Ela cobria parte de um card no meio da rolagem — agora cobre um terço disso e o total nunca some da tela</div>
+      <div class="cl-item">Vale nas duas abas: em vendidos, encolhe escondendo lucro e VB</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.197.0</span><span class="cl-ver-date">28/07/2026</span></div>
+      <div class="cl-item">Os botões de ação saíram dos cards do Estoque e foram para dentro do card aberto. A lista trazia em toda linha a baixa manual e o excluir, as duas ações mais raras da tela, enquanto vender, que é a mais comum, já morava um toque abaixo. Estava invertido</div>
+      <div class="cl-item">O excluir usava o estilo de botão primário, sólido, repetido dez vezes na tela. Agora é discreto, no rodapé do card aberto, e continua pedindo dois toques</div>
+      <div class="cl-item">Dentro do card aberto a ordem é vender, editar, baixa manual e excluir. Em vendidos, voltar ao estoque entra no lugar do vender, em neutro — voltar não é ação principal de nada</div>
+      <div class="cl-item">Com os botões fora, o nome do relógio ganhou a largura toda. Modelos longos deixam de espremer</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.196.0</span><span class="cl-ver-date">28/07/2026</span></div>
