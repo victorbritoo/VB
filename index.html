@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.199.1</title>
+<title>VB - v1.199.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9410,7 +9410,7 @@ function REN_ficha(k, exp){
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     document.body.appendChild(ov);
   }
-  function bloco(lbl,v,red){ return '<div style="margin-bottom:4px;min-width:0;text-align:center;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+lbl+'</div><div style="font-size:12px;color:'+(red?'var(--red)':'var(--tx)')+';font-weight:600;margin-top:1px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v+'</div></div>'; }
+  function bloco(lbl,v,red,esq){ return '<div style="margin-bottom:4px;min-width:0;text-align:'+(esq?'left':'center')+';"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+lbl+'</div><div style="font-size:12px;color:'+(red?'var(--red)':'var(--tx)')+';font-weight:600;margin-top:1px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v+'</div></div>'; }
   var status, red=false;
   if(b){ status='RECEBIDA'; }
   else if(x.venc<hoje){ var dd=Math.max(1,Math.floor((new Date(hoje+'T00:00:00')-new Date(x.venc+'T00:00:00'))/86400000)); status='ATRASADA \u00b7 '+dd+'D'; red=true; }
@@ -9440,15 +9440,12 @@ function REN_ficha(k, exp){
     var _seu=null;
     if(oi){ var _rp=yb?(Number(yb.repasse_valor)||0):REN_repAlvo(oi,y); _seu=Math.round((y.valor-_rp)*100)/100; }
     var _cor=(atual?'var(--tx)':'var(--mu)');
-    tl+='<div style="margin-top:4px;'+(atual?'font-weight:700;':'')+'">'
-      +'<div style="display:grid;grid-template-columns:1.1fr 0.95fr 0.8fr 1fr;gap:6px;align-items:baseline;font-size:11px;">'
-        +'<span style="text-align:right;color:'+_cor+';white-space:nowrap;">'+HIST_fmtMoeda(y.valor)+'</span>'
-        +'<span style="text-align:center;color:'+_cor+';white-space:nowrap;">'+HIST_fmtData(y.venc)+'</span>'
-        +'<span style="text-align:center;color:'+_cor+';white-space:nowrap;">'+REN_nm(y)+'</span>'
-        +'<span style="text-align:right;color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span>'
-      +'</div>'
-      +(_seu!=null?('<div style="display:grid;grid-template-columns:1.1fr 0.95fr 0.8fr 1fr;gap:6px;"><span style="text-align:right;font-size:9px;color:var(--so2);font-weight:600;white-space:nowrap;">SEU: '+HIST_fmtMoeda(_seu)+'</span></div>'):'')
-      +'</div>';
+    /* largura fixa em cada peca: mesmo formato de antes, mas as colunas nao dancam entre as linhas */
+    var _c1='display:inline-block;min-width:84px;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
+    tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
+      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(y.valor)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span></span>'
+      +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>'
+      +(_seu!=null?('<div style="font-size:9px;color:var(--so2);font-weight:600;margin-top:1px;">SEU: '+HIST_fmtMoeda(_seu)+'</div>'):'');
   });
   var pre='', pos='';
   var _vt=' \u00b7 <span style="text-decoration:underline;">ver todas</span>';
@@ -9459,19 +9456,19 @@ function REN_ficha(k, exp){
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">PARCELA</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco('PARCELA',REN_nm(x))+'</div>';
-  if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' (parcela '+HIST_fmtMoeda(x.valor)+')'):''))+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
+  if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' (parcela '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   if(b){
     var _rv=Number(b.repasse_valor)||REN_repAlvo(oi, x);
     if(_rv>0||b.repassado_em){
       var _rtx=b.repassado_em?('PAGO '+HIST_fmtData(String(b.repassado_em).slice(0,10))+' \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor)||_rv)+(b.repasse_nota?(' \u00b7 '+CLIP_esc(b.repasse_nota)):'')):('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv));
-      hh+='<div style="margin-bottom:4px;text-align:center;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE'+(oi?(' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())):'')+'</div><div style="font-size:11px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
+      hh+='<div style="margin-bottom:4px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE'+(oi?(' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())):'')+'</div><div style="font-size:11px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
     }
   }
   if(oi){
     var pr=REN_repAlvo(oi, x);
     var pct=(x.valor>0&&pr>0)?(pr/x.valor*100):null;
     var pctTx=(pct!=null)?(' ('+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):'';
-    hh+='<div style="margin-bottom:4px;text-align:center;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:11px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+'</div></div>';
+    hh+='<div style="margin-bottom:4px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:11px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+'</div></div>';
   }
   hh+='<div style="border-top:0.5px solid var(--ln3);margin-top:2px;padding-top:6px;">';
   hh+='<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:1px;text-align:center;">PARCELAS DA OPERA\u00c7\u00c3O</div>'+tl+'</div>';
@@ -13821,6 +13818,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.2</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Na ficha da parcela, campo que divide a linha com outro fica centralizado; campo sozinho na linha volta a ficar encostado à esquerda</div>
+      <div class="cl-item">PARCELAS DA OPERAÇÃO voltou ao formato de antes, com valor, data e parcela na mesma linha. A diferença é que cada peça agora tem largura fixa, então as colunas param de dançar de uma linha para outra quando os valores têm tamanhos diferentes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.1</span><span class="cl-ver-date">29/07/2026</span></div>
