@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.199.3</title>
+<title>VB - v1.199.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9413,7 +9413,7 @@ function REN_ficha(k, exp){
   var status, red=false;
   if(b){ status='RECEBIDA'; }
   else if(x.venc<hoje){ var dd=Math.max(1,Math.floor((new Date(hoje+'T00:00:00')-new Date(x.venc+'T00:00:00'))/86400000)); status='ATRASADA \u00b7 '+dd+'D'; red=true; }
-  else if(x.venc===hoje){ status='VENCE HOJE'; }
+  else if(x.venc===hoje){ status='<b>VENCE HOJE</b>'; }
   else { status='A VENCER'; }
   var irmas=REN_cache.itens.filter(function(y){ return y.tab===x.tab && y.opId===x.opId; });
   irmas.sort(function(a2,b2){ return a2.idx-b2.idx; });
@@ -9608,7 +9608,7 @@ function REN_prevSheet(k){
     +linhas
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
     +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
-    +'<button onclick="REN_prevCompletar()" style="'+BS+'">COMPLETAR NA \u00daLTIMA</button>'
+    +'<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'
     +'<button onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
     +'</div>';
@@ -9663,26 +9663,27 @@ function REN_prevSoma(){
     +'<div style="'+L+'margin-top:4px;"><span style="'+R+'">VOC\u00ca:</span>'
       +'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(seu)+'</span></div>';
 }
-/* Joga o que falta na ultima parcela ainda em aberto: e o caso comum (capital do socio
-   primeiro, o seu lucro no fim) e evita conta de cabeca. */
-function REN_prevCompletar(){
+/* Preenche as parcelas em ordem de vencimento ate quitar o que e do socio; o que sobra
+   nas ultimas fica com VB. E a regra de capital antes de lucro, num toque. */
+function REN_prevSocioPrim(){
   var c=REN_prevCtx; if(!c) return;
-  var abertos=[];
-  c.ps.forEach(function(i, ix){ if(!REN_cache.bx[REN_key(i)]) abertos.push(ix); });
-  if(!abertos.length){ VB_toast('Todas as parcelas j\u00e1 baixadas.'); return; }
-  var ult=abertos[abertos.length-1];
-  var soma=0;
-  c.ps.forEach(function(i, ix){
+  var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
+  c.ps.forEach(function(i){
     var b=REN_cache.bx[REN_key(i)];
-    if(b){ soma+=(Number(b.repasse_valor)||0); return; }
-    if(ix===ult) return;
-    var inp=document.getElementById('renp-'+ix);
-    soma+=inp?(REN_num(inp.value)||0):0;
+    if(b) resta-=(Number(b.repasse_valor)||0);
   });
-  var falta=Math.round((REN_prevAlvoTotal(c.oi, c.tab, c.opId)-soma)*100)/100;
-  if(falta<0) falta=0;
-  var alvoInp=document.getElementById('renp-'+ult);
-  if(alvoInp) alvoInp.value=Number(falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  resta=Math.round(resta*100)/100;
+  var tem=false;
+  c.ps.forEach(function(i, ix){
+    if(REN_cache.bx[REN_key(i)]) return;
+    var inp=document.getElementById('renp-'+ix); if(!inp) return;
+    tem=true;
+    var v=Math.max(0, Math.min(Number(i.valor)||0, resta));
+    v=Math.round(v*100)/100;
+    resta=Math.round((resta-v)*100)/100;
+    inp.value=Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
+  if(!tem){ VB_toast('Todas as parcelas j\u00e1 baixadas.'); return; }
   REN_prevSoma();
 }
 function REN_prevSalvar(){
@@ -9696,13 +9697,13 @@ function REN_prevSalvar(){
   });
   sb.from('repasse_previsto').delete().eq('op_tab', c.tab).eq('op_id', String(c.opId)).then(function(r1){
     if(r1.error){ VB_erro(r1.error.message,'N\u00e3o salvou. Tente de novo.'); return; }
-    if(!linhas.length){ VB_toast('Combinado limpo.'); document.getElementById('ren-prev-ov').style.display='none'; REN_fichaVoltar=c.voltar; REN_carrega(); return; }
+    if(!linhas.length){ VB_toast('Combinado limpo.'); document.getElementById('ren-prev-ov').style.display='none'; REN_fichaVoltar=c.voltar; REN_abrir(); return; }
     sb.from('repasse_previsto').insert(linhas).then(function(r2){
       if(r2.error){ VB_erro(r2.error.message,'N\u00e3o salvou. Tente de novo.'); return; }
       try{ VB_log('RECEB\u00cdVEIS','combinou repasse', '', linhas.length+' parcelas'); }catch(e){}
       VB_toast('Repasse combinado.');
       document.getElementById('ren-prev-ov').style.display='none';
-      REN_fichaVoltar=c.voltar; REN_carrega();
+      REN_fichaVoltar=c.voltar; REN_abrir();
     });
   });
 }
@@ -13840,6 +13841,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.4</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Corrigido: salvar o repasse combinado não atualizava a tela. O aviso aparecia, o valor ia para o banco, mas a lista não recarregava — os valores novos só apareciam depois de sair e voltar. De quebra ficava pendurada a ordem de reabrir a ficha, que disparava sozinha na próxima vez que você entrava em Recebimentos e abria o card da parcela do nada. Era a mesma causa nos dois casos</div>
+      <div class="cl-item">O botão COMPLETAR NA ÚLTIMA virou SÓCIO PRIMEIRO: preenche as parcelas na ordem de vencimento até quitar o que é do sócio, e o que sobra nas últimas fica com você. É a regra de capital antes de lucro, num toque</div>
+      <div class="cl-item">Parcela que vence hoje aparece em negrito na ficha. Vermelho continua significando só uma coisa: atrasada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.199.3</span><span class="cl-ver-date">29/07/2026</span></div>
