@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.202.1</title>
+<title>VB - v1.203.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9132,22 +9132,31 @@ function CLIP_abrir(nome, cliId, voltarK){
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>';
     hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
     /* linha com valor a direita e o lucro logo abaixo, em cinza */
-    function lnLuc(esq, dir, luc){
+    /* o % e o lucro sobre o valor da propria operacao: diz quanto de cada real ficou com voce,
+       e da pra comparar relógio de 65 mil com relógio de 200 mil */
+    function lnLuc(esq, dir, luc, base, sufixo){
+      var pct=(luc!=null && base>0)?(luc/base*100):null;
       return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-top:5px;">'
         +'<span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span>'
         +'<span style="color:var(--tx);font-weight:600;white-space:nowrap;">'+dir+'</span></div>'
-        +(luc!=null?('<div style="text-align:right;font-size:10px;color:var(--so2);font-weight:600;">LUCRO: '+HIST_fmtMoeda(luc)+'</div>'):'');
+        +(luc!=null?('<div style="text-align:right;font-size:10px;color:var(--so2);font-weight:600;">LUCRO: '+HIST_fmtMoeda(luc)
+            +(pct!=null?(' \u00b7 '+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% '+sufixo):'')+'</div>'):'');
     }
     // RESULTADO
     var innR=ln('<b>Lucro total</b>', '<b>'+HIST_fmtMoeda(lucVB)+'</b>');
     if(venL.length) innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
     if(antL.length) innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
+    if(totFut>0 || totCob>0){
+      innR+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>';
+      if(totFut>0) innR+=ln('A receber', HIST_fmtMoeda(totFut));
+      if(totCob>0) innR+=ln('Em cobran\u00e7a', HIST_fmtMoeda(totCob), true);
+    }
     hh+=bl('RESULTADO', innR);
     // RELÓGIOS
     if(venL.length){
       var innV='';
       venL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
-      venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc); });
+      venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc, v2.total, 'DA VENDA'); });
       innV+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Vendido</b>', HIST_fmtMoeda(venTot))+ln('<b>Lucro</b>', HIST_fmtMoeda(venLuc));
       hh+=bl('REL\u00d3GIOS \u00b7 '+venL.length, innV);
     }
@@ -9155,7 +9164,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     if(antL.length){
       var innA='';
       antL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
-      antL.forEach(function(a2){ innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc); });
+      antL.forEach(function(a2){ innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc, a2.bruto, 'DO BRUTO'); });
       innA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Antecipado</b>', HIST_fmtMoeda(antBruto))+ln('<b>Lucro</b>', HIST_fmtMoeda(antLuc));
       hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA);
     }
@@ -9320,6 +9329,29 @@ function REN_repAlvo(oi, x){
   var pv=REN_repPrev(x);
   if(pv!=null) return Math.round(pv*100)/100;
   return REN_repDef(oi, x);
+}
+/* O combinado gruda no numero da parcela. Se a venda for editada depois, ele pode nao bater mais
+   com a lista nova. Em vez de apagar o que voce combinou, o app confere e avisa. */
+function REN_prevProblema(tab, opId, oi){
+  if(!REN_cache || !oi) return null;
+  var ps=REN_opParcelas(tab, opId);
+  if(!ps.length) return null;
+  var tem=false, soma=0, excede=false;
+  ps.forEach(function(i){
+    var b=REN_cache.bx[REN_key(i)];
+    if(b){ soma+=(Number(b.repasse_valor)||0); return; }
+    var pv=REN_repPrev(i);
+    if(pv!=null){
+      tem=true;
+      if(pv>(Number(i.valor)||0)+0.005) excede=true;
+      soma+=pv;
+    } else soma+=REN_repDef(oi, i);
+  });
+  if(!tem) return null;
+  if(excede) return 'COMBINADO MAIOR QUE A PARCELA';
+  var alvo=REN_prevAlvoTotal(oi, tab, opId);
+  if(Math.abs(Math.round((alvo-soma)*100)/100)>=0.01) return 'COMBINADO N\u00c3O FECHA COM O S\u00d3CIO';
+  return null;
 }
 function REN_opParcelas(tab, opId){
   if(!REN_cache) return [];
@@ -9597,6 +9629,11 @@ function REN_ficha(k, exp){
   }
   if(_bSoc && _bRep) hh+='<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:2px 10px;">'+_bSoc+_bRep+'</div>';
   else hh+=(_bSoc||_bRep);
+  (function(){
+    var pb=REN_prevProblema(x.tab, x.opId, oi);
+    if(!pb) return;
+    hh+='<div onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="margin:2px 0 6px;padding:6px 8px;border:0.5px solid var(--red);border-radius:10px;text-align:center;font-size:10px;letter-spacing:1px;color:var(--red);font-weight:700;cursor:pointer;">'+pb+' \u00b7 REVER</div>';
+  })();
   (function(){
     var pgs=REN_pagsDe(x);
     if(pgs.length<2 && !REN_parcial(x)) return; /* pagamento unico e parcela fechada: o campo RECEBIDO ja diz tudo */
@@ -14040,6 +14077,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.203.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">O repasse combinado passou a se conferir sozinho. Ele fica preso ao número da parcela, então editar a venda depois podia deixar os valores na parcela errada em silêncio. Agora, se a soma deixar de fechar com o que é do sócio ou se algum valor ficar maior que a própria parcela, a ficha da parcela mostra um aviso vermelho que leva direto à folha para rever</div>
+      <div class="cl-item">Panorama do Cliente: o bloco RESULTADO passou a mostrar também quanto ele ainda deve, separando o que está a vencer do que está em cobrança. O primeiro bloco responde as duas perguntas de uma vez</div>
+      <div class="cl-item">Cada operação mostra o lucro com o percentual ao lado: nas vendas sobre o valor vendido, nas antecipações sobre o valor de face. Sete mil e quinhentos num relógio de oitenta mil e num de duzentos mil são coisas diferentes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.202.1</span><span class="cl-ver-date">29/07/2026</span></div>
