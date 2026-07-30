@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.210.0</title>
+<title>VB - v1.210.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4687,7 +4687,10 @@ function VB_upper(el){
 function VB_val(id){ var e=document.getElementById(id); return e?(e.value||''):''; }
 function FIN_assinatura(){
   return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
-    VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData')]);
+    VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData'),
+    /* marca de simulacao e dados do investidor tambem sao alteracao */
+    (typeof FIN_simFlag!=='undefined'?!!FIN_simFlag:false),
+    VB_val('inv-nome'), VB_val('inv-aporte'), VB_val('inv-parcela')]);
 }
 /* A assinatura considera SO o que o modo ativo grava. Antes ela somava os dois mundos: ir para
    personalizada criava uma linha de titulo que ficava na assinatura para sempre, entao voltar ao
@@ -4711,7 +4714,8 @@ function VEN_assinatura(){
     (typeof VEN_socioNome!=='undefined'?(VEN_socioNome||''):''),
     (typeof VEN_socioValor!=='undefined'?VEN_socioValor:0),
     (typeof VEN_modoPersonalizado!=='undefined'?!!VEN_modoPersonalizado:false),
-    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs,(p.troca?('⇄'+(p.troca.modelo||'')+'|'+(p.troca.sn||'')):'')];}):[])]);
+    (typeof VEN_parcelas!=='undefined'?VEN_parcelas.map(function(p){return [p.valor,p.data,p.obs,(p.troca?('⇄'+(p.troca.modelo||'')+'|'+(p.troca.sn||'')):'')];}):[]),
+    (typeof VEN_simFlag!=='undefined'?!!VEN_simFlag:false)]);  /* marcar como simulação é alteração: sem isso o botão fica travado */
 }
 function PAG_assinatura(){
   return JSON.stringify([VB_val('pag-total'),VB_val('pag-nome'),
@@ -6408,7 +6412,22 @@ function VEN_confirmarOperacao(btn){
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
     // vínculo com o estoque: baixa o item puxado e mantém a data da venda em sincronia
     (function(){
-      if(row.simulacao) return;
+      if(row.simulacao){
+        /* Virou simulacao: o relogio nao foi vendido de verdade, entao volta pro estoque.
+           Simulacao nova nao casa com nenhuma mercadoria e o update nao faz nada.
+           E o espelho do que ja acontece com o relogio recebido em troca. */
+        var _vs=VEN_currentOperationId;
+        if(_vs){
+          sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null})
+            .eq('venda_id', _vs).select().then(function(rv){
+              if(!rv.error && rv.data && rv.data.length){
+                try{ VB_log('ESTOQUE','voltou ao estoque (virou simula\u00e7\u00e3o)', (rv.data[0].descricao||''), ''); }catch(e){}
+                VB_toast('Simula\u00e7\u00e3o. Rel\u00f3gio de volta ao estoque.');
+              }
+            });
+        }
+        return;
+      }
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var dv=row.data_venda;
       if(VEN_merVinculo){
@@ -14362,6 +14381,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.3</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Transformar uma venda já feita em simulação devolve o relógio ao Estoque. Antes ele continuava marcado como vendido, preso a uma venda que passou a ser só hipótese — e o Estoque mostrava um item a menos, com o total menor. O relógio recebido em troca já tinha essa volta; faltava a do relógio vendido</div>
+      <div class="cl-item">Desmarcar a simulação e salvar volta a dar baixa no relógio, como sempre foi. Apagar a venda pelo Histórico já devolvia ao Estoque e continua igual</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.2</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: marcar uma venda ou um financiamento já salvos como simulação não liberava o botão de atualizar. A verificação de alteração dessas duas telas não olhava a marca, então o app concluía que nada tinha mudado. Na antecipação já funcionava</div>
+      <div class="cl-item">No financiamento, mexer nos dados do investidor também passou a contar como alteração. Nome, aporte e parcela dele ficavam de fora da verificação, e trocar qualquer um deles deixava o botão travado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.0</span><span class="cl-ver-date">30/07/2026</span></div>
