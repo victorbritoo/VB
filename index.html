@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.209.0</title>
+<title>VB - v1.209.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1629,6 +1629,7 @@ function HIST_carregarFin(r){
 }
 function HIST_carregarAnt(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
+  ANT_simplesStash=null;
   ANT_currentOperationId = r.id;
   ANT_simFlag=!!r.simulacao; ANT_paintSimChip();
   VB_carimboTS = r.created_at||null;
@@ -6762,7 +6763,7 @@ function ANT_limpar(){
   document.getElementById('ant-prazoMedio').textContent='---';
   document.getElementById('ant-totJuros').textContent='---';
   document.getElementById('ant-totDesc').textContent='---';
-  ANT_titulos=[]; ANT_tituloCounter=0;
+  ANT_titulos=[]; ANT_tituloCounter=0; ANT_simplesStash=null;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
   ANT_simFlag=false; ANT_paintSimChip();
   ANT_currentOperationId = null;
@@ -7474,7 +7475,15 @@ function ANT_updateSeg(){
   if(ANT_modoPersonalizado){ if(bP)bP.style.cssText=on; if(bS)bS.style.cssText=off; }
   else { if(bS)bS.style.cssText=on; if(bP)bP.style.cssText=off; }
 }
+var ANT_simplesStash=null;
 function ANT_toggleModo(){
+  /* A ida a personalizada recalcula bruto e liquido a partir dos titulos e apaga o que estava
+     nos campos do simples. Sem guardar, voltar deixava a tela vazia - e por isso ela seguia
+     marcada como alterada. Guarda ao sair do simples, devolve ao voltar. */
+  if(!ANT_modoPersonalizado){
+    ANT_simplesStash={ bruto:VB_val('ant-valorBruto'), qtd:VB_val('ant-qtd'),
+      venc:VB_val('ant-tabelaData'), liq:VB_val('ant-valorLiquido'), parc:VB_val('ant-valorParcela') };
+  }
   ANT_modoPersonalizado = !ANT_modoPersonalizado;
   ANT_updateSeg();
   var sec    = document.getElementById('ant-secPersonalizado');
@@ -7511,6 +7520,12 @@ function ANT_toggleModo(){
     secTD.style.display='block';
     vliq.style.color='var(--ink)'; vliq.readOnly=false;
     try{document.getElementById('ant-secGerarLabel').style.display='block';}catch(e){}
+    if(ANT_simplesStash){
+      var _s=ANT_simplesStash; ANT_simplesStash=null;
+      var _pv=function(id,v){ var e=document.getElementById(id); if(e) e.value=v; };
+      _pv('ant-valorBruto',_s.bruto); _pv('ant-qtd',_s.qtd); _pv('ant-tabelaData',_s.venc);
+      _pv('ant-valorLiquido',_s.liq); _pv('ant-valorParcela',_s.parc);
+    }
     ANT_recalc();
   }
 }
@@ -11811,9 +11826,22 @@ function PIN_grant(target){
   showScreen(target);
 }
 
+/* Vir da Home para uma tela de operacao significa comecar uma NOVA. Se a tela ainda estiver
+   carregada com uma operacao SALVA (aberta antes pelo Historico), ela e limpa - senao voce edita
+   e confirma achando que e nova, e na verdade sobrescreve a antiga. Rascunho nao salvo e mantido:
+   ali nao ha id de operacao. Sair com alteracao ja e barrado pela guarda de tela. */
+function VB_novaOperacao(target){
+  try{
+    if(target==='ant' && typeof ANT_currentOperationId!=='undefined' && ANT_currentOperationId){ ANT_limpar(); }
+    else if(target==='ven' && typeof VEN_currentOperationId!=='undefined' && VEN_currentOperationId){ VEN_limpar(); }
+    else if(target==='fin' && typeof FIN_currentOperationId!=='undefined' && FIN_currentOperationId){ FIN_limpar(); }
+    else if(target==='pag' && typeof PAG_currentOperationId!=='undefined' && PAG_currentOperationId){ PAG_limpar(); }
+  }catch(e){}
+}
 function PIN_request(target){
   // PIN 3113 removido — o login (e-mail+senha) já protege o app. Acesso direto.
   if(target==='hist') HIST_totEscopo='mes'; // cada visita ao Histórico nasce no mês atual; navegar entre abas mantém o escopo
+  VB_novaOperacao(target);
   PIN_grant(target);
 }
 function PIN_key(d){
@@ -14283,6 +14311,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.1</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: ir para a personalizada e voltar apagava o valor bruto e o líquido do modo simples. A personalizada recalcula esses campos a partir dos títulos e não havia de onde restaurar. Agora os campos do simples são guardados ao sair e devolvidos ao voltar — e a tela deixa de pedir para salvar depois de uma ida e volta</div>
+      <div class="cl-item">Abrir Antecipação, Vendas, Financiamento ou Pagamentos pela tela inicial passou a começar uma operação nova. Antes, se a tela ainda estivesse carregada com uma operação aberta pelo Histórico, ela vinha preenchida com os dados dela — e confirmar ali sobrescrevia a operação antiga em vez de criar uma nova. Rascunho ainda não salvo continua sendo mantido</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.0</span><span class="cl-ver-date">30/07/2026</span></div>
