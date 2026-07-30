@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.208.3</title>
+<title>VB - v1.208.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1645,6 +1645,10 @@ function HIST_carregarAnt(r){
     if(!ANT_modoPersonalizado){ ANT_toggleModo(); } else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   } else {
     // Modo simples: preenche bruto e qtd, depois recalc (taxa e tarifa já preenchidas acima)
+    /* zera os titulos: sem isso o botao PERSONALIZADA mostra os titulos da operacao aberta antes,
+       porque ANT_toggleModo so cria titulos novos quando a lista esta vazia */
+    ANT_titulos=[]; ANT_tituloCounter=0;
+    try{ document.getElementById('ant-listaTitulos').innerHTML=''; }catch(e){}
     if(r.valor_bruto){ document.getElementById('ant-valorBruto').value = ANT_formatBR(Number(r.valor_bruto)); }
     if(r.quantidade_titulos){ document.getElementById('ant-qtd').value = String(r.quantidade_titulos); }
     // Primeiro/próximo vencimento: vem da data do 1º título salvo (expandido no confirmar)
@@ -1655,13 +1659,11 @@ function HIST_carregarAnt(r){
     ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
+  /* A DATA OP nao e mais trocada por hoje ao abrir do Historico: e a data do negocio, e reescreve-la
+     marcava a tela como alterada sem voce ter mexido em nada - e, se salvasse, mudava a data gravada.
+     A assinatura sai depois de TUDO, incluindo o recalculo, senao a tela nasce suja. */
+  if(r.modo==='personalizado'){ try{ ANT_recalcPersonalizado(); }catch(e){} }
   ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant');
-  if(r.modo==='personalizado'){
-    var _hoje=new Date();
-    document.getElementById('ant-dataOperacao').value=('0'+_hoje.getDate()).slice(-2)+'/'+('0'+(_hoje.getMonth()+1)).slice(-2)+'/'+_hoje.getFullYear();
-    try{ ANT_recalcPersonalizado(); }catch(e){}
-    VB_dirtyPaintTela('ant');
-  }
   VB_telaAnterior = 'hist';
   showScreen('ant');
 }
@@ -14263,6 +14265,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.4</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: abrir uma antecipação simples do Histórico e tocar em PERSONALIZADA trazia os títulos da operação aberta antes. A lista de títulos não era zerada ao carregar uma operação simples, e o botão só cria títulos novos quando ela está vazia</div>
+      <div class="cl-item">Abrir uma antecipação personalizada do Histórico não troca mais a data da operação pela de hoje. Ela é a data do negócio: reescrever marcava a tela como alterada sem você ter mexido em nada e, se você salvasse, gravava a data errada</div>
+      <div class="cl-item">A assinatura usada para saber se houve alteração passou a ser tirada depois de todo o preenchimento e do recálculo. Antes ela saia no meio, e o que vinha depois já nascia como diferença</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.3</span><span class="cl-ver-date">30/07/2026</span></div>
