@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.208.1</title>
+<title>VB - v1.208.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -107,8 +107,10 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
 @keyframes vbDlgIn{ from{ transform:scale(0.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
 @keyframes vbFundo{ from{ background-color:rgba(0,0,0,0); } }
 /* FOLHA NOVA PRECISA ENTRAR NESTAS LISTAS. */
-#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div{ animation:vbSheetUp var(--mo-folha) var(--mo-curva) both; }
-#clip-overlay, #fm-overlay, #glb-overlay, #hist-mes-overlay, #log-overlay, #mer-baixa-overlay, #mer-ord-overlay, #mer-view-overlay, #mer-voltar-overlay, #mig-ov, #ren-baixa-ov, #ren-ficha-ov, #ren-prev-ov, #soc-pick-overlay, #soc-view-overlay, #vb-autoteste-ov, #ven-estoqueOverlay{ animation:vbFundo var(--mo-fundo) ease-out both; }
+/* --mo-dur e --mo-durF sao definidas por folha no VB_folhaObserva (duracao proporcional a
+   altura). Sem o observador, cai no padrao e tudo continua funcionando. */
+#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div{ animation:vbSheetUp var(--mo-dur, var(--mo-folha)) var(--mo-curva) both; }
+#clip-overlay, #fm-overlay, #glb-overlay, #hist-mes-overlay, #log-overlay, #mer-baixa-overlay, #mer-ord-overlay, #mer-view-overlay, #mer-voltar-overlay, #mig-ov, #ren-baixa-ov, #ren-ficha-ov, #ren-prev-ov, #soc-pick-overlay, #soc-view-overlay, #vb-autoteste-ov, #ven-estoqueOverlay{ animation:vbFundo var(--mo-durF, var(--mo-fundo)) ease-out both; }
 #hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:vbDlgIn var(--mo-dialogo) ease-out both; }
 #hist-filter-overlay, #login-overlay, #vb-c2-overlay, #vb-name-overlay, #vb-sair-overlay{ animation:vbFundo var(--mo-dialogo) ease-out both; }
 
@@ -9302,6 +9304,39 @@ function REN_addMesISO(iso, k){
 }
 function REN_num(x){ if(typeof x==='number') return x; var n=VB_dinheiroRaw(x); return isFinite(n)?n:0; }
 var VB_apelidos=null;
+/* ===== VELOCIDADE UNIFORME DAS FOLHAS =====
+   Toda folha desliza a propria altura. Com duracao fixa, folha alta percorre muito mais no mesmo
+   tempo e parece mais rapida que a baixa. No iOS isso nao aparece porque a folha dele e sempre da
+   altura da tela; aqui as alturas variam. Entao a duracao acompanha a altura, mantendo a
+   velocidade parecida: ~0,6ms por pixel, travada entre 180ms e 520ms.
+   Um observador por folha; nao e preciso tocar nos pontos de abertura. */
+var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log-overlay',
+  'mer-baixa-overlay','mer-ord-overlay','mer-view-overlay','mer-voltar-overlay','mig-ov',
+  'ren-baixa-ov','ren-ficha-ov','ren-prev-ov','soc-pick-overlay','soc-view-overlay',
+  'vb-autoteste-ov','ven-estoqueOverlay'];
+function VB_folhaAjusta(ov){
+  try{
+    if(!ov || ov.style.display==='none' || ov.style.display==='') return;
+    var p=ov.firstElementChild; if(!p) return;
+    var alt=p.offsetHeight||0; if(!alt) return;
+    var d=Math.round(alt*0.6);
+    if(d<180) d=180; else if(d>520) d=520;
+    ov.style.setProperty('--mo-dur', d+'ms');
+    ov.style.setProperty('--mo-durF', Math.min(250, d)+'ms'); /* fundo nunca mais lento que a folha */
+  }catch(e){}
+}
+function VB_folhaObserva(){
+  if(!window.MutationObserver) return;
+  VB_FOLHAS.forEach(function(id){
+    var ov=document.getElementById(id); if(!ov || ov.dataset.moObs) return;
+    ov.dataset.moObs='1';
+    new MutationObserver(function(){ VB_folhaAjusta(ov); })
+      .observe(ov, {attributes:true, attributeFilter:['style']});
+  });
+}
+/* folhas criadas em JS entram depois: reobserva de vez em quando, barato e sem efeito colateral */
+document.addEventListener('DOMContentLoaded', function(){ VB_folhaObserva(); setInterval(VB_folhaObserva, 3000); });
+
 /* ===== ESTADO PRESSIONADO (motor) =====
    Marca UM elemento por toque. Sobe no maximo 6 niveis procurando o tocavel mais proximo e
    desiste ao encontrar fundo de folha (position:fixed), botao desabilitado ou travado pelo
@@ -14228,6 +14263,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.2</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">As folhas deslizavam em velocidades diferentes umas das outras. Todas levavam o mesmo tempo, mas cada uma percorre a própria altura — então a folha alta atravessava muito mais espaço no mesmo tempo e parecia mais rápida que a baixa. No iPhone isso não acontece porque a folha dele é sempre da altura da tela</div>
+      <div class="cl-item">Agora a duração acompanha a altura de cada folha, mantendo a velocidade parecida em todas. Folha curta leva menos tempo, folha alta leva mais, entre 180 e 520 milésimos. O fundo escuro nunca fica mais lento que a folha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.1</span><span class="cl-ver-date">29/07/2026</span></div>
