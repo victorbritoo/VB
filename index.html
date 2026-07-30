@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.210.3</title>
+<title>VB - v1.210.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6418,7 +6418,10 @@ function VEN_confirmarOperacao(btn){
            E o espelho do que ja acontece com o relogio recebido em troca. */
         var _vs=VEN_currentOperationId;
         if(_vs){
-          sb.from('mercadorias').update({status:'estoque', venda_id:null, data_venda:null, baixa_em:null})
+          /* o venda_id NAO e limpo de proposito: e por ele que o caminho de volta reencontra
+             a mercadoria. Limpando, desmarcar a simulacao deixava o relogio no estoque E a venda
+             valendo - o mesmo relogio contado duas vezes. */
+          sb.from('mercadorias').update({status:'estoque', data_venda:null, baixa_em:null})
             .eq('venda_id', _vs).select().then(function(rv){
               if(!rv.error && rv.data && rv.data.length){
                 try{ VB_log('ESTOQUE','voltou ao estoque (virou simula\u00e7\u00e3o)', (rv.data[0].descricao||''), ''); }catch(e){}
@@ -6436,7 +6439,10 @@ function VEN_confirmarOperacao(btn){
         VEN_merVinculo=null;
       } else {
         // sincronia venda -> estoque: custo/sócio acompanham (descrição fica: no estoque ela nasce de MODELO/ANO/SN)
-        var _novoM={data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
+        /* status e baixa entram aqui tambem: se a venda tinha virado simulacao, o relogio
+           esta no estoque e precisa sair de novo ao voltar a ser venda. Em venda que ja estava
+           baixada, isto nao muda nada. */
+        var _novoM={status:'vendida', baixa_em:new Date().toISOString(), data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
         sb.from('mercadorias').select('*').eq('venda_id', vendaId).then(function(rq){
           var _mOld=(rq.data&&rq.data[0])||null;
           sb.from('mercadorias').update(_novoM).eq('venda_id', vendaId).select().then(function(rm){
@@ -14381,6 +14387,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.4</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido o caminho de volta: desmarcar a simulação deixava o relógio no Estoque e a venda valendo ao mesmo tempo, contando a mesma peça duas vezes. Ao virar simulação o app deixava de guardar o vínculo com a venda, e na volta não reencontrava a mercadoria. Agora o vínculo é mantido e a volta dá baixa de novo</div>
+      <div class="cl-item">Se você fez essa ida e volta, confira o Estoque: se a peça ficou lá indevidamente, abra a venda e salve de novo que ela sai</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.3</span><span class="cl-ver-date">30/07/2026</span></div>
