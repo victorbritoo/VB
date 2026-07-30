@@ -83,25 +83,51 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.207.0</title>
+<title>VB - v1.208.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
 input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
 .vb-screen{display:none;min-height:100vh;}
-/* === ENTRADA DAS FOLHAS ===
-   No iOS folha sempre desliza de baixo; dialogo centrado surge no lugar. Nao usamos transition
-   porque o app abre a folha com display:flex - a animacao CSS reinicia sozinha quando o elemento
-   sai de display:none, entao nao e preciso tocar nos 40 pontos de abertura.
-   260ms na folha e 180ms no dialogo: dentro da faixa de 150-300ms, acima da qual a animacao irrita.
-   FOLHA NOVA PRECISA ENTRAR NESTA LISTA. */
+/* ===== MOVIMENTO: TEMPOS E CURVAS DO APP =====
+   Fonte: a curva abaixo vem do Ionic Framework e e a que mais se aproxima da usada no iOS; os
+   ~500ms existem pra imitar a Sheet do iPhone (Vaul). O fundo esmaece MAIS RAPIDO que a folha
+   desliza, de proposito - dois tempos criam camada e guiam o olho; sincronizados ficam chapados.
+   Teto: acima de 600ms a interface passa a parecer travada.
+   USAR ESTAS VARIAVEIS, NUNCA NUMERO SOLTO. */
+:root{
+  --mo-curva:cubic-bezier(0.32,0.72,0,1);  /* folha: arranca e desacelera forte, estilo iOS */
+  --mo-folha:450ms;                        /* painel percorrendo a tela */
+  --mo-fundo:250ms;                        /* escurecer o fundo: mais rapido que o painel */
+  --mo-dialogo:200ms;                      /* dialogo centrado: nao percorre distancia */
+  --mo-toque:120ms;                        /* piso do estado pressionado (ver abaixo) */
+  --mo-saida:180ms;                        /* sair e mais rapido que entrar */
+}
 @keyframes vbSheetUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
 @keyframes vbDlgIn{ from{ transform:scale(0.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
-#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div{ animation:vbSheetUp 260ms cubic-bezier(0.32,0.72,0,1) both; }
-#hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:vbDlgIn 180ms ease-out both; }
-/* quem pediu menos movimento no iOS nao recebe nenhum */
+@keyframes vbFundo{ from{ background-color:rgba(0,0,0,0); } }
+/* FOLHA NOVA PRECISA ENTRAR NESTAS LISTAS. */
+#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div{ animation:vbSheetUp var(--mo-folha) var(--mo-curva) both; }
+#clip-overlay, #fm-overlay, #glb-overlay, #hist-mes-overlay, #log-overlay, #mer-baixa-overlay, #mer-ord-overlay, #mer-view-overlay, #mer-voltar-overlay, #mig-ov, #ren-baixa-ov, #ren-ficha-ov, #ren-prev-ov, #soc-pick-overlay, #soc-view-overlay, #vb-autoteste-ov, #ven-estoqueOverlay{ animation:vbFundo var(--mo-fundo) ease-out both; }
+#hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:vbDlgIn var(--mo-dialogo) ease-out both; }
+#hist-filter-overlay, #login-overlay, #vb-c2-overlay, #vb-name-overlay, #vb-sair-overlay{ animation:vbFundo var(--mo-dialogo) ease-out both; }
+
+/* ===== ESTADO PRESSIONADO =====
+   O realce nativo do iOS esta desligado (tap-highlight transparent), e :active em CSS acende os
+   ancestrais junto - entao um so elemento e marcado por toque, via JS (VB_press*).
+   Aparece na hora: acima de 100ms perde-se a sensacao de que foi VOCE que causou.
+   Fica no minimo 120ms: o limiar de percepcao vai ate ~137ms em algumas pessoas, e um realce de
+   50ms simplesmente nao e visto. Sai em 180ms, abaixo do teto de irritacao. */
+.vb-press{ opacity:0.55 !important; }
+.vb-press-solta{ transition:opacity var(--mo-saida) ease-out; }
+
+/* segurar o dedo num card nao abre menu de selecao do iOS - app nativo nao faz isso */
+button, [onclick]{ -webkit-touch-callout:none; }
+
 @media (prefers-reduced-motion: reduce){
-#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div, #hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:none; }
+#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div, #hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div, #clip-overlay, #fm-overlay, #glb-overlay, #hist-mes-overlay, #log-overlay, #mer-baixa-overlay, #mer-ord-overlay, #mer-view-overlay, #mer-voltar-overlay, #mig-ov, #ren-baixa-ov, #ren-ficha-ov, #ren-prev-ov, #soc-pick-overlay, #soc-view-overlay, #vb-autoteste-ov, #ven-estoqueOverlay, #hist-filter-overlay, #login-overlay, #vb-c2-overlay, #vb-name-overlay, #vb-sair-overlay{ animation:none; }
+}
+}
 }
 /* Escala de tipografia dos cards. Quatro papeis, quatro estilos - antes o rotulo de bloco
    aparecia em dez combinacoes diferentes de tamanho e espacamento. */
@@ -9274,6 +9300,51 @@ function REN_addMesISO(iso, k){
 }
 function REN_num(x){ if(typeof x==='number') return x; var n=VB_dinheiroRaw(x); return isFinite(n)?n:0; }
 var VB_apelidos=null;
+/* ===== ESTADO PRESSIONADO (motor) =====
+   Marca UM elemento por toque. Sobe no maximo 6 niveis procurando o tocavel mais proximo e
+   desiste ao encontrar fundo de folha (position:fixed), botao desabilitado ou travado pelo
+   dirty-aware - botao travado nao acender e informacao: ele diz que nao ha o que salvar.
+   Piso de 120ms para o realce ser visto mesmo num toque rapido. Arrastar mais de 8px cancela,
+   pra rolar lista nao acender card. Passivo: nao interfere no toque nem no teclado. */
+var VB_pressEl=null, VB_pressT=0, VB_pressX=0, VB_pressY=0;
+function VB_pressAlvo(el){
+  for(var i=0; el && el.nodeType===1 && i<6; i++, el=el.parentElement){
+    var st=el.style||{};
+    if(st.position==='fixed') return null;
+    if(el.disabled) return null;
+    if(st.pointerEvents==='none') return null;
+    if(el.tagName==='BUTTON' || el.getAttribute('onclick') || st.cursor==='pointer') return el;
+  }
+  return null;
+}
+function VB_pressLimpa(el){
+  if(!el) return;
+  el.classList.add('vb-press-solta');
+  el.classList.remove('vb-press');
+  setTimeout(function(){ el.classList.remove('vb-press-solta'); }, 260);
+}
+document.addEventListener('touchstart', function(e){
+  if(!e.touches || e.touches.length!==1) return;
+  var el=VB_pressAlvo(e.target); if(!el) return;
+  VB_pressEl=el; VB_pressT=Date.now();
+  VB_pressX=e.touches[0].clientX; VB_pressY=e.touches[0].clientY;
+  el.classList.remove('vb-press-solta');
+  el.classList.add('vb-press');
+}, {passive:true});
+document.addEventListener('touchmove', function(e){
+  if(!VB_pressEl || !e.touches || !e.touches[0]) return;
+  var dx=Math.abs(e.touches[0].clientX-VB_pressX), dy=Math.abs(e.touches[0].clientY-VB_pressY);
+  if(dx>8 || dy>8){ var el=VB_pressEl; VB_pressEl=null; el.classList.remove('vb-press'); }
+}, {passive:true});
+function VB_pressSolta(){
+  var el=VB_pressEl; if(!el) return;
+  VB_pressEl=null;
+  var falta=120-(Date.now()-VB_pressT);
+  if(falta>0) setTimeout(function(){ VB_pressLimpa(el); }, falta);
+  else VB_pressLimpa(el);
+}
+document.addEventListener('touchend', VB_pressSolta, {passive:true});
+document.addEventListener('touchcancel', VB_pressSolta, {passive:true});
 function VB_apelidosCarrega(){
   if(VB_apelidos!==null) return;
   VB_apelidos='loading';
@@ -14150,6 +14221,21 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Os tempos e curvas de movimento do app viraram valores com nome, escritos num lugar só, em vez de números espalhados. A curva usada nas folhas é a mesma que o iOS usa, e os tempos seguem as referências da plataforma: 450 milésimos na folha, 250 no fundo, 200 no diálogo, 180 na saída</div>
+      <div class="cl-item">O fundo escuro voltou a esmaecer mais rápido que a folha desliza, e não junto. É a prática da plataforma: dois tempos diferentes criam camada e conduzem o olho, enquanto sincronizados deixam a cena chapada. Na v1.207.1 eu tinha igualado os dois por engano</div>
+      <div class="cl-item">Cards passaram a responder ao toque, escurecendo enquanto o dedo está neles. Antes só os botões respondiam, e os cards são justamente onde você mais toca. O realce dura no mínimo 120 milésimos: abaixo disso um toque rápido não chega a ser visto</div>
+      <div class="cl-item">Botão travado por não ter alteração não acende, e isso é de propósito: ele te diz que não há o que salvar. Arrastar o dedo mais de oito pontos cancela o realce, para rolar a lista não acender card</div>
+      <div class="cl-item">Segurar o dedo num card ou botão não abre mais o menu de seleção do iPhone</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.207.1</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">As folhas subiam rápido demais. A curva usada arranca forte e desacelera, e foi feita para percurso longo — comprimida em 260 milésimos, o arranque virava estalo. Passou para 420, e o diálogo centrado para 200</div>
+      <div class="cl-item">O fundo escuro agora escurece no mesmo tempo da folha. Antes ele entrava de uma vez enquanto o painel deslizava, e dois ritmos diferentes leem como defeito</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.207.0</span><span class="cl-ver-date">29/07/2026</span></div>
