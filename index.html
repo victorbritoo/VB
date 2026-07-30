@@ -83,12 +83,26 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.206.0</title>
+<title>VB - v1.207.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
 input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-transform:uppercase;} input[type="text"]:not([inputmode="numeric"]){letter-spacing:0.3px;}
 .vb-screen{display:none;min-height:100vh;}
+/* === ENTRADA DAS FOLHAS ===
+   No iOS folha sempre desliza de baixo; dialogo centrado surge no lugar. Nao usamos transition
+   porque o app abre a folha com display:flex - a animacao CSS reinicia sozinha quando o elemento
+   sai de display:none, entao nao e preciso tocar nos 40 pontos de abertura.
+   260ms na folha e 180ms no dialogo: dentro da faixa de 150-300ms, acima da qual a animacao irrita.
+   FOLHA NOVA PRECISA ENTRAR NESTA LISTA. */
+@keyframes vbSheetUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+@keyframes vbDlgIn{ from{ transform:scale(0.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
+#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div{ animation:vbSheetUp 260ms cubic-bezier(0.32,0.72,0,1) both; }
+#hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:vbDlgIn 180ms ease-out both; }
+/* quem pediu menos movimento no iOS nao recebe nenhum */
+@media (prefers-reduced-motion: reduce){
+#clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div, #hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div{ animation:none; }
+}
 /* Escala de tipografia dos cards. Quatro papeis, quatro estilos - antes o rotulo de bloco
    aparecia em dez combinacoes diferentes de tamanho e espacamento. */
 .vb-rot{font-size:9px;letter-spacing:1px;font-weight:700;color:var(--so);}
@@ -14136,6 +14150,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.207.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">As folhas passaram a deslizar de baixo em vez de aparecer de estalo, e os diálogos centrados surgem crescendo de leve. Era o maior sinal de que o app é uma página e não um aplicativo: no iPhone, folha sempre entra deslizando</div>
+      <div class="cl-item">Dezessete folhas deslizam em 260 milésimos e cinco diálogos surgem em 180 — dentro da faixa de 150 a 300, acima da qual a animação passa a irritar. Tela cheia, foto, PIN e changelog não animam, porque não são folhas</div>
+      <div class="cl-item">Quem liga a opção de reduzir movimento nos ajustes do iPhone não recebe animação nenhuma</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.206.0</span><span class="cl-ver-date">29/07/2026</span></div>
