@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.208.4</title>
+<title>VB - v1.209.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4678,11 +4678,21 @@ function FIN_assinatura(){
   return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
     VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData')]);
 }
+/* A assinatura considera SO o que o modo ativo grava. Antes ela somava os dois mundos: ir para
+   personalizada criava uma linha de titulo que ficava na assinatura para sempre, entao voltar ao
+   simples nunca devolvia o valor de origem e a tela seguia marcada como alterada sem motivo.
+   O modo entra nos dois porque ele e gravado na operacao - ficar no outro modo E alteracao, ja
+   que salvar ali converte a operacao. */
 function ANT_assinatura(){
-  return JSON.stringify([VB_val('ant-tabelaCliente'),VB_val('ant-dataOperacao'),VB_val('ant-taxa'),
-    VB_val('ant-tarifa'),VB_val('ant-valorBruto'),VB_val('ant-qtd'),VB_val('ant-tabelaData'),
-    (typeof ANT_modoPersonalizado!=='undefined'?!!ANT_modoPersonalizado:false),
-    (typeof ANT_titulos!=='undefined'?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[]),(typeof ANT_simFlag!=='undefined'?!!ANT_simFlag:false)]);
+  var pers=(typeof ANT_modoPersonalizado!=='undefined')?!!ANT_modoPersonalizado:false;
+  var comum=[VB_val('ant-tabelaCliente'),VB_val('ant-dataOperacao'),VB_val('ant-taxa'),
+    VB_val('ant-tarifa'), pers, (typeof ANT_simFlag!=='undefined'?!!ANT_simFlag:false)];
+  if(pers){
+    comum.push((typeof ANT_titulos!=='undefined')?ANT_titulos.map(function(t){return [t.valor,t.data,t.tipo||'deb'];}):[]);
+  } else {
+    comum.push(VB_val('ant-valorBruto'), VB_val('ant-qtd'), VB_val('ant-tabelaData'));
+  }
+  return JSON.stringify(comum);
 }
 function VEN_assinatura(){
   return JSON.stringify([VB_val('ven-tabelaDesc'),VB_val('ven-cliente'),VB_val('ven-notas'),VB_val('ven-total'),VB_val('ven-qtd'),
@@ -7445,8 +7455,16 @@ var ANT_tituloCounter = 0;
 
 function ANT_setModo(modo){
   var querPers = (modo==='pers');
-  if(querPers !== ANT_modoPersonalizado){ ANT_toggleModo(); }
-  else { ANT_updateSeg(); }
+  if(querPers === ANT_modoPersonalizado){ ANT_updateSeg(); return; }
+  /* Em operacao ja salva, trocar o modo converte a operacao e pode jogar fora dado: indo de
+     personalizada para simples, as datas individuais dos titulos se perdem. Em operacao nova nao
+     ha o que perder, entao a troca segue livre. */
+  var salva = (typeof ANT_currentOperationId!=='undefined') && ANT_currentOperationId;
+  var temTitulo = (typeof ANT_titulos!=='undefined') && ANT_titulos.some(function(t){ return (t.valor&&String(t.valor).trim()) || (t.data&&String(t.data).trim()); });
+  if(salva && !querPers && temTitulo){
+    if(!confirm('Converter para SIMPLES descarta as datas dos t\u00edtulos desta opera\u00e7\u00e3o. Continuar?')){ ANT_updateSeg(); return; }
+  }
+  ANT_toggleModo();
 }
 function ANT_updateSeg(){
   var bS=document.getElementById('ant-seg-simples');
@@ -14265,6 +14283,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.0</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Na antecipação, olhar o outro modo e voltar não pede mais para salvar. A verificação de alteração somava os dois modos ao mesmo tempo: ir até a personalizada criava uma linha de título que ficava contada para sempre, e voltar ao simples nunca devolvia o estado de origem</div>
+      <div class="cl-item">Agora ela considera só o que o modo ativo grava — no simples, valor bruto, quantidade e primeiro vencimento; na personalizada, os títulos. Ficar no outro modo continua contando como alteração, e isso está certo: salvar ali converte a operação</div>
+      <div class="cl-item">Converter uma operação já salva de personalizada para simples passou a pedir confirmação, porque descarta as datas individuais dos títulos. Em operação nova a troca segue livre, já que não há o que perder</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.4</span><span class="cl-ver-date">30/07/2026</span></div>
