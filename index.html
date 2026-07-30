@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.209.4</title>
+<title>VB - v1.209.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5776,7 +5776,7 @@ function VEN_updateLucro(){
         +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
       rd.style.display='block';
     } else if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
+      rd.innerHTML='<span style="color:var(--mu);">SEU RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?(' \u00b7 '+VEN_diasEstoque()+'d parado'):' \u00b7 venda direta')+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
         +'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);vertical-align:1px;">SIMULAR</span>';
       rd.style.display='block';
     } else if(_ok && c>0 && !(_meuC>0)){
@@ -6016,6 +6016,9 @@ function VEN_renderParcelas(){
       var p = VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p){ p.data = this.value; VEN_modoPersonalizado=true;
         var sp=document.querySelector('[data-dias="'+p.id+'"]'); if(sp) sp.textContent=VEN_diasTxt(p.data);
+        /* a data muda o ciclo e, por tabela, o rendimento - o campo de valor ja recalculava,
+           este nao. So com a data inteira (ou apagada), pra nao piscar no meio da digitacao. */
+        if(this.value.length===10 || this.value.length===0){ try{ VEN_updateLucro(); }catch(e){} }
       }
     });
   });
@@ -11804,13 +11807,22 @@ function HIST_resumoSocio(idx){
   VEN_resumoSocioSheet(r);
 }
 function VB_brToDate(s){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((s||'').trim()); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+/* Dias entre a compra da peca e a venda. Entra no ciclo e, por tabela, no rendimento - entao
+   precisa ser visivel: um valor errado aqui derruba o rendimento sem deixar rastro. */
+function VEN_diasEstoque(){
+  if(!VEN_merDataCompra) return null;
+  var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+  var pp=String(VEN_merDataCompra).split('T')[0].split('-'); if(pp.length!==3) return null;
+  var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
+  var d=(dv-dc)/86400000;
+  return (isFinite(d)&&d>=0)?Math.round(d):0;
+}
 function VEN_cicloMeses(){
   var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
   var dias=0;
   if(VEN_merDataCompra){
-    var pp=String(VEN_merDataCompra).split('T')[0].split('-'); if(pp.length!==3) return null;
-    var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(isNaN(dc.getTime())) return null;
-    dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0;
+    var _de=VEN_diasEstoque(); if(_de==null) return null;
+    dias=_de;
   }
   var soma=0, peso=0;
   (VEN_parcelas||[]).forEach(function(p){
@@ -14341,6 +14353,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.6</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: mudar a data de uma parcela não recalculava o rendimento nem o ciclo. Quem gera as parcelas pelo REPETIR e depois troca as datas na mão — de mensal para semanal, por exemplo — ficava vendo o número do arranjo antigo. O campo de valor já recalculava; o de data, não. Agora recalcula assim que a data fica completa</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.5</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">A linha do rendimento na Venda passou a mostrar quantos dias a peça ficou parada antes de vender. Esse número entra no ciclo e, por tabela, no rendimento — e não aparecia em lugar nenhum, então um valor errado ali derrubava o rendimento sem deixar rastro. Onde não há peça vinculada ao Estoque, continua dizendo venda direta</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.4</span><span class="cl-ver-date">30/07/2026</span></div>
