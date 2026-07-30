@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.211.0</title>
+<title>VB - v1.211.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4436,8 +4436,10 @@ function HIST_renderRows(tab, rows){
       valor='';
       var _lvL=HIST_lucroRow('ven', r), _c=Number(r.custo)||0, _vs=Number(r.valor_socio)||0;
       var _temSocio=(r.socio && _vs>0 && _c>0 && _vs<=_c);
-      var _consig=VB_capitalDele(r.socio, _vs, _c);
-      if(_temSocio) rowBadge=_consig?'C':'S';
+      /* duas perguntas diferentes: o SELO olha o capital; _consig olha se ha lucro dele.
+         Consignacao com lucro rachado e C no selo e continua mostrando lucro dos dois lados. */
+      var _consig=VB_consigVen(r.socio, _vs, _c, r.lucro_vb_pct);
+      if(_temSocio) rowBadge=VB_capitalDele(r.socio, _vs, _c)?'C':'S';
       if(r.simulacao) rowBadge='SIM';
       var _l2=[];
       if(r.valor_total!=null) _l2.push('<span style="color:var(--tx);">'+HIST_esc(HIST_valCurto(r.valor_total))+'</span>');
@@ -4517,7 +4519,7 @@ function HIST_renderRows(tab, rows){
     if(campos.length){
       campos.push({l:'Salvo', v:carimboStr}); // sem espaçador: campos sobem e ocupam o vazio
     }
-    html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2, (rtab==='ven' && typeof _snM!=='undefined' && !!_snM), (rtab==='ven' && rowBadge==='S'));
+    html+=HIST_buildRow(rtab, idx, titulo, valor, dataStr, horaStr, resumoExtra, campos, rowBadge, linha2, (rtab==='ven' && typeof _snM!=='undefined' && !!_snM), (rtab==='ven' && !!(r.socio && (Number(r.valor_socio)||0)>0 && !VB_consigVen(r.socio, r.valor_socio, r.custo, r.lucro_vb_pct))));  /* extrato depende de haver lucro dele, nao da letra do selo */
   });
   listaEl.innerHTML=html;
   HIST_fitNomes();
@@ -14403,6 +14405,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.211.1</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: ao passar o selo a ser decidido pelo capital, o card da venda deixou de mostrar o lucro de cada lado e o botão do extrato do sócio sumiu. O selo estava sendo usado como se fosse regra de negócio nesses dois pontos — mudar a letra mudava o comportamento junto</div>
+      <div class="cl-item">Agora são duas perguntas separadas: o selo olha o capital, e o que decide mostrar lucro e gerar extrato olha se há lucro do sócio. Consignação com lucro rachado aparece como C e continua mostrando lucro dos dois lados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.211.0</span><span class="cl-ver-date">30/07/2026</span></div>
