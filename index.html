@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.205.2</title>
+<title>VB - v1.206.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2557,7 +2557,9 @@ function VB_fetchPag(tabela, cols){
   });
 }
 function VB_fetchTudo(onOk, onErr){
-  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
+  /* baixas, pagamentos e repasse combinado sao dado operacional: sem eles a restauracao
+     devolve as vendas com todas as parcelas em aberto de novo. */
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto'];
   Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
@@ -2933,7 +2935,7 @@ function VB_restaurarStart(){
           var data=JSON.parse(rd.result);
           if(!data || data.app!=='VB' || !data.dados){ VB_toast('Arquivo não parece um backup do VB.'); inp.value=''; return; }
           var d=data.dados;
-          var cont={ antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length, socios:(d.socios||[]).length };
+          var cont={ parcela_baixas:(d.parcela_baixas||[]).length, parcela_pagamentos:(d.parcela_pagamentos||[]).length, repasse_previsto:(d.repasse_previsto||[]).length, antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length, socios:(d.socios||[]).length };
           var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos+cont.mercadorias+cont.listas+cont.recebimentos+cont.socios;
           if(!tot){ VB_toast('O backup está vazio.'); inp.value=''; return; }
           VB_restPayload={ data:data, cont:cont, tot:tot, diff:null };
@@ -2966,7 +2968,7 @@ function VB_diffCampos(a,b){
 }
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
-  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos'];
+  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto'];
   Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
@@ -3013,7 +3015,7 @@ function VB_restaurarModal(){
 }
 function VB_restaurarResumoHTML(P){
   var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos'};
-  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos'];
+  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','parcela_baixas','parcela_pagamentos','repasse_previsto'];
   var h='';
   if(P.diff && P.diffOk){
     var tN=0,tA=0,tI=0, allAlt=[], allNovas=[];
@@ -3075,7 +3077,7 @@ function VB_restaurarExec(){
   if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
   var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
   var d=P.data.dados;
-  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]]];
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]], ['parcela_baixas', d.parcela_baixas||[]], ['parcela_pagamentos', d.parcela_pagamentos||[]], ['repasse_previsto', d.repasse_previsto||[]]];
   var i=0, okCount=0, erros=[];
   function next(){
     if(i>=tabelas.length){ done(); return; }
@@ -8245,13 +8247,11 @@ function MER_isDirty(){
     fornecedor:(document.getElementById('mer-fornecedor').value||'').trim(),
     pagamento:(document.getElementById('mer-pagamento').value||'').trim(),
     socio:(document.getElementById('mer-socio').value||'').trim(),
-    vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0,
-    bnota:((document.getElementById('mer-baixaNota')||{}).value||'').trim().toUpperCase()
+    vsocio:VEN_parseBR(document.getElementById('mer-valorSocio').value)||0
   };
   var orig= r ? {
     descricao:(r.descricao||''), infos:(r.infos||''), custo:Number(r.custo)||0, data:MER_fmtData(r.data_compra)||'',
-    fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0,
-    bnota:(r.baixa_nota||'').trim().toUpperCase()
+    fornecedor:(r.fornecedor||''), pagamento:(r.pagamento||''), socio:(r.socio||''), vsocio:Number(r.valor_socio)||0
   } : null;
   return !orig || JSON.stringify(atual)!==JSON.stringify(orig);
 }
@@ -11336,9 +11336,8 @@ function MER_add(btn){
     fornecedor: forn||null, pagamento: pgto||null,
     socio: socio||null, valor_socio: (!isNaN(vSocio)&&vSocio>0)?vSocio:null
   };
-  if(_rEd && (_rEd.status||'')==='vendida' && !_rEd.venda_id){
-    payload.baixa_nota=((document.getElementById('mer-baixaNota')||{}).value||'').trim().toUpperCase()||null;
-  }
+  /* Este formulario nao tem campo de nota da saida - ela e editada no card aberto e na folha de
+     baixa. Antes daqui saia sempre null e apagava a nota gravada. */
   if(btn){ btn.disabled=true; btn.textContent='SALVANDO...'; }
   try{ if(payload.socio) VB_cliGarantir(payload.socio); }catch(e){}
   var q = MER_editId
@@ -14137,6 +14136,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.206.0</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">O backup passou a levar as baixas, os pagamentos e o repasse combinado. Sem eles, restaurar um backup devolvia as vendas com todas as parcelas em aberto de novo, e os repasses aos sócios desapareciam. Valia também para a foto automática diária, então o furo não era só do arquivo do iCloud. Faça um backup novo: o que está salvo é incompleto</div>
+      <div class="cl-item">A restauração também grava essas três tabelas, e a conferência antes de restaurar passou a contá-las. Levar o dado no arquivo e ignorá-lo na volta seria pior que não levar</div>
+      <div class="cl-item">Corrigido: editar no formulário do Estoque uma peça que saiu por baixa manual apagava a nota da saída. O código lia a nota de um campo que não existe mais nesse formulário, então gravava vazio por cima. A nota continua sendo editada no card aberto e na folha de baixa</div>
+      <div class="cl-item">Pelo mesmo motivo, peça com nota de saída gravada aparecia sempre como alterada no formulário, deixando o botão de salvar aceso sem nenhuma mudança</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.205.2</span><span class="cl-ver-date">29/07/2026</span></div>
