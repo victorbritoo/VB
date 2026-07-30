@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.210.4</title>
+<title>VB - v1.211.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2717,6 +2717,11 @@ function VB_autoteste(){
   t('Regra canônica de consignação (VB_consigVen)', function(){
     return VB_consigVen('X',10000,10000,100)===true && VB_consigVen('X',5000,10000,50)===false && VB_consigVen('X',10000,10000,50)===false;
   });
+  t('Selo pelo capital (VB_capitalDele)', function(){
+    return VB_capitalDele('X',10000,10000)===true    /* capital todo dele: C, mesmo com lucro rachado */
+        && VB_capitalDele('X',5000,10000)===false    /* capital rachado: S */
+        && VB_capitalDele('',10000,10000)===false;   /* sem sócio: nem um nem outro */
+  });
   t('Termômetro de rendimento (VB_termometro)', function(){ var v=VB_termometro(1000,10000,2); return v!=null && Math.abs(v-5)<1e-9; });
   t('Leitura de dinheiro (PAG_parseBR)', function(){ return Math.abs(PAG_parseBR('1.234,56')-1234.56)<1e-9 && Math.abs(PAG_parseBR('10.000,00')-10000)<1e-9; });
   t('Núcleo de dinheiro (VB_dinheiroRaw)', function(){ return Math.abs(VB_dinheiroRaw('R$ -1.234,56')+1234.56)<1e-9 && isNaN(VB_dinheiroRaw('')) && Math.abs(VB_dinheiro('abc'))<1e-9; });
@@ -3175,7 +3180,7 @@ function VB_relatorioPDF(dados, total, returnImages){
   function vDataNeg(r){ return r.data_venda||r.data_primeira_parcela||(r.created_at?_localYMD(r.created_at):null); }
   function vGiro(r){ var m=merMap[r.id]; if(!m||!m.data_compra) return null; var dv=vDataNeg(r); if(!dv) return null; var d=MER_diasEntre(m.data_compra, dv); return (d!=null&&d>=0)?d:null; }
   function vPctVB(r){ var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0; if(!(r.socio&&vs>0&&c>0)) return 100; if(r.lucro_vb_pct!=null) return Number(r.lucro_vb_pct); return Math.round(vs/c*100)===100?100:50; }
-  function vSufixo(r){ if(!(r.socio&&(Number(r.valor_socio)||0)>0&&(Number(r.custo)||0)>0)) return ''; return VB_consigVen(r.socio, r.valor_socio, r.custo, r.lucro_vb_pct)?'  · C':'  · S'; }
+  function vSufixo(r){ if(!(r.socio&&(Number(r.valor_socio)||0)>0&&(Number(r.custo)||0)>0)) return ''; return VB_capitalDele(r.socio, r.valor_socio, r.custo)?'  · C':'  · S'; }
   function vSemSN(t){ return String(t||'').replace(/\bSN\s*:?\s*[A-Za-z0-9-]+/i,'').replace(/\s{2,}/g,' ').trim(); }
   function vRend(r){
     if(r.custo==null) return null; var c=Number(r.custo)||0; if(!(c>0)) return null;
@@ -4094,6 +4099,17 @@ function HIST_atrHoje(r){
 // Lucro por operação: ant = bruto − líquido (tarifa fica com VB; atrasados fora),
 // fin = juros totais ou spread do investidor, ven = total − custo (quando houver custo)
 // Regra canônica: consignação = sócio com 100% do CUSTO e 0% do LUCRO. Se houver racha de lucro (pct<100), é sociedade — mesmo com capital todo dele.
+/* O TIPO do negocio e decidido pelo CAPITAL: se o dinheiro e todo dele, e consignacao.
+   Rachar lucro e remuneracao do seu trabalho, nao retorno do seu capital - nao faz de voce socio.
+   Um relogio pode comecar consignado e virar sociedade quando VB entra com capital; o que muda o
+   tipo e o dinheiro, nao a divisao do lucro.
+   Isto vale so para o SELO. Os CALCULOS continuam com VB_consigVen, que responde outra pergunta:
+   consignacao pura (capital dele E lucro todo seu), onde nao ha lucro dele a repassar. */
+function VB_capitalDele(socio, vs, c){
+  vs=Number(vs)||0; c=Number(c)||0;
+  if(!(socio && vs>0 && c>0)) return false;
+  return Math.round(vs/c*100)===100;
+}
 function VB_consigVen(socio, vs, c, pct){
   vs=Number(vs)||0; c=Number(c)||0;
   if(!(socio && vs>0 && c>0)) return false;
@@ -4420,7 +4436,7 @@ function HIST_renderRows(tab, rows){
       valor='';
       var _lvL=HIST_lucroRow('ven', r), _c=Number(r.custo)||0, _vs=Number(r.valor_socio)||0;
       var _temSocio=(r.socio && _vs>0 && _c>0 && _vs<=_c);
-      var _consig=VB_consigVen(r.socio, _vs, _c, r.lucro_vb_pct);
+      var _consig=VB_capitalDele(r.socio, _vs, _c);
       if(_temSocio) rowBadge=_consig?'C':'S';
       if(r.simulacao) rowBadge='SIM';
       var _l2=[];
@@ -10808,7 +10824,7 @@ function MER_render(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
-            var _isC=VB_consigVen(r.socio, r.valor_socio, r.custo, _pctL);
+            var _isC=VB_capitalDele(r.socio, r.valor_socio, r.custo);
             return ' <span style=\"display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(_isC?'C':'S')+'</span>';
           })())+'</span>'
               +'<span style="font-size:10px;color:var(--so);font-weight:600;white-space:nowrap;">'+MER_fmtData(r.data_venda)+'</span>'
@@ -10817,7 +10833,7 @@ function MER_render(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
-            var _isC=VB_consigVen(r.socio, r.valor_socio, r.custo, _pctL);
+            var _isC=VB_capitalDele(r.socio, r.valor_socio, r.custo);
             return ' <span style=\"display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(_isC?'C':'S')+'</span>';
           })())+'</div>'))
         +(MER_tab==='vendida' ? (function(){
@@ -14387,6 +14403,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.211.0</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">O selo C ou S passou a ser decidido pelo capital, e não pela divisão do lucro. Se o dinheiro é todo do consignante, é consignação — mesmo que vocês rachem o lucro. Rachar lucro é remuneração do seu trabalho, não retorno do seu capital, e não faz de você sócio. Um relógio pode começar consignado e virar sociedade quando você entra com capital: o que muda o tipo é o dinheiro</div>
+      <div class="cl-item">Isso corrige o IWC e a DJ Azzuro, que apareciam como sociedade no Histórico e como consignação no Estoque — o mesmo relógio com dois tipos, dependendo da tela</div>
+      <div class="cl-item">Nenhum cálculo mudou. A divisão do lucro, o repasse ao sócio e o extrato continuam pela regra antiga, que responde outra pergunta: se há ou não lucro dele a repassar. O selo diz o tipo do negócio; a conta diz quanto cada um leva</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.210.4</span><span class="cl-ver-date">30/07/2026</span></div>
