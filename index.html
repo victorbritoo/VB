@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.208.0</title>
+<title>VB - v1.208.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -118,16 +118,18 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
    Aparece na hora: acima de 100ms perde-se a sensacao de que foi VOCE que causou.
    Fica no minimo 120ms: o limiar de percepcao vai ate ~137ms em algumas pessoas, e um realce de
    50ms simplesmente nao e visto. Sai em 180ms, abaixo do teto de irritacao. */
-.vb-press{ opacity:0.55 !important; }
-.vb-press-solta{ transition:opacity var(--mo-saida) ease-out; }
+/* Sombra interna, nao opacidade: card branco em fundo claro a 55% de opacidade fica
+   praticamente igual ao fundo e o realce desaparece. A sombra escurece no tema claro e
+   CLAREIA no escuro, senao no escuro tambem sumiria. */
+.vb-press{ box-shadow:inset 0 0 0 999px rgba(0,0,0,0.10) !important; }
+html.vb-dark .vb-press{ box-shadow:inset 0 0 0 999px rgba(255,255,255,0.10) !important; }
+.vb-press-solta{ transition:box-shadow var(--mo-saida) ease-out; }
 
-/* segurar o dedo num card nao abre menu de selecao do iOS - app nativo nao faz isso */
-button, [onclick]{ -webkit-touch-callout:none; }
+/* segurar o dedo num card nao abre menu de selecao nem seleciona texto - app nativo nao faz isso */
+button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 
 @media (prefers-reduced-motion: reduce){
 #clip-overlay>div, #fm-overlay>div, #glb-overlay>div, #hist-mes-overlay>div, #log-overlay>div, #mer-baixa-overlay>div, #mer-ord-overlay>div, #mer-view-overlay>div, #mer-voltar-overlay>div, #mig-ov>div, #ren-baixa-ov>div, #ren-ficha-ov>div, #ren-prev-ov>div, #soc-pick-overlay>div, #soc-view-overlay>div, #vb-autoteste-ov>div, #ven-estoqueOverlay>div, #hist-filter-overlay>div, #login-overlay>div, #vb-c2-overlay>div, #vb-name-overlay>div, #vb-sair-overlay>div, #clip-overlay, #fm-overlay, #glb-overlay, #hist-mes-overlay, #log-overlay, #mer-baixa-overlay, #mer-ord-overlay, #mer-view-overlay, #mer-voltar-overlay, #mig-ov, #ren-baixa-ov, #ren-ficha-ov, #ren-prev-ov, #soc-pick-overlay, #soc-view-overlay, #vb-autoteste-ov, #ven-estoqueOverlay, #hist-filter-overlay, #login-overlay, #vb-c2-overlay, #vb-name-overlay, #vb-sair-overlay{ animation:none; }
-}
-}
 }
 /* Escala de tipografia dos cards. Quatro papeis, quatro estilos - antes o rotulo de bloco
    aparecia em dez combinacoes diferentes de tamanho e espacamento. */
@@ -9334,7 +9336,7 @@ document.addEventListener('touchstart', function(e){
 document.addEventListener('touchmove', function(e){
   if(!VB_pressEl || !e.touches || !e.touches[0]) return;
   var dx=Math.abs(e.touches[0].clientX-VB_pressX), dy=Math.abs(e.touches[0].clientY-VB_pressY);
-  if(dx>8 || dy>8){ var el=VB_pressEl; VB_pressEl=null; el.classList.remove('vb-press'); }
+  if(dx>6 || dy>6){ var el=VB_pressEl; VB_pressEl=null; el.classList.remove('vb-press'); }
 }, {passive:true});
 function VB_pressSolta(){
   var el=VB_pressEl; if(!el) return;
@@ -9345,6 +9347,11 @@ function VB_pressSolta(){
 }
 document.addEventListener('touchend', VB_pressSolta, {passive:true});
 document.addEventListener('touchcancel', VB_pressSolta, {passive:true});
+/* rolagem cancela na hora: o limiar de 8px nao pegava rolagem rapida, em que o scroll
+   comeca antes de o dedo andar o suficiente */
+window.addEventListener('scroll', function(){
+  if(VB_pressEl){ var el=VB_pressEl; VB_pressEl=null; el.classList.remove('vb-press'); }
+}, {passive:true, capture:true});
 function VB_apelidosCarrega(){
   if(VB_apelidos!==null) return;
   VB_apelidos='loading';
@@ -14221,6 +14228,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.1</span><span class="cl-ver-date">29/07/2026</span></div>
+      <div class="cl-item">Corrigido: sobraram duas chaves de fechamento soltas no estilo, uma em cada vez que eu reescrevi o bloco de movimento. Com o estilo quebrado ali, o navegador descartava tudo o que vinha depois — e o que vinha depois eram as classes de tipografia do Panorama e a regra que impede o menu de seleção. Por isso os títulos do Panorama apareceram grandes e o menu voltou a abrir ao segurar o dedo</div>
+      <div class="cl-item">O realce de toque deixou de usar transparência e passou a usar sombra interna. Card branco sobre fundo claro a 55 por cento de opacidade fica quase igual ao fundo, e o realce sumia. Agora escurece no tema claro e clareia no escuro</div>
+      <div class="cl-item">Rolar a lista cancela o realce imediatamente. O limite de movimento do dedo não pegava rolagem rápida, em que a página começa a correr antes de o dedo andar o suficiente</div>
+      <div class="cl-item">Segurar o dedo também deixou de selecionar o texto do card, não só de abrir o menu</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.208.0</span><span class="cl-ver-date">29/07/2026</span></div>
