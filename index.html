@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.209.2</title>
+<title>VB - v1.209.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -149,7 +149,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   .card { background: var(--bg); width: 100%; max-width: 440px; margin: 0 auto; padding: 16px 20px 24px; position: relative; }
-  .logo { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: var(--ink); line-height: 1; margin-bottom: 6px; margin-left: 10px; }
+  .logo { display:inline-block; font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 400; letter-spacing: 1px; color: var(--ink); line-height: 1; margin-bottom: 6px; margin-left: 10px; }
   .simulacao-label { font-size: 11px; letter-spacing: 5px; color: var(--mu); margin-bottom: 6px; font-weight: 500; margin-left: 10px; }
   .divider { border: none; border-top: 0.5px solid var(--ln0); margin-bottom: 8px; }
   button { transition: opacity 0.12s ease; }
@@ -212,7 +212,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   
   .card{background:var(--bg);width:100%;max-width:440px}
-  .logo{font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:var(--tx);margin-bottom:4px;margin-left:10px}
+  .logo{display:inline-block;font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:400;letter-spacing:1px;color:var(--tx);margin-bottom:4px;margin-left:10px}
   .sub{font-size:11px;letter-spacing:5px;color:var(--mu);margin-bottom:6px;font-weight:500;margin-left:10px}
   .hr{border:none;border-top:0.5px solid var(--ln0);margin-bottom:8px}
   .fc{background:var(--sf);border-radius:13px;padding:5px 14px;margin-bottom:3px;border:0.5px solid var(--ln2)}
@@ -4674,6 +4674,16 @@ function VB_nameSkip(){
    Foto dos campos é tirada DEPOIS do recálculo automático no carregar, então
    só dispara quando o Victor mexe de verdade. Não vale pra op nova. */
 var FIN_snapshot=null, ANT_snapshot=null, VEN_snapshot=null, PAG_snapshot=null;
+/* Maiuscula sem jogar o cursor pro fim. Reatribuir .value durante a digitacao sempre manda o
+   cursor pro fim; aqui so reatribui quando muda de verdade e devolve a posicao. */
+function VB_upper(el){
+  if(!el) return;
+  var u=String(el.value||'').toUpperCase();
+  if(u===el.value) return;
+  var ini=el.selectionStart, fim=el.selectionEnd;
+  el.value=u;
+  try{ if(ini!=null) el.setSelectionRange(ini, fim); }catch(e){}
+}
 function VB_val(id){ var e=document.getElementById(id); return e?(e.value||''):''; }
 function FIN_assinatura(){
   return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
@@ -4742,7 +4752,24 @@ document.addEventListener('touchend', function(e){
   var now=Date.now(); if(now-VB_kbLast<600) return; VB_kbLast=now;
   try{ if(e.cancelable) e.preventDefault(); }catch(_){}
   try{ var a=document.activeElement; if(a && a.blur) a.blur(); }catch(_){}  /* blur commita data pela metade */
-  setTimeout(function(){ try{ b.click(); }catch(_){} }, 120);
+  setTimeout(function(){
+    try{
+      var alvo=b;
+      if(!document.contains(b)){
+        /* o desfoque pode ter redesenhado a lista: procura o botao equivalente */
+        var oc=b.getAttribute?b.getAttribute('onclick'):null;
+        var tx=(b.textContent||'').trim();
+        if(oc){
+          var cand=[], todos=document.querySelectorAll('[onclick]');
+          for(var i=0;i<todos.length;i++){
+            if(todos[i].getAttribute('onclick')===oc && (todos[i].textContent||'').trim()===tx) cand.push(todos[i]);
+          }
+          alvo=(cand.length===1)?cand[0]:null;   /* ambiguo (varios X iguais): nao arrisca */
+        } else alvo=null;
+      }
+      if(alvo) alvo.click();
+    }catch(_){}
+  }, 120);
 }, {passive:false, capture:true});
 function VB_dirtyPaintTela(tela){
   var id=VB_dirtyBtn[tela]; if(!id) return;
@@ -5953,7 +5980,7 @@ function VEN_renderParcelas(){
   // Obs field listener
   lista.querySelectorAll('[data-field="obs"]').forEach(function(el){
     el.addEventListener('input',function(){
-      this.value=this.value.toUpperCase();
+      VB_upper(this);
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p){ p.obs=this.value; VEN_modoPersonalizado=true; }
     });
@@ -5962,7 +5989,7 @@ function VEN_renderParcelas(){
   // Troca modelo listener
   lista.querySelectorAll('[data-field="trocaModelo"]').forEach(function(el){
     el.addEventListener('input',function(){
-      this.value=this.value.toUpperCase();
+      VB_upper(this);
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p && p.troca){ p.troca.modelo=this.value; VEN_modoPersonalizado=true; }
     });
@@ -5971,7 +5998,7 @@ function VEN_renderParcelas(){
   // Troca SN listener
   lista.querySelectorAll('[data-field="trocaSn"]').forEach(function(el){
     el.addEventListener('input',function(){
-      this.value=this.value.toUpperCase();
+      VB_upper(this);
       var p=VEN_parcelas.find(function(x){ return x.id===parseInt(el.dataset.pid); });
       if(p && p.troca){ p.troca.sn=this.value; VEN_modoPersonalizado=true; }
     });
@@ -8210,7 +8237,7 @@ document.querySelectorAll('input[type="text"]').forEach(function(el){
   if(mode !== 'numeric' && mode !== 'decimal'){
     el.addEventListener('input', function(){
       var pos = this.selectionStart;
-      this.value = this.value.toUpperCase();
+      VB_upper(this);
       this.setSelectionRange(pos, pos);
     });
   }
@@ -14314,6 +14341,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.4</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">O VB do topo das telas ocupava a linha inteira, mesmo tendo duas letras — então tocar em qualquer ponto vazio daquela linha voltava de tela, e o realce de toque pintava a faixa toda. Agora ele tem o tamanho do próprio texto: o realce fica sobre as letras e o toque só vale sobre elas</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.3</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: com o teclado aberto, tocar em REPETIR ÚLTIMA não fazia nada. A regra que fecha o teclado e aciona o botão desfoca o campo primeiro, para gravar a data pela metade — e o desfoque redesenha a lista de parcelas, deixando o botão guardado fora da tela. O toque acabava caindo no vazio. Agora, se o botão foi redesenhado, o app reencontra o equivalente antes de acionar</div>
+      <div class="cl-item">Corrigido: ao digitar no meio da nota da parcela, o cursor pulava para o fim a cada tecla. O campo reescrevia o próprio texto em maiúsculo a cada letra, e reescrever o valor sempre joga o cursor para o fim. Agora só reescreve quando muda de verdade e devolve o cursor ao lugar. Vale para nota, modelo e número de série da troca, e para o campo de identificação</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.209.2</span><span class="cl-ver-date">30/07/2026</span></div>
