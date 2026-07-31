@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.213.0</title>
+<title>VB - v1.213.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10462,11 +10462,10 @@ function REN_confirmaBaixa(k){
 }
 function REN_desfaz(btn, baixaId){
   if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
-  sb.from('parcela_baixas').delete().eq('id', baixaId).then(function(res){
-    if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('RECEB\u00cdVEIS','desfez baixa','',''); }catch(e){}
-    VB_toast('Baixa desfeita.'); REN_abrir();
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  /* Delega pro REN_desfazDireto: era a UNICA das duas rotas que apagava os pagamentos junto.
+     Esta aqui so tirava o carimbo, e a parcela voltava pra lista mostrando PAGO / RESTA 0,00.
+     De quebra, esta rota passa a avisar quando existe repasse pago. */
+  REN_desfazDireto(baixaId);
 }
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
@@ -14498,6 +14497,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.213.1</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">Corrigido: desfazer a baixa por um dos caminhos deixava os pagamentos gravados, e a parcela voltava para a lista dizendo PAGO com RESTA 0,00. Agora os dois caminhos zeram a parcela por inteiro, e os dois avisam quando existe repasse pago</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.213.0</span><span class="cl-ver-date">31/07/2026</span></div>
