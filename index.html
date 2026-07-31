@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.212.6</title>
+<title>VB - v1.213.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4991,6 +4991,13 @@ function VB_drawWatermark(ctx, W, H){
   }
   ctx.restore();
 }
+/* Campo marcado com data-selall: tocar seleciona o conteudo inteiro, pra digitar por cima
+   sem precisar apagar. O setTimeout e por causa do iOS, que reposiciona o cursor depois do foco. */
+document.addEventListener('focusin', function(e){
+  var el=e.target;
+  if(!el || !el.hasAttribute || !el.hasAttribute('data-selall') || !el.select) return;
+  setTimeout(function(){ try{ el.select(); }catch(_){} }, 0);
+});
 function autoCompleteDate(el){
   var v = el.value.trim();
   if(!v) return;
@@ -10084,10 +10091,10 @@ function REN_editRec(k){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">EDITAR RECEBIMENTO</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;">R$</span><input id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:right;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA (OPCIONAL)</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
     +'<button id="renb-salvar" onclick="REN_salvaRec(\''+k+'\')" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -10304,10 +10311,10 @@ function REN_repassar(k){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(b.repassado_em?'EDITAR REPASSE':'REPASSAR')+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+(oi?CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 ':'')+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;">R$</span><input id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:right;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input id="renr-data" inputmode="numeric" maxlength="10" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA (OPCIONAL)</div><input id="renr-nota" placeholder="EX.: PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="EX.: PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
     +'<button onclick="REN_salvaRepasse(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(b.repassado_em?'SALVAR':'CONFIRMAR REPASSE')+'</button>'
     +(b.repassado_em?'<button onclick="REN_desfazRepasse(\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -10329,7 +10336,7 @@ function REN_salvaRepasse(k){
     try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', x.cliente, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')+(nt?(' \u00b7 '+nt):'')); }catch(e){}
     VB_toast('Repasse registrado.');
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
-    REN_fichaVoltar=k; REN_abrir();
+    REN_abrir();   /* volta pra lista, nao pro card da parcela */
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_desfazRepasse(k){
@@ -10377,7 +10384,7 @@ function REN_gravaBaixa(x, valor, dataISO, nota){
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     if(total < (Number(x.valor)||0)-0.005){
       VB_toast('Pagamento parcial registrado.');
-      REN_fichaVoltar=REN_key(x); REN_abrir(); return;
+      REN_abrir(); return;   /* volta pra lista, nao pro card da parcela */
     }
     REN_fechaParcela(x, total, dataISO, nota);
   }).catch(function(e){ VB_toast('Sem conex\u00e3o \u2014 nada gravado.'); });
@@ -10392,7 +10399,7 @@ function REN_fechaParcela(x, total, dataISO, nota){
     if(res.error){ VB_toast(String(res.error.code)==='23505'?'Parcela j\u00e1 baixada.':('Erro: '+res.error.message)); return; }
     try{ VB_log('RECEB\u00cdVEIS','baixa', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(total)); }catch(e){}
     VB_toast('Parcela quitada.');
-    REN_fichaVoltar=REN_key(x); REN_abrir();
+    REN_abrir();   /* volta pra lista, nao pro card da parcela */
   }).catch(function(e){ VB_toast('Sem conex\u00e3o \u2014 baixa n\u00e3o gravada.'); });
 }
 /* Apaga um pagamento. Se a parcela estava quitada, ela reabre. */
@@ -10435,10 +10442,10 @@ function REN_editBaixa(k){
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:'+(_ja>0?'4px':'12px')+';">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +(_ja>0?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">PAGO: '+HIST_fmtMoeda(_ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(_falta)+'</div>'):'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;">R$</span><input id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:right;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input id="renb-data" inputmode="numeric" maxlength="10" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA (OPCIONAL)</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" style="'+IN+'"></div>'
     +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -14491,6 +14498,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.213.0</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">Nas folhas de baixa e de repasse: tocar no valor ou na data já seleciona tudo, para digitar por cima sem apagar</div>
+      <div class="cl-item">A data se completa sozinha ao sair do campo — 30/07 vira 30/07/2026</div>
+      <div class="cl-item">O valor recebido ficou centralizado, no mesmo alinhamento da data</div>
+      <div class="cl-item">O rótulo da nota virou só NOTA</div>
+      <div class="cl-item">Dar baixa e registrar repasse voltam para a lista, e não para o card da parcela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.6</span><span class="cl-ver-date">31/07/2026</span></div>
