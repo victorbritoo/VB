@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.216.0</title>
+<title>VB - v1.216.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9666,6 +9666,9 @@ function REN_termo(tab, plural, caixaAlta){
   var s = (tab==='ant') ? (plural?'T\u00edtulos':'T\u00edtulo') : (plural?'Parcelas':'Parcela');
   return caixaAlta ? s.toUpperCase() : s;
 }
+/* TITULO e masculino, PARCELA e feminino: um lugar so decide o artigo, como ja acontece
+   com a palavra. Sem isto sai "NOTA DA TITULO". */
+function REN_rotNota(tab){ return 'NOTA D'+((tab==='ant')?'O ':'A ')+REN_termo(tab,false,true); }
 function REN_nm(x){ var _d=(x.dnum!=null?x.dnum:x.idx); return ('0'+(_d+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
 /* Repasse combinado de antemao para uma parcela ainda em aberto. Null = nao foi combinado nada,
    entao vale o proporcional. */
@@ -9773,7 +9776,7 @@ function REN_notaSheet(k){
   var atual=REN_notaDe(x);
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">NOTA DA '+REN_termo(x.tab,false,true)+'</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+REN_rotNota(x.tab)+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
     +'<input id="rennt-txt" data-selall placeholder="EX.: CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
     +'<button onclick="REN_notaSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
@@ -10074,7 +10077,7 @@ function REN_ficha(k, exp){
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+REN_termo(x.tab,false,true)+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
-  (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA '+REN_termo(x.tab,false,true), CLIP_esc(_nt))+'</div>'; })();
+  (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
   if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' ('+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   /* REPASSE e SOCIO dividem uma linha: eram dois blocos de largura cheia e a ficha crescia demais */
   var _bRep='', _bSoc='';
@@ -10129,9 +10132,13 @@ function REN_ficha(k, exp){
   if(b) hh+='<button onclick="REN_desfazFicha(\''+k+'\')" style="'+BTN_S+'color:var(--tx);">\u21a9\ufe0e DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'padding:13px;">DAR BAIXA</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
-  hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_notaSheet(\''+k+'\');" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">'+(REN_notaDe(x)?'EDITAR NOTA':'ADICIONAR NOTA')+'</button>';
-  hh+='<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">ABRIR OPERA\u00c7\u00c3O</button>';
-  hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">PANORAMA DO CLIENTE</button>';
+  /* DAR BAIXA e o que voce faz em quase toda abertura e continua largo e sozinho. Estas tres
+     sao raras: lado a lado, a folha encurta duas linhas sem achatar a acao principal. */
+  hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">'
+    +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_notaSheet(\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(REN_notaDe(x)?'EDITAR NOTA':'NOTA')+'</button>'
+    +'<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'
+    +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
+    +'</div>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
   ov.innerHTML=hh; ov.style.display='flex';
@@ -14578,6 +14585,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.216.2</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">A ficha da parcela encurtou duas linhas: NOTA, OPERAÇÃO e PANORAMA ficaram lado a lado. DAR BAIXA continua largo e sozinho — é o que você faz em quase toda abertura, e igualar os cinco botões tornaria o comum mais difícil de acertar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.216.1</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">Escrevia "NOTA DA TÍTULO" na antecipação. Título é masculino, parcela é feminino, e agora um lugar só decide o artigo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.216.0</span><span class="cl-ver-date">31/07/2026</span></div>
