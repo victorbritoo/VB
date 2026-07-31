@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.212.5</title>
+<title>VB - v1.212.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -103,6 +103,12 @@ input[type="text"]:not([inputmode="numeric"]):not([inputmode="decimal"]){text-tr
   --mo-toque:120ms;                        /* piso do estado pressionado (ver abaixo) */
   --mo-saida:180ms;                        /* sair e mais rapido que entrar */
 }
+/* Alvo de toque ampliado para selos pequenos (CR de Pagamentos, DEB/PG da antecipacao).
+   A area extra e um pseudo-elemento absoluto: nao ocupa espaco e nao mexe no layout.
+   Limites: 3px em cima/embaixo (metade do respiro de 6px entre linhas, pra area de uma linha
+   nunca invadir a da linha vizinha) e 5px a direita (dentro do gap, sem roubar toque do campo). */
+.vb-hit{ position:relative; }
+.vb-hit::after{ content:''; position:absolute; top:-3px; bottom:-3px; left:-14px; right:-5px; }
 @keyframes vbSheetUp{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
 @keyframes vbDlgIn{ from{ transform:scale(0.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
 @keyframes vbFundo{ from{ background-color:rgba(0,0,0,0); } }
@@ -7781,7 +7787,7 @@ function ANT_renderTitulos(){
     row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;align-items:center;margin-bottom:6px;';
     var ehPg=(t.tipo==='pg');
     row.innerHTML=
-      '<span data-tptog="'+t.id+'" data-keepkb title="Tocar: alternar débito/pagamento" style="cursor:pointer;font-size:9px;font-weight:700;text-align:center;'+(ehPg?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--mu2);')+'">'+(ehPg?'PG':String(idx+1).padStart(2,'0'))+'</span>'+
+      '<span data-tptog="'+t.id+'" data-keepkb class="vb-hit" title="Tocar: alternar débito/pagamento" style="cursor:pointer;font-size:9px;font-weight:700;text-align:center;'+(ehPg?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--mu2);')+'">'+(ehPg?'PG':String(idx+1).padStart(2,'0'))+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:2px;border-bottom:0.5px solid var(--ln);padding-bottom:2px;min-width:0;">'+
         '<span style="font-size:11px;color:'+(ehPg?'#111':'#aaa')+';flex-shrink:0;font-weight:'+(ehPg?'700':'400')+';">'+(ehPg?'−R$':'R$')+'</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" data-tid="'+t.id+'" data-field="valor"'+
@@ -8002,7 +8008,7 @@ function PAG_render(){
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
     row.innerHTML=
-      '<span data-crtog="'+p.id+'" data-keepkb title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
+      '<span data-crtog="'+p.id+'" data-keepkb class="vb-hit" title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
       '<input type="text" placeholder="Descrição" onclick="if(!this.value)this.select()" data-pid="'+p.id+'" data-field="desc"'+
       ' style="min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:0;font-family:-apple-system,sans-serif;text-align:center;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
@@ -14485,6 +14491,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.6</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">A área de toque dos seletores de crédito e de débito/pagamento ficou maior, para não errar o alvo e fechar o teclado. O selo continua do mesmo tamanho na tela — só a área que aceita o dedo cresceu, e sem encostar na linha de cima nem na de baixo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.5</span><span class="cl-ver-date">31/07/2026</span></div>
