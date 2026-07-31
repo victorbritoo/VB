@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.212.3</title>
+<title>VB - v1.212.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1086,8 +1086,8 @@ body{ text-transform:uppercase; }
       </div>
       <div id="ant-listaTitulos" style="width:100%;"></div>
       <div style="display:flex;gap:6px;align-items:stretch;margin-top:8px;">
-        <button id="ant-add-titulo-btn" style="flex:1;height:38px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">+ TÍTULO</button>
-        <button id="ant-repetir-btn" type="button" style="flex:1;height:38px;box-sizing:border-box;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">REPETIR</button>
+        <button id="ant-add-titulo-btn" data-keepkb style="flex:1;height:38px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">+ TÍTULO</button>
+        <button id="ant-repetir-btn" data-keepkb type="button" style="flex:1;height:38px;box-sizing:border-box;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">REPETIR</button>
         <input id="ant-repetir-n" type="hidden" value="1">
       </div>
     </div>
@@ -1201,7 +1201,7 @@ body{ text-transform:uppercase; }
   <div class="fc" style="margin-bottom:6px;">
     <div style="font-size:10px;letter-spacing:2px;color:var(--tx);font-weight:500;margin-bottom:6px;text-align:center;">PAGAMENTOS</div>
     <div id="pag-lista" style="overflow:hidden;"></div>
-    <button id="pag-add-btn" style="width:100%;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ ADICIONAR</button>
+    <button id="pag-add-btn" data-keepkb style="width:100%;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ ADICIONAR</button>
     <hr style="border:none;border-top:0.5px solid var(--ln3);margin:8px 0 6px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;">
       <span style="font-size:10px;letter-spacing:2.5px;color:var(--tx);font-weight:500;">TOTAL</span>
@@ -4774,7 +4774,8 @@ document.addEventListener('touchstart', function(e){
   if(!VB_kbAberto()) return;
   var t=e.target; if(!t || !t.closest) return;
   if(t.closest('input,textarea,select')) return;           /* tocando outro campo: fluxo normal */
-  var b=t.closest('button,[onclick]'); if(!b) return;
+  var b=t.closest('button,[onclick],[data-keepkb]'); if(!b) return;
+  if(b.hasAttribute('data-keepkb')) return;   /* cuida do proprio toque e mantem o teclado aberto */
   if(b.disabled) return;
   try{ if(getComputedStyle(b).pointerEvents==='none') return; }catch(_){}   /* respeita botão travado */
   VB_kbTgt=b;
@@ -7688,6 +7689,31 @@ var VB_temToque = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
   }, true);
 })();
 
+/* === FOCO QUE SOBREVIVE AO RE-DESENHO ===
+   Listas que se redesenham inteiras (PAG_render, ANT_renderTitulos) destroem o input em foco
+   e o teclado do iPhone cai. VB_focoGuarda anota quem estava em foco e onde estava o cursor;
+   VB_focoDevolve reencontra o campo equivalente na lista nova e devolve o foco no mesmo ponto. */
+function VB_focoGuarda(){
+  var a=document.activeElement;
+  if(!a || (a.tagName!=='INPUT' && a.tagName!=='TEXTAREA')) return null;
+  var s=null; try{ s=a.selectionStart; }catch(_){}
+  return { pid:a.getAttribute('data-pid'), tid:a.getAttribute('data-tid'),
+           campo:a.getAttribute('data-field'), id:a.id||null, sel:s };
+}
+function VB_focoDevolve(g){
+  if(!g) return;
+  var el=null;
+  if(g.id) el=document.getElementById(g.id);
+  if(!el && g.campo){
+    var chave = g.pid ? '[data-pid="'+g.pid+'"]' : (g.tid ? '[data-tid="'+g.tid+'"]' : null);
+    if(chave) el=document.querySelector(chave+'[data-field="'+g.campo+'"]');
+  }
+  if(!el) return;
+  try{
+    el.focus({preventScroll:true});
+    if(g.sel!=null && el.setSelectionRange){ var n=(el.value||'').length; var p=Math.min(g.sel,n); el.setSelectionRange(p,p); }
+  }catch(_){}
+}
 function VB_onTap(el, fn){
   if(!el) return;
   if(VB_temToque){
@@ -7702,7 +7728,18 @@ function VB_onTap(el, fn){
       var t=e.touches&&e.touches[0]; if(!t) return;
       if(Math.abs(t.clientX-_x)>6 || Math.abs(t.clientY-_y)>6) _mv=true;
     }, {passive:true});
-    el.addEventListener('touchend', function(e){ if(_mv) return; e.preventDefault(); fn(); }, {passive:false});
+    el.addEventListener('touchend', function(e){
+      if(_mv) return;
+      e.preventDefault();
+      var _g = el.hasAttribute('data-keepkb') ? VB_focoGuarda() : null;
+      fn();
+      /* so devolve se a acao NAO escolheu um campo. O + TITULO e o + ADICIONAR focam de proposito
+         a linha nova; sobrescrever isso jogaria o cursor de volta pra linha velha. */
+      if(_g){
+        var _a=document.activeElement;
+        if(!_a || (_a.tagName!=='INPUT' && _a.tagName!=='TEXTAREA')) VB_focoDevolve(_g);
+      }
+    }, {passive:false});
   } else {
     el.addEventListener('click', function(){ fn(); });
   }
@@ -7744,7 +7781,7 @@ function ANT_renderTitulos(){
     row.style.cssText='display:grid;grid-template-columns:18px 1fr 1fr 20px;gap:6px;align-items:center;margin-bottom:6px;';
     var ehPg=(t.tipo==='pg');
     row.innerHTML=
-      '<span onclick="ANT_toggleTipo('+t.id+')" title="Tocar: alternar débito/pagamento" style="cursor:pointer;font-size:9px;font-weight:700;text-align:center;'+(ehPg?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--mu2);')+'">'+(ehPg?'PG':String(idx+1).padStart(2,'0'))+'</span>'+
+      '<span data-tptog="'+t.id+'" data-keepkb title="Tocar: alternar débito/pagamento" style="cursor:pointer;font-size:9px;font-weight:700;text-align:center;'+(ehPg?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--mu2);')+'">'+(ehPg?'PG':String(idx+1).padStart(2,'0'))+'</span>'+
       '<div style="display:flex;align-items:baseline;gap:2px;border-bottom:0.5px solid var(--ln);padding-bottom:2px;min-width:0;">'+
         '<span style="font-size:11px;color:'+(ehPg?'#111':'#aaa')+';flex-shrink:0;font-weight:'+(ehPg?'700':'400')+';">'+(ehPg?'−R$':'R$')+'</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" data-tid="'+t.id+'" data-field="valor"'+
@@ -7772,6 +7809,10 @@ function ANT_renderTitulos(){
       var t=ANT_titulos.find(function(x){return x.id===parseInt(el.dataset.tid);});
       if(t){ t.data=el.value; ANT_recalcPersonalizado(); }
     });
+  });
+  /* mesmo caminho de toque do resto do app; data-keepkb mantem o teclado aberto */
+  lista.querySelectorAll('[data-tptog]').forEach(function(el){
+    VB_onTap(el, function(){ ANT_toggleTipo(parseInt(el.dataset.tptog,10)); });
   });
 }
 
@@ -7961,7 +8002,7 @@ function PAG_render(){
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
     row.innerHTML=
-      '<span data-crtog="'+p.id+'" title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
+      '<span data-crtog="'+p.id+'" data-keepkb title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
       '<input type="text" placeholder="Descrição" onclick="if(!this.value)this.select()" data-pid="'+p.id+'" data-field="desc"'+
       ' style="min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:0;font-family:-apple-system,sans-serif;text-align:center;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
@@ -14444,6 +14485,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.4</span><span class="cl-ver-date">31/07/2026</span></div>
+      <div class="cl-item">O teclado não cai mais ao virar uma linha em crédito em Pagamentos, nem ao alternar débito/pagamento na antecipação. O cursor volta para o mesmo campo, no mesmo ponto do texto</div>
+      <div class="cl-item">O + TÍTULO e o REPETIR da antecipação e o + ADICIONAR de Pagamentos também mantêm o teclado aberto. Quando a ação cria uma linha nova, o cursor vai para ela; quando não cria, fica onde estava</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.3</span><span class="cl-ver-date">30/07/2026</span></div>
