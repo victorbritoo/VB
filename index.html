@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.212.2</title>
+<title>VB - v1.212.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -7691,7 +7691,18 @@ var VB_temToque = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
 function VB_onTap(el, fn){
   if(!el) return;
   if(VB_temToque){
-    el.addEventListener('touchend', function(e){ e.preventDefault(); fn(); }, {passive:false});
+    /* arrastar/rolar NAO aciona: sem isso, rolar a lista de Pagamentos com o dedo em cima do
+       seletor CR virava a linha sem querer. Mesmo limiar do realce de toque (6px). */
+    var _x=0,_y=0,_mv=false;
+    el.addEventListener('touchstart', function(e){
+      _mv=false;
+      var t=e.touches&&e.touches[0]; if(t){ _x=t.clientX; _y=t.clientY; }
+    }, {passive:true});
+    el.addEventListener('touchmove', function(e){
+      var t=e.touches&&e.touches[0]; if(!t) return;
+      if(Math.abs(t.clientX-_x)>6 || Math.abs(t.clientY-_y)>6) _mv=true;
+    }, {passive:true});
+    el.addEventListener('touchend', function(e){ if(_mv) return; e.preventDefault(); fn(); }, {passive:false});
   } else {
     el.addEventListener('click', function(){ fn(); });
   }
@@ -7950,7 +7961,7 @@ function PAG_render(){
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;width:100%;overflow:hidden;';
     row.innerHTML=
-      '<span onclick="PAG_toggleTipo('+p.id+')" title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
+      '<span data-crtog="'+p.id+'" title="Tocar: alternar pagamento/cr\u00e9dito" style="cursor:pointer;font-size:'+(p.cr?'9':'10')+'px;font-weight:700;width:18px;flex-shrink:0;text-align:center;align-self:center;'+(p.cr?'color:var(--tx);border:0.5px solid var(--lnk);border-radius:4px;padding:1px 0;':'color:var(--so);')+'">'+(p.cr?'CR':String(i+1).padStart(2,'0'))+'</span>'+
       '<input type="text" placeholder="Descrição" onclick="if(!this.value)this.select()" data-pid="'+p.id+'" data-field="desc"'+
       ' style="min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:0;font-family:-apple-system,sans-serif;text-align:center;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
@@ -7962,6 +7973,11 @@ function PAG_render(){
       '</div>'+
       '<button onclick="PAG_removeLinha('+p.id+')" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;width:20px;flex-shrink:0;text-align:center;">×</button>';
     lista.appendChild(row);
+  });
+  /* o seletor CR usa o mesmo caminho dos outros botoes de toque: um unico evento, sem onclick
+     inline. Com onclick ele dependia do clique sintetico e nao virava com o teclado aberto. */
+  lista.querySelectorAll('[data-crtog]').forEach(function(el){
+    VB_onTap(el, function(){ PAG_toggleTipo(parseInt(el.dataset.crtog,10)); });
   });
   lista.querySelectorAll('[data-field="desc"]').forEach(function(el){
     el.addEventListener('input',function(){
@@ -8099,13 +8115,10 @@ function PAG_salvar(btn){
 
 (function(){ if(!PAG_restoreSession()){ PAG_setLinhasIniciais(); PAG_render(); } })();
 
-// Botão ADICIONAR: dispara no toque (touchend) pra não ser engolido pelo fechamento do teclado no iPhone
-(function(){
-  var b=document.getElementById('pag-add-btn');
-  if(!b) return;
-  b.addEventListener('touchend',function(e){ e.preventDefault(); PAG_addLinha(); }, {passive:false});
-  b.addEventListener('click',function(){ PAG_addLinha(); });
-})();
+/* ADICIONAR: UM UNICO evento por botao (VB_onTap). Antes tinha touchend E click: quando a regra
+   global do teclado passou a alcancar Pagamentos (v1.212.2), o touchend proprio somava com o
+   click sintetico da regra e a linha entrava duas vezes. */
+VB_onTap(document.getElementById('pag-add-btn'), function(){ PAG_addLinha(); });
 
 function PAG_compartilhar(){
   var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
@@ -8156,7 +8169,10 @@ function PAG_compartilhar(){
       ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
       ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
       ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-      ctx.fillText((p.cr?'\u2212 ':'')+'R$ '+(p.valor||'0,00'),W-pad,y+13);
+      var _vTxt='R$ '+(p.valor||'0,00');
+      ctx.fillText(_vTxt,W-pad,y+13);
+      /* menos desenhado a esquerda do R$: assim a coluna de R$ alinha em todas as linhas */
+      if(p.cr) ctx.fillText('\u2212', W-pad-ctx.measureText(_vTxt).width-4, y+13);
       y+=secRow;
     });
   }
@@ -8246,7 +8262,10 @@ function PAG_salvarFoto(){
       ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
       ctx.fillText((p.desc||'').toUpperCase(),pad,y+13);
       ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica,Arial,sans-serif'; ctx.textAlign='right';
-      ctx.fillText((p.cr?'\u2212 ':'')+'R$ '+(p.valor||'0,00'),W-pad,y+13);
+      var _vTxt='R$ '+(p.valor||'0,00');
+      ctx.fillText(_vTxt,W-pad,y+13);
+      /* menos desenhado a esquerda do R$: assim a coluna de R$ alinha em todas as linhas */
+      if(p.cr) ctx.fillText('\u2212', W-pad-ctx.measureText(_vTxt).width-4, y+13);
       y+=secRow;
     });
   }
@@ -14425,6 +14444,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.3</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Corrigido: em Pagamentos, o + ADICIONAR criava duas linhas com o teclado aberto. O botão tinha dois gatilhos e passou a ter um só, igual aos outros botões de toque do app</div>
+      <div class="cl-item">Corrigido de vez: tocar no número da linha para virá-la em crédito agora funciona com o teclado aberto. O seletor passou a usar o mesmo caminho de toque dos demais botões</div>
+      <div class="cl-item">Na foto de Pagamentos, o "R$" das linhas de crédito ficava fora de prumo com o das outras. O menos passou a ser desenhado à esquerda do R$, e a coluna alinha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.2</span><span class="cl-ver-date">30/07/2026</span></div>
