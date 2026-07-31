@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.212.1</title>
+<title>VB - v1.212.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -7955,9 +7955,9 @@ function PAG_render(){
       ' style="min-width:0;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;color:var(--tx);padding:0;font-family:-apple-system,sans-serif;text-align:center;"'+
       (p.desc?' value="'+p.desc+'"':'')+'>'+
       '<div style="display:flex;align-items:baseline;gap:1px;width:110px;flex-shrink:0;border-bottom:0.5px solid var(--ln);">'+
-        '<span style="font-size:10px;color:var(--mu2);white-space:nowrap;">'+(p.cr?'\u2212 R$':'R$')+'</span>'+
+        '<span style="font-size:10px;color:var(--mu2);white-space:nowrap;width:24px;flex-shrink:0;text-align:right;">'+(p.cr?'\u2212 R$':'R$')+'</span>'+
         '<input type="text" inputmode="numeric" placeholder="0,00" onclick="this.select()" data-pid="'+p.id+'" data-field="valor"'+
-        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--tx);width:88px;text-align:center;font-family:-apple-system,sans-serif;"'+
+        ' style="border:none;background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--tx);flex:1;min-width:0;text-align:center;font-family:-apple-system,sans-serif;"'+
         (p.valor?' value="'+p.valor+'"':'')+'>'+
       '</div>'+
       '<button onclick="PAG_removeLinha('+p.id+')" style="border:none;background:none;font-size:16px;color:var(--so2);cursor:pointer;padding:0;line-height:1;width:20px;flex-shrink:0;text-align:center;">×</button>';
@@ -11988,6 +11988,11 @@ function PIN_cancel(){
 // Fechar teclado ao tocar fora de campos (exceto na tela de Vendas)
 document.addEventListener('touchstart', function(e){
   var tag = e.target.tagName;
+  /* Botao NAO pode ser desfocado aqui: a regra global do teclado (VB_kb*) ja fecha o teclado
+     E aciona o botao. Se blurarmos antes, ela encontra o teclado fechado no touchend e desiste.
+     Era por isso que a regra so funcionava em Vendas (unica tela com excecao abaixo) e o CR de
+     Pagamentos nao respondia com o teclado aberto. */
+  try{ if(e.target.closest && e.target.closest('button,[onclick]')) return; }catch(_){}
   if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){
     var venScreen = document.getElementById('screen-ven');
     if(venScreen && venScreen.style.display !== 'none' && venScreen.classList.contains('show')) return;
@@ -14420,6 +14425,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.2</span><span class="cl-ver-date">30/07/2026</span></div>
+      <div class="cl-item">Em Pagamentos, os valores das linhas de crédito ficavam fora de prumo com os das linhas normais. O "− R$" é mais largo que o "R$" e empurrava o número. Agora o R$ ocupa sempre o mesmo espaço e todos os valores alinham</div>
+      <div class="cl-item">Corrigido: com o teclado aberto, tocar no número da linha para virá-la em crédito não fazia nada. Um ajuste antigo fechava o teclado antes da hora e derrubava a regra que faz botão funcionar com teclado aberto. A regra valia só na tela de Vendas e agora vale em todas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.212.1</span><span class="cl-ver-date">30/07/2026</span></div>
