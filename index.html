@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.228.4</title>
+<title>VB - v1.228.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9811,13 +9811,15 @@ function REN_painel(){
   var tEnt=0, tEntVB=0, tSai=0;
   meses.forEach(function(ym){ tEnt+=M[ym].ent; tEntVB+=M[ym].entVB; tSai+=M[ym].sai; });
   var hojeYM=hoje.slice(0,7);
-  var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+  var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA MENSAL</div>';
   if(!meses.length){
     hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada a vencer.</div>';
   } else {
     var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
-    var RTd=RT+'text-align:right;margin-right:-1px;';
+    /* letter-spacing zerado nas colunas de numero: o espaco que ele acrescenta depois da
+       ultima letra empurra o titulo para dentro e ele nunca encosta na borda dos valores */
+    var RTd='font-size:8px;letter-spacing:0;color:var(--so);font-weight:700;text-align:right;';
     hh+='<div style="display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;padding:0 2px 4px;">'
       +'<span style="'+RT+'">M\u00caS</span>'
       +'<span style="'+RTd+'">ENTRADAS</span>'
@@ -10454,7 +10456,7 @@ function REN_render(){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div id="renmes-'+ym+'" style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div id="renmes-'+ym+'" onclick="REN_painel()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -15202,6 +15204,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.5</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Rolar o panorama arrastava junto a tela de trás. Agora o gesto morre na folha</div>
+      <div class="cl-item">Do panorama você já ia para o mês; agora volta pelo mesmo caminho — o cabeçalho de mês, aquele que fica grudado no topo enquanto você rola, abre o panorama. A ida e a volta usam o mesmo elemento, e a volta está sempre à mão sem precisar rolar até o card preto</div>
+      <div class="cl-item">ENTRADAS, VB e SAÍDAS agora encostam na mesma borda dos números. O espaçamento entre letras empurrava os títulos para dentro da coluna, o que os fazia parecer centralizados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.4</span><span class="cl-ver-date">01/08/2026</span></div>
