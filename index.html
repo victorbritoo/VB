@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.228.1</title>
+<title>VB - v1.228.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9811,15 +9811,13 @@ function REN_painel(){
   var tEnt=0, tEntVB=0, tSai=0;
   meses.forEach(function(ym){ tEnt+=M[ym].ent; tEntVB+=M[ym].entVB; tSai+=M[ym].sai; });
   var hojeYM=hoje.slice(0,7);
-  var maxEnt=0; meses.forEach(function(ym){ if(M[ym].ent>maxEnt) maxEnt=M[ym].ent; });
-  var acum=0, ant=null;
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA MENSAL</div>';
   if(!meses.length){
     hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada a vencer.</div>';
   } else {
     var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
-    hh+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:0 2px 4px;">'
+    hh+='<div style="display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;padding:0 2px 4px;">'
       +'<span style="'+RT+'">M\u00caS</span>'
       +'<span style="'+RT+'text-align:right;">ENTRADAS</span>'
       +'<span style="'+RT+'text-align:right;">VB</span>'
@@ -9831,23 +9829,15 @@ function REN_painel(){
       /* quatro colunas iguais; o VB fica entre parenteses e em cinza para se ler como
          parte do numero ao lado, nao como um valor independente */
       var _dif=(Math.abs(m.ent-m.entVB)>0.005);
-      /* barra proporcional ao maior mes: a forma do ano se le de uma vez, sem comparar 12 numeros */
-      var _pct=maxEnt>0?Math.max(2, Math.round(m.ent/maxEnt*100)):0;
-      /* peso na carteira, acumulado ate o mes e variacao contra o mes anterior da lista */
-      acum+=m.ent;
-      var _peso=(tEnt>0)?Math.round(m.ent/tEnt*100):0;
-      var _det=m.entN+' PARCELA'+(m.entN===1?'':'S')+' \u00b7 '+_peso+'% DA CARTEIRA \u00b7 ACUM '+VB_kFmt(acum);
-      if(ant!=null && Math.abs(m.ent-ant)>0.005) _det+=' \u00b7 '+((m.ent>ant)?'\u2191':'\u2193')+' '+VB_kFmt(Math.abs(m.ent-ant));
-      ant=m.ent;
-      hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;padding:7px 2px 4px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;align-items:baseline;">'
-        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';">'+lbl+(passado?' \u26a0':'')+'</span>'
+      /* parcelas e peso colados no mes: respondem "quanto do meu dinheiro esta preso aqui"
+         sem conta mental. Abaixo de 0,5% vira <1%, senao leria como nada. */
+      var _pp=(tEnt>0)?(m.ent/tEnt*100):0;
+      var _peso=(_pp>0 && _pp<0.5)?'<1':String(Math.round(_pp));
+      hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--so2);font-weight:600;"> \u00b7 '+m.entN+' \u00b7 '+_peso+'%</span></span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?('('+VB_kFmt(m.entVB)+')'):'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
-        +'</div>'
-        +'<div style="font-size:9px;color:var(--so2);font-weight:600;margin-top:3px;letter-spacing:0.3px;">'+_det+'</div>'
-        +'<div style="height:2px;border-radius:2px;background:var(--ln3);margin-top:4px;"><div style="height:2px;border-radius:2px;background:'+(passado?'var(--red)':'var(--mu2)')+';width:'+_pct+'%;"></div></div>'
         +'</div>';
     });
     /* mesmas linhas e mesmos nomes do card preto: o painel detalha o card, nao inventa outra conta */
@@ -15209,6 +15199,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.3</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O panorama voltou a uma linha por mês. Saíram a barra e a linha cinza de detalhe; ficaram, coladas no mês, a quantidade de parcelas e o peso na carteira — AGO/26 · 21 · 23% —, que é o que responde quanto do seu dinheiro está preso naquele mês sem você fazer conta. Tocar no mês continua levando à lista</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.2</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Mês que pesa menos de meio por cento na carteira mostrava 0% DA CARTEIRA, que se lê como nada. Agora mostra &lt;1%</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.1</span><span class="cl-ver-date">01/08/2026</span></div>
