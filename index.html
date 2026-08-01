@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.222.1</title>
+<title>VB - v1.222.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9825,7 +9825,7 @@ function REN_cpLista(){
   var venc=abertas.filter(function(c){ return String(c.venc||'')>=hoje; });
   var tot=0; abertas.forEach(function(c){ tot+=Number(c.valor)||0; });
   var tAtr=0; atr.forEach(function(c){ tAtr+=Number(c.valor)||0; });
-  function sec(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
+  function sec(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   var hh='';
   if(REN_cache.cpErro) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Contas a pagar indispon\u00edveis: '+CLIP_esc(REN_cache.cpErro)+'</div>';
   /* sub PAGAS: o que ja saiu. Mesma tabela, outra pergunta. */
@@ -9843,7 +9843,7 @@ function REN_cpLista(){
       if(ym!==gP){
         gP=ym; var gt=0, gn=0;
         ps0.forEach(function(y){ if(String(y.pago_em||'').slice(0,7)===ym){ gt+=Number(y.valor_pago!=null?y.valor_pago:y.valor)||0; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -9853,13 +9853,14 @@ function REN_cpLista(){
     +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
     +'</div>';
-  /* mesma altura do chip de ordenacao das ENTRADAS: as duas abas tem a faixa de acao no mesmo lugar */
-  hh+='<div style="display:flex;gap:6px;"><span onclick="REN_cpSheet(\'\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">+ CONTA</span></div>';
+  /* mesma faixa das ENTRADAS: acao a esquerda, travessia a direita */
+  hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;"><span onclick="REN_cpSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">+</span>'
+    +'<span onclick="REN_setAba(\'cpp\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">PAGAS</span></div>';
   if(atr.length){
     hh+=sec('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(tAtr), true);
     atr.forEach(function(c){ hh+=REN_cpCard(c); });
   }
-  hh+=sec('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'cpp\')" style="display:inline-block;padding:4px 11px;border-radius:999px;background:var(--sf);border:0.5px solid var(--ln);color:var(--mu2);font-size:9px;letter-spacing:1px;font-weight:600;cursor:pointer;">PAGAS</span>');
+  hh+=sec('A VENCER \u00b7 '+venc.length, '');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else{
     var gAtu='';
@@ -9868,7 +9869,7 @@ function REN_cpLista(){
       if(ym!==gAtu){
         gAtu=ym; var gt=0, gn=0;
         venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ gt+=Number(y.valor)||0; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -10115,7 +10116,7 @@ function REN_render(){
   /* tres chips permanentes para uma escolha que quase nao muda: virou um so, que cicla e
      mostra o criterio atual */
   function chipOrd(){ var L={data:'DATA',valor:'VALOR',cliente:'CLIENTE'}; return '<span onclick="REN_cicloSort()" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">'+(L[REN_sort]||'DATA')+'</span>'; }
-  function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
+  function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
     var k=REN_key(x);
     var dt=(x.venc===hoje)?'<b>HOJE</b>':(dataCurta?(x.venc.slice(8,10)+'/'+x.venc.slice(5,7)):HIST_fmtData(x.venc));
@@ -10169,7 +10170,7 @@ function REN_render(){
   /* O que ja aconteceu e consulta rara: nao merece barra fixa ocupando a tela toda visita.
      Um botao no fim da lista leva pra la; a volta fica no topo, porque a lista de la e longa. */
   /* a ida mora na linha de secao (RECEBIDAS >); a volta fica no topo, porque de la a lista e longa */
-  function trav(alvo,lbl){ return '<button onclick="REN_setAba(\''+alvo+'\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:-4px 0 10px;">'+lbl+'</button>'; }
+  function trav(alvo,lbl){ return '<div style="margin:-4px 0 8px;"><span onclick="REN_setAba(\''+alvo+'\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">'+lbl+'</span></div>'; }
   if(!REN_busca){
     if(REN_aba==='rec') hh+=trav('aberto','\u2190 A RECEBER');
     else if(REN_aba==='cpp') hh+=trav('cp','\u2190 A PAGAR');
@@ -10235,7 +10236,7 @@ function REN_render(){
       ordem.forEach(function(ym){
         var g=grupos[ym];
         var _gvbTx=(Math.abs(g.total-g.vb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(g.vb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
         g.itens.forEach(function(x){ hh+=cardRec(x); });
       });
     }
@@ -10298,7 +10299,9 @@ function REN_render(){
       +'<div style="'+_LH+'margin-top:5px;padding-top:5px;border-top:0.5px solid rgba(128,128,128,0.3);"><span style="'+_RH+'">L\u00cdQUIDO</span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAbVB-_cpAb)+'</span></div>';
   }
   hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
-  hh+='<div style="display:flex;gap:6px;">'+chipOrd()+'</div>';
+  /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
+  hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipOrd()
+    +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS</span></div>';
   var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && Number(b2.repasse_valor)>0 && !b2.repassado_em; });
   if(repPend.length){
     repPend.sort(function(a,b2){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b2)].recebido_em||''); return av<bv?-1:1; });
@@ -10321,7 +10324,7 @@ function REN_render(){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
     REN_ordena(atr).forEach(function(x){ hh+=card(x,true,false); });
   }
-  hh+=secHdr('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'rec\')" style="display:inline-block;padding:4px 11px;border-radius:999px;background:var(--sf);border:0.5px solid var(--ln);color:var(--mu2);font-size:9px;letter-spacing:1px;font-weight:600;cursor:pointer;">RECEBIDAS</span>');
+  hh+=secHdr('A VENCER \u00b7 '+venc.length, '');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else if(REN_sort==='data'){
     var vs=REN_ordena(venc), gAtu='';
@@ -10331,7 +10334,7 @@ function REN_render(){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -15059,6 +15062,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.2</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">ENTRADAS e SAÍDAS passaram a ter a mesma faixa de ação: a ação à esquerda (o critério de ordenação numa, o + na outra) e a travessia à direita (RECEBIDAS e PAGAS). Uma linha a menos e o mesmo desenho nos dois lados</div>
+      <div class="cl-item">As linhas de seção estavam muito soltas — A VENCER, o mês e o primeiro card ocupavam mais tela do que precisavam. Os respiros encolheram e a lista começa mais perto do topo. O ← A RECEBER também deixou de ser faixa larga e virou um botão do tamanho do que ele faz</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.1</span><span class="cl-ver-date">01/08/2026</span></div>
