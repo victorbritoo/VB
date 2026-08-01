@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.224.0</title>
+<title>VB - v1.225.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10958,7 +10958,16 @@ function FM_calcMes(ym, res, _merMap){
       var cap3=temS3?(c3-vs3):c3; if(cap3>0) _estCap+=cap3;
     });
     var rendTot=((_rCM+_estCap)>0)?(_rL/(_rCM+_estCap)*100):null;
-    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, venLucVB:venLucVB, rend:rendMes,
+    /* SAIDAS e informativo e fica FORA de lucro e rendimento de proposito: o custo da peca ja
+       esta dentro do lucro da venda. Descontar a parcela que VB deve por ela contaria o mesmo
+       custo duas vezes. Aqui e caixa, nao resultado. */
+    var _cpRows=((res[6]&&res[6].data)||[]), _cpVence=0, _cpVenceN=0, _cpPago=0, _cpPagoN=0;
+    _cpRows.forEach(function(c){
+      if(String(c.venc||'').slice(0,7)===ym){ _cpVence+=Number(c.valor)||0; _cpVenceN++; }
+      if(c.pago_em && String(c.pago_em).slice(0,7)===ym){ _cpPago+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; _cpPagoN++; }
+    });
+    var dSai={vence:_cpVence, venceN:_cpVenceN, pago:_cpPago, pagoN:_cpPagoN};
+    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, venLucVB:venLucVB, rend:rendMes,
       rendDet:{aL:_aL,aCM:_aCM,vL:_vL,vCM:_vCM,estCap:_estCap,rendTot:rendTot},
       lucroTotal:dAnt.luc+dFin.luc+venLucVB, nOps:(dAnt.n+dFin.n+dVen.n)};
 }
@@ -10973,16 +10982,17 @@ function FM_load(){
     sb.from('vendas').select('*').limit(10000),
     sb.from('pagamentos').select('*').limit(10000),
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
-    sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000)
+    sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
+    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago').limit(10000)
   ]).then(function(res){
     var _merMap={};
     ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
     var _c=FM_calcMes(ym, res, _merMap);
-    var dAnt=_c.ant, dFin=_c.fin, dVen=_c.ven, dPag=_c.pag, venLucVB=_c.venLucVB, rendMes=_c.rend;
+    var dAnt=_c.ant, dFin=_c.fin, dVen=_c.ven, dPag=_c.pag, dSai=_c.sai, venLucVB=_c.venLucVB, rendMes=_c.rend;
     var _pd=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
     var _pym=_pd.getFullYear()+'-'+('0'+(_pd.getMonth()+1)).slice(-2);
     var _prev=FM_calcMes(_pym, res, _merMap);
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -11004,6 +11014,12 @@ function FM_load(){
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     hh+=bloco('VENDAS · '+dVen.n, vlin);
+    if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
+      var slin=[];
+      if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
+      if(dSai.pagoN>0) slin.push(['Pago no mês', HIST_fmtMoeda(dSai.pago)]);
+      hh+=bloco('SAÍDAS · '+Math.max(dSai.venceN, dSai.pagoN), slin);
+    }
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
       var _dv3=FM_dados.lucroTotal-FM_dados.prevLucro;
@@ -11068,8 +11084,11 @@ function FM_foto(){
   }
   var linVen=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
   (d.ven.partes||[]).forEach(function(pp){ linVen.push([pp[0], HIST_fmtMoeda(pp[1])]); });
+  var linSai=[];
+  if(d.sai && d.sai.venceN>0) linSai.push(['Vence no mês', HIST_fmtMoeda(d.sai.vence)]);
+  if(d.sai && d.sai.pagoN>0) linSai.push(['Pago no mês', HIST_fmtMoeda(d.sai.pago)]);
   function boxH(l){ return 40+14+l.reduce(function(acc,x){ return acc+(x[0]==='—div—'?6:30); },0); }
-  var H=176 + (boxH(linAnt)+12) + (boxH(linFin)+12) + (boxH(linVen)+12) + 64 + 52;
+  var H=176 + (boxH(linAnt)+12) + (boxH(linFin)+12) + (boxH(linVen)+12) + (linSai.length?(boxH(linSai)+12):0) + 64 + 52;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -11098,6 +11117,7 @@ function FM_foto(){
   selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
   selo('FINANCIAMENTOS · '+d.fin.n, linFin);
   selo('VENDAS · '+d.ven.n, linVen);
+  if(linSai.length) selo('SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), linSai);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
@@ -15085,6 +15105,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.225.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O Fechamento ganhou o bloco SAÍDAS, com quanto vence e quanto foi pago no mês. Aparece na tela e na foto, e some quando o mês não tem nenhuma das duas</div>
+      <div class="cl-item">Ele fica FORA do LUCRO DO MÊS e do RENDIMENTO DO CAPITAL, de propósito: o custo da peça já está dentro do lucro da venda, então descontar dali também a parcela que você deve por ela contaria o mesmo custo duas vezes. Aqui é caixa, não resultado — o lucro diz se o negócio foi bom, a saída diz se o dinheiro está lá no dia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.224.0</span><span class="cl-ver-date">01/08/2026</span></div>
