@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.223.2</title>
+<title>VB - v1.224.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9848,7 +9848,7 @@ function REN_cpLista(){
       if(ym!==gP){
         gP=ym; var gt=0, gn=0;
         ps0.forEach(function(y){ if(String(y.pago_em||'').slice(0,7)===ym){ gt+=Number(y.valor_pago!=null?y.valor_pago:y.valor)||0; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -9865,7 +9865,9 @@ function REN_cpLista(){
     hh+=sec('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(tAtr), true);
     atr.forEach(function(c){ hh+=REN_cpCard(c); });
   }
-  hh+=sec('A VENCER \u00b7 '+venc.length, '');
+  /* a linha so divide quando ha algo acima dela; sem atrasadas ela rotula uma lista que ja
+     comeca com o cabecalho do mes */
+  if(atr.length) hh+=sec('A VENCER \u00b7 '+venc.length, '');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else{
     var gAtu='';
@@ -9874,7 +9876,7 @@ function REN_cpLista(){
       if(ym!==gAtu){
         gAtu=ym; var gt=0, gn=0;
         venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ gt+=Number(y.valor)||0; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -10257,7 +10259,7 @@ function REN_render(){
       ordem.forEach(function(ym){
         var g=grupos[ym];
         var _gvbTx=(Math.abs(g.total-g.vb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(g.vb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+MES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+g.itens.length+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(g.total)+_gvbTx+'</span></div>';
         g.itens.forEach(function(x){ hh+=cardRec(x); });
       });
     }
@@ -10345,7 +10347,7 @@ function REN_render(){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
     REN_ordena(atr).forEach(function(x){ hh+=card(x,true,false); });
   }
-  hh+=secHdr('A VENCER \u00b7 '+venc.length, '');
+  if(atr.length) hh+=secHdr('A VENCER \u00b7 '+venc.length, '');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else if(REN_sort==='data'){
     var vs=REN_ordena(venc), gAtu='';
@@ -10355,7 +10357,7 @@ function REN_render(){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -15083,6 +15085,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.224.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O cabeçalho do mês passou a grudar no topo enquanto você rola. Com 115 parcelas espalhadas por seis meses, saber em que mês você está exigia ler a data de cada card; agora o mês, a quantidade e o total ficam à vista o tempo todo. Vale nas quatro listas: A VENCER, RECEBIDAS, A PAGAR e PAGAS</div>
+      <div class="cl-item">A linha A VENCER só aparece quando existem atrasadas. Ela é uma divisória, e sem nada acima não dividia nada — a contagem que ela carregava foi substituída com vantagem pela contagem por mês, que agora fica fixa no topo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.223.2</span><span class="cl-ver-date">01/08/2026</span></div>
