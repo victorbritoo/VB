@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.228.3</title>
+<title>VB - v1.228.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9817,11 +9817,12 @@ function REN_painel(){
     hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada a vencer.</div>';
   } else {
     var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
+    var RTd=RT+'text-align:right;margin-right:-1px;';
     hh+='<div style="display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;padding:0 2px 4px;">'
       +'<span style="'+RT+'">M\u00caS</span>'
-      +'<span style="'+RT+'text-align:right;">ENTRADAS</span>'
-      +'<span style="'+RT+'text-align:right;">VB</span>'
-      +'<span style="'+RT+'text-align:right;">SA\u00cdDAS</span></div>';
+      +'<span style="'+RTd+'">ENTRADAS</span>'
+      +'<span style="'+RTd+'">VB</span>'
+      +'<span style="'+RTd+'">SA\u00cdDAS</span></div>';
     meses.forEach(function(ym){
       var m=M[ym];
       var passado=(ym<hojeYM), agora=(ym===hojeYM);
@@ -9834,9 +9835,9 @@ function REN_painel(){
       var _pp=(tEnt>0)?(m.ent/tEnt*100):0;
       var _peso=(_pp>0 && _pp<0.5)?'<1':String(Math.round(_pp));
       hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
-        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--so2);font-weight:600;"> \u00b7 '+m.entN+' \u00b7 '+_peso+'%</span></span>'
+        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--so2);font-weight:600;"> ('+m.entN+' \u00b7 '+_peso+'%)</span></span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
-        +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?('('+VB_kFmt(m.entVB)+')'):'')+'</span>'
+        +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?VB_kFmt(m.entVB):'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
         +'</div>';
     });
@@ -9859,7 +9860,9 @@ function REN_painel(){
 function VB_kFmt(v){
   var n=Number(v)||0, s=(n<0)?'\u2212':'';
   var a=Math.abs(n);
-  if(a>=1000) return s+(a/1000).toLocaleString('pt-BR',{minimumFractionDigits:(a>=100000?0:1),maximumFractionDigits:(a>=100000?0:1)})+'K';
+  /* a casa decimal so aparece quando ha quebrado: 56K, nao 56,0K. Acima de 100 mil o
+     decimal nao muda decisao nenhuma e some sempre. */
+  if(a>=1000) return s+(a/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:(a>=100000?0:1)})+'K';
   return s+a.toLocaleString('pt-BR',{maximumFractionDigits:0});
 }
 /* ===== CONTAS A PAGAR =====
@@ -15199,6 +15202,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.4</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Os títulos das colunas estavam um fio à esquerda dos números: o espaçamento entre letras acrescenta um espaço depois da última letra, e num texto alinhado à direita esse espaço empurra tudo. Compensado</div>
+      <div class="cl-item">Parcelas e peso do mês entraram entre parênteses — AGO/26 (21 · 23%) — e o VB saiu dos dele: agora que tem coluna com nome próprio, o parêntese não explicava mais nada. Segue em cinza, que é o que diz que ele vem do número ao lado</div>
+      <div class="cl-item">Valor redondo perdeu a casa decimal: 56K em vez de 56,0K. A vírgula só aparece quando há quebrado, como em 65,8K</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.3</span><span class="cl-ver-date">01/08/2026</span></div>
