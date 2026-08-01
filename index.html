@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.223.1</title>
+<title>VB - v1.223.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4958,7 +4958,8 @@ function showScreen(name){
     CLI_load(); VB_telaAnterior='ges'; }
   if(name==='ges'){ VB_telaAnterior='home'; var _bm=document.getElementById('ges-btn-mig'); if(_bm) _bm.style.display=(Number(localStorage.getItem('vb_mig_duv')||0)>0)?'flex':'none'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
-  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_abrir(); VB_telaAnterior='home'; }
+  /* abrir a tela e sempre comecar em ENTRADAS: sem isso REN_aba ficava com o ultimo valor em memoria */
+  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_aba='aberto'; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
@@ -9859,7 +9860,7 @@ function REN_cpLista(){
     +'</div>';
   /* mesma faixa das ENTRADAS: acao a esquerda, travessia a direita */
   hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;"><span onclick="REN_cpSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">+</span>'
-    +'<span onclick="REN_setAba(\'cpp\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">PAGAS</span></div>';
+    +'<span onclick="REN_setAba(\'cpp\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">PAGAS \u2192</span></div>';
   if(atr.length){
     hh+=sec('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(tAtr), true);
     atr.forEach(function(c){ hh+=REN_cpCard(c); });
@@ -10321,7 +10322,7 @@ function REN_render(){
   hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
   /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
   hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipOrd()
-    +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS</span></div>';
+    +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS \u2192</span></div>';
   var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && Number(b2.repasse_valor)>0 && !b2.repassado_em; });
   if(repPend.length){
     repPend.sort(function(a,b2){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b2)].recebido_em||''); return av<bv?-1:1; });
@@ -15082,6 +15083,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.223.2</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Voltar para Recebimentos continuava abrindo na última aba: a busca era limpa ao entrar na tela, mas a aba não — ela seguia guardada em memória. Agora entrar em Recebimentos sempre começa em ENTRADAS, com a busca vazia</div>
+      <div class="cl-item">Os quatro botões de travessia ganharam seta apontando o sentido — RECEBIDAS →, PAGAS →, ← A RECEBER, ← A PAGAR. É o que distingue um botão que muda de tela de um que só muda a ordem da lista</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.223.1</span><span class="cl-ver-date">01/08/2026</span></div>
