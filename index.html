@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.221.0</title>
+<title>VB - v1.222.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9853,12 +9853,11 @@ function REN_cpLista(){
     +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
     +'</div>';
-  hh+='<button onclick="REN_cpSheet(\'\')" style="width:100%;padding:11px;border:0.5px dashed var(--ln);border-radius:12px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ NOVA CONTA</button>';
   if(atr.length){
     hh+=sec('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(tAtr), true);
     atr.forEach(function(c){ hh+=REN_cpCard(c); });
   }
-  hh+=sec('A VENCER \u00b7 '+venc.length, '');
+  hh+=sec('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'cpp\')" style="cursor:pointer;color:var(--mu2);font-weight:600;font-size:10px;letter-spacing:1px;">PAGAS \u203a</span>');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else{
     var gAtu='';
@@ -9872,7 +9871,6 @@ function REN_cpLista(){
       hh+=REN_cpCard(c);
     });
   }
-  hh+='<button onclick="REN_setAba(\'cpp\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:16px 0 4px;">VER PAGAS \u2192</button>';
   return hh;
 }
 function REN_cpSheet(id){
@@ -10031,6 +10029,7 @@ function REN_repDef(oi, x){
 function REN_rotCurto(r){ return String(r||'').replace(/\bSN[:.\s]*[A-Z0-9-]+/gi,'').replace(/\s{2,}/g,' ').replace(/[\s\u00b7,;-]+$/,'').trim(); }
 var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='', REN_fichaVoltar=null, REN_recOrig=null, REN_busca='', REN_buscaOn=false;
 function REN_setSort(s){ REN_sort=s; REN_render(); }
+function REN_cicloSort(){ var o=['data','valor','cliente']; REN_sort=o[(o.indexOf(REN_sort)+1)%o.length]; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
 function REN_setBset(s){ REN_bset=s; REN_render(); }
 /* a aba do setor sem resultado fica apagada: nao adianta poder tocar e nao ter nada */
@@ -10111,8 +10110,9 @@ function REN_render(){
   function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repAlvo(oiX,x):0); }
   var totAb=0, totAbVB=0; abertas.forEach(function(x){ totAb+=REN_falta(x); totAbVB+=_vbDe(x); });
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
-  /* flex:1 nos tres: larguras iguais, como as abas de cima */
-  function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="flex:1;text-align:center;padding:5px 4px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
+  /* tres chips permanentes para uma escolha que quase nao muda: virou um so, que cicla e
+     mostra o criterio atual */
+  function chipOrd(){ var L={data:'DATA',valor:'VALOR',cliente:'CLIENTE'}; return '<span onclick="REN_cicloSort()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);"><span style="opacity:0.6;">ORDEM</span>'+(L[REN_sort]||'DATA')+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
     var k=REN_key(x);
@@ -10163,13 +10163,15 @@ function REN_render(){
     return '<button '+(ac?('onclick="'+ac+'"'):'')+' style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(vazia?'opacity:0.35;cursor:default;pointer-events:none;':'cursor:pointer;')+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>';
   }
   hh+='<div style="display:flex;gap:6px;margin-bottom:10px;align-items:stretch;">'+aba('aberto','ENTRADAS')+aba('cp','SA\u00cdDAS')+aba('cli','CLIENTES')
+    +((REN_aba==='cp'&&!REN_busca)?('<button onclick="REN_cpSheet(\'\')" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'):'')
     +'<button onclick="REN_toggleBusca()" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;'+(REN_buscaOn?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);')+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button></div>';
   /* O que ja aconteceu e consulta rara: nao merece barra fixa ocupando a tela toda visita.
      Um botao no fim da lista leva pra la; a volta fica no topo, porque a lista de la e longa. */
-  function trav(alvo,lbl,topo){ return '<button onclick="REN_setAba(\''+alvo+'\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:'+(topo?'-4px 0 10px':'16px 0 4px')+';">'+lbl+'</button>'; }
+  /* a ida mora na linha de secao (RECEBIDAS >); a volta fica no topo, porque de la a lista e longa */
+  function trav(alvo,lbl){ return '<button onclick="REN_setAba(\''+alvo+'\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:-4px 0 10px;">'+lbl+'</button>'; }
   if(!REN_busca){
-    if(REN_aba==='rec') hh+=trav('aberto','\u2190 A RECEBER', true);
-    else if(REN_aba==='cpp') hh+=trav('cp','\u2190 A PAGAR', true);
+    if(REN_aba==='rec') hh+=trav('aberto','\u2190 A RECEBER');
+    else if(REN_aba==='cpp') hh+=trav('cp','\u2190 A PAGAR');
   }
   if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;position:relative;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE OU OPERA\u00c7\u00c3O" style="width:100%;box-sizing:border-box;padding:10px 34px 10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;">'+(REN_busca?'<button onclick="REN_limparBusca()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--sf3);color:var(--mu0);border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">\u00d7</button>':'')+'</div>';
   /* Busca geral: o termo nao pertence a um sub. Procurar um nome e perguntar "onde ele aparece",
@@ -10295,7 +10297,7 @@ function REN_render(){
       +'<div style="'+_LH+'margin-top:5px;padding-top:5px;border-top:0.5px solid rgba(128,128,128,0.3);"><span style="'+_RH+'">L\u00cdQUIDO</span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAbVB-_cpAb)+'</span></div>';
   }
   hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
-  hh+='<div style="display:flex;gap:6px;">'+chip('data','DATA')+chip('valor','VALOR')+chip('cliente','CLIENTE')+'</div>';
+  hh+='<div style="display:flex;gap:6px;">'+chipOrd()+'</div>';
   var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && Number(b2.repasse_valor)>0 && !b2.repassado_em; });
   if(repPend.length){
     repPend.sort(function(a,b2){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b2)].recebido_em||''); return av<bv?-1:1; });
@@ -10318,7 +10320,7 @@ function REN_render(){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
     REN_ordena(atr).forEach(function(x){ hh+=card(x,true,false); });
   }
-  hh+=secHdr('A VENCER \u00b7 '+venc.length, '');
+  hh+=secHdr('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'rec\')" style="cursor:pointer;color:var(--mu2);font-weight:600;font-size:10px;letter-spacing:1px;">RECEBIDAS \u203a</span>');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else if(REN_sort==='data'){
     var vs=REN_ordena(venc), gAtu='';
@@ -10335,7 +10337,6 @@ function REN_render(){
   }
   else REN_ordena(venc).forEach(function(x){ hh+=card(x,false,false); });
   }
-  if(REN_aba==='aberto') hh+=trav('rec','VER RECEBIDAS \u2192', false);
     body.innerHTML=hh;
 }
 function REN_ficha(k, exp){
@@ -15057,6 +15058,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">DATA · VALOR · CLIENTE viraram um botão só, ORDEM DATA, que cicla entre os três e mostra o atual. Três chips fixos era muito espaço para uma escolha que quase nunca muda</div>
+      <div class="cl-item">RECEBIDAS e PAGAS mudaram do fim da lista para a direita da linha A VENCER, que estava vazia. Nenhuma faixa nova, e a travessia fica visível sem rolar</div>
+      <div class="cl-item">O + NOVA CONTA tracejado saiu e virou um + ao lado da lupa, aparecendo só em SAÍDAS. Em ENTRADAS não existe + de propósito: o que você tem a receber é derivado das vendas, antecipações e financiamentos — a parcela nasce quando a operação nasce, não digitada à mão. É a mesma assimetria que fez as contas a pagar precisarem de tabela própria</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.221.0</span><span class="cl-ver-date">01/08/2026</span></div>
