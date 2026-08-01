@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.227.1</title>
+<title>VB - v1.227.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9801,25 +9801,25 @@ function REN_painel(){
   meses.forEach(function(ym){ tEnt+=M[ym].ent; tEntVB+=M[ym].entVB; tSai+=M[ym].sai; });
   var hojeYM=hoje.slice(0,7);
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:2px;">M\u00caS A M\u00caS</div>'
-    +'<div style="text-align:center;font-size:10px;color:var(--so2);margin-bottom:12px;">PELO VENCIMENTO \u00b7 ENTRE PAR\u00caNTESES, A SUA PARTE</div>';
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA MENSAL</div>';
   if(!meses.length){
     hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada a vencer.</div>';
   } else {
     var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
-    hh+='<div style="display:grid;grid-template-columns:64px 1fr 84px;gap:6px;padding:0 2px 4px;">'
+    hh+='<div style="display:grid;grid-template-columns:52px 1fr 62px;gap:6px;padding:0 2px 4px;">'
       +'<span style="'+RT+'">M\u00caS</span>'
-      +'<span style="'+RT+'text-align:right;">ENTRA (VB)</span>'
-      +'<span style="'+RT+'text-align:right;">SAI</span></div>';
+      +'<span style="'+RT+'text-align:right;">ENTRADAS (VB)</span>'
+      +'<span style="'+RT+'text-align:right;">SA\u00cdDAS</span></div>';
     meses.forEach(function(ym){
       var m=M[ym];
       var passado=(ym<hojeYM), agora=(ym===hojeYM);
       var lbl=(FM_MESES[Number(ym.slice(5,7))-1]||'').slice(0,3)+'/'+ym.slice(2,4);
-      /* o parenteses so aparece quando o mes tem socio: repetir o mesmo numero duas vezes
-         nao informa nada e ainda faz procurar diferenca onde nao ha */
+      /* o parenteses volta, mas com largura reservada: o total termina sempre na mesma
+         coluna e os parenteses alinham entre si, mesmo quando um mes nao tem socio */
       var _dif=(Math.abs(m.ent-m.entVB)>0.005);
-      var _ent=m.entN?(VB_kFmt(m.ent)+(_dif?('<span style="color:var(--so);font-weight:600;"> ('+VB_kFmt(m.entVB)+')</span>'):'')):'\u2014';
-      hh+='<div style="display:grid;grid-template-columns:64px 1fr 84px;gap:6px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+      var _ent='<span style="display:inline-block;min-width:46px;text-align:right;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
+        +'<span style="display:inline-block;min-width:58px;text-align:right;color:var(--so);font-weight:600;">'+((m.entN&&_dif)?(' ('+VB_kFmt(m.entVB)+')'):'')+'</span>';
+      hh+='<div style="display:grid;grid-template-columns:52px 1fr 62px;gap:6px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
         +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';">'+lbl+(passado?' \u26a0':'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+_ent+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
@@ -15184,6 +15184,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.3</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O VB voltou para dentro do parêntese, mas agora com largura reservada: o total termina sempre na mesma coluna e os parênteses alinham entre si, inclusive nos meses que não têm sócio e não mostram parêntese nenhum</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.2</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O painel virou PANORAMA MENSAL e as colunas ganharam nome próprio: MÊS · ENTRADAS · VB · SAÍDAS. A sua parte saiu de dentro do parêntese e virou coluna — dentro do parêntese ela mudava de lugar a cada linha e nada alinhava. Quando o mês não tem sócio, o VB repete o total e fica em cinza claro</div>
+      <div class="cl-item">Saiu a frase explicativa do topo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.1</span><span class="cl-ver-date">01/08/2026</span></div>
