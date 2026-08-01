@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.218.1</title>
+<title>VB - v1.219.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9827,6 +9827,27 @@ function REN_cpLista(){
   function sec(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   var hh='';
   if(REN_cache.cpErro) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Contas a pagar indispon\u00edveis: '+CLIP_esc(REN_cache.cpErro)+'</div>';
+  /* sub PAGAS: o que ja saiu. Mesma tabela, outra pergunta. */
+  if(REN_aba==='cpp'){
+    var tp=0; pagas.forEach(function(c){ tp+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
+    hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL PAGO</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tp)+'</span></div>'
+      +(pagas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+pagas.length+' CONTA'+(pagas.length===1?'':'S')+'</span></div>'):'')
+      +'</div>';
+    if(!pagas.length) return hh+'<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma conta paga ainda.</div>';
+    var ps0=pagas.slice(); ps0.sort(function(a,b2){ return String(a.pago_em||'')>String(b2.pago_em||'')?-1:1; });
+    var gP='';
+    ps0.forEach(function(c){
+      var ym=String(c.pago_em||'').slice(0,7);
+      if(ym!==gP){
+        gP=ym; var gt=0, gn=0;
+        ps0.forEach(function(y){ if(String(y.pago_em||'').slice(0,7)===ym){ gt+=Number(y.valor_pago!=null?y.valor_pago:y.valor)||0; gn++; } });
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+      }
+      hh+=REN_cpCard(c);
+    });
+    return hh;
+  }
   hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
@@ -9849,12 +9870,6 @@ function REN_cpLista(){
       }
       hh+=REN_cpCard(c);
     });
-  }
-  if(pagas.length){
-    var tp=0; pagas.forEach(function(c){ tp+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
-    var ps=pagas.slice(); ps.sort(function(a,b2){ return String(a.pago_em||'')>String(b2.pago_em||'')?-1:1; });
-    hh+=sec('PAGAS \u00b7 '+pagas.length, HIST_fmtMoeda(tp));
-    ps.forEach(function(c){ hh+=REN_cpCard(c); });
   }
   return hh;
 }
@@ -10086,7 +10101,8 @@ function REN_render(){
   function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repAlvo(oiX,x):0); }
   var totAb=0, totAbVB=0; abertas.forEach(function(x){ totAb+=REN_falta(x); totAbVB+=_vbDe(x); });
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
-  function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
+  /* flex:1 nos tres: larguras iguais, como as abas de cima */
+  function chip(id,lbl){ var on=(REN_sort===id); return '<span onclick="REN_setSort(\''+id+'\')" style="flex:1;text-align:center;padding:5px 4px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
     var k=REN_key(x);
@@ -10117,9 +10133,14 @@ function REN_render(){
   }
   var hh='';
   if(REN_cache.semTabela) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Baixas indispon\u00edveis: '+CLIP_esc(REN_erroBx||'tabela parcela_baixas n\u00e3o encontrada')+'</div>';
-  function aba(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
-  hh+='<div style="display:flex;gap:6px;margin-bottom:10px;align-items:stretch;">'+aba('aberto','ENTRADAS')+aba('rec','CONCLU\u00cdDAS')+aba('cli','CLIENTES')+aba('cp','SA\u00cdDAS')
+  /* ENTRADAS fica acesa em A RECEBER e em RECEBIDAS; SAIDAS em A PAGAR e em PAGAS */
+  function aba(id,lbl){ var on=(REN_aba===id)||(id==='aberto'&&REN_aba==='rec')||(id==='cp'&&REN_aba==='cpp'); return '<button onclick="REN_setAba(\''+id+'\')" style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
+  hh+='<div style="display:flex;gap:6px;margin-bottom:10px;align-items:stretch;">'+aba('aberto','ENTRADAS')+aba('cp','SA\u00cdDAS')+aba('cli','CLIENTES')
     +'<button onclick="REN_toggleBusca()" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;'+(REN_buscaOn?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);')+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button></div>';
+  /* sub-seletor no padrao do Historico: a aba diz de onde vem o dinheiro, o sub diz se ja aconteceu */
+  function sub(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="padding:8px 0;border-radius:10px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--lnk);':'background:var(--sf);color:var(--mu);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
+  if(REN_aba==='aberto'||REN_aba==='rec') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('aberto','A RECEBER')+sub('rec','RECEBIDAS')+'</div>';
+  else if(REN_aba==='cp'||REN_aba==='cpp') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('cp','A PAGAR')+sub('cpp','PAGAS')+'</div>';
   if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE OU OPERA\u00c7\u00c3O" style="width:100%;box-sizing:border-box;padding:10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;"></div>';
   if(REN_aba==='rec'){
     if(!receb.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma parcela recebida ainda.</div>';
@@ -10173,7 +10194,7 @@ function REN_render(){
         +'</div>'
         +'</div>';
     });
-  } else if(REN_aba==='cp'){
+  } else if(REN_aba==='cp'||REN_aba==='cpp'){
     hh+=REN_cpLista();
   } else {
   /* Dois pares rotulo-valor. A linha de 7 dias saiu: com 75 parcelas mensais quase toda semana
@@ -10233,7 +10254,6 @@ function REN_render(){
     });
   }
   else REN_ordena(venc).forEach(function(x){ hh+=card(x,false,false); });
-  hh+='<div style="font-size:9px;color:var(--so2);line-height:1.5;margin:2px 4px 10px;">Cronograma derivado das opera\u00e7\u00f5es; a baixa \u00e9 registro seu (\u2713 dois toques = valor cheio hoje; tocar no card ajusta valor e data). Baixa n\u00e3o mexe em lucro nem Fechamento. Antecipa\u00e7\u00f5es em cobran\u00e7a ficam fora; financiamento aparece pela descri\u00e7\u00e3o.</div>';
   }
     body.innerHTML=hh;
 }
@@ -14953,6 +14973,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.219.1</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Saiu o texto do pé de ENTRADAS, como já tinha saído o de SAÍDAS. Três das quatro frases ensinavam o que você já sabe; a quarta — antecipação em cobrança fica fora da lista — segue valendo e está no changelog, e volta como uma linha curta se algum dia o número parecer não bater</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.219.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Recebimentos passou de quatro abas para três: ENTRADAS · SAÍDAS · CLIENTES. Entra e sai ficaram lado a lado, que é o par que interessa, e cada uma ganhou o sub-seletor do Histórico logo abaixo — A RECEBER / RECEBIDAS em ENTRADAS, A PAGAR / PAGAS em SAÍDAS. A aba diz de onde vem o dinheiro, o sub diz se já aconteceu</div>
+      <div class="cl-item">As PAGAS saíram do pé da lista de SAÍDAS e viraram tela própria, com TOTAL PAGO no card preto e agrupamento por mês de pagamento — antes ficavam empilhadas embaixo do que ainda vence</div>
+      <div class="cl-item">DATA, VALOR e CLIENTE agora dividem a largura em três partes iguais, como as abas de cima</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.218.1</span><span class="cl-ver-date">01/08/2026</span></div>
