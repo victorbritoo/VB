@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.226.0</title>
+<title>VB - v1.226.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3344,40 +3344,7 @@ function VB_relatorioPDF(dados, total, returnImages){
       cols:[ {h:'Data', x:pad, w:150, get:function(r){return dt(r.created_at?r.created_at.split('T')[0]:null);}},
              {h:'Total', x:320, w:200, r:1, get:function(r){return money(r.valor_total);}},
              {h:'Lançamentos', x:560, w:200, get:function(r){return String((r.pagamentos||[]).length);}} ],
-      somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} },
-    /* SAIDAS e informativo, igual ao Fechamento: nao entra em lucro nem no total de operacoes.
-       So aparece no relatorio GERAL — num relatorio de uma aba so, ou de uma busca por nome,
-       estaria fora do escopo pedido. Respeita o periodo, pela data de vencimento. */
-    { key:'contas_pagar', titulo:'SA\u00cdDAS (A PAGAR)', date:'venc',
-      filter:function(r){
-        if(typeof VB_relEscopo==='undefined' || VB_relEscopo!=='todos') return false;
-        if((HIST_searchTerm||'').trim()) return false;
-        var range=(typeof VB_relPeriodoRange==='function')?VB_relPeriodoRange():null;
-        if(range){
-          var d=HIST_dataNegDate(String(r.venc||'').slice(0,10));
-          if(!d) return false;
-          if(range.ini && d<range.ini) return false;
-          if(range.fim && d>range.fim) return false;
-        }
-        return true;
-      },
-      cols:[ {h:'Credor', x:pad, w:200, get:function(r){return (r.credor||r.descricao||'\u2014');}},
-             {h:'Descri\u00e7\u00e3o', x:246, w:210, get:function(r){return (r.credor?(r.descricao||'\u2014'):'\u2014');}},
-             {h:'Vencimento', x:462, w:96, get:function(r){return dt(String(r.venc||'').slice(0,10));}},
-             {h:'Valor', x:566, w:120, r:1, get:function(r){return money(r.valor);}},
-             {h:'Status', x:694, w:86, r:1, get:function(r){return r.pago_em?('PAGO '+dt(String(r.pago_em).slice(0,10))):'EM ABERTO';}} ],
-      somaLabel:'TOTAL A PAGAR', soma:function(r){return Number(r.valor)||0;},
-      extraSelos:function(rows){
-        var ab=0, pg=0;
-        (rows||[]).forEach(function(r){
-          if(r.pago_em) pg+=Number(r.valor_pago!=null?r.valor_pago:r.valor)||0;
-          else ab+=Number(r.valor)||0;
-        });
-        var out=[];
-        if(ab>0) out.push({label:'EM ABERTO', valor:ab});
-        if(pg>0) out.push({label:'J\u00c1 PAGO', valor:pg});
-        return out;
-      } }
+      somaLabel:'TOTAL', soma:function(r){return Number(r.valor_total)||0;} }
   ];
 
   var pages=[], cur=null;
@@ -15138,6 +15105,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.226.1</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">A seção SAÍDAS saiu do Relatório PDF. Vista funcionando, não mudava decisão nenhuma: o Relatório é uma peça de operações, e conta a pagar não é operação — a pergunta "quanto sai neste mês" já está respondida no Fechamento e em SAÍDAS. Só entra o que muda uma decisão que de fato acontece</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.226.0</span><span class="cl-ver-date">01/08/2026</span></div>
