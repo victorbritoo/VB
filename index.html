@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.222.2</title>
+<title>VB - v1.223.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9610,7 +9610,9 @@ function VB_nomeCurto(nome){
 function VB_nomePU(nome){
   var s=String(nome||'').trim(); if(!s) return s;
   var ps=s.split(/\s+/);
-  if(ps.length<2 || (ps.length<4 && s.length<=24)) return s;
+  /* 20 e nao 24: com 24 "EDUARDO DUARTE PINHEIRO" (23) escapava e era truncado pelo CSS no card.
+     Abaixo de 20 nomes de operacao como "ACORDO PEDRO HUBLOT" (19) seguem inteiros, que e o certo. */
+  if(ps.length<2 || (ps.length<4 && s.length<=20)) return s;
   return ps[0]+' '+ps[ps.length-1];
 }
 function VB_nomePUS(nome){
@@ -9804,9 +9806,11 @@ function REN_cpCard(c){
   var sub=(c.credor&&c.descricao)?String(c.descricao):'';
   var cor=atr?'var(--red)':(pago?'var(--mu)':'var(--tx)');
   var id=String(c.id);
+  /* selo E: conta que nasceu de uma peca do estoque, no lugar onde as entradas tem o V/A */
+  var selo=(c.origem_tab==='mercadorias')?GLB_badge('E'):'';
   var s='<div style="background:var(--sf);border:0.5px solid var(--ln'+(pago?'3':'2')+');border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;'+(pago?'opacity:0.75;':'')+'">'
     +'<div onclick="REN_cpSheet(\'' + id + '\')" style="flex:1;min-width:0;cursor:pointer;">'
-    +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(tit))+'</span>'
+    +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(tit))+'</span>'+selo
     +'<span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+cor+';">'+HIST_fmtMoeda(val)+'</span> \u00b7 <span style="font-weight:600;color:'+(atr?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>';
   if(sub) s+='<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(sub)+'</div>';
   if(c.nota) s+='<div style="font-size:10px;color:var(--tx2);font-weight:600;margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(c.nota)+'</div>';
@@ -10030,10 +10034,10 @@ function REN_repDef(oi, x){
   return (oi.vt>0)?Math.round(oi.vs/oi.vt*x.valor*100)/100:0;
 }
 function REN_rotCurto(r){ return String(r||'').replace(/\bSN[:.\s]*[A-Z0-9-]+/gi,'').replace(/\s{2,}/g,' ').replace(/[\s\u00b7,;-]+$/,'').trim(); }
-var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='', REN_fichaVoltar=null, REN_recOrig=null, REN_busca='', REN_buscaOn=false;
+var REN_sort='data', REN_aba=(function(){ try{ var a=localStorage.getItem('vb_ren_aba'); return (a==='aberto'||a==='rec'||a==='cp'||a==='cpp'||a==='cli')?a:'aberto'; }catch(e){ return 'aberto'; } })(), REN_bset='', REN_cache=null, REN_erroBx='', REN_fichaVoltar=null, REN_recOrig=null, REN_busca='', REN_buscaOn=false;
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_cicloSort(){ var o=['data','valor','cliente']; REN_sort=o[(o.indexOf(REN_sort)+1)%o.length]; REN_render(); }
-function REN_setAba(a){ REN_aba=a; REN_render(); }
+function REN_setAba(a){ REN_aba=a; try{ localStorage.setItem('vb_ren_aba', a); }catch(e){} REN_render(); }
 function REN_setBset(s){ REN_bset=s; REN_render(); }
 /* a aba do setor sem resultado fica apagada: nao adianta poder tocar e nao ter nada */
 function REN_bsetTem(lado){
@@ -10197,11 +10201,27 @@ function REN_render(){
     /* setorizado, o card mostra so o lado escolhido: A RECEBER no topo enquanto a lista
        so tem contas a pagar pareceria numero solto */
     var _nSet=REN_bset==='ent'?(_sAtr.length+_sVen.length+_sRec.length):(REN_bset==='sai'?(_cpAb.length+_cpPg.length):_n);
+    var _tRecdo=0; _sRec.forEach(function(x){ var b=bx[REN_key(x)]; _tRecdo+=Number(b.valor_recebido)||0; });
+    var _tPago=0; _cpPg.forEach(function(c){ _tPago+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
     hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
       +(REN_bset==='sai'
         ?('<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tPag)+'</span></div>')
         :('<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tRec)+'</span></div>'
           +((!REN_bset&&_tPag>0.005)?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_tPag)+'</span></div>'):'')))
+      +(function(){
+        /* realizado vai abaixo de uma linha: os quatro numeros NAO somam entre si — dois sao
+           futuro e dois sao passado. Sem a divisoria o card vira uma conta impossivel. */
+        var L='display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;';
+        var R='font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;';
+        var V='font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;';
+        var s='', mRec=(REN_bset!=='sai'&&_tRecdo>0.005), mPag=(REN_bset!=='ent'&&_tPago>0.005);
+        if(mRec||mPag){
+          s+='<div style="border-top:0.5px solid rgba(128,128,128,0.3);margin-top:6px;padding-top:5px;"></div>';
+          if(mRec) s+='<div style="'+L+'margin-top:0;"><span style="'+R+'">RECEBIDO</span><span style="'+V+'">'+HIST_fmtMoeda(_tRecdo)+'</span></div>';
+          if(mPag) s+='<div style="'+L+'"><span style="'+R+'">PAGO</span><span style="'+V+'">'+HIST_fmtMoeda(_tPago)+'</span></div>';
+        }
+        return s;
+      })()
       +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+_nSet+' RESULTADO'+(_nSet===1?'':'S')+'</span></div>'
       +'</div>';
     if(!_n) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada encontrado.</div>';
@@ -15062,6 +15082,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.223.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O card preto da busca ficou completo: além de A RECEBER e A PAGAR, agora mostra RECEBIDO e PAGO abaixo de uma linha divisória. A linha não é enfeite — os quatro números não somam entre si, dois são futuro e dois são passado, e sem a separação o card viraria uma conta impossível de fazer. Cada linha só aparece quando tem valor, e setorizar em ENTRADAS ou SAÍDAS esconde o lado que não interessa</div>
+      <div class="cl-item">Nome longo truncando com espaço sobrando: EDUARDO DUARTE PINHEIRO tem 23 caracteres e passava raspando pelo limite de 24 que decide se o nome vira primeiro + último. O limite caiu para 20, então ele vira EDUARDO PINHEIRO — e nomes de operação como ACORDO PEDRO HUBLOT, com 19, seguem inteiros, que é o certo</div>
+      <div class="cl-item">Recebimentos passou a lembrar em qual aba você estava, como o Histórico já fazia</div>
+      <div class="cl-item">Conta a pagar que nasceu de uma peça do estoque ganhou o selo E, no mesmo lugar onde as entradas mostram V ou A. Dá pra saber de onde a dívida veio sem abrir</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.2</span><span class="cl-ver-date">01/08/2026</span></div>
