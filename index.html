@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.228.5</title>
+<title>VB - v1.228.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9768,16 +9768,35 @@ function REN_repDefSocioPrim(oi, x){
   }
   return 0;
 }
+/* overscroll-behavior nao segura o gesto no Safari iOS: enquanto a folha esta aberta o corpo
+   da pagina fica travado em position:fixed, guardando e devolvendo a posicao do scroll */
+var VB_travaY=0, VB_travado=false;
+function VB_travaFundo(on){
+  var b=document.body;
+  if(on && !VB_travado){
+    VB_travaY=window.scrollY||window.pageYOffset||0; VB_travado=true;
+    b.style.position='fixed'; b.style.top=(-VB_travaY)+'px'; b.style.left='0'; b.style.right='0'; b.style.width='100%';
+  } else if(!on && VB_travado){
+    VB_travado=false;
+    b.style.position=''; b.style.top=''; b.style.left=''; b.style.right=''; b.style.width='';
+    window.scrollTo(0, VB_travaY);
+  }
+}
+function REN_painelFechar(){
+  var o=document.getElementById('ren-pan-ov'); if(o) o.style.display='none';
+  VB_travaFundo(false);
+}
 /* o panorama leva a lista: tocar num mes fecha a folha e rola ate o cabecalho daquele mes */
 function REN_irMes(ym){
-  var o=document.getElementById('ren-pan-ov'); if(o) o.style.display='none';
+  REN_painelFechar();
   function pula(){
     var el=document.getElementById('renmes-'+ym);
     if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
     else window.scrollTo({top:0, behavior:'smooth'});
   }
-  if(REN_aba!=='aberto'){ REN_aba='aberto'; REN_render(); setTimeout(pula, 60); }
-  else pula();
+  /* a trava devolve o scroll antigo; so depois disso o pulo para o mes faz sentido */
+  if(REN_aba!=='aberto'){ REN_aba='aberto'; REN_render(); setTimeout(pula, 80); }
+  else setTimeout(pula, 40);
 }
 /* ===== PAINEL MES A MES (entra / sai / sobra) =====
    ENTRA usa a PARTE DO VB, nao o bruto: se entrasse o bruto, a SOBRA incluiria o dinheiro do
@@ -9791,7 +9810,7 @@ function REN_painel(){
     ov=document.createElement('div'); ov.id='ren-pan-ov';
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100025;align-items:flex-end;justify-content:center;';
     document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    ov.addEventListener('click', function(e){ if(e.target===ov) REN_painelFechar(); });
   }
   var bx=REN_cache.bx||{}, hoje=REN_hojeISO();
   var abertas=(REN_cache.itens||[]).filter(function(x){ return !bx[REN_key(x)]; });
@@ -9853,10 +9872,11 @@ function REN_painel(){
       +'<div style="'+_L+'margin-top:5px;padding-top:5px;border-top:0.5px solid var(--ln3);"><span style="'+_R+'">L\u00cdQUIDO</span><span style="font-size:14px;font-weight:700;color:'+((tEntVB-tSai)<-0.005?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(tEntVB-tSai)+'</span></div>'
       +'</div>';
   }
-  hh+='<button onclick="document.getElementById(\'ren-pan-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+  hh+='<button onclick="REN_painelFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.innerHTML=hh;
   ov.style.display='flex';
+  VB_travaFundo(true);
 }
 /* abreviado: a tabela tem 4 colunas em 340px, valor cheio nao cabe */
 function VB_kFmt(v){
@@ -15204,6 +15224,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.6</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">A tela de trás ainda andava ao rolar o panorama — a propriedade que deveria conter o gesto não é respeitada pelo Safari do iPhone. Agora o corpo da página fica travado enquanto a folha está aberta, guardando a posição e devolvendo exatamente onde você estava ao fechar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.5</span><span class="cl-ver-date">01/08/2026</span></div>
