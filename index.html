@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.227.4</title>
+<title>VB - v1.228.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9768,6 +9768,17 @@ function REN_repDefSocioPrim(oi, x){
   }
   return 0;
 }
+/* o panorama leva a lista: tocar num mes fecha a folha e rola ate o cabecalho daquele mes */
+function REN_irMes(ym){
+  var o=document.getElementById('ren-pan-ov'); if(o) o.style.display='none';
+  function pula(){
+    var el=document.getElementById('renmes-'+ym);
+    if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
+    else window.scrollTo({top:0, behavior:'smooth'});
+  }
+  if(REN_aba!=='aberto'){ REN_aba='aberto'; REN_render(); setTimeout(pula, 60); }
+  else pula();
+}
 /* ===== PAINEL MES A MES (entra / sai / sobra) =====
    ENTRA usa a PARTE DO VB, nao o bruto: se entrasse o bruto, a SOBRA incluiria o dinheiro do
    socio e nao seria dinheiro dele. Mesmo criterio do LIQUIDO no card preto.
@@ -9800,6 +9811,8 @@ function REN_painel(){
   var tEnt=0, tEntVB=0, tSai=0;
   meses.forEach(function(ym){ tEnt+=M[ym].ent; tEntVB+=M[ym].entVB; tSai+=M[ym].sai; });
   var hojeYM=hoje.slice(0,7);
+  var maxEnt=0; meses.forEach(function(ym){ if(M[ym].ent>maxEnt) maxEnt=M[ym].ent; });
+  var acum=0, ant=null;
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA MENSAL</div>';
   if(!meses.length){
@@ -9818,11 +9831,23 @@ function REN_painel(){
       /* quatro colunas iguais; o VB fica entre parenteses e em cinza para se ler como
          parte do numero ao lado, nao como um valor independente */
       var _dif=(Math.abs(m.ent-m.entVB)>0.005);
-      hh+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+      /* barra proporcional ao maior mes: a forma do ano se le de uma vez, sem comparar 12 numeros */
+      var _pct=maxEnt>0?Math.max(2, Math.round(m.ent/maxEnt*100)):0;
+      /* peso na carteira, acumulado ate o mes e variacao contra o mes anterior da lista */
+      acum+=m.ent;
+      var _peso=(tEnt>0)?Math.round(m.ent/tEnt*100):0;
+      var _det=m.entN+' PARCELA'+(m.entN===1?'':'S')+' \u00b7 '+_peso+'% DA CARTEIRA \u00b7 ACUM '+VB_kFmt(acum);
+      if(ant!=null && Math.abs(m.ent-ant)>0.005) _det+=' \u00b7 '+((m.ent>ant)?'\u2191':'\u2193')+' '+VB_kFmt(Math.abs(m.ent-ant));
+      ant=m.ent;
+      hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;padding:7px 2px 4px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;align-items:baseline;">'
         +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';">'+lbl+(passado?' \u26a0':'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?('('+VB_kFmt(m.entVB)+')'):'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--so2);font-weight:600;margin-top:3px;letter-spacing:0.3px;">'+_det+'</div>'
+        +'<div style="height:2px;border-radius:2px;background:var(--ln3);margin-top:4px;"><div style="height:2px;border-radius:2px;background:'+(passado?'var(--red)':'var(--mu2)')+';width:'+_pct+'%;"></div></div>'
         +'</div>';
     });
     /* mesmas linhas e mesmos nomes do card preto: o painel detalha o card, nao inventa outra conta */
@@ -10436,7 +10461,7 @@ function REN_render(){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div id="renmes-'+ym+'" style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -15184,6 +15209,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.1</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Cada mês do panorama ganhou uma segunda linha em cinza com quatro coisas que a tabela não dizia: quantas parcelas, quanto por cento da carteira aquele mês representa, o acumulado até ali — que responde "quando eu tenho X na mão" — e a variação contra o mês anterior, com seta. O degrau de novembro para dezembro deixa de ser só uma barra menor e vira um número</div>
+      <div class="cl-item">Os valores seguem abreviados em K por enquanto, para ver como a leitura funciona antes de decidir o formato final</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Cada mês do panorama ganhou uma barra fina proporcional ao maior mês. É o único jeito de ler a forma do ano de uma vez — onde estão os picos e onde a carteira afina — sem comparar doze números um a um. Meses passados têm a barra em vermelho</div>
+      <div class="cl-item">Tocar num mês fecha o panorama e leva a lista até aquele mês, rolando até o cabeçalho dele. O painel deixou de ser só leitura e virou navegação</div>
+      <div class="cl-item">Ao lado do mês entrou a quantidade de parcelas. Dois meses de valor parecido podem ser um cliente grande ou quinze pequenos, e isso muda quem você cobra primeiro</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.4</span><span class="cl-ver-date">01/08/2026</span></div>
