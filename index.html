@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.227.0</title>
+<title>VB - v1.227.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9786,10 +9786,10 @@ function REN_painel(){
   var abertas=(REN_cache.itens||[]).filter(function(x){ return !bx[REN_key(x)]; });
   function vbDe(x){ var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oi?REN_repAlvo(oi,x):0); }
   var M={};
-  function slot(ym){ if(!M[ym]) M[ym]={ym:ym, ent:0, entN:0, sai:0, saiN:0}; return M[ym]; }
+  function slot(ym){ if(!M[ym]) M[ym]={ym:ym, ent:0, entVB:0, entN:0, sai:0, saiN:0}; return M[ym]; }
   abertas.forEach(function(x){
     var ym=String(x.venc||'').slice(0,7); if(!ym) return;
-    var s=slot(ym); s.ent+=vbDe(x); s.entN++;
+    var s=slot(ym); s.ent+=REN_falta(x); s.entVB+=vbDe(x); s.entN++;
   });
   ((REN_cache.cp)||[]).forEach(function(c){
     if(c.pago_em) return;
@@ -9797,38 +9797,42 @@ function REN_painel(){
     var s=slot(ym); s.sai+=Number(c.valor)||0; s.saiN++;
   });
   var meses=Object.keys(M).sort();
-  var tEnt=0, tSai=0;
-  meses.forEach(function(ym){ tEnt+=M[ym].ent; tSai+=M[ym].sai; });
+  var tEnt=0, tEntVB=0, tSai=0;
+  meses.forEach(function(ym){ tEnt+=M[ym].ent; tEntVB+=M[ym].entVB; tSai+=M[ym].sai; });
   var hojeYM=hoje.slice(0,7);
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:2px;">M\u00caS A M\u00caS</div>'
-    +'<div style="text-align:center;font-size:10px;color:var(--so2);margin-bottom:12px;">SUA PARTE, PELO VENCIMENTO</div>';
+    +'<div style="text-align:center;font-size:10px;color:var(--so2);margin-bottom:12px;">PELO VENCIMENTO \u00b7 ENTRE PAR\u00caNTESES, A SUA PARTE</div>';
   if(!meses.length){
     hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada a vencer.</div>';
   } else {
     var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
-    hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:0 2px 4px;">'
+    hh+='<div style="display:grid;grid-template-columns:64px 1fr 84px;gap:6px;padding:0 2px 4px;">'
       +'<span style="'+RT+'">M\u00caS</span>'
-      +'<span style="'+RT+'text-align:right;">ENTRA</span>'
-      +'<span style="'+RT+'text-align:right;">SAI</span>'
-      +'<span style="'+RT+'text-align:right;">SOBRA</span></div>';
-    var acum=0;
+      +'<span style="'+RT+'text-align:right;">ENTRA (VB)</span>'
+      +'<span style="'+RT+'text-align:right;">SAI</span></div>';
     meses.forEach(function(ym){
-      var m=M[ym], sobra=m.ent-m.sai; acum+=sobra;
+      var m=M[ym];
       var passado=(ym<hojeYM), agora=(ym===hojeYM);
       var lbl=(FM_MESES[Number(ym.slice(5,7))-1]||'').slice(0,3)+'/'+ym.slice(2,4);
-      var cs=(sobra<-0.005)?'var(--red)':'var(--tx)';
-      hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+      /* o parenteses so aparece quando o mes tem socio: repetir o mesmo numero duas vezes
+         nao informa nada e ainda faz procurar diferenca onde nao ha */
+      var _dif=(Math.abs(m.ent-m.entVB)>0.005);
+      var _ent=m.entN?(VB_kFmt(m.ent)+(_dif?('<span style="color:var(--so);font-weight:600;"> ('+VB_kFmt(m.entVB)+')</span>'):'')):'\u2014';
+      hh+='<div style="display:grid;grid-template-columns:64px 1fr 84px;gap:6px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
         +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';">'+lbl+(passado?' \u26a0':'')+'</span>'
-        +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
+        +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+_ent+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
-        +'<span style="font-size:11px;font-weight:700;color:'+cs+';text-align:right;white-space:nowrap;">'+VB_kFmt(sobra)+'</span>'
         +'</div>';
     });
+    /* mesmas linhas e mesmos nomes do card preto: o painel detalha o card, nao inventa outra conta */
+    var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
+    var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
     hh+='<div style="border-top:0.5px solid var(--ln);margin-top:6px;padding-top:8px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">TOTAL A RECEBER (VB)</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(tEnt)+'</span></div>'
-      +(tSai>0.005?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">TOTAL A PAGAR</span><span style="font-size:12px;font-weight:700;color:var(--tx);">\u2212 '+HIST_fmtMoeda(tSai)+'</span></div>'):'')
-      +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:5px;padding-top:5px;border-top:0.5px solid var(--ln3);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">SOBRA</span><span style="font-size:14px;font-weight:700;color:'+((tEnt-tSai)<-0.005?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(tEnt-tSai)+'</span></div>'
+      +'<div style="'+_L+'margin-top:0;"><span style="'+_R+'">TOTAL A RECEBER</span><span style="font-size:13px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(tEnt)+'</span></div>'
+      +(Math.abs(tEnt-tEntVB)>0.005?('<div style="'+_L+'"><span style="'+_R+'">VB'+((tEnt>0)?(' <span style="letter-spacing:0;opacity:0.7;">('+Math.round(tEntVB/tEnt*100)+'%)</span>'):'')+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(tEntVB)+'</span></div>'):'')
+      +(tSai>0.005?('<div style="'+_L+'"><span style="'+_R+'">A PAGAR</span><span style="font-size:12px;font-weight:700;color:var(--tx);">\u2212 '+HIST_fmtMoeda(tSai)+'</span></div>'):'')
+      +'<div style="'+_L+'margin-top:5px;padding-top:5px;border-top:0.5px solid var(--ln3);"><span style="'+_R+'">L\u00cdQUIDO</span><span style="font-size:14px;font-weight:700;color:'+((tEntVB-tSai)<-0.005?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(tEntVB-tSai)+'</span></div>'
       +'</div>';
   }
   hh+='<button onclick="document.getElementById(\'ren-pan-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">FECHAR</button>'
@@ -15180,6 +15184,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.1</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O painel MÊS A MÊS passou a mostrar o total do mês com a sua parte entre parênteses — 292K (186K). O parêntese só aparece quando há sócio no mês; repetir o mesmo número duas vezes faria procurar diferença onde não há. Ver os dois lado a lado deixa visível todo mês quanto do que entra não é seu</div>
+      <div class="cl-item">A coluna SOBRA saiu. Com o total no lugar do líquido ela não fecharia à vista (292 − 95 não dá a sua sobra), e o número não decidia nada. O rodapé agora repete as mesmas quatro linhas do card preto — TOTAL A RECEBER, VB, A PAGAR e LÍQUIDO — com os mesmos nomes: o painel detalha o card, não inventa outra conta</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.227.0</span><span class="cl-ver-date">01/08/2026</span></div>
