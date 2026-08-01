@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.222.0</title>
+<title>VB - v1.222.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9853,11 +9853,13 @@ function REN_cpLista(){
     +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
     +'</div>';
+  /* mesma altura do chip de ordenacao das ENTRADAS: as duas abas tem a faixa de acao no mesmo lugar */
+  hh+='<div style="display:flex;gap:6px;"><span onclick="REN_cpSheet(\'\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">+ CONTA</span></div>';
   if(atr.length){
     hh+=sec('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(tAtr), true);
     atr.forEach(function(c){ hh+=REN_cpCard(c); });
   }
-  hh+=sec('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'cpp\')" style="cursor:pointer;color:var(--mu2);font-weight:600;font-size:10px;letter-spacing:1px;">PAGAS \u203a</span>');
+  hh+=sec('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'cpp\')" style="display:inline-block;padding:4px 11px;border-radius:999px;background:var(--sf);border:0.5px solid var(--ln);color:var(--mu2);font-size:9px;letter-spacing:1px;font-weight:600;cursor:pointer;">PAGAS</span>');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else{
     var gAtu='';
@@ -10112,7 +10114,7 @@ function REN_render(){
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
   /* tres chips permanentes para uma escolha que quase nao muda: virou um so, que cicla e
      mostra o criterio atual */
-  function chipOrd(){ var L={data:'DATA',valor:'VALOR',cliente:'CLIENTE'}; return '<span onclick="REN_cicloSort()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);"><span style="opacity:0.6;">ORDEM</span>'+(L[REN_sort]||'DATA')+'</span>'; }
+  function chipOrd(){ var L={data:'DATA',valor:'VALOR',cliente:'CLIENTE'}; return '<span onclick="REN_cicloSort()" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">'+(L[REN_sort]||'DATA')+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
     var k=REN_key(x);
@@ -10163,7 +10165,6 @@ function REN_render(){
     return '<button '+(ac?('onclick="'+ac+'"'):'')+' style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(vazia?'opacity:0.35;cursor:default;pointer-events:none;':'cursor:pointer;')+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>';
   }
   hh+='<div style="display:flex;gap:6px;margin-bottom:10px;align-items:stretch;">'+aba('aberto','ENTRADAS')+aba('cp','SA\u00cdDAS')+aba('cli','CLIENTES')
-    +((REN_aba==='cp'&&!REN_busca)?('<button onclick="REN_cpSheet(\'\')" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'):'')
     +'<button onclick="REN_toggleBusca()" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;'+(REN_buscaOn?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);')+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button></div>';
   /* O que ja aconteceu e consulta rara: nao merece barra fixa ocupando a tela toda visita.
      Um botao no fim da lista leva pra la; a volta fica no topo, porque a lista de la e longa. */
@@ -10320,7 +10321,7 @@ function REN_render(){
     hh+=secHdr('ATRASADAS \u00b7 '+atr.length, HIST_fmtMoeda(totAtr), true);
     REN_ordena(atr).forEach(function(x){ hh+=card(x,true,false); });
   }
-  hh+=secHdr('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'rec\')" style="cursor:pointer;color:var(--mu2);font-weight:600;font-size:10px;letter-spacing:1px;">RECEBIDAS \u203a</span>');
+  hh+=secHdr('A VENCER \u00b7 '+venc.length, '<span onclick="REN_setAba(\'rec\')" style="display:inline-block;padding:4px 11px;border-radius:999px;background:var(--sf);border:0.5px solid var(--ln);color:var(--mu2);font-size:9px;letter-spacing:1px;font-weight:600;cursor:pointer;">RECEBIDAS</span>');
   if(!venc.length) hh+='<div style="font-size:11px;color:var(--so2);margin:6px 4px;">Nada a vencer.</div>';
   else if(REN_sort==='data'){
     var vs=REN_ordena(venc), gAtu='';
@@ -15058,6 +15059,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.1</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">O rótulo ORDEM saiu do botão de ordenação — sobrou só DATA, VALOR ou CLIENTE. RECEBIDAS e PAGAS viraram botão de verdade em vez de texto com seta</div>
+      <div class="cl-item">O + de nova conta saiu do topo e virou um + CONTA logo abaixo do card preto, na mesma altura em que ENTRADAS tem o botão de ordenação. As duas abas passam a ter a faixa de ação no mesmo lugar, e o topo volta a ser só a lupa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.222.0</span><span class="cl-ver-date">01/08/2026</span></div>
