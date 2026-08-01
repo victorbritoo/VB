@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.219.1</title>
+<title>VB - v1.220.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10139,9 +10139,51 @@ function REN_render(){
     +'<button onclick="REN_toggleBusca()" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;'+(REN_buscaOn?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);')+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button></div>';
   /* sub-seletor no padrao do Historico: a aba diz de onde vem o dinheiro, o sub diz se ja aconteceu */
   function sub(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="padding:8px 0;border-radius:10px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--lnk);':'background:var(--sf);color:var(--mu);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
-  if(REN_aba==='aberto'||REN_aba==='rec') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('aberto','A RECEBER')+sub('rec','RECEBIDAS')+'</div>';
-  else if(REN_aba==='cp'||REN_aba==='cpp') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('cp','A PAGAR')+sub('cpp','PAGAS')+'</div>';
+  if(!REN_busca){
+    if(REN_aba==='aberto'||REN_aba==='rec') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('aberto','A RECEBER')+sub('rec','RECEBIDAS')+'</div>';
+    else if(REN_aba==='cp'||REN_aba==='cpp') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('cp','A PAGAR')+sub('cpp','PAGAS')+'</div>';
+  }
   if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE OU OPERA\u00c7\u00c3O" style="width:100%;box-sizing:border-box;padding:10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;"></div>';
+  /* Busca geral: o termo nao pertence a um sub. Procurar um nome e perguntar "onde ele aparece",
+     entao o resultado vem dividido por secao em vez de preso na aba em que voce estava. */
+  if(REN_busca){
+    var _cpT=(REN_cache&&REN_cache.cp)||[];
+    var _cpAb=REN_cpFiltra(_cpT.filter(function(c){ return !c.pago_em; }));
+    var _cpPg=REN_cpFiltra(_cpT.filter(function(c){ return !!c.pago_em; }));
+    var _sAtr=atr.slice(), _sVen=venc.slice();
+    _sAtr.sort(function(a,b){ return a.venc<b.venc?-1:1; });
+    _sVen.sort(function(a,b){ return a.venc<b.venc?-1:1; });
+    var _sRec=receb.slice();
+    _sRec.sort(function(a,b){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b)].recebido_em||''); return av>bv?-1:1; });
+    _cpPg.sort(function(a,b){ return String(a.pago_em||'')>String(b.pago_em||'')?-1:1; });
+    var _tRec=0; _sAtr.concat(_sVen).forEach(function(x){ _tRec+=REN_falta(x); });
+    var _tPag=0; _cpAb.forEach(function(c){ _tPag+=Number(c.valor)||0; });
+    var _n=_sAtr.length+_sVen.length+_sRec.length+_cpAb.length+_cpPg.length;
+    hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tRec)+'</span></div>'
+      +(_tPag>0.005?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_tPag)+'</span></div>'):'')
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+_n+' RESULTADO'+(_n===1?'':'S')+'</span></div>'
+      +'</div>';
+    if(!_n) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada encontrado.</div>';
+    var TETO=25;
+    function _sec(lbl, arr, tot, red, fn){
+      if(!arr.length) return;
+      hh+=secHdr(lbl+' \u00b7 '+arr.length, HIST_fmtMoeda(tot), red);
+      arr.slice(0,TETO).forEach(fn);
+      if(arr.length>TETO) hh+='<div style="font-size:10px;color:var(--so2);text-align:center;margin:8px 0;">+ '+(arr.length-TETO)+' n\u00e3o mostradas. Refine a busca.</div>';
+    }
+    var _t1=0; _sAtr.forEach(function(x){ _t1+=REN_falta(x); });
+    _sec('ATRASADAS', _sAtr, _t1, true, function(x){ hh+=card(x, true, false); });
+    var _t2=0; _sVen.forEach(function(x){ _t2+=REN_falta(x); });
+    _sec('A RECEBER', _sVen, _t2, false, function(x){ hh+=card(x, false, false); });
+    _sec('A PAGAR', _cpAb, _tPag, false, function(c){ hh+=REN_cpCard(c); });
+    var _t4=0; _sRec.forEach(function(x){ var b=bx[REN_key(x)]; _t4+=Number(b.valor_recebido)||0; });
+    _sec('RECEBIDAS', _sRec, _t4, false, function(x){ hh+=cardRec(x); });
+    var _t5=0; _cpPg.forEach(function(c){ _t5+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
+    _sec('PAGAS', _cpPg, _t5, false, function(c){ hh+=REN_cpCard(c); });
+    body.innerHTML=hh;
+    return;
+  }
   if(REN_aba==='rec'){
     if(!receb.length) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nenhuma parcela recebida ainda.</div>';
     else{
@@ -14973,6 +15015,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.220.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">A lupa de Recebimentos virou busca geral. Procurar um nome é perguntar onde ele aparece, não onde ele aparece dentro do sub em que você por acaso estava — então o termo agora varre as quatro listas de uma vez e o resultado vem dividido: ATRASADAS, A RECEBER, A PAGAR, RECEBIDAS e PAGAS, cada seção com quantidade e total. O card preto mostra quanto o termo tem a receber, quanto tem a pagar e quantos resultados deram</div>
+      <div class="cl-item">Enquanto há termo digitado, o sub-seletor some — a busca não pertence a um sub. Apagando o termo, tudo volta ao normal. Cada seção mostra até 25 cards; acima disso aparece quantos ficaram de fora</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.219.1</span><span class="cl-ver-date">01/08/2026</span></div>
