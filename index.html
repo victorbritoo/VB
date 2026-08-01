@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.220.1</title>
+<title>VB - v1.221.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9872,6 +9872,7 @@ function REN_cpLista(){
       hh+=REN_cpCard(c);
     });
   }
+  hh+='<button onclick="REN_setAba(\'cpp\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:16px 0 4px;">VER PAGAS \u2192</button>';
   return hh;
 }
 function REN_cpSheet(id){
@@ -10032,6 +10033,12 @@ var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
 function REN_setBset(s){ REN_bset=s; REN_render(); }
+/* a aba do setor sem resultado fica apagada: nao adianta poder tocar e nao ter nada */
+function REN_bsetTem(lado){
+  if(!REN_cache) return false;
+  if(lado==='sai') return REN_cpFiltra((REN_cache.cp||[])).length>0;
+  return REN_filtra(REN_cache.itens||[]).length>0;
+}
 function REN_limparBusca(){ REN_busca=''; REN_bset=''; REN_render(); var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); }
 function REN_toggleBusca(){ REN_buscaOn=!REN_buscaOn; if(!REN_buscaOn){ REN_busca=''; REN_bset=''; } REN_render(); if(REN_buscaOn){ var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); } }
 function REN_buscaInput(el){ REN_busca=String(el.value||'').toUpperCase(); REN_bset=''; clearTimeout(REN_buscaInput._t); REN_buscaInput._t=setTimeout(function(){ var i=document.getElementById('ren-busca-inp'); var pos=i?i.selectionStart:0; REN_render(); i=document.getElementById('ren-busca-inp'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(e){} } },250); }
@@ -10136,15 +10143,33 @@ function REN_render(){
   }
   var hh='';
   if(REN_cache.semTabela) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Baixas indispon\u00edveis: '+CLIP_esc(REN_erroBx||'tabela parcela_baixas n\u00e3o encontrada')+'</div>';
-  /* ENTRADAS fica acesa em A RECEBER e em RECEBIDAS; SAIDAS em A PAGAR e em PAGAS */
-  function aba(id,lbl){ var on=(REN_aba===id)||(id==='aberto'&&REN_aba==='rec')||(id==='cp'&&REN_aba==='cpp'); return '<button onclick="REN_setAba(\''+id+'\')" style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
+  /* Sem termo: ENTRADAS acesa em A RECEBER e RECEBIDAS, SAIDAS em A PAGAR e PAGAS.
+     Com termo: as MESMAS abas viram o setorizador do resultado, em vez de criar chips novos.
+     Aba sem nenhum resultado fica apagada e nao responde; tocar na acesa volta pro geral. */
+  function aba(id,lbl){
+    var on, vazia=false, ac='';
+    if(REN_busca){
+      var s=(id==='aberto')?'ent':(id==='cp'?'sai':'cli');
+      if(s==='cli'){ on=false; ac='REN_setAba(\'cli\')'; }
+      else {
+        vazia=!REN_bsetTem(s);
+        on=(REN_bset===s);
+        ac=vazia?'':('REN_setBset(\''+(on?'':s)+'\')');
+      }
+    } else {
+      on=(REN_aba===id)||(id==='aberto'&&REN_aba==='rec')||(id==='cp'&&REN_aba==='cpp');
+      ac='REN_setAba(\''+id+'\')';
+    }
+    return '<button '+(ac?('onclick="'+ac+'"'):'')+' style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;white-space:nowrap;overflow:hidden;font-family:-apple-system,sans-serif;'+(vazia?'opacity:0.35;cursor:default;pointer-events:none;':'cursor:pointer;')+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>';
+  }
   hh+='<div style="display:flex;gap:6px;margin-bottom:10px;align-items:stretch;">'+aba('aberto','ENTRADAS')+aba('cp','SA\u00cdDAS')+aba('cli','CLIENTES')
     +'<button onclick="REN_toggleBusca()" style="flex:none;padding:0 11px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:0;'+(REN_buscaOn?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--tx);border:0.5px solid var(--ln);')+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></button></div>';
-  /* sub-seletor no padrao do Historico: a aba diz de onde vem o dinheiro, o sub diz se ja aconteceu */
-  function sub(id,lbl){ var on=(REN_aba===id); return '<button onclick="REN_setAba(\''+id+'\')" style="padding:8px 0;border-radius:10px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--lnk);':'background:var(--sf);color:var(--mu);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
+  /* O que ja aconteceu e consulta rara: nao merece barra fixa ocupando a tela toda visita.
+     Um botao no fim da lista leva pra la; a volta fica no topo, porque a lista de la e longa. */
+  function trav(alvo,lbl,topo){ return '<button onclick="REN_setAba(\''+alvo+'\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--mu2);font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;margin:'+(topo?'-4px 0 10px':'16px 0 4px')+';">'+lbl+'</button>'; }
   if(!REN_busca){
-    if(REN_aba==='aberto'||REN_aba==='rec') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('aberto','A RECEBER')+sub('rec','RECEBIDAS')+'</div>';
-    else if(REN_aba==='cp'||REN_aba==='cpp') hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 10px;">'+sub('cp','A PAGAR')+sub('cpp','PAGAS')+'</div>';
+    if(REN_aba==='rec') hh+=trav('aberto','\u2190 A RECEBER', true);
+    else if(REN_aba==='cpp') hh+=trav('cp','\u2190 A PAGAR', true);
   }
   if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;position:relative;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE OU OPERA\u00c7\u00c3O" style="width:100%;box-sizing:border-box;padding:10px 34px 10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;">'+(REN_busca?'<button onclick="REN_limparBusca()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--sf3);color:var(--mu0);border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">\u00d7</button>':'')+'</div>';
   /* Busca geral: o termo nao pertence a um sub. Procurar um nome e perguntar "onde ele aparece",
@@ -10162,30 +10187,19 @@ function REN_render(){
     var _tRec=0; _sAtr.concat(_sVen).forEach(function(x){ _tRec+=REN_falta(x); });
     var _tPag=0; _cpAb.forEach(function(c){ _tPag+=Number(c.valor)||0; });
     var _n=_sAtr.length+_sVen.length+_sRec.length+_cpAb.length+_cpPg.length;
-    /* comeca geral; tocar num setor estreita. So aparece setor que tem item. */
-    var _sets=[];
-    if(_sAtr.length) _sets.push(['atr','ATRASADAS']);
-    if(_sVen.length) _sets.push(['ven','A RECEBER']);
-    if(_cpAb.length) _sets.push(['pag','A PAGAR']);
-    if(_sRec.length) _sets.push(['rec','RECEBIDAS']);
-    if(_cpPg.length) _sets.push(['pgs','PAGAS']);
-    if(REN_bset && !_sets.some(function(s){ return s[0]===REN_bset; })) REN_bset='';
-    var _mostra=function(k){ return !REN_bset || REN_bset===k; };
+    /* comeca geral; a aba de cima estreita para um lado so */
+    if(REN_bset && !REN_bsetTem(REN_bset)) REN_bset='';
+    var _mostra=function(lado){ return !REN_bset || REN_bset===lado; };
+    /* setorizado, o card mostra so o lado escolhido: A RECEBER no topo enquanto a lista
+       so tem contas a pagar pareceria numero solto */
+    var _nSet=REN_bset==='ent'?(_sAtr.length+_sVen.length+_sRec.length):(REN_bset==='sai'?(_cpAb.length+_cpPg.length):_n);
     hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tRec)+'</span></div>'
-      +(_tPag>0.005?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_tPag)+'</span></div>'):'')
-      +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+_n+' RESULTADO'+(_n===1?'':'S')+'</span></div>'
+      +(REN_bset==='sai'
+        ?('<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tPag)+'</span></div>')
+        :('<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(_tRec)+'</span></div>'
+          +((!REN_bset&&_tPag>0.005)?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_tPag)+'</span></div>'):'')))
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+_nSet+' RESULTADO'+(_nSet===1?'':'S')+'</span></div>'
       +'</div>';
-    if(_sets.length>1){
-      hh+='<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:2px;padding-bottom:2px;">';
-      hh+=(function(){
-        function ch(k,lbl){ var on=(REN_bset===k); return '<span onclick="REN_setBset(\''+k+'\')" style="flex:none;white-space:nowrap;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</span>'; }
-        var s=ch('','TUDO');
-        _sets.forEach(function(p){ s+=ch(p[0],p[1]); });
-        return s;
-      })();
-      hh+='</div>';
-    }
     if(!_n) hh+='<div style="text-align:center;font-size:12px;color:var(--so2);margin:24px 0;">Nada encontrado.</div>';
     var TETO=25;
     function _sec(lbl, arr, tot, red, fn){
@@ -10194,14 +10208,16 @@ function REN_render(){
       arr.slice(0,TETO).forEach(fn);
       if(arr.length>TETO) hh+='<div style="font-size:10px;color:var(--so2);text-align:center;margin:8px 0;">+ '+(arr.length-TETO)+' n\u00e3o mostradas. Refine a busca.</div>';
     }
-    if(_mostra('atr')){ var _t1=0; _sAtr.forEach(function(x){ _t1+=REN_falta(x); });
-      _sec('ATRASADAS', _sAtr, _t1, true, function(x){ hh+=card(x, true, false); }); }
-    if(_mostra('ven')){ var _t2=0; _sVen.forEach(function(x){ _t2+=REN_falta(x); });
-      _sec('A RECEBER', _sVen, _t2, false, function(x){ hh+=card(x, false, false); }); }
-    if(_mostra('pag')) _sec('A PAGAR', _cpAb, _tPag, false, function(c){ hh+=REN_cpCard(c); });
-    if(_mostra('rec')){ var _t4=0; _sRec.forEach(function(x){ var b=bx[REN_key(x)]; _t4+=Number(b.valor_recebido)||0; });
+    if(_mostra('ent')){
+      var _t1=0; _sAtr.forEach(function(x){ _t1+=REN_falta(x); });
+      _sec('ATRASADAS', _sAtr, _t1, true, function(x){ hh+=card(x, true, false); });
+      var _t2=0; _sVen.forEach(function(x){ _t2+=REN_falta(x); });
+      _sec('A RECEBER', _sVen, _t2, false, function(x){ hh+=card(x, false, false); });
+    }
+    if(_mostra('sai')) _sec('A PAGAR', _cpAb, _tPag, false, function(c){ hh+=REN_cpCard(c); });
+    if(_mostra('ent')){ var _t4=0; _sRec.forEach(function(x){ var b=bx[REN_key(x)]; _t4+=Number(b.valor_recebido)||0; });
       _sec('RECEBIDAS', _sRec, _t4, false, function(x){ hh+=cardRec(x); }); }
-    if(_mostra('pgs')){ var _t5=0; _cpPg.forEach(function(c){ _t5+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
+    if(_mostra('sai')){ var _t5=0; _cpPg.forEach(function(c){ _t5+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
       _sec('PAGAS', _cpPg, _t5, false, function(c){ hh+=REN_cpCard(c); }); }
     body.innerHTML=hh;
     return;
@@ -10319,6 +10335,7 @@ function REN_render(){
   }
   else REN_ordena(venc).forEach(function(x){ hh+=card(x,false,false); });
   }
+  if(REN_aba==='aberto') hh+=trav('rec','VER RECEBIDAS \u2192', false);
     body.innerHTML=hh;
 }
 function REN_ficha(k, exp){
@@ -15040,6 +15057,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.221.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">A barra de A RECEBER / RECEBIDAS saiu. Ver o que já aconteceu é consulta rara e não merecia ocupar uma faixa da tela em toda visita — agora tem um botão VER RECEBIDAS no fim da lista, e do outro lado um ← A RECEBER no topo, porque de lá a lista é longa e voltar tem que ser fácil. SAÍDAS ganhou o mesmo par com VER PAGAS</div>
+      <div class="cl-item">Os chips de setor da busca sumiram: quem estreita o resultado agora são as próprias abas ENTRADAS e SAÍDAS, que já estavam lá. Sem termo elas navegam; com termo elas filtram, e a que não tem nenhum resultado fica apagada e não responde ao toque. Tocar na aba já acesa devolve o resultado inteiro, e o card preto acompanha o lado escolhido</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.220.1</span><span class="cl-ver-date">01/08/2026</span></div>
