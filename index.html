@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.229.4</title>
+<title>VB - v1.229.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11577,20 +11577,27 @@ function MER_render(){
             +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span></span>'):'')
         +'</span>';
     } else {
-      /* a divisao propria/consignada responde "quanto do MEU dinheiro esta em vitrine":
-         consignada e capital do dono, risco zero do VB. Mesma pergunta que o panorama
-         responde para a carteira. So aparece quando ha consignada. */
-      var _nCon=0; est.forEach(function(r){ try{ if(VB_consigVen(r.socio, r.valor_socio, r.custo, null)) _nCon++; }catch(e){} });
-      /* o app fala com a empresa, nunca em segunda pessoa: "VB" e o mesmo referente do
-         valor tres linhas acima (VB: R$ ...), entao a leitura fecha sozinha */
-      var _nVB=est.length-_nCon;
-      var _mix=(_nCon>0)?('<br><span style="font-size:10px;letter-spacing:0.5px;color:var(--so);font-weight:600;">'+_nVB+' VB \u00b7 '+_nCon+' CONSIGNADA'+(_nCon===1?'':'S')+'</span>'):'';
-      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+_mix+'</span>'
-        +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
-          +'<span style="color:var(--so);font-weight:600;">TOTAL: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
-          +(socios>0?('<span class="mer-tot-x"><br><span style="color:var(--so);font-weight:600;">SÓCIOS: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(socios)+'</span>'
-            +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma-socios)+'</span></span>'):'')
-        +'</span>';
+      /* contagem pelos MESMOS selos dos cards (VB_capitalDele decide o selo; consigVen e
+         outra pergunta) e desenhada com os proprios selos — sem rotulo novo, sem explicar.
+         Quem le a lista ja sabe o que S e C significam; a linha so conta. */
+      var _nS=0, _nC=0;
+      est.forEach(function(r){
+        try{
+          if(!(r.socio && (Number(r.valor_socio)||0)>0 && (Number(r.custo)||0)>0)) return;
+          if(VB_capitalDele(r.socio, r.valor_socio, r.custo)) _nC++; else _nS++;
+        }catch(e){}
+      });
+      function _sb(l){ return '<span style="display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;">'+l+'</span>'; }
+      /* desenho do mockup do VB, achatado: total no topo, contagem com os selos, e o
+         capital dividido em duas linhas com o % inline ao lado do valor */
+      var _cnt=est.length+' '+(est.length===1?'ITEM':'ITENS')+(_nS?(' \u00b7 '+_nS+' '+_sb('S')):'')+(_nC?(' \u00b7 '+_nC+' '+_sb('C')):'');
+      var _pVB=(soma>0)?Math.round((soma-socios)/soma*100):0;
+      var _lin=function(rot,val,pct){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;">'+rot+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);white-space:nowrap;">R$ '+MER_fmtBR(val)+' <span style="color:var(--so);font-weight:600;">('+pct+'%)</span></span></div>'; };
+      tot.innerHTML='<div style="width:100%;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+'</span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">R$ '+MER_fmtBR(soma)+'</span></div>'
+        +'<div class="mer-tot-x" style="font-size:10px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:2px;">'+_cnt+'</div>'
+        +(socios>0?('<span class="mer-tot-x">'+_lin('VB', soma-socios, _pVB)+_lin('S\u00d3CIOS', socios, 100-_pVB)+'</span>'):'')
+        +'</div>';
     }
     tot.style.display='flex';
     var _w=document.getElementById('mer-total-wrap'); if(_w) _w.style.display='flex';
@@ -15227,6 +15234,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.6</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">O card do estoque foi redesenhado a partir de um esboço do VB, achatado: ESTOQUE TOTAL com o valor na mesma linha, a contagem com os selos logo abaixo (8 ITENS · 3 S · 4 C), e o capital dividido em duas linhas — VB e SÓCIOS — cada uma com o percentual ao lado do valor. O percentual responde de bate-pronto quanto do dinheiro em vitrine é da empresa: 23%</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.5</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">A linha do estoque parou de tentar explicar e passou a contar com os próprios selos: 3 Ⓢ · 4 Ⓒ, desenhados igual aos dos cards. Quem lê a lista já sabe o que S e C significam. E a contagem agora usa a mesma regra do selo (o capital decide), então nunca diverge do que os cards mostram — a versão anterior usava outra regra e divergiria numa consignação com lucro rachado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.4</span><span class="cl-ver-date">02/08/2026</span></div>
