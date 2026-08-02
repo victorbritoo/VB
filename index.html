@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.229.0</title>
+<title>VB - v1.229.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4649,11 +4649,15 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
-(function(){ // badge de versão deriva do <title> — fonte única, sem corrente de substituições
+(function(){ /* badge deriva do <title> (versao) e da 1a entrada do changelog (data) —
+   fontes unicas que ja fazem parte do ritual de cada patch; o texto do badge nunca mais
+   fica orfao como ficou de 28/07 a 02/08 */
   try{
     var mv=(document.title||'').match(/v([0-9.]+)/i);
     var el=document.getElementById('vb-versao-badge');
-    if(mv && el){ var dt=el.innerHTML.split('<br>')[1]||''; el.innerHTML='V: '+mv[1]+'<br>'+dt; }
+    var d1=document.querySelector('.cl-ver-date');
+    var dt=(d1&&d1.textContent)||((el&&el.innerHTML.split('<br>')[1])||'');
+    if(mv && el) el.innerHTML='V: '+mv[1]+'<br>'+dt;
   }catch(e){}
 })();
 (function(){ var el=document.getElementById('fin-dataOp'); if(el && !el.value) el.value=MER_hojeBR(); })();
@@ -11573,7 +11577,12 @@ function MER_render(){
             +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span></span>'):'')
         +'</span>';
     } else {
-      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+      /* a divisao propria/consignada responde "quanto do MEU dinheiro esta em vitrine":
+         consignada e capital do dono, risco zero do VB. Mesma pergunta que o panorama
+         responde para a carteira. So aparece quando ha consignada. */
+      var _nCon=0; est.forEach(function(r){ try{ if(VB_consigVen(r.socio, r.valor_socio, r.custo, null)) _nCon++; }catch(e){} });
+      var _mix=(_nCon>0)?('<br><span style="font-size:10px;letter-spacing:0.5px;color:var(--so);font-weight:600;">'+(est.length-_nCon)+' PR\u00d3PRIA'+((est.length-_nCon)===1?'':'S')+'/S\u00d3CIO \u00b7 '+_nCon+' CONSIGNADA'+(_nCon===1?'':'S')+'</span>'):'';
+      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+_mix+'</span>'
         +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
           +'<span style="color:var(--so);font-weight:600;">TOTAL: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(soma)+'</span>'
           +(socios>0?('<span class="mer-tot-x"><br><span style="color:var(--so);font-weight:600;">SÓCIOS: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(socios)+'</span>'
@@ -15215,6 +15224,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.2</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">O card do Estoque ganhou a linha 4 PRÓPRIAS/SÓCIO · 4 CONSIGNADAS abaixo da contagem. Os valores de TOTAL, SÓCIOS e VB dizem de quem é o capital, mas não diziam quantas peças carregam risco seu — consignada é capital do dono, risco zero. É a mesma pergunta que o panorama responde para a carteira: quanto do meu dinheiro está aqui. A linha só aparece quando há consignada na lista</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.1</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">A data do badge da Home estava presa em 28/07 há cinco versões: a versão já vinha do título da página, mas a data era um texto solto que dependia de lembrar de trocar. Agora ela vem da primeira entrada deste changelog — que nunca esquece, porque escrever a entrada faz parte de cada versão. Duas fontes únicas, zero manutenção</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.0</span><span class="cl-ver-date">01/08/2026</span></div>
