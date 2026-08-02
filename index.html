@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.229.9</title>
+<title>VB - v1.230.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11831,9 +11831,9 @@ function MER_cpSheet(){
     var rows=(res.data||[]).slice();
     rows.sort(function(a,b){ return String(a.venc||'')<String(b.venc||'')?-1:1; });
     MER_cpLinhas=rows.map(function(c){
-      return {id:c.id, valor:Number(c.valor)||0, venc:String(c.venc||'').slice(0,10), pago:!!c.pago_em};
+      return {id:c.id, valor:Number(c.valor)||0, venc:String(c.venc||'').slice(0,10), nota:(c.nota||''), pago:!!c.pago_em};
     });
-    if(!MER_cpLinhas.length) MER_cpLinhas=[{id:null, valor:0, venc:'', pago:false}];
+    if(!MER_cpLinhas.length) MER_cpLinhas=[{id:null, valor:0, venc:'', nota:'', pago:false}];
     MER_cpOrig=JSON.stringify(MER_cpLinhas);
     MER_cpRender(r);
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); MER_cpFechar(); });
@@ -11860,12 +11860,15 @@ function MER_cpRender(r){
     if(l.pago){
       hh+='<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;padding:10px 6px;">R$ '+vBR+'</div></div>'
         +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;padding:10px 6px;">'+dBR+'</div></div>'
-        +'<div style="text-align:center;font-size:9px;color:var(--so);font-weight:700;padding-bottom:11px;">PAGA</div>';
+        +'<div style="text-align:center;font-size:9px;color:var(--so);font-weight:700;padding-bottom:11px;">PAGA</div>'
+        +(l.nota?('<div style="grid-column:1/-1;margin:-2px 0 6px;padding:0 10px;font-size:10px;color:var(--so);font-weight:600;opacity:0.7;">'+CLIP_esc(l.nota)+'</div>'):'');
       return;
     }
     hh+='<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="display:flex;align-items:center;gap:4px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:9px 6px;"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input data-selall inputmode="decimal" value="'+vBR+'" oninput="MER_cpCampo('+i+',\'valor\',this)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
       +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><input data-selall inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="'+dBR+'" onblur="autoCompleteDate(this);MER_cpCampo('+i+',\'venc\',this)" oninput="MER_cpCampo('+i+',\'venc\',this)" style="'+IN+'"></div>'
-      +'<button onclick="MER_cpRemove('+i+')" style="height:38px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:15px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>';
+      +'<button onclick="MER_cpRemove('+i+')" style="height:38px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:15px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>'
+      /* a obs e lembrete da parcela (ex.: METADE ROMULO). E a mesma nota que aparece em SAIDAS. */
+      +'<div style="grid-column:1/-1;margin:-2px 0 6px;"><input data-selall placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
   });
   hh+='</div>';
   hh+='<button onclick="MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ PARCELA</button>';
@@ -11894,6 +11897,7 @@ function MER_cpPinta(){
 function MER_cpCampo(i, campo, el){
   var l=MER_cpLinhas[i]; if(!l) return;
   if(campo==='valor'){ REC_maskVal(el); l.valor=REN_num(el.value); }
+  else if(campo==='nota'){ l.nota=el.value||''; }
   else { REC_maskData(el); l.venc=REN_brToISO(el.value)||''; }
   MER_cpPinta(); MER_cpTotais();
 }
@@ -11909,13 +11913,13 @@ function MER_cpTotais(){
   var c=document.getElementById('mer-cp-rotf'); if(c) c.textContent=(falta<-0.005)?'PASSOU':'FALTA';
 }
 function MER_cpAdd(){
-  MER_cpLinhas.push({id:null, valor:0, venc:'', pago:false});
+  MER_cpLinhas.push({id:null, valor:0, venc:'', nota:'', pago:false});
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpRemove(i){
   var l=MER_cpLinhas[i]; if(!l || l.pago) return;
   MER_cpLinhas.splice(i,1);
-  if(!MER_cpLinhas.length) MER_cpLinhas=[{id:null, valor:0, venc:'', pago:false}];
+  if(!MER_cpLinhas.length) MER_cpLinhas=[{id:null, valor:0, venc:'', nota:'', pago:false}];
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpSalvar(){
@@ -11929,13 +11933,13 @@ function MER_cpSalvar(){
   var apagar=orig.filter(function(o){ return o.id && !o.pago && !vivos[String(o.id)]; }).map(function(o){ return o.id; });
   var base={credor:(r.fornecedor?String(r.fornecedor).toUpperCase():null), descricao:String(r.descricao||'').toUpperCase(), origem_tab:'mercadorias', origem_id:String(id)};
   var novas=validas.filter(function(l){ return !l.id; }).map(function(l){
-    return {credor:base.credor, descricao:base.descricao, valor:l.valor, venc:l.venc, origem_tab:base.origem_tab, origem_id:base.origem_id};
+    return {credor:base.credor, descricao:base.descricao, valor:l.valor, venc:l.venc, nota:(l.nota||null), origem_tab:base.origem_tab, origem_id:base.origem_id};
   });
   var alterar=validas.filter(function(l){ return !!l.id; });
   var tarefas=[];
   if(apagar.length) tarefas.push(sb.from('contas_pagar').delete().in('id', apagar));
   if(novas.length) tarefas.push(sb.from('contas_pagar').insert(novas));
-  alterar.forEach(function(l){ tarefas.push(sb.from('contas_pagar').update({valor:l.valor, venc:l.venc, credor:base.credor, descricao:base.descricao}).eq('id', l.id)); });
+  alterar.forEach(function(l){ tarefas.push(sb.from('contas_pagar').update({valor:l.valor, venc:l.venc, nota:(l.nota||null), credor:base.credor, descricao:base.descricao}).eq('id', l.id)); });
   if(!tarefas.length){ MER_cpFechar(); return; }
   Promise.all(tarefas).then(function(res){
     var err=(res||[]).filter(function(x){ return x&&x.error; })[0];
@@ -15228,6 +15232,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.230.0</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">Cada parcela da compra ganhou uma observação. Serve pra lembrar o que aquela parcela é — METADE ROMULO, PIX QUELAU, o que for. É a mesma nota que aparece em SAÍDAS: escreveu aqui, aparece lá, e o contrário também. Parcela já paga mostra a observação, mas travada</div>
+      <div class="cl-item">A parcela continua sendo lançada pelo valor cheio, mesmo quando tem sócio. O controle da operação é da VB, então a dívida é da VB — quem devolve a parte dele é outra conversa. A observação é onde isso fica escrito</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.9</span><span class="cl-ver-date">02/08/2026</span></div>
