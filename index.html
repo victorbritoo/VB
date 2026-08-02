@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.229.6</title>
+<title>VB - v1.229.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4649,16 +4649,21 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
-(function(){ /* badge deriva do <title> (versao) e da 1a entrada do changelog (data) —
-   fontes unicas que ja fazem parte do ritual de cada patch; o texto do badge nunca mais
-   fica orfao como ficou de 28/07 a 02/08 */
-  try{
-    var mv=(document.title||'').match(/v([0-9.]+)/i);
-    var el=document.getElementById('vb-versao-badge');
-    var d1=document.querySelector('.cl-ver-date');
-    var dt=(d1&&d1.textContent)||((el&&el.innerHTML.split('<br>')[1])||'');
-    if(mv && el) el.innerHTML='V: '+mv[1]+'<br>'+dt;
-  }catch(e){}
+(function(){ /* badge deriva do <title> (versao) e da 1a entrada do changelog (data).
+   Precisa rodar DEPOIS do documento montado: este script vive no meio do body e o
+   changelog so aparece milhares de linhas abaixo — rodando na hora, o seletor da data
+   nao achava nada e o badge ficava com o texto velho. */
+  function pinta(){
+    try{
+      var mv=(document.title||'').match(/v([0-9.]+)/i);
+      var el=document.getElementById('vb-versao-badge');
+      var d1=document.querySelector('.cl-ver-date');
+      var dt=(d1&&d1.textContent)||((el&&el.innerHTML.split('<br>')[1])||'');
+      if(mv && el) el.innerHTML='V: '+mv[1]+'<br>'+dt;
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', pinta);
+  else pinta();
 })();
 (function(){ var el=document.getElementById('fin-dataOp'); if(el && !el.value) el.value=MER_hojeBR(); })();
 function VB_toast(msg){
@@ -11590,13 +11595,13 @@ function MER_render(){
       function _sb(l){ return '<span style="display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;">'+l+'</span>'; }
       /* desenho do mockup do VB, achatado: total no topo, contagem com os selos, e o
          capital dividido em duas linhas com o % inline ao lado do valor */
-      var _cnt=est.length+' '+(est.length===1?'ITEM':'ITENS')+(_nS?(' \u00b7 '+_nS+' '+_sb('S')):'')+(_nC?(' \u00b7 '+_nC+' '+_sb('C')):'');
+      var _cnt=(_nS?(_nS+' '+_sb('S')):'')+((_nS&&_nC)?' \u00b7 ':'')+(_nC?(_nC+' '+_sb('C')):'');
       var _pVB=(soma>0)?Math.round((soma-socios)/soma*100):0;
       var _lin=function(rot,val,pct){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;">'+rot+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);white-space:nowrap;">R$ '+MER_fmtBR(val)+' <span style="color:var(--so);font-weight:600;">('+pct+'%)</span></span></div>'; };
       tot.innerHTML='<div style="width:100%;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+'</span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">R$ '+MER_fmtBR(soma)+'</span></div>'
-        +'<div class="mer-tot-x" style="font-size:10px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:2px;">'+_cnt+'</div>'
-        +(socios>0?('<span class="mer-tot-x">'+_lin('VB', soma-socios, _pVB)+_lin('S\u00d3CIOS', socios, 100-_pVB)+'</span>'):'')
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' <span style="letter-spacing:0;">('+est.length+')</span></span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">R$ '+MER_fmtBR(soma)+'</span></div>'
+        +(_cnt?('<div class="mer-tot-x" style="font-size:10px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:2px;">'+_cnt+'</div>'):'')
+        +(socios>0?('<span class="mer-tot-x">'+_lin('S\u00d3CIOS', socios, 100-_pVB)+_lin('VB', soma-socios, _pVB)+'</span>'):'')
         +'</div>';
     }
     tot.style.display='flex';
@@ -15234,6 +15239,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.7</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">A data da Home continuava em 28/07: o trecho que a lê fica no meio da página e rodava antes do changelog existir, então não achava nada e mantinha o texto velho. Agora espera o documento terminar de montar</div>
+      <div class="cl-item">No card do estoque a quantidade foi para o título — ESTOQUE TOTAL (8) — e a linha de baixo ficou só com os selos. SÓCIOS subiu para cima do VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.6</span><span class="cl-ver-date">02/08/2026</span></div>
