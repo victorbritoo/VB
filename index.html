@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.229.8</title>
+<title>VB - v1.229.9</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11582,25 +11582,14 @@ function MER_render(){
             +'<br><span style="color:var(--so);font-weight:600;">VB: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroVB)+'</span></span>'):'')
         +'</span>';
     } else {
-      /* contagem pelos MESMOS selos dos cards (VB_capitalDele decide o selo; consigVen e
-         outra pergunta) e desenhada com os proprios selos — sem rotulo novo, sem explicar.
-         Quem le a lista ja sabe o que S e C significam; a linha so conta. */
-      var _nS=0, _nC=0;
-      est.forEach(function(r){
-        try{
-          if(!(r.socio && (Number(r.valor_socio)||0)>0 && (Number(r.custo)||0)>0)) return;
-          if(VB_capitalDele(r.socio, r.valor_socio, r.custo)) _nC++; else _nS++;
-        }catch(e){}
-      });
-      /* dentro do card o fundo ja e var(--acc): o selo com o mesmo fundo sumia. Invertido. */
-      function _sb(l){ return '<span style="display:inline-block;background:var(--acc-tx);color:var(--acc);font-size:8px;font-weight:700;border-radius:7px;padding:1px 5px;vertical-align:1px;margin:0 1px;">'+l+'</span>'; }
-      /* desenho do mockup do VB, achatado: total no topo, contagem com os selos, e o
-         capital dividido em duas linhas com o % inline ao lado do valor */
-      var _cnt=(_nS?(' \u00b7 '+_nS+_sb('S')):'')+(_nC?(' \u00b7 '+_nC+_sb('C')):'');
+      /* A contagem de S e C saiu de proposito: a divisao do capital ja esta logo abaixo em
+         dinheiro (SOCIOS 77% / VB 23%), que responde a mesma pergunta em unidade util.
+         Quem precisa saber QUAIS pecas sao S ou C olha os selos dos cards, onde a
+         informacao e acionavel. Card em 3 linhas: total, socios, VB. */
       var _pVB=(soma>0)?Math.round((soma-socios)/soma*100):0;
       var _lin=function(rot,val,pct){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;">'+rot+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);white-space:nowrap;">R$ '+MER_fmtBR(val)+' <span style="color:var(--so);font-weight:600;">('+pct+'%)</span></span></div>'; };
       tot.innerHTML='<div style="width:100%;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;white-space:nowrap;">'+totLabel.replace(' TOTAL','')+' <span style="letter-spacing:0;">('+est.length+_cnt+')</span></span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);white-space:nowrap;">R$ '+MER_fmtBR(soma)+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;white-space:nowrap;">'+totLabel.replace(' TOTAL','')+' <span style="letter-spacing:0;">('+est.length+')</span></span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);white-space:nowrap;">R$ '+MER_fmtBR(soma)+'</span></div>'
         +(socios>0?('<span class="mer-tot-x">'+_lin('S\u00d3CIOS', socios, 100-_pVB)+_lin('VB', soma-socios, _pVB)+'</span>'):'')
         +'</div>';
     }
@@ -15239,6 +15228,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.9</span><span class="cl-ver-date">02/08/2026</span></div>
+      <div class="cl-item">A contagem de S e C saiu do card. A divisão do capital já está logo abaixo em dinheiro — SÓCIOS 77%, VB 23% — que responde a mesma pergunta numa unidade mais útil; contar peças era a mesma história repetida. Quem precisa saber quais peças são S ou C olha os selos dos cards, que é onde isso vira ação. Ficou ESTOQUE (8) e as duas linhas de capital</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.8</span><span class="cl-ver-date">02/08/2026</span></div>
