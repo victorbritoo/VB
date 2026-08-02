@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.228.6</title>
+<title>VB - v1.229.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1568,26 +1568,13 @@ sb.auth.onAuthStateChange(function(event, session){
 
 // ===== HISTÓRICO =====
 var HIST_tabAtual=(function(){try{var _t=localStorage.getItem('vb_hist_tab');return (_t==='fin'||_t==='ant'||_t==='ven'||_t==='pag')?_t:'ant';}catch(e){return 'ant';}})();
-function HIST_setTabStyle(tab){
-  ['ant','fin','ven','pag'].forEach(function(t){
-    var b=document.getElementById('hist-tab-'+t);
-    if(!b) return;
-    if(t===tab){ b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; }
-    else { b.style.background='var(--sf)'; b.style.color='var(--mu2)'; }
-  });
-}
-function HIST_fmtData(iso){
-  if(!iso) return '--';
-  var p=iso.split('-'); if(p.length!==3) return iso;
-  return p[2]+'/'+p[1]+'/'+p[0];
-}
+/* HIST_setTabStyle antigo removido na auditoria: era sobrescrito pela versao abaixo */
+/* HIST_fmtData antigo removido na auditoria: era sobrescrito pela versao abaixo */
 function HIST_fmtMoeda(v){
   if(v===null||v===undefined) return '--';
   return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
-function HIST_esc(s){
-  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+/* HIST_esc antigo removido na auditoria: era sobrescrito pela versao abaixo */
 function HIST_row(titulo, sub, valor){
   return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:12px 16px;margin-bottom:6px;">'+
     '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'+
@@ -2764,7 +2751,9 @@ function VB_autoteste(){
     var ok=(VB_cliIdDe('joao silva')==='1' && VB_cliIdDe('MARIA')===null && VB_cliIdDe('NINGUEM')===null);
     VB_cliBase=bk; return ok;
   });
-  t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO'; });
+  t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO' && VB_nomePU('EDUARDO DUARTE PINHEIRO')==='EDUARDO PINHEIRO' && VB_nomePU('ACORDO PEDRO HUBLOT')==='ACORDO PEDRO HUBLOT'; });
+  t('Valor abreviado do panorama (VB_kFmt)', function(){ return VB_kFmt(56000)==='56K' && VB_kFmt(65800)==='65,8K' && VB_kFmt(99950)==='100K' && VB_kFmt(291780)==='292K' && VB_kFmt(999)==='999'; });
+  t('Conta paga cai no mês certo (REN_cpGravaPag)', function(){ /* o timestamp e sempre meio-dia UTC: o slice(0,7) do mes nunca transborda */ return ('2026-08-31T12:00:00.000Z').slice(0,7)==='2026-08'; });
   VB_autotesteFalhas=F;
   var el=document.getElementById('vb-autoteste'); if(el) el.style.display=F.length?'block':'none';
   if(F.length){ try{ console.warn('VB autoteste:', F); }catch(e){} }
@@ -10067,7 +10056,9 @@ function REN_cpQuick(btn, id){
   REN_cpGravaPag(c, Number(c.valor)||0, REN_hojeISO(), null);
 }
 function REN_cpGravaPag(c, valor, dataISO, nota){
-  var ts=(dataISO===REN_hojeISO())?new Date().toISOString():(dataISO+'T12:00:00.000Z');
+  /* sempre meio-dia UTC: gravar a hora real em UTC jogava um pagamento feito entre 21h e
+     meia-noite do ultimo dia do mes (Fortaleza, UTC-3) no mes seguinte do Fechamento */
+  var ts=dataISO+'T12:00:00.000Z';
   sb.from('contas_pagar').update({pago_em:ts, valor_pago:Math.round((Number(valor)||0)*100)/100, nota_baixa:(nota||null)}).eq('id', c.id).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
     try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
@@ -15226,6 +15217,12 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.229.0</span><span class="cl-ver-date">01/08/2026</span></div>
+      <div class="cl-item">Auditoria completa do app. Quatro consertos: (1) o ✓ rápido de pagar conta gravava a hora real em UTC, então um pagamento feito entre 21h e meia-noite do último dia do mês caía no mês seguinte do Fechamento — agora grava sempre ao meio-dia UTC, como a baixa com data já fazia; (2) cerca de trinta entradas antigas deste changelog não fechavam a própria caixa e ficavam aninhadas uma dentro da outra — o navegador disfarçava; (3) três funções antigas do Histórico existiam em duas versões, com a velha servindo só de armadilha para quem editasse a errada — as velhas saíram; (4) a conferência de boot ganhou três provas novas cobrindo o que esta semana construiu: o nome curto com o limite de 20, o valor abreviado do panorama e o mês da conta paga</div>
+      <div class="cl-item">O que a auditoria NÃO achou também conta: nenhum erro de cálculo — Fechamento fora do lucro, painel, líquido sobre a parte do VB e a busca estão todos batendo — nenhuma função chamada sem existir, nenhuma tabela fora do backup, e todo texto digitado devidamente escapado</div>
+    </div>
+
+    <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.228.6</span><span class="cl-ver-date">01/08/2026</span></div>
       <div class="cl-item">A tela de trás ainda andava ao rolar o panorama — a propriedade que deveria conter o gesto não é respeitada pelo Safari do iPhone. Agora o corpo da página fica travado enquanto a folha está aberta, guardando a posição e devolvendo exatamente onde você estava ao fechar</div>
     </div>
@@ -16504,115 +16501,199 @@ function CTR_gerar(ov){
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.152.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Um padrão só de cabeçalho mensal, VB pediu e tinha razão: Histórico, Recebimentos e Vendidos agora usam a mesma régua — esquerda JULHO 2026 · N em caps 9px espaçado cinza; direita valores em 11px fortes com rótulos e conectores (· L:, · VB:, parênteses) em 10px discretos; margens idênticas. O conteúdo de cada tela continua o seu (bruto·L no Histórico, bruto·(VB) no Recebimentos, vendido·L·VB nos Vendidos) — a unificação é de tipografia, não de semântica</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.151.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">VENDIDOS com quebra mensal, na gramática do Histórico: cabeçalho JULHO 2026 · n com o trio do mês à direita — vendido, L (lucro) e VB (sua fatia, mesma régua da barra) — agrupando pela data da venda (ou da baixa). A quebra respeita a busca e só vale na ordenação padrão (por data da venda); ordenando por preço ou modelo a lista fica corrida, porque cabeçalho de mês fora de ordem cronológica mente. Itens de baixa manual entram na contagem do mês sem somar valores</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.150.1</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">TOTAL A RECEBER com a parte de VB: o hero mostra o bruto grande e, logo abaixo, (R$ X VB) — o que sobra depois dos repasses; a linha do vence em 7 dias ganhou o mesmo parêntese. Sem repasse na conta, sem parêntese</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.150.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Cabeçalho mensal com a parte de VB: no A VENCER, cada mês mostra o bruto e, entre parênteses, o que fica com VB depois dos repasses de sócio e investidor — ex.: R$ 191.280,00 (R$ 154.930,00 VB). Nas CONCLUÍDAS, o mesmo com o recebido líquido (recebido − repasses da baixa). Mês sem repasse não mostra o parêntese — número igual duas vezes é ruído</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.149.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Repasse do INVESTIDOR no financiamento — o grosso da lista real de VB entrou na engine: dar baixa numa parcela de financiamento com investidor cria a pendência com o valor EXATO da investidor_parcela (nem precisa de rateio; ADRIANO R$ 2.070 nasce cravado). Aparece no A REPASSAR da ENTRADAS junto com os de sócio, mesmo ✓ rápido, mesma ficha (rotulada INVESTIDOR · NOME com valor e %), mesmo editar/desfazer. Botão unificado pra REPASSAR (serve sócio e investidor)</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.148.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Nomes longos domados em três lugares. (1) Cards do Recebimentos: o título virou flex onde só o NOME corta com reticências — valor e data nunca mais somem ("HO..." era a data HOJE truncada); vale pros cards de parcela, concluídas e A REPASSAR. (2) Relatório da antecipação: o cliente agora encolhe a fonte pra caber na coluna (e trunca com … se ainda assim não couber) em vez de invadir a coluna do lado. (3) BUSCA no Recebimentos: lupa no padrão da casa (mesmo SVG do Histórico) ao lado das abas, abrindo campo que filtra por cliente ou operação em ENTRADAS, CONCLUÍDAS e CLIENTES ao vivo. E o caminho pro nome curto continua sendo o campo Cliente da operação: preencheu lá, muda em tudo que deriva — uma fonte só</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.147.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Tarifa da antecipação agora É lucro: como VB usa a tarifa pra arredondar o líquido (o dinheiro fica com ele), a conta canônica virou bruto − líquido, sem subtrair tarifa. Vale em cadeia: L do card no Histórico, Juros (hoje) da cobrança de atrasado, Lucro do Fechamento, rendimento e panorama do cliente — os lucros históricos de antecipações sobem pelo valor de suas tarifas. O simulador não muda: lá a tarifa continua definindo o líquido do cliente, que é o papel dela na precificação</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.2</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Ficha da parcela mais enxuta: OPERAÇÃO sem o SN (quem quiser o resto abre a operação) e a linha do sócio reduzida ao que decide — R$ 10.750,00 (50%) — sem o texto do rateio nem o total na venda</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.1</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Rateio do sócio CORRIGIDO (VB pegou): a fatia usava só o capital do sócio (valor_socio) e esquecia o lucro dele. Agora é (capital do sócio + lucro do sócio) ÷ valor da venda — sócio com 50% do relógio e 50% do lucro recebe exatamente metade de cada parcela, como manda a intuição. Consignação preservada: o valor do consignante já é o total dele. Vale pra tudo que deriva daí: linha da ficha, repasse pendente das próximas baixas e o valor sugerido no REPASSAR AO SÓCIO. Baixas antigas guardam o valor antigo — edita no EDITAR REPASSE se precisar</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.146.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">Repasse mudou de casa: pendência escondida em CONCLUÍDAS contrariava a regra da fila — agora o bloco A REPASSAR mora na ENTRADAS, entre ATRASADAS e A VENCER, com total em vermelho. Card no formato SÓCIO · R$ valor, com cliente/parcela/data do recebimento embaixo, ✓ de dois toques marcando o repasse na hora (com o horário real) e toque abrindo a ficha pra ajustar valor/data/nota. Mais antigo primeiro — a dívida que envelhece sobe. O strip da CONCLUÍDAS saiu (redundante); os cards de lá seguem marcando REPASSE PENDENTE/repassado</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.145.0</span><span class="cl-ver-date">20/07/2026</span></div>
       <div class="cl-item">REPASSE AO SÓCIO: dar baixa numa parcela de venda com sócio agora cria a obrigação — o repasse nasce PENDENTE com o valor pro-rata. A aba CONCLUÍDAS ganha o strip A REPASSAR (total e quantidade, em vermelho) e cada card mostra REPASSE PENDENTE · valor · sócio até você liquidar (depois vira "repassado dd/mm"). Na ficha: bloco REPASSE com status, botão REPASSAR AO SÓCIO (valor pré-preenchido no pro-rata mas editável, data e nota — "pix, 3 parcelas juntas"), EDITAR REPASSE e DESFAZER REPASSE depois de pago. Desfazer uma baixa que já tem repasse pago avisa antes, no card e na ficha. Nada disso toca lucro, Fechamento ou Pagamentos — é controle de obrigação, como a baixa é controle de caixa</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.144.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Quatro ajustes. (1) SALVAR do EDITAR RECEBIMENTO agora é dirty-aware como o CONFIRMAR da casa: nasce quieto e só acende quando valor, data ou nota mudam; sem mudança, tocar só fecha. (2) Panorama do cliente: bloco renomeado A VENCER (com Total a vencer) — em aberto era ambíguo. (3) "ver todas" deduplicado na linha do tempo: o link aparece uma vez, na última linha-resumo; a de recebidas continua tocável. (4) Parcela de venda com sócio mostra o rateio: SÓCIO · NOME com quanto desta parcela é dele (proporcional ao valor_socio/valor_total — régua informativa, não repasse gravado) e o total dele na venda</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.143.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Recebimentos afinado. Abas renomeadas cabendo direitinho: ENTRADAS · CONCLUÍDAS · CLIENTES. Ficha: VALOR · VENCIMENTO · STATUS · PARCELA numa linha só, STATUS sem data (a data já está na lista), PARCELAS DA OPERAÇÃO com título centralizado, RECEBIDO e NOTA lado a lado. Seta de desfazer sem cara de emoji (↩ forçada como texto, igual ao Estoque). E o pedido grande: EDITAR RECEBIMENTO — parcela concluída agora abre edição de valor recebido, data do recebimento e nota; a data editada passa a mandar na ordem da aba CONCLUÍDAS, e salvar reabre a ficha atualizada</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.142.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Seis lapidações no Recebimentos. (1) ABRIR OPERAÇÃO agora volta pra FICHA DA PARCELA, não pra lista — o ciclo fecha onde começou. (2) Hero renomeado TOTAL A RECEBER (tudo que vai entrar; o que venceu sem baixa é o bloco ATRASADAS). (3) Exposição por cliente saiu do rodapé e virou a aba CLIENTES — cards com total, nº de parcelas, próximo vencimento e o ATRASADO dele em vermelho quando houver. (4) NOTA na baixa: campo opcional no DAR BAIXA (ex.: encontro de contas), guardada na parcela — aparece na ficha e no card de recebida. (5) Ficha compactada: CLIENTE·OPERAÇÃO numa linha, VALOR·VENCIMENTO·STATUS na outra, PARCELA·RECEBIDO na terceira, espaçamentos menores. (6) Linha do tempo sustentável pra financiamento longo: acima de 8 parcelas mostra só atrasadas + atual + 2 próximas; recebidas e futuro distante viram linhas-resumo com total, tocáveis pra VER TODAS</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.141.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Card de parcela no formato pedido: primeira linha CLIENTE · R$ valor · data, segunda linha Parcela 01 de 10 · descrição do relógio SEM o SN (marca, modelo, ano). E o A VENCER agora divide por mês igual ao Histórico (JULHO 2026 · n com o subtotal do mês à direita) quando ordenado por DATA — dentro do grupo a data encurta pra dia/mês, já que o cabeçalho diz o resto; ordenando por VALOR ou CLIENTE a lista fica corrida com data completa. ATRASADAS mantém data completa (podem cruzar meses). RECEBIDAS seguiu o mesmo card, com a data da baixa curta sob o cabeçalho do mês — e o card de recebida também abre a ficha agora</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.140.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Lapidação do módulo, agora chamado RECEBIMENTOS (o antigo com esse nome segue aposentado fora da Home). Parcela em extenso em todo lugar: "Parcela 01 de 06" nos cards, na ficha e no DAR BAIXA. Linha do tempo da ficha virou PARCELAS DA OPERAÇÃO, sem símbolos: cada linha é R$ valor · data · NN de MM, com a atual em negrito e o status à direita (RECEBIDA com a data, ATRASADA em vermelho, A VENCER). E a ordem das RECEBIDAS foi consertada de verdade: a baixa rápida gravava todas com o mesmo horário fixo — agora grava o horário real, então últimas recebidas aparecem primeiro</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.139.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">A RECEBER virou módulo de verdade: tela própria no padrão da casa (logo VB volta, swipe-back de borda funciona, entrada pela Home via roteador), sem FECHAR — deixou de ser sheet. E a ficha da parcela ganhou ABRIR OPERAÇÃO: busca a venda/antecipação/financiamento no banco e carrega na tela de edição dela, exatamente como o Histórico faz — e o voltar te devolve pro A Receber, não pra Home. Parcela → operação inteira → edição, sem sair do fluxo</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.138.1</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Baixa que não saía: o ✓ de dois toques ganhou touch-action:manipulation (o Safari podia engolir o segundo toque como gesto de zoom), toast "Toque de novo para dar baixa" no primeiro toque, e toda a gravação/desfazer ganhou .catch — falha de rede agora avisa em vez de sumir em silêncio. Se a consulta de baixas falhar, o aviso vermelho passa a mostrar o motivo exato do banco</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.138.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">FICHA DA PARCELA: tocar no card abre a ficha — cliente, operação, N/M, valor, vencimento e STATUS (A VENCER, VENCE HOJE, ATRASADA HÁ X DIAS em vermelho, ou RECEBIDA com data e valor). Embaixo, a linha do tempo de TODAS as parcelas da operação (✓ recebidas com data, atrasadas em vermelho, a vencer), com a atual marcada — dá pra ver onde essa parcela mora dentro do acordo. Ações na ficha: DAR BAIXA (abre o ajuste de valor/data de sempre), DESFAZER BAIXA quando recebida, e atalho pro PANORAMA DO CLIENTE. O ✓ do card segue como baixa rápida de dois toques</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.137.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">RECEBIDAS saiu da lista principal: o A RECEBER ganhou abas no padrão do Estoque — EM ABERTO (a fila de trabalho: hero, atrasadas, a vencer, por cliente) e RECEBIDAS (o arquivo, agrupado por mês com subtotal, cards esmaecidos com ↩ pra desfazer). Dar baixa manda o card direto pra aba de recebidas; a principal só mostra o que ainda precisa de ação</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.136.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">A RECEBER no padrão dos cards do Histórico: cada parcela virou um card — CLIENTE forte em cima, Parcela N/M com o valor (R$ com ponto e vírgula em tudo, inclusive no campo do DAR BAIXA, que abre pré-formatado), operação de origem em letra miúda, ✓ e a data de vencimento completa (DD/MM/AAAA) na coluna da direita, HOJE quando é hoje. Atrasada: valor e data em vermelho. Recebida: card esmaecido com valor recebido, data da baixa e ↩. Revisão geral de formato: todas as datas da tela (inclusive o "próx" do POR CLIENTE) no padrão completo</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.135.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">A RECEBER virou gestão (Fase 2): a lista agora tem ATRASADAS (venceu sem baixa — em vermelho, com total; o que antes era invisível), A VENCER (cronológica) e RECEBIDAS (recolhida, com ↩ pra desfazer). Ordenação por DATA, VALOR ou CLIENTE. Baixa no padrão da casa: ✓ com dois toques registra valor cheio na data de hoje; tocar na linha abre DAR BAIXA com valor e data ajustáveis. A baixa é um evento gravado (parcela_baixas) — o cronograma continua derivado das operações, uma fonte de verdade só; baixa NÃO mexe em lucro nem Fechamento (é caixa/cobrança, não contabilidade). Panorama do cliente acompanhou: EM ABERTO exclui baixadas e mostra vencidas em vermelho. Requer SQL: create table parcela_baixas (id uuid primary key default gen_random_uuid(), op_tab text not null, op_id text not null, parcela_idx int not null, venc date, valor numeric, valor_recebido numeric, recebido_em timestamptz default now(), nota text, unique(op_tab, op_id, parcela_idx)); — sem a tabela, a tela avisa e segue só leitura</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.134.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">PANORAMA DO CLIENTE: tocar num cliente no A RECEBER (ou no botão PANORAMA da ficha em Gestão › Clientes) abre o retrato completo dele, tudo derivado — EM ABERTO (parcelas futuras, data a data), EM COBRANÇA (antecipações atrasadas dele, com o valor corrigido de hoje, em vermelho), HISTÓRICO (operações, total negociado e o lucro VB que ele já gerou — mesma matemática canônica do Fechamento) e CONTRATOS (assinado/aguardando). É a pergunta de crédito respondida numa tela: quanto deve, quanto atrasou, quanto já rendeu. O casamento é pelo nome digitado nas operações — grafias diferentes são clientes diferentes; financiamento fica fora por não guardar cliente</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.133.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">A RECEBER (Fase 1 da gestão de recebíveis): novo botão na Home abre o cronograma derivado das próprias operações — nenhuma tabela nova, nenhuma digitação. TOTAL EM ABERTO (parcelas futuras de vendas, antecipações e financiamentos), PRÓXIMOS 7 DIAS (quem vence, quanto, HOJE em destaque) e POR CLIENTE (exposição em aberto, ordenada, com quantidade de parcelas e próximo vencimento). Vendas usam as parcelas reais (personalizadas ou N×valor), antecipações usam os títulos com data (atrasadas ficam fora — já são cobrança), financiamentos usam parcela×prazo a partir do 1º vencimento. Fase 2 (dar baixa por parcela) torna as vencidas rastreáveis</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.132.1</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Seta de tendência só quando há operação dos dois lados: mês zerado (futuro ou vazio) não mostra mais a "queda" do lucro inteiro do mês anterior — era verdade técnica, mas ruído</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.132.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Quatro entregas. (1) Fechamento com tendência: LUCRO DO MÊS ganha a linha ↑/↓ com a diferença em R$ contra o mês anterior, e RENDIMENTO DO CAPITAL mostra ↑/↓ era X% ao lado do valor — mês anterior sem operação não compara. (2) Contrato órfão sinalizado: em Gestão › Contratos, contrato cuja venda foi excluída ganha a tag VENDA EXCLUÍDA. (3) Alarme de assinatura parada: contrato aguardando há 7+ dias fica vermelho com a contagem de dias, na lista e na ficha. (4) Ficha do sócio com pills: tocar no nome ou telefone edita ali mesmo — e renomear agora PROPAGA o novo nome para vendas, estoque e financiamentos (o vínculo é por nome; a edição antiga deixava as operações órfãs — corrigido nos dois caminhos). Nome duplicado é bloqueado</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.131.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Guarda do contrato órfão: apagar uma venda que tem contrato — pelo × do Histórico ou pelo ↩ APAGAR VENDA E VOLTAR do estoque — agora avisa antes, dizendo se o contrato está gerado ou ASSINADO e lembrando que ele permanece em Gestão › Contratos. A venda some, o contrato fica; nada é apagado em cascata</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.130.0</span><span class="cl-ver-date">19/07/2026</span></div>
       <div class="cl-item">Visualizador definitivo do contrato assinado: pdf.js embutido (primeira e única biblioteca externa do app, decisão tomada após o leitor nativo e o Quick Look falharem no PWA) — o PDF do gov.br abre no visualizador interno rolável, com carimbo de assinatura visível, página por página, offline. A biblioteca só carrega na primeira abertura de um assinado</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.129.5</span><span class="cl-ver-date">17/07/2026</span></div>
       <div class="cl-item">Contrato em PDF gerado no próprio aparelho: o app abre o .docx salvo, extrai texto e foto de dentro dele, renderiza as páginas A4 em canvas e escreve o PDF à mão — sem serviço externo, offline. Na aba Contratos, tocar abre a FICHA (cliente, CPF, data, relógio, valor, arquivo) com VISUALIZAR (PDF) e COMPARTILHAR. Compartilhar — na ficha, no visualizador e na conferência da geração — pergunta: PDF (para o cliente) ou WORD (meus arquivos)</div>
       <div class="cl-item">PDF no formato de impressão do Word: cabeçalho do contrato repetido no topo direito de TODAS as páginas (negritos sublinhados como no original) e numeração N/T no rodapé</div>
@@ -16647,7 +16728,10 @@ function CTR_gerar(ov){
       <div class="cl-item">CONTRATO ASSINADO abre direto na folha do iOS: o carimbo do gov.br é camada desenhada sobre a página e só o leitor nativo (Quick Look — toque no nome do arquivo na folha) mostra o documento fiel. O extrator de páginas foi descartado por mostrar a página sem o carimbo; nenhuma biblioteca externa entrou no app</div>
       <div class="cl-item">Assinado tenta abrir no leitor do Safari em aba própria (rolagem e carimbo completos); se o iOS bloquear, cai na folha de compartilhar</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.121.0</span><span class="cl-ver-date">16/07/2026</span></div>
       <div class="cl-item">CONTRATO na venda: botão novo na linha expandida do Histórico de Vendas gera o CONTRATO DE CONFISSÃO DE DÍVIDA em .docx dentro do aparelho — modelo real embutido (formatação intocada), Cláusula 4ª escrita automaticamente das parcelas da venda (valores por extenso, datas por extenso, agrupamento de mensais), foto da venda injetada no lugar da tabela, saída pela folha de compartilhar do iOS. Dados do devedor digitados na hora nesta versão; cadastro de clientes vem na próxima</div>
       <div class="cl-item">Cadastro de clientes (2B): tabela clientes no Supabase já nascendo com os 21 devedores extraídos dos contratos reais (SQL entregue à parte — rodar uma vez no painel). No sheet do CONTRATO, seletor de cliente preenche tudo num toque; devedor novo digitado é salvo no cadastro automaticamente ao gerar. Tabela clientes protegida nos três caminhos de backup (snapshot diário, restauração e exportação), sem repetir o buraco que a socios teve</div>
@@ -16661,7 +16745,10 @@ function CTR_gerar(ov){
       <div class="cl-item">Acabamento geral da GESTÃO: telas de hub e Clientes no padrão .card dos módulos (logo e título no lugar certo, recuo padrão), swipe e logo VB roteando certo (Clientes → Gestão → Home), botões VOLTAR removidos, ordenar com folha de opções (nome A–Z / mais recentes). Formulário: COMP., Nº estreito, endereço largo, seletores centralizados. Sheet do CONTRATO refeito: cliente buscado por lupa com lista, endereço estruturado igual ao cadastro (CEP preenche o resto), tudo maiúsculo centralizado, relógio em MARCA E MODELO num campo só com REF/ANO/SN na mesma linha — e o modelo do contrato foi fundido de verdade: Cláusula 1ª agora diz Marca e Modelo</div>
       <div class="cl-item">Gerar contrato agora abre a tela de conferência: o documento inteiro renderizado (preâmbulo preenchido, cláusulas, foto da venda, parcelas por extenso) com COMPARTILHAR e FECHAR — fechar volta pro formulário com os dados intactos. E todo contrato gerado fica salvo em Gestão › Contratos: lista por data com cliente, relógio e valor; tocar recompartilha o .docx, × duplo exclui. Registros entram no backup; o arquivo em si fica só na tabela (fora dos snapshots, pra não inchar). Requer SQL da tabela contratos (no chat)</div>
 
-    <div class="cl-version">
+    
+    </div>
+
+<div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.117.2</span><span class="cl-ver-date">15/07/2026</span></div>
       <div class="cl-item">Card de totais do Hist\u00f3rico agora \u00e9 toc\u00e1vel e abre no M\u00caS ATUAL \u2014 o n\u00famero que aparece \u00e9 o do m\u00eas em curso (ex.: BRUTO \u00b7 JULHO \u00b7 2), no ritmo mensal do resto do app. Um toque alterna pro GERAL (acumulado) e volta. Compara\u00e7\u00e3o entre meses segue sendo papel do Fechamento. Com busca ativa o card soma tudo que foi encontrado, sem recorte de m\u00eas. M\u00eas sem opera\u00e7\u00e3o mostra \u2014 em vez de zero. Indicador \u21c4 discreto sinaliza o toque</div>
       <div class="cl-item">Exce\u00e7\u00e3o consciente: ATRASADOS fica fora do ciclo \u2014 atrasado \u00e9 estoque a cobrar, n\u00e3o fluxo do m\u00eas. O card ali mostra sempre o panorama geral, sem toque e sem \u21c4</div>
