@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.239.0</title>
+<title>VB - v1.239.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10263,7 +10263,7 @@ function REN_proSheet(k){
       +'<div><div style="'+ROT+'">NOVO SALDO</div><input id="renpr-val" inputmode="decimal" oninput="REC_maskVal(this);REN_proPinta()" value="'+HIST_fmtMoeda(falta).replace('R$ ','')+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div id="renpr-dica" style="text-align:center;font-size:10px;color:var(--mu);font-weight:600;margin-top:6px;min-height:13px;"></div>'
-    +'<div style="margin-top:10px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'text-align:left;font-size:13px;"></div>'
+    +'<div style="margin-top:10px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'font-size:13px;"></div>'
     +'<button id="renpr-salvar" onclick="REN_proSalvar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +(pp?'<button onclick="REN_proDesfazer(this)" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">DESFAZER PRORROGA\u00c7\u00c3O</button>':'')
     +'<button onclick="REN_proFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -10779,7 +10779,13 @@ function REN_ficha(k, exp){
   var hh='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+REN_termo(x.tab,false,true)+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR', (x.prorrogada && x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005)?('<span style="color:var(--mu);font-weight:600;">'+HIST_fmtMoeda(x.valorOrig)+' \u2192 </span>'+HIST_fmtMoeda(x.valor)):HIST_fmtMoeda(x.valor), red)+bloco('VENCIMENTO', x.prorrogada?('<span style="color:var(--mu);font-weight:600;">'+HIST_fmtData(x.vencOrig)+' \u2192 </span>'+HIST_fmtData(x.venc)):HIST_fmtData(x.venc), red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  if(x.prorrogada){
+    var _pv=HIST_fmtData(x.vencOrig)+' \u2192 '+HIST_fmtData(x.venc);
+    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _pv+='<span style="color:var(--mu);font-weight:600;"> \u00b7 '+HIST_fmtMoeda(x.valorOrig)+' \u2192 '+HIST_fmtMoeda(x.valor)+'</span>';
+    hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('PRORROGA\u00c7\u00c3O', _pv)+'</div>';
+    if(x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
+  }
   (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
   if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' ('+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   /* REPASSE e SOCIO dividem uma linha: eram dois blocos de largura cheia e a ficha crescia demais */
@@ -15507,6 +15513,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.239.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Com data e valor prorrogados, o cabeçalho da ficha não cabia: VALOR e VENCIMENTO apareciam cortados no meio da seta. Os dois voltaram a mostrar só o que vale hoje, e a prorrogação ganhou linha própria embaixo, com as duas datas e os dois valores inteiros</div>
+      <div class="cl-item">A nota da prorrogação aparece na ficha quando existe, e o campo dela na folha ficou centralizado como os outros</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.239.0</span><span class="cl-ver-date">03/08/2026</span></div>
