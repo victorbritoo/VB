@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.237.0</title>
+<title>VB - v1.237.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10654,7 +10654,7 @@ function REN_ficha(k, exp){
   (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
   if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' ('+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   /* REPASSE e SOCIO dividem uma linha: eram dois blocos de largura cheia e a ficha crescia demais */
-  var _bRep='', _bSoc='';
+  var _bRep='', _bSoc='', _bVb='';
   if(b){
     var _rv=Number(b.repasse_valor)||REN_repAlvo(oi, x);
     if(_rv>0||b.repassado_em){
@@ -10668,15 +10668,17 @@ function REN_ficha(k, exp){
     var pr=REN_repAlvo(oi, x);
     var pct=(x.valor>0&&pr>0)?(pr/x.valor*100):null;
     var pctTx=(pct!=null)?(' ('+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):'';
-    /* a parte da VB fecha a frase: mostrar so a do outro deixa o complemento por conta do olho.
-       Em consignacao a VB nasce zerada nas primeiras parcelas, e o zero e informacao. */
+    /* a parte da VB e um bloco proprio, com rotulo proprio: o rotulo SOCIO nao pode encabecar
+       um numero que nao e do socio. Mesmo padrao de CLIENTE | OPERACAO do topo da ficha. */
     var _pvb=Math.round((x.valor-pr)*100)/100;
     var _pvbPct=(x.valor>0)?(' ('+(_pvb/x.valor*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):'';
-    var _vbTx='<span style="color:var(--so2);font-weight:600;"> \u2014 VB \u00b7 </span>'+HIST_fmtMoeda(_pvb)+_pvbPct;
-    _bSoc='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+_vbTx+'</div></div>';
+    _bVb='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">VB</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(_pvb)+_pvbPct+'</div></div>';
+    _bSoc='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+(oi.lbl||'S\u00d3CIO')+' \u00b7 '+CLIP_esc(String(oi.socio).toUpperCase())+'</div><div style="font-size:12px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_fmtMoeda(pr)+pctTx+'</div></div>';
   }
-  if(_bSoc && _bRep) hh+='<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:2px 10px;">'+_bSoc+_bRep+'</div>';
-  else hh+=(_bSoc||_bRep);
+  /* SOCIO | VB dividem a linha; o REPASSE desce, porque agora sao tres blocos e tres nao cabem */
+  if(_bSoc && _bVb) hh+='<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:2px 10px;">'+_bSoc+_bVb+'</div>';
+  else hh+=(_bSoc||'');
+  if(_bRep) hh+=_bRep;
   (function(){
     var pb=REN_prevProblema(x.tab, x.opId, oi);
     if(!pb) return;
@@ -15369,6 +15371,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.237.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">A parte da VB virou bloco próprio, com rótulo próprio, ao lado do bloco do sócio. Antes os dois números viviam embaixo do rótulo SÓCIO · NOME, que respondia por um dono só — e o traço que separava os dois não existe em nenhum outro canto do app. Agora é o mesmo desenho de CLIENTE | OPERAÇÃO do topo da ficha, e o REPASSE desceu pra linha de baixo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.237.0</span><span class="cl-ver-date">03/08/2026</span></div>
