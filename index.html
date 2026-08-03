@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.235.0</title>
+<title>VB - v1.236.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2757,6 +2757,12 @@ function VB_autoteste(){
   t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO' && VB_nomePU('EDUARDO DUARTE PINHEIRO')==='EDUARDO PINHEIRO' && VB_nomePU('ACORDO PEDRO HUBLOT')==='ACORDO PEDRO HUBLOT'; });
   t('Valor abreviado do panorama (VB_kFmt)', function(){ return VB_kFmt(56000)==='56K' && VB_kFmt(65800)==='65,8K' && VB_kFmt(99950)==='100K' && VB_kFmt(291780)==='292K' && VB_kFmt(999)==='999'; });
   t('Conta paga cai no mês certo (REN_cpGravaPag)', function(){ /* o timestamp e sempre meio-dia UTC: o slice(0,7) do mes nunca transborda */ return ('2026-08-31T12:00:00.000Z').slice(0,7)==='2026-08'; });
+  t('Selecionar tudo so em valor e data (VB_selall)', function(){
+    function mk(a){ var e=document.createElement('input'); for(var k in a) e.setAttribute(k,a[k]); return e; }
+    return VB_selall(mk({inputmode:'decimal'})) && VB_selall(mk({inputmode:'numeric'}))
+      && VB_selall(mk({oninput:'REC_maskData(this)'})) && !VB_selall(mk({placeholder:'NOTA'}))
+      && !VB_selall(mk({inputmode:'decimal','data-noselall':'1'})) && VB_selall(mk({'data-selall':'1'}));
+  });
   t('Carimbo guarda o dia local e a hora (VB_carimbo)', function(){ var c=VB_carimbo(); return c.slice(0,10)===REN_hojeISO() && /T\d\d:\d\d:\d\d\.000Z$/.test(c); });
   VB_autotesteFalhas=F;
   var el=document.getElementById('vb-autoteste'); if(el) el.style.display=F.length?'block':'none';
@@ -5000,11 +5006,26 @@ function VB_drawWatermark(ctx, W, H){
   }
   ctx.restore();
 }
-/* Campo marcado com data-selall: tocar seleciona o conteudo inteiro, pra digitar por cima
-   sem precisar apagar. O setTimeout e por causa do iOS, que reposiciona o cursor depois do foco. */
+/* SELECIONAR TUDO AO TOCAR — regra unica do app:
+   campo que se SUBSTITUI (valor, data) seleciona tudo; campo que se CORRIGE (nota, nome,
+   descricao) abre com o cursor onde o dedo tocou. Antes isso era marcado campo a campo com
+   data-selall e so existia em Recebimentos: 6 de 45 campos de valor e 6 de 24 de data.
+   Agora quem decide e o TIPO do campo, entao campo novo ja nasce obedecendo.
+   data-selall  forca ligado (campo sem inputmode que ainda assim se redigita inteiro)
+   data-noselall forca desligado (campo numerico que se edita em pedaco) */
+function VB_selall(el){
+  if(!el || !el.hasAttribute || !el.select) return false;
+  if(el.hasAttribute('data-noselall')) return false;
+  if(el.hasAttribute('data-selall')) return true;
+  var im=String(el.getAttribute('inputmode')||'').toLowerCase();
+  if(im==='decimal' || im==='numeric') return true;
+  var hs=String(el.getAttribute('oninput')||'')+String(el.getAttribute('onblur')||'');
+  return hs.indexOf('maskVal')>=0 || hs.indexOf('maskData')>=0 || hs.indexOf('autoCompleteDate')>=0;
+}
+/* O setTimeout e por causa do iOS, que reposiciona o cursor depois do foco. */
 document.addEventListener('focusin', function(e){
   var el=e.target;
-  if(!el || !el.hasAttribute || !el.hasAttribute('data-selall') || !el.select) return;
+  if(!VB_selall(el)) return;
   setTimeout(function(){ try{ el.select(); }catch(_){} }, 0);
 });
 function autoCompleteDate(el){
@@ -10064,9 +10085,9 @@ function REN_cpSheet(id){
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA')+'</div>'
     +'<div style="'+RT+'">CREDOR</div>'
-    +'<input id="rencp-credor" oninput="REN_cpDirty()" data-selall placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
+    +'<input id="rencp-credor" oninput="REN_cpDirty()" placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
-    +'<input id="rencp-desc" oninput="REN_cpDirty()" data-selall placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
+    +'<input id="rencp-desc" oninput="REN_cpDirty()" placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
     +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
@@ -10183,7 +10204,7 @@ function REN_notaSheet(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+REN_rotNota(x.tab)+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
-    +'<input id="rennt-txt" oninput="REN_ntDirty()" data-selall placeholder="CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
+    +'<input id="rennt-txt" oninput="REN_ntDirty()" placeholder="CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
     +'<button id="rennt-salvar" onclick="REN_notaSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -11978,7 +11999,7 @@ function MER_cpRender(r){
       +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><input data-selall inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="'+dBR+'" onblur="autoCompleteDate(this);MER_cpCampo('+i+',\'venc\',this)" oninput="MER_cpCampo('+i+',\'venc\',this)" style="'+IN+'"></div>'
       +'<button onclick="MER_cpRemove('+i+')" style="height:38px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:15px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>'
       /* a obs e lembrete da parcela (ex.: METADE ROMULO). E a mesma nota que aparece em SAIDAS. */
-      +'<div style="grid-column:1/-1;margin:-2px 0 6px;"><input data-selall placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
+      +'<div style="grid-column:1/-1;margin:-2px 0 6px;"><input placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
   });
   hh+='</div>';
   hh+='<button onclick="MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ PARCELA</button>';
@@ -15343,6 +15364,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.236.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Auditoria dos 130 campos do app. O selecionar-tudo ao tocar existia em 6 dos 45 campos de valor e 6 dos 24 de data — nunca tinha saído de Recebimentos — e, pior, estava em quatro campos de TEXTO, onde a primeira tecla apagava a frase inteira</div>
+      <div class="cl-item">A regra virou uma só: campo que se SUBSTITUI (valor, data) seleciona tudo; campo que se CORRIGE (nota, nome, descrição) abre com o cursor onde o dedo tocou. Quem decide agora é o tipo do campo, não uma marca escrita à mão — então campo novo já nasce obedecendo</div>
+      <div class="cl-item">Na prática: as três calculadoras, o cadastro da peça, os filtros do Histórico e a ficha do cliente ganharam o gesto que só Recebimentos tinha. NOTA DO TÍTULO, DESCRIÇÃO, CREDOR e a OBS da parcela perderam</div>
+      <div class="cl-item">O self-tester ganhou a 17ª prova, vigiando a regra dos dois lados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.235.0</span><span class="cl-ver-date">03/08/2026</span></div>
