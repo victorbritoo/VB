@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.239.1</title>
+<title>VB - v1.240.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4676,6 +4676,21 @@ try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
   else pinta();
 })();
 (function(){ var el=document.getElementById('fin-dataOp'); if(el && !el.value) el.value=MER_hojeBR(); })();
+/* CONFIRMACAO DE DOIS TOQUES -- REGRA UNICA.
+   Estava escrita a mao em 15 botoes e nenhum tinha tempo minimo entre armar e confirmar:
+   dois toques rapidos eram indistinguiveis de uma confirmacao deliberada, entao a protecao
+   existia no codigo e nao existia no dedo. Aqui ha um piso de 400ms, e o botao trava depois
+   de executar para que um terceiro toque nao grave de novo enquanto o banco responde.
+   Devolve TRUE quando pode executar; FALSE quando o chamador deve (re)armar e sair. */
+function VB_podeExec(btn){
+  if(!btn || !btn.dataset) return true;
+  if(String(btn.dataset.busy)==='1') return false;
+  if(String(btn.dataset.armed)!=='1'){ btn.dataset.armedAt=String(Date.now()); return false; }
+  if(Date.now()-(Number(btn.dataset.armedAt)||0) < 400) return false;
+  btn.dataset.busy='1';
+  setTimeout(function(){ try{ btn.dataset.busy=''; }catch(e){} }, 1500);
+  return true;
+}
 function VB_toast(msg){
   try{
     var t=document.getElementById('vb-toast');
@@ -6137,7 +6152,7 @@ function VEN_trocaToggle(id){
   VEN_renderParcelas();
 }
 function VEN_removerParcela(id, btn){
-  if(btn && btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--red)'; VB_toast('Toque de novo para apagar a parcela.'); setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; } },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--red)'; VB_toast('Toque de novo para apagar a parcela.'); setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; } },2500); return; }
   var _p=VEN_parcelas.find(function(x){ return x.id===id; });
   var _mid=(_p&&_p.troca&&_p.troca.mid)||null;
   var _y0=(btn&&btn.getBoundingClientRect)?btn.getBoundingClientRect().top:null;
@@ -7870,7 +7885,7 @@ function ANT_renderTitulos(){
 }
 
 function ANT_removerTituloArm(btn, id){
-  if(btn.dataset.armed!=='1'){
+  if(!VB_podeExec(btn)){
     btn.dataset.armed='1';
     btn.textContent='✓';
     btn.style.color='var(--ink)';
@@ -10135,7 +10150,7 @@ function REN_cpSalvar(id){
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpExcluir(btn, id){
-  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--mu)'; } },2500); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--mu)'; } },2500); return; }
   sb.from('contas_pagar').delete().eq('id',id).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
     try{ VB_log('CONTAS A PAGAR','excluiu conta','',''); }catch(e){}
@@ -10146,7 +10161,7 @@ function REN_cpExcluir(btn, id){
 }
 function REN_cpQuick(btn, id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
-  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para marcar como paga.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar como paga.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   var c=REN_cpDe(id); if(!c) return;
   REN_cpGravaPag(c, Number(c.valor)||0, REN_hojeISO(), null);
 }
@@ -10163,7 +10178,7 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpDesfaz(btn, id){
-  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   sb.from('contas_pagar').update({pago_em:null, valor_pago:null, nota_baixa:null}).eq('id', id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     try{ VB_log('CONTAS A PAGAR','desfez pagamento','',''); }catch(e){}
@@ -10233,7 +10248,7 @@ function REN_notaSheet(k){
    ele decide. O juro incide sobre o que FALTA, nao sobre o valor cheio: se o cliente pagou
    uma parte e empurrou o resto, e o resto que rende. Por dentro guardamos o novo total da
    parcela (ja pago + novo saldo), que e o que mantem o FALTA e o TOTAL A RECEBER honestos. */
-var REN_proK=null;
+var REN_proK=null, REN_proOrig='';
 function REN_proSheet(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   REN_proK=k;
@@ -10242,7 +10257,7 @@ function REN_proSheet(k){
     ov=document.createElement('div'); ov.id='ren-pro-ov';
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100025;align-items:flex-end;justify-content:center;';
     document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov){ ov.style.display='none'; VB_travaFundo(false); } });
+    ov.addEventListener('click', function(e){ if(e.target===ov) REN_proFechar(); });
   }
   var pago=REN_pagoTot(x), falta=REN_falta(x);
   var pp=(REN_cache.pro||{})[REN_key(x)];
@@ -10269,12 +10284,25 @@ function REN_proSheet(k){
     +'<button onclick="REN_proFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex'; VB_travaFundo(true);
-  REN_proCalc(0); REN_proPinta();
+  REN_proCalc(0);
+  REN_proOrig=REN_proEstado();
+  REN_proPinta();
 }
-function REN_proFechar(){
+function REN_proEstado(){
+  function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
+  return [g('renpr-data'),g('renpr-val'),g('renpr-nota')].join('\u241f');
+}
+function REN_proSair(){
   var o=document.getElementById('ren-pro-ov'); if(o) o.style.display='none';
   VB_travaFundo(false);
   if(REN_proK) REN_ficha(REN_proK);   /* folha aberta a partir da ficha volta pra ficha */
+}
+function REN_proFechar(){
+  if(REN_proEstado()===REN_proOrig){ REN_proSair(); return; }
+  VB_confirm2('Alterações feitas', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar) REN_proSalvar();
+    else REN_proSair();
+  });
 }
 function REN_proCalc(sugerir){
   var x=REN_cache&&REN_cache.map[REN_proK]; if(!x) return;
@@ -10295,7 +10323,8 @@ function REN_proPinta(){
   var x=REN_cache&&REN_cache.map[REN_proK];
   var d=REN_brToISO(((document.getElementById('renpr-data')||{}).value)||'');
   var v=REN_num(((document.getElementById('renpr-val')||{}).value)||'');
-  var ok=!!(x && d && Number(v)>0);
+  /* data igual a que ja vale nao e prorrogacao; e sem mudanca nenhuma nao ha o que salvar */
+  var ok=!!(x && d && Number(v)>0 && d!==x.venc && REN_proEstado()!==REN_proOrig);
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -10313,6 +10342,7 @@ function REN_proSalvar(){
   sb.from('parcela_prorroga').upsert(reg, {onConflict:'op_tab,op_id,parcela_idx'}).then(function(res){
     if(res && res.error){ VB_erro(res.error.message, 'N\u00e3o salvou a prorroga\u00e7\u00e3o.'); return; }
     try{ VB_log('RECEB\u00cdVEIS','prorrogou', x.cliente, x.rot+' \u00b7 '+HIST_fmtData(x.venc)+' \u2192 '+HIST_fmtData(d)+' \u00b7 '+HIST_fmtMoeda(saldo)); }catch(e){}
+    REN_proOrig=REN_proEstado();
     var o=document.getElementById('ren-pro-ov'); if(o) o.style.display='none';
     VB_travaFundo(false); VB_toast('Prorrogada.');
     REN_fichaVoltar=k; REN_abrir();
@@ -10321,7 +10351,7 @@ function REN_proSalvar(){
 function REN_proDesfazer(btn){
   var k=REN_proK, x=REN_cache&&REN_cache.map[k]; if(!x) return;
   /* dois toques: desfazer mexe em data e valor de uma parcela viva */
-  if(btn.dataset.armed!=='1'){
+  if(!VB_podeExec(btn)){
     btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO PARA DESFAZER';
     setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='DESFAZER PRORROGA\u00c7\u00c3O'; } }, 2500);
     return;
@@ -10329,6 +10359,7 @@ function REN_proDesfazer(btn){
   sb.from('parcela_prorroga').delete().match({op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx}).then(function(res){
     if(res && res.error){ VB_erro(res.error.message, 'N\u00e3o desfez.'); return; }
     try{ VB_log('RECEB\u00cdVEIS','desfez prorroga\u00e7\u00e3o', x.cliente, x.rot); }catch(e){}
+    REN_proOrig=REN_proEstado();
     var o=document.getElementById('ren-pro-ov'); if(o) o.style.display='none';
     VB_travaFundo(false); VB_toast('Prorroga\u00e7\u00e3o desfeita.');
     REN_fichaVoltar=k; REN_abrir();
@@ -10781,9 +10812,10 @@ function REN_ficha(k, exp){
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
   if(x.prorrogada){
-    var _pv=HIST_fmtData(x.vencOrig)+' \u2192 '+HIST_fmtData(x.venc);
-    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _pv+='<span style="color:var(--mu);font-weight:600;"> \u00b7 '+HIST_fmtMoeda(x.valorOrig)+' \u2192 '+HIST_fmtMoeda(x.valor)+'</span>';
-    hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('PRORROGA\u00c7\u00c3O', _pv)+'</div>';
+    /* VENCIMENTO e VALOR logo acima ja dizem o que vale hoje: aqui so entra o que nao esta na tela */
+    var _pv=HIST_fmtData(x.vencOrig);
+    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _pv+=' \u00b7 '+HIST_fmtMoeda(x.valorOrig);
+    hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('ERA', _pv)+'</div>';
     if(x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
   }
   (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
@@ -10940,7 +10972,7 @@ function REN_desfazFicha(k){
   REN_desfazDireto(b.id);
 }
 function REN_repQuick(btn, k){
-  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
   sb.from('parcela_baixas').update({repassado_em:VB_carimbo()}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
@@ -11170,7 +11202,7 @@ function REN_desfazDireto(baixaId){
 }
 function REN_quick(btn, k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
-  if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   REN_gravaBaixa(x, REN_falta(x), REN_hojeISO());
 }
@@ -11263,7 +11295,7 @@ function REN_confirmaBaixa(k){
   REN_gravaBaixa(x, v, d, nt||null);
 }
 function REN_desfaz(btn, baixaId){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   /* Delega pro REN_desfazDireto: era a UNICA das duas rotas que apagava os pagamentos junto.
      Esta aqui so tirava o carimbo, e a parcela voltava pra lista mostrando PAGO / RESTA 0,00.
      De quebra, esta rota passa a avisar quando existe repasse pago. */
@@ -11650,7 +11682,7 @@ function SOC_updateAddBtn(){
   if(c) c.style.display = SOC_editId ? 'block' : 'none';
 }
 function SOC_delArm(btn,id){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='✓'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='×'; } },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='✓'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='×'; } },2500); return; }
   sb.from('socios').delete().eq('id',id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     var _sr=SOC_rows.find(function(x){return String(x.id)===String(id);});
@@ -12552,7 +12584,7 @@ function MER_updateAddBtn(){
 }
 function MER_baixa(btn){
   if(MER_editId){ var _id=btn.dataset.merid; MER_dirtyGuard(function(){ MER_load(); }); return; }
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='var(--ink)'; btn.style.background='var(--sf)'; btn.style.borderColor='var(--ln)'; },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color='var(--ink)'; btn.style.background='var(--sf)'; btn.style.borderColor='var(--ln)'; },2500); return; }
   MER_baixaSheet(btn.dataset.merid);
 }
 function MER_baixaSheet(merId){
@@ -12587,7 +12619,7 @@ function MER_baixaExec(merId){
 function MER_voltar(btn){
   var m=MER_rows.find(function(x){ return String(x.id)===String(btn.dataset.merid); });
   if(m && m.venda_id){ MER_voltarConfirm(m); return; } // baixa por venda: decidir o destino da venda vinculada
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color=''; btn.style.background=''; btn.style.borderColor=''; }, 2200); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color=''; btn.style.background=''; btn.style.borderColor=''; }, 2200); return; }
   MER_voltarExec(btn.dataset.merid, false, null);
 }
 function MER_voltarConfirm(m){
@@ -12729,7 +12761,7 @@ function MER_delExec(id){
   });
 }
 function MER_del(btn){
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='✓'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='×'; btn.style.color='var(--mu)'; },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='✓'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='×'; btn.style.color='var(--mu)'; },2500); return; }
   var id=btn.dataset.merdel;
   sb.from('mercadorias').delete().eq('id',id).then(function(res){
     if(res.error){ VB_toast('Não excluiu.'); return; }
@@ -14580,7 +14612,7 @@ function CLI_salvar(btn){
 }
 function CLI_del(btn,i){
   var c=CLI_rows[i]; if(!c) return;
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; },2500); return; }
   sb.from('clientes').delete().eq('id',c.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_log('CLIENTES','apagou', c.nome||'', c.cpf||'');
@@ -15120,7 +15152,7 @@ function CON_share(i){
 }
 function CON_del(btn,i){
   var c=CON_rows[i]; if(!c) return;
-  if(btn.dataset.armed!=='1'){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; },2500); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='\u2713'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='\u00d7'; btn.style.color='var(--mu)'; },2500); return; }
   sb.from('contratos').delete().eq('id',c.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_log('CONTRATOS','apagou', c.cliente_nome||'', c.fname||'');
@@ -15513,6 +15545,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.240.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Toque rápido demais atravessava a confirmação. Os botões de dois toques — ✓ rápido, EXCLUIR, DESFAZER, MARCAR COMO PAGA e outros — executavam no segundo toque por mais colado que ele viesse, então a proteção sumia justamente na pressa, que é quando ela deveria valer. Agora o segundo toque só conta depois de 400ms; antes disso ele é ignorado e o botão continua armado esperando</div>
+      <div class="cl-item">E o botão trava depois de executar, para um terceiro toque não gravar de novo enquanto o banco ainda responde</div>
+      <div class="cl-item">A regra estava escrita à mão em 15 botões, cada um do seu jeito. Virou uma só, e botão novo já nasce protegido</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.239.2</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">A linha da prorrogação virou ERA. Ela mostrava para onde a data e o valor foram — e isso já estava logo acima, em VENCIMENTO e VALOR. Agora só diz o que não está em lugar nenhum: de onde vieram</div>
+      <div class="cl-item">O SALVAR da prorrogação entrou na regra da casa: só acende com alguma mudança, e a data tem que ser diferente da que já vale — marcar a mesma data não é prorrogar. Sair com alteração pendente, inclusive tocando fora, agora passa pelo diálogo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.239.1</span><span class="cl-ver-date">03/08/2026</span></div>
