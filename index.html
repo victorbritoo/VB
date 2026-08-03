@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.240.0</title>
+<title>VB - v1.240.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4685,11 +4685,21 @@ try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
 function VB_podeExec(btn){
   if(!btn || !btn.dataset) return true;
   if(String(btn.dataset.busy)==='1') return false;
-  if(String(btn.dataset.armed)!=='1'){ btn.dataset.armedAt=String(Date.now()); return false; }
+  if(String(btn.dataset.armed)!=='1'){
+    /* foto do estilo ANTES de armar: limpar style.background depois apagava a declaracao
+       inline original do botao (que era var(--sf2)), e ele nao voltava ao normal -- voltava a nada */
+    if(typeof btn.dataset.st0!=='string') btn.dataset.st0=btn.getAttribute('style')||'';
+    btn.dataset.armedAt=String(Date.now()); return false;
+  }
   if(Date.now()-(Number(btn.dataset.armedAt)||0) < 400) return false;
   btn.dataset.busy='1';
   setTimeout(function(){ try{ btn.dataset.busy=''; }catch(e){} }, 1500);
   return true;
+}
+function VB_desarma(btn){
+  if(!btn) return;
+  btn.dataset.armed='';
+  if(typeof btn.dataset.st0==='string') btn.setAttribute('style', btn.dataset.st0);
 }
 function VB_toast(msg){
   try{
@@ -10161,7 +10171,7 @@ function REN_cpExcluir(btn, id){
 }
 function REN_cpQuick(btn, id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar como paga.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar como paga.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   var c=REN_cpDe(id); if(!c) return;
   REN_cpGravaPag(c, Number(c.valor)||0, REN_hojeISO(), null);
 }
@@ -10178,7 +10188,7 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpDesfaz(btn, id){
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   sb.from('contas_pagar').update({pago_em:null, valor_pago:null, nota_baixa:null}).eq('id', id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     try{ VB_log('CONTAS A PAGAR','desfez pagamento','',''); }catch(e){}
@@ -10972,7 +10982,7 @@ function REN_desfazFicha(k){
   REN_desfazDireto(b.id);
 }
 function REN_repQuick(btn, k){
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
   sb.from('parcela_baixas').update({repassado_em:VB_carimbo()}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
@@ -11202,7 +11212,7 @@ function REN_desfazDireto(baixaId){
 }
 function REN_quick(btn, k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   REN_gravaBaixa(x, REN_falta(x), REN_hojeISO());
 }
@@ -11295,7 +11305,7 @@ function REN_confirmaBaixa(k){
   REN_gravaBaixa(x, v, d, nt||null);
 }
 function REN_desfaz(btn, baixaId){
-  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   /* Delega pro REN_desfazDireto: era a UNICA das duas rotas que apagava os pagamentos junto.
      Esta aqui so tirava o carimbo, e a parcela voltava pra lista mostrando PAGO / RESTA 0,00.
      De quebra, esta rota passa a avisar quando existe repasse pago. */
@@ -12619,7 +12629,7 @@ function MER_baixaExec(merId){
 function MER_voltar(btn){
   var m=MER_rows.find(function(x){ return String(x.id)===String(btn.dataset.merid); });
   if(m && m.venda_id){ MER_voltarConfirm(m); return; } // baixa por venda: decidir o destino da venda vinculada
-  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ btn.dataset.armed=''; btn.style.color=''; btn.style.background=''; btn.style.borderColor=''; }, 2200); return; }
+  if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.style.color='var(--acc-tx)'; btn.style.background='var(--acc)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ VB_desarma(btn); }, 2200); return; }
   MER_voltarExec(btn.dataset.merid, false, null);
 }
 function MER_voltarConfirm(m){
@@ -15545,6 +15555,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.240.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Botão armado que desarmava sozinho não voltava ao normal — ficava sem fundo e sem borda. Ao desarmar ele apagava o estilo, e o estilo original também estava escrito ali: apagar não devolvia o antigo, devolvia nada. Agora o app guarda como o botão era antes de armar e devolve exatamente aquilo. Era antigo e quase invisível, porque antes quase nunca se armava sem confirmar em seguida</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.240.0</span><span class="cl-ver-date">03/08/2026</span></div>
