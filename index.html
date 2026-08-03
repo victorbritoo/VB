@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.232.0</title>
+<title>VB - v1.232.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10062,7 +10062,7 @@ function REN_cpSalvar(id){
     try{ VB_log('CONTAS A PAGAR', id?'editou conta':'nova conta', cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
     VB_toast(id?'Conta salva.':'Conta lan\u00e7ada.');
-    REN_aba='cp'; REN_abrir();
+    REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpExcluir(btn, id){
@@ -10072,7 +10072,7 @@ function REN_cpExcluir(btn, id){
     try{ VB_log('CONTAS A PAGAR','excluiu conta','',''); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
     VB_toast('Conta exclu\u00edda.');
-    REN_aba='cp'; REN_abrir();
+    REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpQuick(btn, id){
@@ -10090,7 +10090,7 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
     try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
     ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
     VB_toast('Conta paga.');
-    REN_aba='cp'; REN_abrir();
+    REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpDesfaz(btn, id){
@@ -10099,7 +10099,7 @@ function REN_cpDesfaz(btn, id){
     if(res.error){ VB_erro(res.error.message); return; }
     try{ VB_log('CONTAS A PAGAR','desfez pagamento','',''); }catch(e){}
     VB_toast('Pagamento desfeito.');
-    REN_aba='cp'; REN_abrir();
+    REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpBaixaSheet(id){
@@ -15280,6 +15280,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.232.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Desfazer um pagamento em PAGAS jogava a tela pra A PAGAR. Era a mesma linha em quatro lugares — salvar, excluir, pagar e desfazer — todos mandando a tela pra A PAGAR fizesse o que fizesse. Agora a lista fica onde estava, inclusive quando a ação sai da busca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.232.0</span><span class="cl-ver-date">03/08/2026</span></div>
