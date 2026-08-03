@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.232.1</title>
+<title>VB - v1.233.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10017,6 +10017,33 @@ function REN_cpLista(){
   }
   return hh;
 }
+/* A folha de conta obedece a regra do app: SALVAR so acende quando da pra salvar.
+   Conta nova exige valor e vencimento; edicao exige, alem disso, alguma mudanca.
+   Rascunho novo nao dispara guarda de saida (regra antiga, de proposito); edicao mexida, sim. */
+var REN_cpForm=null;
+function REN_cpEstado(){
+  function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
+  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota')].join('\u241f');
+}
+function REN_cpDirty(){
+  var b=document.getElementById('rencp-salvar'); if(!b) return;
+  var v=REN_num((document.getElementById('rencp-valor')||{}).value||'');
+  var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value||'');
+  var ok=(Number(v)>0 && !!d) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
+  b.style.background=ok?'var(--acc)':'var(--sf3)';
+  b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
+  b.style.cursor=ok?'pointer':'not-allowed';
+  b.style.pointerEvents=ok?'':'none';
+}
+function REN_cpFecharGuard(btn){
+  if(REN_cpForm!==null && REN_cpEstado()!==REN_cpForm && btn.dataset.armed!=='1'){
+    VB_toast('Toque de novo para sair sem salvar.');
+    btn.dataset.armed='1'; btn.textContent='SAIR SEM SALVAR';
+    setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='FECHAR'; } },2200);
+    return;
+  }
+  var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
+}
 function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
   var c=REN_cpDe(id);
@@ -10029,21 +10056,23 @@ function REN_cpSheet(id){
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA A PAGAR')+'</div>'
     +'<div style="'+RT+'">CREDOR</div>'
-    +'<input id="rencp-credor" data-selall placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
+    +'<input id="rencp-credor" oninput="REN_cpDirty()" data-selall placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
-    +'<input id="rencp-desc" data-selall placeholder="EX.: DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
+    +'<input id="rencp-desc" oninput="REN_cpDirty()" data-selall placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
-    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
-    +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+dBR+'" style="'+IN+'"></div>'
+    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
-    +'<input id="rencp-nota" placeholder="EX.: COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
-    +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(c?'SALVAR':'LAN\u00c7AR CONTA')+'</button>'
+    +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
+    +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
     +((c&&!c.pago_em)?('<button onclick="REN_cpBaixaSheet(\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">MARCAR COMO PAGA</button>'):'')
     +(c?('<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
-    +'<button onclick="document.getElementById(\'ren-cp-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'<button onclick="REN_cpFecharGuard(this)" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
+  REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
+  REN_cpDirty();
   try{ VB_cliAttach('rencp-credor'); }catch(e){}
 }
 function REN_cpSalvar(id){
@@ -10115,7 +10144,7 @@ function REN_cpBaixaSheet(id){
     +'<div><div style="'+RT+'">DATA DO PAGAMENTO</div><input data-selall id="rencpb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
-    +'<input id="rencpb-nota" placeholder="EX.: PIX \u00b7 BANCO INTER" style="'+IN+'">'
+    +'<input id="rencpb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'
     +'<button onclick="REN_cpBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR PAGAMENTO</button>'
     +'<button onclick="document.getElementById(\'ren-cpb-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -10145,7 +10174,7 @@ function REN_notaSheet(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+REN_rotNota(x.tab)+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
-    +'<input id="rennt-txt" data-selall placeholder="EX.: CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
+    +'<input id="rennt-txt" data-selall placeholder="CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
     +'<button onclick="REN_notaSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -10664,7 +10693,7 @@ function REN_editRec(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
     +'<button id="renb-salvar" onclick="REN_salvaRec(\''+k+'\')" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -10884,7 +10913,7 @@ function REN_repassar(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="EX.: PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
     +'<button onclick="REN_salvaRepasse(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(b.repassado_em?'SALVAR':'CONFIRMAR REPASSE')+'</button>'
     +(b.repassado_em?'<button onclick="REN_desfazRepasse(\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -11015,7 +11044,7 @@ function REN_editBaixa(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="EX.: ENCONTRO DE CONTAS" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" style="'+IN+'"></div>'
     +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -12334,7 +12363,7 @@ function MER_baixaSheet(merId){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,\'Helvetica Neue\',sans-serif;-webkit-text-size-adjust:100%;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">BAIXA MANUAL</div>'
     +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">NOTA DA SA\u00cdDA (OPCIONAL)</div>'
-    +'<textarea id="mer-baixa-nota" rows="2" placeholder="EX: DEVOLVIDO AO DONO \u00b7 TROCA NO NEG\u00d3CIO X" style="width:100%;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);outline:none;font-size:13px;color:var(--tx);padding:10px 12px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;margin-bottom:12px;box-sizing:border-box;"></textarea>'
+    +'<textarea id="mer-baixa-nota" rows="2" placeholder="DEVOLVIDO AO DONO \u00b7 TROCA NO NEG\u00d3CIO X" style="width:100%;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);outline:none;font-size:13px;color:var(--tx);padding:10px 12px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;margin-bottom:12px;box-sizing:border-box;"></textarea>'
     +'<button onclick="MER_baixaExec(\''+merId+'\')" style="'+bs+'border:none;background:var(--acc);color:var(--acc-tx);margin-bottom:8px;">DAR BAIXA</button>'
     +'<button onclick="document.getElementById(\'mer-baixa-overlay\').style.display=\'none\'" style="'+bs+'border:0.5px dashed var(--ln0);background:transparent;color:var(--mu);">CANCELAR</button>'
     +'</div>';
@@ -13621,7 +13650,7 @@ function REC_openEditor(ac){
     +'</div>'
     +'<div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));">'
       +(ctrl?'':'<div style="display:flex;gap:8px;margin-bottom:12px;">'+tipoBtn('dinheiro')+tipoBtn('cheque')+tipoBtn('boleto')+'</div>')
-      +'<div style="margin-bottom:10px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">'+lblCli+'</div><input id="rec-f-cli" autocapitalize="sentences" value="'+REC_esc(ac.cliente||'')+'" placeholder="'+(ctrl?'ex.: Ligar para o contador':'ex.: Wanderson WET')+'" style="'+REC_inpCss+'"></div>'
+      +'<div style="margin-bottom:10px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">'+lblCli+'</div><input id="rec-f-cli" autocapitalize="sentences" value="'+REC_esc(ac.cliente||'')+'" placeholder="'+(ctrl?'Ligar para o contador':'Wanderson WET')+'" style="'+REC_inpCss+'"></div>'
       +'<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">DESCRIÇÃO <span style="color:var(--so2);font-weight:400;letter-spacing:0;">(vai entre parênteses)</span></div><input id="rec-f-desc" autocapitalize="sentences" value="'+REC_esc(ac.descricao||'')+'" placeholder="ex.: OP RAM 1500" style="'+REC_inpCss+'"></div>'
       +'<div style="font-size:11px;letter-spacing:0.5px;color:var(--mu2);font-weight:700;margin-bottom:8px;">'+(ctrl?'VALOR (opcional) E DATA':'VALOR E DATA')+'</div>'
       +'<div id="rec-parc-list"></div>'
@@ -15280,6 +15309,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Sumiu o EX.: dos campos vazios — ficou só o exemplo. A maior parte do app já era assim (o SN mostra 3Y166494, o ACOMPANHA mostra CAIXA, DOCUMENTOS, CERTIFICADO...), e todo campo tem rótulo em cima dizendo o que é: o prefixo explicava o que o rótulo já tinha explicado. De quebra morreu um EX: sem ponto, que destoava dos outros</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">O SALVAR da conta a pagar era o único botão do app que nascia aceso sem ter o que salvar. Agora segue a regra da casa: conta nova exige valor e vencimento; edição exige, além disso, alguma mudança. Sem isso ele fica apagado — e apagado é informação, não defeito</div>
+      <div class="cl-item">Sair de uma conta editada e não salva agora pede confirmação: o FECHAR vira SAIR SEM SALVAR e só obedece no segundo toque. Conta nova continua sem guarda, como sempre foi</div>
+      <div class="cl-item">LANÇAR CONTA virou SALVAR. Lançar a conta é o que acontece quando se salva, não o nome da ação — e agora os dois estados da folha falam a mesma palavra</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.232.1</span><span class="cl-ver-date">03/08/2026</span></div>
