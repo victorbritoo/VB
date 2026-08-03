@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.233.1</title>
+<title>VB - v1.233.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10020,7 +10020,7 @@ function REN_cpLista(){
 /* A folha de conta obedece a regra do app: SALVAR so acende quando da pra salvar.
    Conta nova exige valor e vencimento; edicao exige, alem disso, alguma mudanca.
    Rascunho novo nao dispara guarda de saida (regra antiga, de proposito); edicao mexida, sim. */
-var REN_cpForm=null;
+var REN_cpForm=null, REN_cpEditId='';
 function REN_cpEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
   return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota')].join('\u241f');
@@ -10035,14 +10035,14 @@ function REN_cpDirty(){
   b.style.cursor=ok?'pointer':'not-allowed';
   b.style.pointerEvents=ok?'':'none';
 }
-function REN_cpFecharGuard(btn){
-  if(REN_cpForm!==null && REN_cpEstado()!==REN_cpForm && btn.dataset.armed!=='1'){
-    VB_toast('Toque de novo para sair sem salvar.');
-    btn.dataset.armed='1'; btn.textContent='SAIR SEM SALVAR';
-    setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.textContent='FECHAR'; } },2200);
-    return;
-  }
-  var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
+function REN_cpFecharGuard(){
+  function fecha(){ var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none'; }
+  if(REN_cpForm===null || REN_cpEstado()===REN_cpForm){ fecha(); return; }
+  /* mesmo dialogo do Estoque: sair de uma edicao mexida e decisao, nao aviso */
+  VB_confirm2('Voc\u00ea alterou esta conta. Salvar as altera\u00e7\u00f5es?', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar) REN_cpSalvar(REN_cpEditId||'');
+    else fecha();
+  });
 }
 function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
@@ -10068,10 +10068,11 @@ function REN_cpSheet(id){
     +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
     +((c&&!c.pago_em)?('<button onclick="REN_cpBaixaSheet(\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">MARCAR COMO PAGA</button>'):'')
     +(c?('<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
-    +'<button onclick="REN_cpFecharGuard(this)" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
   REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
+  REN_cpEditId = c ? String(c.id) : '';
   REN_cpDirty();
   try{ VB_cliAttach('rencp-credor'); }catch(e){}
 }
@@ -10174,11 +10175,22 @@ function REN_notaSheet(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+REN_rotNota(x.tab)+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
-    +'<input id="rennt-txt" data-selall placeholder="CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
-    +'<button onclick="REN_notaSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
+    +'<input id="rennt-txt" oninput="REN_ntDirty()" data-selall placeholder="CHEQUE DE TERCEIRO \u00b7 EMANUEL" value="'+CLIP_esc(atual).replace(/"/g,'&quot;')+'" style="'+IN+'">'
+    +'<button id="rennt-salvar" onclick="REN_notaSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
+  REN_ntOrig=(document.getElementById('rennt-txt')||{}).value||'';
+  REN_ntDirty();
+}
+function REN_ntDirty(){
+  var b=document.getElementById('rennt-salvar'); if(!b) return;
+  var e=document.getElementById('rennt-txt');
+  var on = e ? (String(e.value||'')!==REN_ntOrig) : false;
+  b.style.background=on?'var(--acc)':'var(--sf3)';
+  b.style.color=on?'var(--acc-tx)':'var(--mu2)';
+  b.style.cursor=on?'pointer':'not-allowed';
+  b.style.pointerEvents=on?'':'none';
 }
 function REN_notaSalvar(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -10202,6 +10214,7 @@ function REN_repDef(oi, x){
   return (oi.vt>0)?Math.round(oi.vs/oi.vt*x.valor*100)/100:0;
 }
 function REN_rotCurto(r){ return String(r||'').replace(/\bSN[:.\s]*[A-Z0-9-]+/gi,'').replace(/\s{2,}/g,' ').replace(/[\s\u00b7,;-]+$/,'').trim(); }
+var REN_ntOrig='';
 var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='', REN_fichaVoltar=null, REN_recOrig=null, REN_busca='', REN_buscaOn=false;
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_cicloSort(){ var o=['data','valor','cliente']; REN_sort=o[(o.indexOf(REN_sort)+1)%o.length]; REN_render(); }
@@ -15309,6 +15322,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.2</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Sair de uma conta editada e não salva agora abre o mesmo diálogo do Estoque — SALVAR ou DESCARTAR — em vez do aviso de dois toques. Sair é decisão, e decisão pede pergunta com duas saídas, não um recado que some sozinho</div>
+      <div class="cl-item">SALVAR NOTA nascia aceso com o campo do jeito que estava. Agora só acende quando o texto muda, como o resto do app</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.1</span><span class="cl-ver-date">03/08/2026</span></div>
