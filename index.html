@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.240.1</title>
+<title>VB - v1.241.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9097,10 +9097,57 @@ function LOG_toggle(card){
   full.style.display=aberto?'none':'block';
   res.style.display=aberto?'block':'none';
 }
+/* frase por MODULO+ACAO. O log gravava 10 modulos e ~25 verbos, e o mapa antigo
+   conhecia 6 e 5 — o resto saia cru do banco ("RECEBIVEIS DESFEZ BAIXA"). */
+var LOG_FRASES={
+  'RECEBÍVEIS':{
+    'baixa':'Parcela quitada',
+    'pagamento':'Pagamento recebido',
+    'desfez baixa':'Baixa desfeita',
+    'apagou pagamento':'Pagamento apagado',
+    'editou recebimento':'Recebimento editado',
+    'prorrogou':'Parcela prorrogada',
+    'desfez prorrogação':'Prorrogação desfeita',
+    'nota na parcela':'Nota na parcela',
+    'apagou nota':'Nota da parcela apagada',
+    'repasse ao sócio':'Repasse ao sócio',
+    'combinou repasse':'Repasse combinado'
+  },
+  'CONTAS A PAGAR':{
+    'nova conta':'Conta lançada',
+    'editou conta':'Conta editada',
+    'excluiu conta':'Conta excluída',
+    'pagou':'Conta paga',
+    'desfez pagamento':'Pagamento desfeito',
+    'parcelas da compra':'Parcelas da compra'
+  },
+  'CLIENTES':{
+    'criou':'Cliente criado',
+    'editou':'Cliente editado',
+    'apagou':'Cliente apagado',
+    'ativou':'Cliente ativado',
+    'carimbou':'Operações carimbadas',
+    'completou pelo reservatório':'Cliente completado'
+  },
+  'CONTRATOS':{
+    'anexou assinado':'Contrato assinado anexado',
+    'apagou':'Contrato apagado'
+  },
+  'VENDA':{ 'gerou contrato':'Contrato gerado' },
+  'ESTOQUE':{
+    'baixa (vendido)':'Item vendido (saiu do estoque)',
+    'voltou ao estoque':'Item de volta ao estoque',
+    'voltou ao estoque (venda apagada)':'Item de volta ao estoque (venda apagada)',
+    'voltou ao estoque (virou simulação)':'Item de volta ao estoque (virou simulação)'
+  },
+  'SÓCIOS':{ 'editou (ficha)':'Sócio editado na ficha' }
+};
 function LOG_frase(mod, acao){
-  mod=(mod||'').toUpperCase();
+  mod=(mod||'').toUpperCase(); acao=String(acao||'');
+  var m=LOG_FRASES[mod];
+  if(m && m[acao]) return m[acao];
   var fem=(mod==='ANTECIPAÇÃO'||mod==='VENDA'||mod==='BAIXA');
-  var nomes={'ANTECIPAÇÃO':'Antecipação','FINANCIAMENTO':'Financiamento','VENDA':'Venda','PAGAMENTO':'Pagamento','ESTOQUE':'Item do estoque','SÓCIOS':'Sócio'};
+  var nomes={'ANTECIPAÇÃO':'Antecipação','FINANCIAMENTO':'Financiamento','VENDA':'Venda','PAGAMENTO':'Pagamento','ESTOQUE':'Item do estoque','SÓCIOS':'Sócio','RECEBÍVEIS':'Recebível','CONTAS A PAGAR':'Conta a pagar','CLIENTES':'Cliente','CONTRATOS':'Contrato'};
   var n=nomes[mod]||mod;
   var verbos={
     'criou': fem?'criada':'criado',
@@ -10160,10 +10207,11 @@ function REN_cpSalvar(id){
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpExcluir(btn, id){
+  var _cX=REN_cpDe(id)||{};
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--mu)'; } },2500); return; }
   sb.from('contas_pagar').delete().eq('id',id).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
-    try{ VB_log('CONTAS A PAGAR','excluiu conta','',''); }catch(e){}
+    try{ VB_log('CONTAS A PAGAR','excluiu conta', _cX.credor||_cX.descricao||'', HIST_fmtMoeda(Number(_cX.valor)||0)+(_cX.venc?(' \u00b7 VENCIA '+String(_cX.venc).split('-').reverse().join('/')):'')+(_cX.pago_em?' \u00b7 ESTAVA PAGA':'')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
     VB_toast('Conta exclu\u00edda.');
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
@@ -10188,10 +10236,11 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpDesfaz(btn, id){
+  var _cD=REN_cpDe(id)||{};
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   sb.from('contas_pagar').update({pago_em:null, valor_pago:null, nota_baixa:null}).eq('id', id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('CONTAS A PAGAR','desfez pagamento','',''); }catch(e){}
+    try{ VB_log('CONTAS A PAGAR','desfez pagamento', _cD.credor||_cD.descricao||'', HIST_fmtMoeda(Number(_cD.valor_pago!=null?_cD.valor_pago:_cD.valor)||0)+(_cD.pago_em?(' \u00b7 PAGA EM '+String(_cD.pago_em).slice(0,10).split('-').reverse().join('/')):'')+(_cD.nota_baixa?(' \u00b7 '+_cD.nota_baixa):'')); }catch(e){}
     VB_toast('Pagamento desfeito.');
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
@@ -10513,12 +10562,16 @@ function REN_render(){
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
     var k=REN_key(x);
+    /* vermelho = precisa de voce HOJE. O dia do vencimento e o ultimo em que da pra agir,
+       entao ele acende junto com o atraso. A secao continua sendo A RECEBER: em dia inclui
+       o dia do vencimento — quem esta atrasado e outra pergunta. */
+    var _al=(atrasada || x.venc===hoje);
     var dt=(x.venc===hoje)?'<b>HOJE</b>':(dataCurta?(x.venc.slice(8,10)+'/'+x.venc.slice(5,7)):HIST_fmtData(x.venc));
     if(x.prorrogada) dt='<span style="color:var(--mu);font-weight:600;">'+(dataCurta?(x.vencOrig.slice(8,10)+'/'+x.vencOrig.slice(5,7)):HIST_fmtData(x.vencOrig))+' \u2192 </span>'+dt;
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+(atrasada?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(atrasada?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+(_al?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(_al?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +(REN_parcial(x)?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(REN_pagoTot(x))+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_falta(x))+'</div>'):'')
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+REN_termo(x.tab)+' '+REN_nm(x)+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
       +(function(){ var _nt=REN_notaDe(x); return _nt?('<div style="font-size:10px;color:var(--tx2);font-weight:600;margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(_nt)+'</div>'):''; })()
@@ -11194,11 +11247,12 @@ function REN_desfazRepasse(k){
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_desfazDireto(baixaId){
-  var _bD=null; if(REN_cache&&REN_cache.bx){ Object.keys(REN_cache.bx).forEach(function(kk){ if(String(REN_cache.bx[kk].id)===String(baixaId)) _bD=REN_cache.bx[kk]; }); }
+  var _bD=null, _kD=null; if(REN_cache&&REN_cache.bx){ Object.keys(REN_cache.bx).forEach(function(kk){ if(String(REN_cache.bx[kk].id)===String(baixaId)){ _bD=REN_cache.bx[kk]; _kD=kk; } }); }
+  var _xD=(_kD&&REN_cache&&REN_cache.map)?REN_cache.map[_kD]:null;
   if(_bD&&_bD.repassado_em&&!confirm('Esta baixa tem REPASSE PAGO registrado. Desfazer apaga o repasse junto. Continuar?')) return;
   sb.from('parcela_baixas').delete().eq('id', baixaId).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('RECEB\u00cdVEIS','desfez baixa','',''); }catch(e){}
+    try{ VB_log('RECEB\u00cdVEIS','desfez baixa', (_xD&&_xD.cliente)||'', [((_xD&&_xD.rot)||''), (_bD?HIST_fmtMoeda(Number(_bD.valor_recebido)||0):''), (_bD&&_bD.recebido_em?('RECEBIDA EM '+String(_bD.recebido_em).slice(0,10).split('-').reverse().join('/')):''), (_bD&&_bD.repassado_em?'REPASSE APAGADO JUNTO':'')].filter(function(s){return !!s;}).join(' \u00b7 ')); }catch(e){}
     /* os pagamentos vao junto: desfazer a baixa e zerar a parcela, nao so tirar o carimbo */
     if(_bD){
       sb.from('parcela_pagamentos').delete()
@@ -12621,7 +12675,7 @@ function MER_baixaExec(merId){
   var hoje=(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})();
   sb.from('mercadorias').update({status:'vendida', data_venda:hoje, baixa_em:new Date().toISOString(), baixa_nota:nota}).eq('id',merId).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o deu baixa. Tente de novo.'); return; }
-    try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(merId);}); VB_log('ESTOQUE','baixa (vendido)'+(nota?' \u00b7 '+nota:''), (_mb&&_mb.descricao)||'', ''); }catch(e){}
+    try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(merId);}); VB_log('ESTOQUE','baixa (vendido)', (_mb&&_mb.descricao)||'', nota||''); }catch(e){}
     VB_toast('Baixa dada: VENDIDA.');
     MER_load();
   });
@@ -15555,6 +15609,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.241.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Parcela vermelha no dia do vencimento, e não só depois. O dia em que a parcela vence é o último em que ainda dá pra cobrar — deixar pra ficar vermelha no dia seguinte é avisar quando já passou. Agora o valor e a data acendem em vermelho no próprio dia. A parcela continua listada em A RECEBER e a ficha continua dizendo VENCE HOJE: quem está atrasado é outra pergunta, e ninguém fica atrasado no dia do vencimento</div>
+      <div class="cl-item">O log não dizia o que tinha sido desfeito. DESFAZER BAIXA, DESFAZER PAGAMENTO e EXCLUIR CONTA gravavam a linha em branco — justamente os três atos que somem com dinheiro do app eram os únicos sem cliente, sem valor e sem data. Agora cada um guarda de quem era, qual parcela, quanto valia e quando tinha sido recebida ou paga; desfazer baixa com repasse pago avisa que o repasse foi apagado junto</div>
+      <div class="cl-item">E o log voltou a falar português. Ele registra 10 módulos e cerca de 25 ações, mas só conhecia 6 e 5 — o resto saía cru do banco, como RECEBÍVEIS DESFEZ BAIXA. Agora lê Baixa desfeita, Conta paga, Parcela prorrogada, Contrato assinado anexado. A nota da venda do estoque também parou de entrar no meio do nome da ação e foi pro detalhe, onde era o lugar dela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.240.1</span><span class="cl-ver-date">03/08/2026</span></div>
