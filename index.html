@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.241.0</title>
+<title>VB - v1.242.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -610,7 +610,7 @@ body{ text-transform:uppercase; }
     </button>
     <div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:18px 4px 8px;font-family:-apple-system,sans-serif;">GESTÃO</div>
     <button onclick="PIN_request('ren')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Entradas e Saídas</span>
+      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Entradas/Saídas</span>
     </button>
     <button onclick="PIN_request('mer')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Estoque</span>
@@ -1466,7 +1466,7 @@ body{ text-transform:uppercase; }
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
   </div>
-  <div class="simulacao-label">ENTRADAS E SAÍDAS</div>
+  <div class="simulacao-label">ENTRADAS/SAÍDAS</div>
   <hr class="divider">
   <div id="ren-body"><div style="text-align:center;color:var(--mu);font-size:12px;margin-top:24px;">Carregando...</div></div>
 </div>
@@ -9986,7 +9986,6 @@ function REN_painel(){
       +'<div style="'+_L+'margin-top:0;"><span style="'+_R+'">TOTAL A RECEBER</span><span style="font-size:13px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(tEnt)+'</span></div>'
       +(Math.abs(tEnt-tEntVB)>0.005?('<div style="'+_L+'"><span style="'+_R+'">VB'+((tEnt>0)?(' <span style="letter-spacing:0;opacity:0.7;">('+Math.round(tEntVB/tEnt*100)+'%)</span>'):'')+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(tEntVB)+'</span></div>'):'')
       +(tSai>0.005?('<div style="'+_L+'"><span style="'+_R+'">A PAGAR</span><span style="font-size:12px;font-weight:700;color:var(--tx);">\u2212 '+HIST_fmtMoeda(tSai)+'</span></div>'):'')
-      +'<div style="'+_L+'margin-top:5px;padding-top:5px;border-top:0.5px solid var(--ln3);"><span style="'+_R+'">L\u00cdQUIDO</span><span style="font-size:14px;font-weight:700;color:'+((tEntVB-tSai)<-0.005?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(tEntVB-tSai)+'</span></div>'
       +'</div>';
   }
   hh+='<button onclick="REN_painelFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">FECHAR</button>'
@@ -10753,14 +10752,15 @@ function REN_render(){
      e quebrava a coluna de numeros a direita */
   var _heroPct=(totAb>0)?(' <span style="opacity:0.6;font-weight:600;letter-spacing:0;">('+Math.round(totAbVB/totAb*100)+'%)</span>'):'';
   var _heroVB=(Math.abs(totAb-totAbVB)>0.005)?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">VB'+_heroPct+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+HIST_fmtMoeda(totAbVB)+'</span></div>'):'';
-  /* o que entra menos o que sai. A base do liquido e a parte do VB, nao o bruto: o dinheiro do
-     socio nunca foi dele, entao descontar a divida do bruto daria uma sobra que nao existe. */
+  /* LIQUIDO (VB - A PAGAR) saiu em 03/08: desde que a parcela da compra e lancada pelo valor
+     CHEIO mesmo com socio, o A PAGAR carrega divida que nao e so do VB — a subtracao misturava
+     um numero conservador com um preciso e o resultado nao era nenhum dos dois. As tres linhas
+     que ficam sao verdadeiras; a conta e do olho, de quem sabe quanto do A PAGAR e seu. */
   var _cpAb=REN_cpTotAberto(), _heroCP='';
   if(_cpAb>0.005){
     var _LH='display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;';
     var _RH='font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;';
-    _heroCP='<div style="'+_LH+'"><span style="'+_RH+'">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_cpAb)+'</span></div>'
-      +'<div style="'+_LH+'margin-top:5px;padding-top:5px;border-top:0.5px solid rgba(128,128,128,0.3);"><span style="'+_RH+'">L\u00cdQUIDO</span><span style="font-size:13px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAbVB-_cpAb)+'</span></div>';
+    _heroCP='<div style="'+_LH+'"><span style="'+_RH+'">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_cpAb)+'</span></div>';
   }
   hh+='<div onclick="REN_painel()" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
   /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
@@ -15609,6 +15609,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.242.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">A linha LÍQUIDO saiu do card preto e do rodapé do Panorama Mensal. Desde que a parcela da compra é lançada pelo valor cheio mesmo com sócio, o A PAGAR carrega dívida que não é só do VB — e o LÍQUIDO subtraía esse número conservador da parte exata do VB, dando um resultado que não era nem uma coisa nem outra. TOTAL A RECEBER, VB e A PAGAR ficam: são os três verdadeiros, e a conta é do olho de quem sabe quanto do A PAGAR é seu</div>
+      <div class="cl-item">ENTRADAS E SAÍDAS virou ENTRADAS/SAÍDAS, no botão da Home e no cabeçalho da tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.241.0</span><span class="cl-ver-date">03/08/2026</span></div>
