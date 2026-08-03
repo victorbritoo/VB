@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.234.0</title>
+<title>VB - v1.235.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -609,19 +609,19 @@ body{ text-transform:uppercase; }
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Vendas</span>
     </button>
     <div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:18px 4px 8px;font-family:-apple-system,sans-serif;">GESTÃO</div>
+    <button onclick="PIN_request('ren')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Entradas e Saídas</span>
+    </button>
     <button onclick="PIN_request('mer')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Estoque</span>
-    </button>
-    <button onclick="PIN_request('ges')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Gestão</span>
-    </button>
-    <button onclick="PIN_request('ren')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
-      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Recebimentos</span>
     </button>
     <button onclick="PIN_request('hist')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:none;border-radius:14px;background:var(--acc);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--acc-tx);flex:1;text-align:center;">Histórico</span>
     </button>
-    <!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
+    <button onclick="PIN_request('ges')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
+      <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Cadastros</span>
+    </button>
+<!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
          <button onclick="PIN_request('rec')">Recebimentos</button> -->
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
   </div>
@@ -1414,7 +1414,7 @@ body{ text-transform:uppercase; }
 <div class="card">
   <div style="margin-bottom:2px;position:relative;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
-    <div class="simulacao-label">GESTÃO</div>
+    <div class="simulacao-label">CADASTROS</div>
   </div>
   <hr class="divider">
   <button onclick="showScreen('soc')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Sócios</span></button>
@@ -1466,7 +1466,7 @@ body{ text-transform:uppercase; }
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
   </div>
-  <div class="simulacao-label">RECEBIMENTOS</div>
+  <div class="simulacao-label">ENTRADAS E SAÍDAS</div>
   <hr class="divider">
   <div id="ren-body"><div style="text-align:center;color:var(--so2);font-size:12px;margin-top:24px;">Carregando...</div></div>
 </div>
@@ -10190,6 +10190,13 @@ function REN_notaSheet(k){
   ov.style.display='flex';
   REN_ntOrig=(document.getElementById('rennt-txt')||{}).value||'';
   REN_ntDirty();
+  /* campo unico: o unico motivo de abrir e digitar. Cursor no FIM, nunca selecionando tudo,
+     senao a primeira tecla apaga a nota inteira. O focus tem que sair no mesmo toque que
+     abriu a folha, ou o iOS nao levanta o teclado. */
+  (function(){
+    var _i=document.getElementById('rennt-txt'); if(!_i) return;
+    try{ _i.focus(); var _n=(_i.value||'').length; _i.setSelectionRange(_n,_n); }catch(e){}
+  })();
 }
 function REN_ntDirty(){
   var b=document.getElementById('rennt-salvar'); if(!b) return;
@@ -15336,6 +15343,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.235.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">RECEBIMENTOS virou ENTRADAS E SAÍDAS. O nome era de quando a tela só tinha o que entra; hoje metade dela é dinheiro saindo, e o botão da Home escondia isso</div>
+      <div class="cl-item">GESTÃO virou CADASTROS — e some o botão com o mesmo nome da seção em que morava. Lá dentro são clientes, sócios e contratos, e no VB sócio sai da mesma lista de cliente: é gente e papel, os dois cabem na palavra</div>
+      <div class="cl-item">A seção GESTÃO da Home foi reordenada pelo uso: Entradas e Saídas, Estoque, Histórico e Cadastros. O que se abre todo dia subiu</div>
+      <div class="cl-item">A folha da nota do título abre com o cursor pronto no fim do texto. Campo único só se abre pra digitar — mas sem selecionar o que já estava escrito, senão a primeira tecla apagaria a nota</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.234.0</span><span class="cl-ver-date">03/08/2026</span></div>
