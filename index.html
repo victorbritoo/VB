@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.233.2</title>
+<title>VB - v1.233.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -494,7 +494,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
   </div>
 </div>
 
-<div id="vb-c2-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100003;align-items:center;justify-content:center;padding:24px;">
+<div id="vb-c2-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100028;align-items:center;justify-content:center;padding:24px;">
   <div style="background:var(--bg);border-radius:18px;padding:20px 18px;width:100%;max-width:320px;box-shadow:0 14px 44px rgba(0,0,0,0.28);">
     <div id="vb-c2-msg" style="font-size:13px;color:var(--tx2);font-weight:400;margin-bottom:16px;text-align:center;line-height:1.4;font-family:-apple-system,sans-serif;"></div>
     <div style="display:grid;grid-template-columns:1fr;gap:8px;">
@@ -8509,7 +8509,7 @@ function MER_isDirty(){
 function MER_dirtyGuard(next){
   if(!MER_editId) { next(); return; }
   if(!MER_isDirty()){ MER_cancelEdit(); next(); return; }
-  VB_confirm2('Você alterou este item. Salvar as alterações?', 'SALVAR', 'DESCARTAR', function(salvar){
+  VB_confirm2('Alterações feitas', 'SALVAR', 'DESCARTAR', function(salvar){
     if(salvar){ MER_add(document.getElementById('mer-add-btn')); }
     else { MER_cancelEdit(); next(); }
   });
@@ -9924,7 +9924,12 @@ function REN_cpOv(oid){
     ov=document.createElement('div'); ov.id=oid;
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100025;align-items:flex-end;justify-content:center;';
     document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+    /* clique fora e uma saida como qualquer outra: na folha da conta ele passa pela guarda */
+    ov.addEventListener('click', function(e){
+      if(e.target!==ov) return;
+      if(oid==='ren-cp-ov'){ REN_cpFecharGuard(); return; }
+      ov.style.display='none';
+    });
   }
   return ov;
 }
@@ -10029,7 +10034,8 @@ function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
   var v=REN_num((document.getElementById('rencp-valor')||{}).value||'');
   var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value||'');
-  var ok=(Number(v)>0 && !!d) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
+  var cr=((document.getElementById('rencp-credor')||{}).value||'').trim();
+  var ok=(!!cr && Number(v)>0 && !!d) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -10039,7 +10045,7 @@ function REN_cpFecharGuard(){
   function fecha(){ var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none'; }
   if(REN_cpForm===null || REN_cpEstado()===REN_cpForm){ fecha(); return; }
   /* mesmo dialogo do Estoque: sair de uma edicao mexida e decisao, nao aviso */
-  VB_confirm2('Voc\u00ea alterou esta conta. Salvar as altera\u00e7\u00f5es?', 'SALVAR', 'DESCARTAR', function(salvar){
+  VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
     if(salvar) REN_cpSalvar(REN_cpEditId||'');
     else fecha();
   });
@@ -10054,13 +10060,13 @@ function REN_cpSheet(id){
   var dBR=(c&&c.venc)?String(c.venc).slice(0,10).split('-').reverse().join('/'):'';
   function esc(v){ return CLIP_esc(v==null?'':v).replace(/"/g,'&quot;'); }
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA A PAGAR')+'</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA')+'</div>'
     +'<div style="'+RT+'">CREDOR</div>'
     +'<input id="rencp-credor" oninput="REN_cpDirty()" data-selall placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencp-desc" oninput="REN_cpDirty()" data-selall placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
-    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
@@ -10082,7 +10088,7 @@ function REN_cpSalvar(id){
   var v=REN_num((document.getElementById('rencp-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
   var nt=((document.getElementById('rencp-nota')||{}).value||'').trim().toUpperCase();
-  if(!cr && !ds){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
+  if(!cr){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
   if(!(v>0)){ VB_toast('Informe o valor.'); return; }
   if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
   var reg={credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
@@ -15322,6 +15328,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.3</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Fechar tocando fora da folha escapava da guarda: a conta editada sumia sem perguntar e sem salvar. Clique fora agora é uma saída como qualquer outra e passa pelo mesmo diálogo</div>
+      <div class="cl-item">O diálogo aparecia ATRÁS da folha — ele vivia numa camada abaixo das folhas, que são a coisa mais alta da tela. Subiu pra cima delas</div>
+      <div class="cl-item">O texto virou um só em todo lugar: ALTERAÇÕES FEITAS, com SALVAR e DESCARTAR embaixo. Antes cada tela contava a história com as próprias palavras</div>
+      <div class="cl-item">Conta a pagar sem credor não salva mais. Uma dívida sem dono não ajuda em nada</div>
+      <div class="cl-item">NOVA CONTA A PAGAR virou NOVA CONTA — se você está em SAÍDAS, a conta só pode ser a pagar. As caixas de VALOR e VENCIMENTO ficaram exatamente da mesma altura</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.2</span><span class="cl-ver-date">03/08/2026</span></div>
