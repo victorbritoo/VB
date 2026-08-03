@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.233.3</title>
+<title>VB - v1.233.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -499,6 +499,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
     <div id="vb-c2-msg" style="font-size:13px;color:var(--tx2);font-weight:400;margin-bottom:16px;text-align:center;line-height:1.4;font-family:-apple-system,sans-serif;"></div>
     <div style="display:grid;grid-template-columns:1fr;gap:8px;">
       <button id="vb-c2-yes" type="button" ontouchend="event.preventDefault();VB_c2Pick(true)" onclick="VB_c2Pick(true)" style="padding:13px;border:none;border-radius:12px;background:var(--acc);font-size:12px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">SALVAR</button>
+      <button id="vb-c2-back" type="button" ontouchend="event.preventDefault();VB_c2Pick(null)" onclick="VB_c2Pick(null)" style="padding:12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;order:3;">VOLTAR</button>
       <button id="vb-c2-no" type="button" ontouchend="event.preventDefault();VB_c2Pick(false)" onclick="VB_c2Pick(false)" style="padding:13px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:12px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">DESCARTAR</button>
     </div>
   </div>
@@ -3867,7 +3868,7 @@ function HIST_mesSheet(){
   html+='<div style="text-align:center;font-size:12px;letter-spacing:1px;color:var(--tx);font-weight:600;margin-bottom:10px;">FILTRAR POR MÊS</div>';
   if(!yms.length){ html+='<div style="text-align:center;color:var(--so2);font-size:12px;padding:14px 0;">Sem operações.</div>'; }
   yms.forEach(function(ym){ html+='<button class="hist-fmes" data-mes="'+ym+'" onclick="HIST_setMes(\''+ym+'\')" style="'+bs+'">'+HIST_mesLabel(ym)+' <span style="pointer-events:none;color:var(--so);">('+counts[ym]+')</span></button>'; });
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
+  html+='<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
       +'<button onclick="HIST_setMes(\'\')" style="padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:1px;color:var(--mu);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">LIMPAR</button>'
       +'<button onclick="document.getElementById(\'hist-mes-overlay\').style.display=\'none\'" style="padding:10px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OK</button></div>';
   html+='</div>';
@@ -8469,6 +8470,7 @@ function VB_confirm2(msg, yesLabel, noLabel, cb){
 function VB_c2Pick(v){
   var ov=document.getElementById('vb-c2-overlay'); if(ov) ov.style.display='none';
   var cb=VB_c2Cb; VB_c2Cb=null;
+  if(v===null) return;   /* VOLTAR: nem salva nem descarta, devolve a folha como estava */
   if(cb) cb(v);
 }
 function MER_compor(){
@@ -10065,7 +10067,7 @@ function REN_cpSheet(id){
     +'<input id="rencp-credor" oninput="REN_cpDirty()" data-selall placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencp-desc" oninput="REN_cpDirty()" data-selall placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
     +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'
@@ -10146,7 +10148,7 @@ function REN_cpBaixaSheet(id){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PAGAR CONTA</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.credor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<div><div style="'+RT+'">VALOR PAGO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencpb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">DATA DO PAGAMENTO</div><input data-selall id="rencpb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
     +'</div>'
@@ -10708,7 +10710,7 @@ function REN_editRec(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">EDITAR RECEBIMENTO</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
@@ -10928,7 +10930,7 @@ function REN_repassar(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(b.repassado_em?'EDITAR REPASSE':'REPASSAR')+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+(oi?CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 ':'')+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
@@ -11059,7 +11061,7 @@ function REN_editBaixa(k){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(_ja>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:'+(_ja>0?'4px':'12px')+';">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+' \u00b7 venc. '+HIST_fmtData(x.venc)+'</div>'
     +(_ja>0?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">PAGO: '+HIST_fmtMoeda(_ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(_falta)+'</div>'):'')
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
@@ -15328,6 +15330,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.4</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">O diálogo de alterações ganhou VOLTAR. SALVAR e DESCARTAR eram duas saídas e nenhuma porta de volta — quem tocasse fora sem querer era obrigado a decidir ali mesmo. Agora dá pra voltar pra folha do jeito que ela estava</div>
+      <div class="cl-item">VALOR e VENCIMENTO viraram colunas de largura idêntica. A caixa do valor carrega o R$ de um lado e um vazio do outro, e isso empurrava a coluna — agora nenhuma das duas cresce além da metade</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.3</span><span class="cl-ver-date">03/08/2026</span></div>
