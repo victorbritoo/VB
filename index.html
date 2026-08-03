@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.237.2</title>
+<title>VB - v1.237.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9891,7 +9891,7 @@ function REN_painel(){
       var _pp=(tEnt>0)?(m.ent/tEnt*100):0;
       var _peso=(_pp>0 && _pp<0.5)?'<1':String(Math.round(_pp));
       hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
-        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--so2);font-weight:600;"> ('+m.entN+' \u00b7 '+_peso+'%)</span></span>'
+        +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--mu);font-weight:600;"> ('+m.entN+' \u00b7 '+_peso+'%)</span></span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?VB_kFmt(m.entVB):'')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--so2)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
@@ -10636,7 +10636,7 @@ function REN_ficha(k, exp){
     var _c1='display:inline-block;min-width:84px;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
       +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(y.valor)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span>'
-        +(_seu!=null?('<span style="font-size:9px;color:var(--so2);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
+        +(_seu!=null?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
       +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>';
   });
   var pre='', pos='';
@@ -10664,7 +10664,10 @@ function REN_ficha(k, exp){
       var _rtx=b.repassado_em
         ? ('PAGO \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor)||_rv)+' \u00b7 '+HIST_fmtData(String(b.repassado_em).slice(0,10)))
         : ('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv));
-      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div>'+(b.repasse_nota?('<div style="font-size:9px;color:var(--so2);">'+CLIP_esc(b.repasse_nota)+'</div>'):'')+'</div>';
+      /* a nota fecha a linha entre parenteses, no mesmo tamanho: em 9px e --so2 (#ccc) ela nao lia.
+         Fica em --mu, um degrau abaixo do numero, e nunca em vermelho -- vermelho e do estado. */
+      if(b.repasse_nota) _rtx+='<span style="color:var(--mu);font-weight:600;"> ('+CLIP_esc(b.repasse_nota)+')</span>';
+      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
     }
   }
   if(oi){
@@ -10693,7 +10696,7 @@ function REN_ficha(k, exp){
     var ph='';
     pgs.forEach(function(pg){
       ph+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;">'
-        +'<span style="color:var(--mu);white-space:nowrap;"><span style="display:inline-block;min-width:84px;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span> \u00b7 <span style="display:inline-block;min-width:76px;">'+HIST_fmtData(String(pg.data).slice(0,10))+'</span>'+(pg.nota?('<span style="font-size:9px;color:var(--so2);margin-left:4px;">'+CLIP_esc(pg.nota)+'</span>'):'')+'</span>'
+        +'<span style="color:var(--mu);white-space:nowrap;"><span style="display:inline-block;min-width:84px;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span> \u00b7 <span style="display:inline-block;min-width:76px;">'+HIST_fmtData(String(pg.data).slice(0,10))+'</span>'+(pg.nota?('<span style="font-size:9px;color:var(--mu);margin-left:4px;">'+CLIP_esc(pg.nota)+'</span>'):'')+'</span>'
         +(pg.id?('<span onclick="REN_apagaPag(\''+pg.id+'\',\''+k+'\')" style="color:var(--so2);font-size:10px;font-weight:700;cursor:pointer;padding:0 4px;">\u2715</span>'):'')
         +'</div>';
     });
@@ -15374,6 +15377,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.237.4</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Três informações que estavam no cinza mais apagado do app, em 9px, subiram um degrau: a coluna VB da lista de parcelas, a contagem e o peso do mês no panorama, e a nota do pagamento parcial. Eram dado pra ler no tom reservado ao que é fundo</div>
+      <div class="cl-item">Os outros 91 usos do tom mais claro ficaram como estavam, de propósito. Sem cor de status, a hierarquia do app inteiro vive de peso e degrau de cinza — juntar dois degraus faria tudo gritar junto</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.237.3</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">A nota do repasse subiu pra mesma linha, entre parênteses e no mesmo tamanho do resto. Ela estava em 9px num cinza claro demais pra ler — agora fica um degrau abaixo do número, e nunca em vermelho, porque vermelho no app quer dizer uma coisa só</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.237.2</span><span class="cl-ver-date">03/08/2026</span></div>
