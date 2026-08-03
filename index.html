@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.242.0</title>
+<title>VB - v1.243.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10336,7 +10336,7 @@ function REN_proSheet(k){
       +'<div><div style="'+ROT+'">NOVO SALDO</div><input id="renpr-val" inputmode="decimal" oninput="REC_maskVal(this);REN_proPinta()" value="'+HIST_fmtMoeda(falta).replace('R$ ','')+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div id="renpr-dica" style="text-align:center;font-size:10px;color:var(--mu);font-weight:600;margin-top:6px;min-height:13px;"></div>'
-    +'<div style="margin-top:10px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'font-size:13px;"></div>'
+    +'<div style="margin-top:10px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" oninput="REN_proPinta()" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'font-size:13px;"></div>'
     +'<button id="renpr-salvar" onclick="REN_proSalvar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +(pp?'<button onclick="REN_proDesfazer(this)" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">DESFAZER PRORROGA\u00c7\u00c3O</button>':'')
     +'<button onclick="REN_proFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -10376,13 +10376,21 @@ function REN_proCalc(sugerir){
   } else if(dica) dica.textContent='';
   REN_proPinta();
 }
-function REN_proPinta(){
-  var b=document.getElementById('renpr-salvar'); if(!b) return;
-  var x=REN_cache&&REN_cache.map[REN_proK];
+function REN_proPode(){
+  /* regra unica do SALVAR, usada pelo botao e pelo proprio salvar.
+     Sem prorrogacao ainda: exige data nova OU saldo diferente do que falta — so nota nao cria acordo.
+     Ja prorrogada: qualquer mudanca real (data, saldo ou nota) e edicao do acordo e pode salvar. */
+  var x=REN_cache&&REN_cache.map[REN_proK]; if(!x) return false;
   var d=REN_brToISO(((document.getElementById('renpr-data')||{}).value)||'');
   var v=REN_num(((document.getElementById('renpr-val')||{}).value)||'');
-  /* data igual a que ja vale nao e prorrogacao; e sem mudanca nenhuma nao ha o que salvar */
-  var ok=!!(x && d && Number(v)>0 && d!==x.venc && REN_proEstado()!==REN_proOrig);
+  if(!d || !(Number(v)>0)) return false;
+  if(REN_proEstado()===REN_proOrig) return false;
+  if(x.prorrogada) return true;
+  return d!==x.venc || Math.abs(Number(v)-REN_falta(x))>0.005;
+}
+function REN_proPinta(){
+  var b=document.getElementById('renpr-salvar'); if(!b) return;
+  var ok=REN_proPode();
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -10393,7 +10401,7 @@ function REN_proSalvar(){
   var d=REN_brToISO(((document.getElementById('renpr-data')||{}).value)||'');
   var saldo=REN_num(((document.getElementById('renpr-val')||{}).value)||'');
   var nt=((document.getElementById('renpr-nota')||{}).value||'').trim().toUpperCase();
-  if(!d || !(Number(saldo)>0)) return;
+  if(!REN_proPode()) return;
   /* o banco guarda o TOTAL da parcela: o que ja entrou mais o que ficou pra frente */
   var total=Math.round((REN_pagoTot(x)+Number(saldo))*100)/100;
   var reg={op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx, venc_novo:d, valor_novo:total, nota:(nt||null)};
@@ -15609,6 +15617,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.243.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">O SALVAR do PRORROGAR não ligava mudando o saldo. A regra exigia data diferente da vigente sempre — escrita pra criar prorrogação, ela bloqueava a edição de uma que já existe e travava o saldo renegociado com a mesma data. Agora mudar o valor também exige salvar: sem prorrogação, data nova OU saldo diferente do que falta liga o botão (só nota não cria acordo); já prorrogada, qualquer mudança real liga. E a regra virou uma só (REN_proPode), usada pelo botão e pelo salvar, pra não desandar cada um pro seu lado</div>
+      <div class="cl-item">O campo NOTA da prorrogação era o único dos três que não acordava o botão ao digitar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.242.0</span><span class="cl-ver-date">03/08/2026</span></div>
