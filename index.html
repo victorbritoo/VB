@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.231.0</title>
+<title>VB - v1.231.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11734,10 +11734,23 @@ function MER_abrir(id){
     if(!document.getElementById('mer-view-parcinfo')) return;
     sb.from('contas_pagar').select('valor,venc,pago_em').eq('origem_tab','mercadorias').eq('origem_id', String(id)).then(function(res){
       var arr=(res.data||[]); if(!arr.length) return;
-      var ab=arr.filter(function(c){ return !c.pago_em; }).sort(function(x,y){ return String(x.venc||'')<String(y.venc||'')?-1:1; });
-      var txt=arr.length+(arr.length===1?' parcela':' parcelas');
-      if(!ab.length) txt+=' \u00b7 pagas';
-      else txt+=' \u00b7 pr\u00f3xima '+(MER_fmtData(ab[0].venc)||'')+' \u00b7 R$ '+MER_fmtBR(Number(ab[0].valor)||0);
+      arr.sort(function(x,y){ return String(x.venc||'')<String(y.venc||'')?-1:1; });
+      var ab=arr.filter(function(c){ return !c.pago_em; });
+      /* a frase que VB escrevia a mao ("70K + 75K 31/08") era boa, so nao fazia conta.
+         Ate 3 parcelas a linha conta a compra inteira, com \u2713 no que ja saiu.
+         De 4 em diante vira resumo: a frase estouraria a linha. */
+      var txt;
+      if(arr.length<=3){
+        txt=arr.map(function(c){
+          var d=String(c.venc||'').split('-');
+          var dm=(d.length===3)?(d[2]+'/'+d[1]):'';
+          return VB_kFmt(Number(c.valor)||0)+(dm?(' ('+dm+')'):'')+(c.pago_em?'\u2713':'');
+        }).join(' + ');
+      } else {
+        txt=arr.length+'\u00d7';
+        if(!ab.length) txt+=' \u00b7 pagas';
+        else txt+=' \u00b7 pr\u00f3xima '+(MER_fmtData(ab[0].venc)||'')+' \u00b7 R$ '+MER_fmtBR(Number(ab[0].valor)||0);
+      }
       var alvo=document.getElementById('mer-view-parcinfo'); if(alvo) alvo.innerHTML=lin('Parcelas', txt);
     });
   })();
@@ -15252,6 +15265,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.231.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">A linha PARCELAS passou a contar a compra inteira, do jeito que VB escrevia à mão: 70K (31/07)✓ + 75K (31/08). O ✓ marca o que já saiu. Contar quantas eram não dizia nada — se estão listadas, a conta é do olho. De 4 parcelas em diante volta a ser resumo, senão estoura a linha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.231.0</span><span class="cl-ver-date">03/08/2026</span></div>
