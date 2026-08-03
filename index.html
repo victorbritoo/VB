@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.233.4</title>
+<title>VB - v1.233.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12221,7 +12221,7 @@ function MER_viewPossRefresh(){
 }
 function MER_viewEditar(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); }); if(!r) return;
-  MER_viewEdit=true; MER_viewEditRow=r; MER_viewFecharArmado=false;
+  MER_viewEdit=true; MER_viewEditRow=r;
   var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:((r.marca?r.marca+' ':'')+(r.modelo||'')).trim(),ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
   var ehBaixa=((r.status||'')==='vendida' && !r.venda_id);
   var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;">';
@@ -12340,19 +12340,20 @@ function MER_abrirVenda(id){
 }
 function MER_viewFechar(){
   MER_possAberto=null;
+  /* sair de uma ficha mexida e uma bifurcacao, nao um recado: mesmo dialogo do resto do app */
   if(MER_viewEdit && MER_viewDirty()){
-    if(MER_viewFecharArmado){ MER_viewFecharArmado=false; }
-    else {
-      MER_viewFecharArmado=true;
-      VB_toast('Altera\u00e7\u00f5es n\u00e3o salvas. Toque de novo para descartar.');
-      setTimeout(function(){ MER_viewFecharArmado=false; }, 2500);
-      return;
-    }
+    VB_confirm2('Alterações feitas', 'SALVAR', 'DESCARTAR', function(salvar){
+      if(salvar){ MER_viewSalvar(); return; }
+      MER_viewFecharExec();
+    });
+    return;
   }
+  MER_viewFecharExec();
+}
+function MER_viewFecharExec(){
   MER_viewEdit=false; MER_viewEditRow=null;
   GLB_fichaDaBusca=false; MER_fichaDoHist=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
 }
-var MER_viewFecharArmado=false;
 function MER_cancelEdit(){
   MER_editId=null;
   ['mer-modelo','mer-ano','mer-ref','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
@@ -15330,6 +15331,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.5</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">O aviso de dois toques da ficha do Estoque deu lugar ao diálogo de três opções. Sair de uma ficha mexida agora pergunta SALVAR, DESCARTAR ou VOLTAR, igual em todo o resto do app — e o SALVAR salva de verdade, coisa que o aviso antigo nem oferecia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.233.4</span><span class="cl-ver-date">03/08/2026</span></div>
