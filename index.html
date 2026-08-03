@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.238.0</title>
+<title>VB - v1.238.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5412,18 +5412,28 @@ function VB_simFoto(cfg){
   y+=106;
   // card 3: duas metades
   card(y,70);
-  var xm=W/2+6;
+  /* as duas metades sao centradas no proprio eixo: a peca inteira e centrada e este era o
+     unico bloco alinhado a esquerda, bem no meio dela. O +1 compensa o espaco que o
+     letter-spacing acrescenta DEPOIS da ultima letra e que puxaria o texto pra esquerda. */
+  var cEsq=(pad + (W/2-6))/2, cDir=((W/2-6) + (W-pad))/2;
   ctx.fillStyle=MU2; ctx.font='500 9px -apple-system, Helvetica, sans-serif'; ls('2px');
-  ctx.fillText('PRAZO', pad+20, y+26);
-  ctx.fillText(cfg.l3, xm, y+26); ls('0px');
-  ctx.fillStyle=INK; ctx.font='700 20px -apple-system, Helvetica, sans-serif';
-  ctx.fillText(String(cfg.prazo), pad+20, y+50);
-  var wPr=ctx.measureText(String(cfg.prazo)).width;
-  ctx.fillText(cfg.v3, xm, y+50);
-  var wV3=ctx.measureText(cfg.v3).width;
-  ctx.fillStyle=MU2; ctx.font='500 9px -apple-system, Helvetica, sans-serif'; ls('2px');
-  ctx.fillText('meses', pad+20+wPr+4, y+50);
-  ctx.fillText(cfg.u3, xm+wV3+4, y+50); ls('0px');
+  ctx.textAlign='center';
+  ctx.fillText('PRAZO', cEsq+1, y+26);
+  ctx.fillText(cfg.l3, cDir+1, y+26); ls('0px'); ctx.textAlign='left';
+  var par=function(cx, val, uni){
+    ctx.font='700 20px -apple-system, Helvetica, sans-serif'; ls('0px');
+    var wv=ctx.measureText(val).width;
+    ctx.font='500 9px -apple-system, Helvetica, sans-serif'; ls('2px');
+    var wu=ctx.measureText(uni).width-2;   /* tira o espaco solto do fim */
+    ls('0px');
+    var x0=cx-(wv+4+wu)/2;
+    ctx.fillStyle=INK; ctx.font='700 20px -apple-system, Helvetica, sans-serif';
+    ctx.fillText(val, x0, y+50);
+    ctx.fillStyle=MU2; ctx.font='500 9px -apple-system, Helvetica, sans-serif'; ls('2px');
+    ctx.fillText(uni, x0+wv+4, y+50); ls('0px');
+  };
+  par(cEsq, String(cfg.prazo), 'meses');
+  par(cDir, cfg.v3, cfg.u3);
   // divisor vertical
   ctx.strokeStyle=LN; ctx.beginPath(); ctx.moveTo(W/2-6, y+14); ctx.lineTo(W/2-6, y+56); ctx.stroke();
   y+=76;
@@ -15377,6 +15387,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.238.1</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">Na foto da SIMULAÇÃO, PRAZO e TAXA DE JUROS passaram a ser centrados cada um na sua metade. A peça inteira é centrada — logo, título e os dois números grandes — e esse era o único bloco encostado à esquerda, bem no meio dela. O TOTAL FINANCIADO continua rótulo à esquerda e número à direita, porque ali é linha de fechamento, não valor em exibição</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.238.0</span><span class="cl-ver-date">03/08/2026</span></div>
