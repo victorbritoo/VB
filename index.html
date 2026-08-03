@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.231.1</title>
+<title>VB - v1.232.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2756,6 +2756,7 @@ function VB_autoteste(){
   t('Nome primeiro+último (VB_nomePU)', function(){ return VB_nomePU('JOAO ADRIANO LOPES ALBUQUERQUE')==='JOAO ALBUQUERQUE' && VB_nomePU('TONY DU CARRO')==='TONY DU CARRO' && VB_nomePU('EDUARDO DUARTE PINHEIRO')==='EDUARDO PINHEIRO' && VB_nomePU('ACORDO PEDRO HUBLOT')==='ACORDO PEDRO HUBLOT'; });
   t('Valor abreviado do panorama (VB_kFmt)', function(){ return VB_kFmt(56000)==='56K' && VB_kFmt(65800)==='65,8K' && VB_kFmt(99950)==='100K' && VB_kFmt(291780)==='292K' && VB_kFmt(999)==='999'; });
   t('Conta paga cai no mês certo (REN_cpGravaPag)', function(){ /* o timestamp e sempre meio-dia UTC: o slice(0,7) do mes nunca transborda */ return ('2026-08-31T12:00:00.000Z').slice(0,7)==='2026-08'; });
+  t('Carimbo guarda o dia local e a hora (VB_carimbo)', function(){ var c=VB_carimbo(); return c.slice(0,10)===REN_hojeISO() && /T\d\d:\d\d:\d\d\.000Z$/.test(c); });
   VB_autotesteFalhas=F;
   var el=document.getElementById('vb-autoteste'); if(el) el.style.display=F.length?'block':'none';
   if(F.length){ try{ console.warn('VB autoteste:', F); }catch(e){} }
@@ -9493,6 +9494,17 @@ function CLIP_abrir(nome, cliId, voltarK){
 }
 /* === A RECEBER (Fase 1): cronograma derivado das operações — só leitura, sem tabela nova === */
 function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* CARIMBO = RELOGIO DE PAREDE. O campo guarda a hora LOCAL rotulada como Z. Parece errado e e
+   de proposito: o app le esses campos sempre como TEXTO (fatia o mes, fatia o dia, compara pra
+   ordenar) e nunca como instante. Gravando UTC de verdade, uma baixa feita entre 21h e meia-noite
+   do ultimo dia do mes (Fortaleza, UTC-3) caia no mes seguinte. Gravando meio-dia fixo, o mes
+   ficava certo mas a hora sumia e duas baixas do mesmo dia empatavam na ordenacao. Assim os dois
+   ficam certos. Data retroativa continua no meio-dia: hora daquele dia ninguem sabe. */
+function VB_carimbo(){
+  var d=new Date(), p2=function(n){ return ('0'+n).slice(-2); };
+  return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())
+    +'T'+p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())+'.000Z';
+}
 function REN_brToISO(s){
   s=String(s||'').trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
@@ -9919,7 +9931,10 @@ function REN_cpOv(oid){
 function REN_cpCard(c){
   var hoje=REN_hojeISO(), pago=!!c.pago_em, dtv=String(c.venc||'');
   var atr=(!pago && dtv<hoje);
-  var dt=pago?(String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7))
+  /* na paga, duas datas contam a historia: quando vencia e quando saiu. Iguais, uma so. */
+  var dPag=String(c.pago_em||'').slice(8,10)+'/'+String(c.pago_em||'').slice(5,7);
+  var dVen=dtv?(dtv.slice(8,10)+'/'+dtv.slice(5,7)):'';
+  var dt=pago?((dVen&&dVen!==dPag)?(dVen+' \u2192 '+dPag):dPag)
              :((dtv===hoje)?'<b>HOJE</b>':HIST_fmtData(dtv));
   var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(Number(c.valor)||0);
   var tit=String(c.credor||c.descricao||'\u2014');
@@ -10067,9 +10082,9 @@ function REN_cpQuick(btn, id){
   REN_cpGravaPag(c, Number(c.valor)||0, REN_hojeISO(), null);
 }
 function REN_cpGravaPag(c, valor, dataISO, nota){
-  /* sempre meio-dia UTC: gravar a hora real em UTC jogava um pagamento feito entre 21h e
-     meia-noite do ultimo dia do mes (Fortaleza, UTC-3) no mes seguinte do Fechamento */
-  var ts=dataISO+'T12:00:00.000Z';
+  /* hoje carrega a hora local (VB_carimbo) para a lista PAGAS ordenar de verdade;
+     data retroativa fica no meio-dia, que e onde a hora e desconhecida */
+  var ts=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
   sb.from('contas_pagar').update({pago_em:ts, valor_pago:Math.round((Number(valor)||0)*100)/100, nota_baixa:(nota||null)}).eq('id', c.id).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
     try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
@@ -10695,7 +10710,7 @@ function REN_desfazFicha(k){
 function REN_repQuick(btn, k){
   if(btn.dataset.armed!=='1'){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; } },2200); return; }
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
-  sb.from('parcela_baixas').update({repassado_em:new Date().toISOString()}).eq('id', b.id).then(function(res){
+  sb.from('parcela_baixas').update({repassado_em:VB_carimbo()}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', '', HIST_fmtMoeda(Number(b.repasse_valor)||0)); }catch(e){}
     VB_toast('Repasse registrado.'); REN_abrir();
@@ -10884,7 +10899,7 @@ function REN_salvaRepasse(k){
   var nt=((document.getElementById('renr-nota')||{}).value||'').trim().toUpperCase();
   if(!(v>0)){ VB_toast('Informe o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
-  var ts=(d===REN_hojeISO())?new Date().toISOString():(d+'T12:00:00.000Z');
+  var ts=(d===REN_hojeISO())?VB_carimbo():(d+'T12:00:00.000Z');
   if(b.repassado_em && d===String(b.repassado_em).slice(0,10)) ts=b.repassado_em;
   sb.from('parcela_baixas').update({repasse_valor:v, repassado_em:ts, repasse_nota:(nt||null)}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
@@ -10946,7 +10961,7 @@ function REN_gravaBaixa(x, valor, dataISO, nota){
 }
 /* Fecha a parcela: cria a baixa (que e o que dispara o repasse ao socio). */
 function REN_fechaParcela(x, total, dataISO, nota){
-  var _rem=(dataISO===REN_hojeISO())?new Date().toISOString():(dataISO+'T12:00:00.000Z');
+  var _rem=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
   var _pay={op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:total, recebido_em:_rem, nota:(nota||null)};
   var _oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
   if(_oi){ _pay.repasse_valor=REN_repAlvo(_oi, x); }
@@ -15265,6 +15280,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.232.0</span><span class="cl-ver-date">03/08/2026</span></div>
+      <div class="cl-item">RECEBIDAS e PAGAS voltaram a ter hora. As duas listas sempre ordenaram pelo carimbo, mas o carimbo de SAÍDAS era meio-dia fixo — duas contas pagas no mesmo dia empatavam e a ordem virava sorte. Agora o carimbo guarda o relógio de parede: dia certo, mês certo e hora pra desempatar</div>
+      <div class="cl-item">De quebra, o bug de vira-mês que ainda vivia em ENTRADAS morreu. Uma baixa lançada entre 21h e meia-noite do último dia do mês caía no mês seguinte; agora não cai. Baixa com data retroativa continua no meio-dia, porque a hora daquele dia ninguém sabe</div>
+      <div class="cl-item">A conta paga mostra as duas datas: 31/07 → 03/08, quando venceu e quando saiu. Pagou no dia, aparece uma só</div>
+      <div class="cl-item">O self-tester ganhou a 16ª prova, vigiando o carimbo novo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.231.1</span><span class="cl-ver-date">03/08/2026</span></div>
