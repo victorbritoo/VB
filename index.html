@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.249.0</title>
+<title>VB - v1.250.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9463,7 +9463,7 @@ function CLIP_abrir(nome, cliId, voltarK){
        numero grande e sem significado; o lucro, sim, e dinheiro seu nos dois casos. */
     var antBruto=0, antLuc=0, venTot=0, venLuc=0;
     var antL=[], venL=[];
-    ant.forEach(function(r){
+    antOk.forEach(function(r){ /* antAtr ja aparece sozinho no bloco EM COBRANCA */
       var b2=Number(r.valor_bruto)||0; antBruto+=b2;
       var l=HIST_lucroRow('ant', r)||0; antLuc+=l;
       antL.push({rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), data:String(r.data_operacao||r.created_at||'').slice(0,10), bruto:b2, liq:Number(r.valor_liquido)||0, luc:l});
@@ -10974,7 +10974,7 @@ function REN_ficha(k, exp){
   if(_pend) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_P+'">REPASSAR \u00b7 '+HIST_fmtMoeda(_rvB)+'</button>';
   if(b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editRec(\''+k+'\');" style="'+(_pend?BTN_S:BTN_P)+'">EDITAR RECEBIMENTO</button>';
   if(b&&b.repassado_em) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_S+'">EDITAR REPASSE</button>';
-  if(b) hh+='<button onclick="REN_desfazFicha(\''+k+'\')" style="'+BTN_S+'color:var(--tx);">\u21a9\ufe0e DESFAZER BAIXA</button>';
+  if(b) hh+='<button onclick="REN_desfazFicha(\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'padding:13px;">DAR BAIXA</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
   if(!b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_proSheet(\''+k+'\');" style="'+BTN_S+'">'+(x.prorrogada?'EDITAR PRORROGA\u00c7\u00c3O':'PRORROGAR')+'</button>';
@@ -11101,8 +11101,8 @@ function REN_prevSheet(k){
     var val=(b?(Number(b.repasse_valor)||0):(pv!=null?pv:REN_repDef(oi,i)));
     var txt=Number(val||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     linhas+='<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;align-items:center;margin-bottom:7px;">'
-      +'<div style="min-width:0;"><div style="font-size:11px;color:var(--tx);font-weight:600;">'+REN_nm(i)+' \u00b7 '+HIST_fmtData(i.venc)+'</div>'
-      +'<div style="font-size:9px;color:var(--so);">'+REN_termo(i.tab,false,true)+': '+HIST_fmtMoeda(i.valor)+(b?' \u00b7 BAIXADA':'')+'</div></div>'
+      +'<div style="min-width:0;"><div style="font-size:11px;color:var(--tx);font-weight:600;">'+REN_termo(i.tab,false,true)+' '+REN_nm(i)+' \u00b7 '+HIST_fmtData(i.venc)+'</div>'
+      +'<div style="font-size:9px;color:var(--so);">VALOR: '+HIST_fmtMoeda(i.valor)+(b?' \u00b7 RECEBIDA':'')+'</div></div>'
       +(b ? ('<div style="text-align:right;font-size:13px;color:var(--so);font-weight:600;">'+HIST_fmtMoeda(val)+'</div>')
           : ('<div style="'+CX+'"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input id="renp-'+ix+'" inputmode="decimal" value="'+txt+'" oninput="REC_maskVal(this);REN_prevSoma()" style="'+IN+'"></div>'))
       +'</div>';
@@ -15642,6 +15642,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.250.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">No Panorama do cliente, uma operação em cobrança era contada duas vezes na mesma folha: entrava no histórico de ANTECIPAÇÕES e aparecia de novo no bloco EM COBRANÇA. O ANTECIPADO somava um valor que nunca foi desembolsado. Agora o histórico conta só as operações normais</div>
+      <div class="cl-item">Na folha do REPASSE COMBINADO o rótulo PARCELA encabeçava o valor. A palavra subiu pro lugar dela — PARCELA 01 DE 02 em cima, VALOR embaixo — e BAIXADA virou RECEBIDA, que é a palavra que o resto do app usa</div>
+      <div class="cl-item">A seta saiu do DESFAZER BAIXA</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.249.0</span><span class="cl-ver-date">04/08/2026</span></div>
