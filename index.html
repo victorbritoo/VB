@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.245.0</title>
+<title>VB - v1.246.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1362,7 +1362,7 @@ body{ text-transform:uppercase; }
     <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:40px;">Carregando...</div>
   </div>
 
-  <div id="hist-total" style="display:none;margin-top:4px;padding:4px 14px 5px;background:var(--acc);border-radius:12px;color:var(--acc-tx);justify-content:space-between;align-items:center;"></div>
+  <div id="hist-total" style="display:none;position:sticky;bottom:8px;z-index:3;margin-top:4px;padding:4px 14px 5px;background:var(--acc);border-radius:12px;color:var(--acc-tx);justify-content:space-between;align-items:center;"></div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;">
     <button id="hist-relatorio-btn" type="button" ontouchend="event.preventDefault();VB_relatorioMenu()" onclick="VB_relatorioMenu()" style="padding:14px 6px;border:0.5px solid var(--lnk);border-radius:12px;background:var(--sf);color:var(--tx);font-size:12px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>RELATÓRIO</button>
@@ -3665,7 +3665,6 @@ function HIST_tipoLabel(tab){ return tab==='ant'?'ANTEC':tab==='fin'?'FINANC':ta
 function HIST_valLabel(tab){ return tab==='ant'?'Bruto':tab==='fin'?'Financiado':'Total'; }
 // ===== Card de totais com escopo (v1.115.0): m\u00eas atual (padr\u00e3o) <-> geral; busca ativa soma tudo =====
 var HIST_totEscopo='mes';
-var HIST_atrJuros=true; /* card de ATRASADOS: true = a cobrar hoje (padrao), false = liquido salvo, sem juros */
 function HIST_renderTotal(tab, rows, term){
   var totalEl=document.getElementById('hist-total');
   if(!totalEl) return;
@@ -3695,12 +3694,11 @@ function HIST_renderTotal(tab, rows, term){
   var corpo='';
   if(tab==='ant'){
     if(HIST_antSub==='atr'){
-      var atrA=0, atrB=0, nAtrA=0;
-      rowsT.forEach(function(r){ atrA+=HIST_atrHoje(r); atrB+=(Number(r.valor_liquido)||0); nAtrA++; });
-      var _av=HIST_atrJuros?atrA:atrB;
-      var _atxt=nAtrA?HIST_fmtMoeda(_av):(_vazio?HIST_fmtMoeda(0):'\u2014');
+      var atrA=0, nAtrA=0;
+      rowsT.forEach(function(r){ atrA+=HIST_atrHoje(r); nAtrA++; });
+      var _atxt=nAtrA?HIST_fmtMoeda(atrA):(_vazio?HIST_fmtMoeda(0):'\u2014');
       corpo='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:10px;">'
-        +'<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">ATRASADOS \u00b7 '+nAtrA+(HIST_atrJuros?'':' \u00b7 SEM JUROS')+' <span style="opacity:0.4;">\u21c4</span></span>'
+        +'<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">ATRASADOS \u00b7 '+nAtrA+'</span>'
         +'<span style="font-size:15px;font-weight:700;white-space:nowrap;'+(nAtrA?'color:#ff6b6b;':'')+'">'+_atxt+'</span>'
         +'</div>';
     } else {
@@ -3746,19 +3744,15 @@ function HIST_renderTotal(tab, rows, term){
   if(!busca && !fixo && !filtro){
     totalEl.insertAdjacentHTML('beforeend','<div style="position:absolute;top:3px;right:8px;font-size:9px;color:var(--acc-tx);opacity:0.4;pointer-events:none;">\u21c4</div>');
   }
-  totalEl.style.position='relative';
-  totalEl.style.cursor=(fixo||!(busca||filtro))?'pointer':'default';
+  totalEl.style.position='sticky'; /* gruda no rodape da lista; ancora do indicador absoluto continua valendo */
+  totalEl.style.cursor=(busca||fixo||filtro)?'default':'pointer';
   if(!totalEl._escBind){
     totalEl._escBind=true;
     totalEl.addEventListener('click', function(){
-      var _t0=Date.now(); if(_t0-(totalEl._escT||0)<350) return; totalEl._escT=_t0;
-      if(HIST_tabCache==='ant' && HIST_antSub==='atr'){
-        HIST_atrJuros=!HIST_atrJuros;
-        HIST_renderTotal(HIST_tabCache, HIST_rowsCache, HIST_searchTerm);
-        return;
-      }
       if(HIST_searchTerm) return;
       if(typeof HIST_hasActiveFilter==='function' && HIST_hasActiveFilter()) return;
+      if(HIST_tabCache==='ant' && HIST_antSub==='atr') return;
+      var t=Date.now(); if(t-(totalEl._escT||0)<350) return; totalEl._escT=t;
       HIST_totEscopo=(HIST_totEscopo==='mes')?'geral':'mes';
       HIST_renderTotal(HIST_tabCache, HIST_rowsCache, HIST_searchTerm);
     });
@@ -4004,7 +3998,6 @@ function HIST_rendRow(tab, r){
 var HIST_antSub='ops';
 function HIST_setAntSub(s){
   HIST_antSub=s;
-  HIST_atrJuros=true; /* volta sempre pro a cobrar hoje */
   var bO=document.getElementById('hist-ant-ops'), bA=document.getElementById('hist-ant-atr');
   var on='padding:8px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
   var off='padding:8px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;';
@@ -5616,7 +5609,7 @@ function FIN_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!FIN_currentOperationId;
-  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
+  row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -6511,7 +6504,7 @@ function VEN_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!VEN_currentOperationId;
-  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
+  row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -7448,7 +7441,7 @@ function ANT_confirmarOperacao(btn){
   };
 
   var ehAtualizacao = !!ANT_currentOperationId;
-  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
+  row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -8159,7 +8152,7 @@ function PAG_confirmarOperacao(btn){
   var row={ nome:((_nomeEl.value||'').trim().toUpperCase()||null), valor_total: (total>0?total:0), pagamentos: itens };
 
   var ehAtualizacao = !!PAG_currentOperationId;
-  row.created_at = new Date().toISOString(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
+  row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
   var query = ehAtualizacao
@@ -15625,6 +15618,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.246.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">O card de totais do Histórico passou a grudar no rodapé da lista, como o do Estoque. A pergunta que ele responde — quanto isso tudo soma — se faz enquanto se olha a lista, não depois de percorrer 12 vendas até o fim</div>
+      <div class="cl-item">ATRASADOS ficou em uma linha só, rótulo à esquerda e valor à direita. O toque pro valor sem juros foi retirado: o campo salvo já embute os juros das cobranças anteriores, então o segundo número não era o que o rótulo prometia. Fica um número só, o que se cobra hoje</div>
+      <div class="cl-item">O carimbo do histórico das quatro operações (antecipação, financiamento, venda e pagamento) passou a usar VB_carimbo. Salvamento entre 21h e meia-noite gravava o dia seguinte, e no atrasado isso atrasava o relógio do juro em um dia inteiro, porque a correção corre a partir desse carimbo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.245.0</span><span class="cl-ver-date">04/08/2026</span></div>
