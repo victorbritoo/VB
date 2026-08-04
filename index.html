@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.250.2</title>
+<title>VB - v1.252.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3636,9 +3636,11 @@ function HIST_colsPessoa(tab){
   if(tab==='fin') return ['investidor_nome'];
   return [];
 }
-function HIST_orsApelido(tab, termo){
-  var cols=HIST_colsPessoa(tab);
-  if(!cols.length) return [];
+/* O apelido e o nome que VB usa; as operacoes guardam o nome completo. Um lugar so traduz
+   o que foi digitado na lista de nomes completos que aquilo pode significar. Estava escrito
+   dentro do Historico e nao alcancava a busca geral nem o cadastro de operacao -- foi assim
+   que nasceu um cliente duplicado: VB digitou o apelido, o app nao achou, e criou outro. */
+function VB_apelidoNomes(termo){
   if(!VB_apelidos || typeof VB_apelidos!=='object') return [];
   var t=String(termo||'').trim().toUpperCase();
   if(t.length<2) return [];
@@ -3647,8 +3649,13 @@ function HIST_orsApelido(tab, termo){
     var ap=String(VB_apelidos[nm]||'').toUpperCase();
     if(ap && ap.indexOf(t)>=0 && nomes.indexOf(nm)<0) nomes.push(nm);
   });
+  return nomes.slice(0,8); /* trava pro filtro nao virar um texto gigante */
+}
+function HIST_orsApelido(tab, termo){
+  var cols=HIST_colsPessoa(tab);
+  if(!cols.length) return [];
+  var nomes=VB_apelidoNomes(termo);
   if(!nomes.length) return [];
-  nomes=nomes.slice(0,8); /* trava pro filtro nao virar um texto gigante */
   var ors=[];
   nomes.forEach(function(nm){
     var s=String(nm).replace(/[,*()]/g,' ');
@@ -8964,14 +8971,24 @@ function GLB_buscar(){
   if(termo.length<2){ res.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:10px;">Digite pelo menos 2 letras.</div>'; return; }
   res.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:10px;">Buscando...</div>';
   var q='%'+termo+'%';
+  /* o termo pode ser um apelido: procura tambem pelos nomes completos que ele representa */
+  var _apn=VB_apelidoNomes(termo);
+  function _o(cols){
+    var a=[];
+    cols.forEach(function(c){
+      a.push(c+'.ilike.'+q);
+      _apn.forEach(function(nm){ a.push(c+'.ilike.%'+String(nm).replace(/[,*()]/g,' ')+'%'); });
+    });
+    return a.join(',');
+  }
   Promise.all([
-    sb.from('antecipacoes').select('*').ilike('nome', q).limit(8),
-    sb.from('financiamentos_hist').select('*').or('descricao.ilike.'+q+',investidor_nome.ilike.'+q).limit(8),
-    sb.from('vendas').select('*').or('descricao.ilike.'+q+',nome.ilike.'+q+',socio.ilike.'+q+',cliente.ilike.'+q).limit(8),
-    sb.from('pagamentos').select('*').ilike('nome', q).limit(8),
-    sb.from('mercadorias').select('*').or('descricao.ilike.'+q+',fornecedor.ilike.'+q+',socio.ilike.'+q+',sn.ilike.'+q).limit(8),
-    sb.from('socios').select('*').ilike('nome', q).limit(8),
-    sb.from('clientes').select('*').or('nome.ilike.'+q+',cpf.ilike.'+q).limit(8)
+    sb.from('antecipacoes').select('*').or(_o(['nome'])).limit(8),
+    sb.from('financiamentos_hist').select('*').or(_o(['descricao','investidor_nome'])).limit(8),
+    sb.from('vendas').select('*').or(_o(['descricao','nome','socio','cliente'])).limit(8),
+    sb.from('pagamentos').select('*').or(_o(['nome'])).limit(8),
+    sb.from('mercadorias').select('*').or(_o(['descricao','fornecedor','socio','sn'])).limit(8),
+    sb.from('socios').select('*').or(_o(['nome'])).limit(8),
+    sb.from('clientes').select('*').or(_o(['nome','cpf'])+',apelido.ilike.'+q).limit(8)
   ]).then(function(rs){
     var termoAtual=(document.getElementById('glb-termo').value||'').trim();
     if(termoAtual!==termo) return; // resposta velha
@@ -9296,7 +9313,7 @@ var VB_cliBase=null, VB_cliBaseTs=0;
 function VB_cliNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
 function VB_cliCarregar(cb){
   if(VB_cliBase && (Date.now()-VB_cliBaseTs)<120000){ cb(VB_cliBase); return; }
-  sb.from('clientes').select('id,nome,ativo').order('nome',{ascending:true}).limit(2000).then(function(res){
+  sb.from('clientes').select('id,nome,apelido,ativo').order('nome',{ascending:true}).limit(2000).then(function(res){
     if(!res.error){ VB_cliBase=res.data||[]; VB_cliBaseTs=Date.now(); }
     cb(VB_cliBase||[]);
   }).catch(function(){ cb(VB_cliBase||[]); });
@@ -9323,9 +9340,19 @@ function VB_cliAttach(inputId){
     if(termo.length<2){ b.style.display='none'; return; }
     VB_cliCarregar(function(lista){
       if(document.activeElement!==el) return;
-      var hits=(lista||[]).filter(function(c){ var n=VB_cliNorm(c.nome); return n.indexOf(termo)>=0 && n!==termo; }).slice(0,6);
+      /* digitar o apelido tem que achar a pessoa: o campo guarda o nome completo, mas
+         ninguem lembra dele na hora de lancar */
+      var hits=(lista||[]).filter(function(c){
+        var n=VB_cliNorm(c.nome);
+        if(n.indexOf(termo)>=0 && n!==termo) return true;
+        var a=VB_cliNorm(c.apelido||'');
+        return !!a && a.indexOf(termo)>=0 && n!==termo;
+      }).slice(0,6);
       if(!hits.length){ b.style.display='none'; return; }
-      b.innerHTML=hits.map(function(c){ return '<div data-nome="'+CLIP_esc(c.nome)+'" style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;border-bottom:0.5px solid var(--ln3);text-transform:uppercase;">'+CLIP_esc(c.nome)+'</div>'; }).join('');
+      b.innerHTML=hits.map(function(c){
+        var _ap=String(c.apelido||'').trim();
+        return '<div data-nome="'+CLIP_esc(c.nome)+'" style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;border-bottom:0.5px solid var(--ln3);text-transform:uppercase;">'+CLIP_esc(c.nome)+(_ap?('<span style="color:var(--mu);font-weight:600;"> \u00b7 '+CLIP_esc(_ap)+'</span>'):'')+'</div>';
+      }).join('');
       Array.prototype.forEach.call(b.children,function(ch){
         function pick(ev){ ev.preventDefault(); ev.stopPropagation(); el.value=ch.getAttribute('data-nome'); b.style.display='none'; try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
         ch.addEventListener('touchend', function(ev){ var t=ev.changedTouches&&ev.changedTouches[0]; if(t && (Math.abs(t.clientX-(b._sx||t.clientX))>10 || Math.abs(t.clientY-(b._sy||t.clientY))>10)) return; pick(ev); });
@@ -10331,13 +10358,13 @@ function REN_proSheet(k){
   }
   var pago=REN_pagoTot(x), falta=REN_falta(x);
   var pp=(REN_cache.pro||{})[REN_key(x)];
-  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;font-weight:600;outline:none;';
+  var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;font-weight:600;outline:none;';
   var ROT='font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;';
-  function lin(l,v,forte){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(forte?'font-weight:700;':'')+'"><span style="color:var(--so);letter-spacing:1px;">'+l+'</span><span style="color:var(--tx);font-weight:600;">'+v+'</span></div>'; }
+  function lin(l,v,forte){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:2px;'+(forte?'font-weight:700;':'')+'"><span style="color:var(--so);letter-spacing:1px;">'+l+'</span><span style="color:var(--tx);font-weight:600;">'+v+'</span></div>'; }
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PRORROGAR</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
-    +'<div style="background:var(--sf);border:0.5px solid var(--ln3);border-radius:12px;padding:10px 12px;margin-bottom:12px;">'
+    +'<div style="background:var(--sf);border:0.5px solid var(--ln3);border-radius:12px;padding:8px 12px;margin-bottom:10px;">'
       +lin(REN_termo(x.tab,false,true), HIST_fmtMoeda(x.valorOrig!=null?x.valorOrig:x.valor))
       +(pago>0?lin('J\u00c1 PAGO', HIST_fmtMoeda(pago)):'')
       +lin('VENCE', HIST_fmtData(x.venc))
@@ -10347,9 +10374,9 @@ function REN_proSheet(k){
       +'<div><div style="'+ROT+'">NOVA DATA</div><input id="renpr-data" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_proCalc(1)" oninput="REC_maskData(this);REN_proCalc(1)" value="'+(pp?HIST_fmtData(String(pp.venc_novo).slice(0,10)):'')+'" style="'+IN+'"></div>'
       +'<div><div style="'+ROT+'">NOVO SALDO</div><input id="renpr-val" inputmode="decimal" oninput="REC_maskVal(this);REN_proPinta()" value="'+HIST_fmtMoeda(falta).replace('R$ ','')+'" style="'+IN+'"></div>'
     +'</div>'
-    +'<div id="renpr-dica" style="text-align:center;font-size:10px;color:var(--mu);font-weight:600;margin-top:6px;min-height:13px;"></div>'
-    +'<div style="margin-top:10px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" oninput="REN_proPinta()" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'font-size:13px;"></div>'
-    +'<button id="renpr-salvar" onclick="REN_proSalvar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
+    +'<div id="renpr-dica" style="text-align:center;font-size:10px;color:var(--mu);font-weight:600;margin-top:4px;min-height:12px;"></div>'
+    +'<div style="margin-top:8px;"><div style="'+ROT+'">NOTA</div><input id="renpr-nota" placeholder="COMBINADO NO WHATSAPP" oninput="REN_proPinta()" value="'+CLIP_esc(pp&&pp.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'font-size:13px;"></div>'
+    +'<button id="renpr-salvar" onclick="REN_proSalvar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +(pp?'<button onclick="REN_proDesfazer(this)" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">DESFAZER PRORROGA\u00c7\u00c3O</button>':'')
     +'<button onclick="REN_proFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -11164,9 +11191,9 @@ function REN_prevSoma(){
     bs.style.color=sujo?'var(--acc-tx)':'var(--mu2)';
     bs.style.border=sujo?'none':'0.5px solid var(--ln3)';
   }
-  el.innerHTML='<div style="'+L+'"><span style="'+R+'">'+CLIP_esc(String(c.oi.socio).toUpperCase())+':</span>'
-      +'<span style="font-size:11px;font-weight:700;color:'+(fecha?'var(--tx)':'var(--red)')+';">'+HIST_fmtMoeda(soma)+' DE '+HIST_fmtMoeda(alvo)
-      +(fecha?'':(' \u00b7 '+(falta>0?'FALTAM ':'SOBRAM ')+HIST_fmtMoeda(Math.abs(falta))))+'</span></div>'
+  el.innerHTML='<div style="'+L+'"><span style="'+R+'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">'+CLIP_esc(String(c.oi.socio).toUpperCase())+':</span>'
+      +'<span style="font-size:11px;font-weight:700;white-space:nowrap;flex:none;padding-left:8px;color:'+(fecha?'var(--tx)':'var(--red)')+';">'+HIST_fmtMoeda(soma)+' DE '+HIST_fmtMoeda(alvo)+'</span></div>'
+    +(fecha?'':('<div style="text-align:right;font-size:10px;font-weight:700;color:var(--red);margin-top:1px;">'+(falta>0?'FALTAM ':'SOBRAM ')+HIST_fmtMoeda(Math.abs(falta))+'</div>'))
     +'<div style="'+L+'margin-top:4px;"><span style="'+R+'">VOC\u00ca:</span>'
       +'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(seu)+'</span></div>';
 }
@@ -15642,6 +15669,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.252.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">Na folha do repasse combinado, o FALTAM entrava na mesma linha do quanto já foi distribuído e empurrava o nome do sócio pra duas linhas. Passou a ter linha própria embaixo, alinhada à direita e um degrau menor — o de cima responde quanto está posto, o de baixo quanto falta</div>
+      <div class="cl-item">A folha PRORROGAR encolheu: o resumo, os campos e os botões estavam com folga maior que a das outras folhas. Mesmos elementos, espaçamento da casa</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.251.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">Digitar o apelido passou a achar a pessoa na BUSCA GERAL e no campo de cliente das operações. A regra existia só dentro do Histórico — e era por isso que lançar uma operação pelo apelido não encontrava ninguém e criava um cliente novo com o apelido como nome</div>
+      <div class="cl-item">A sugestão do campo agora mostra o nome completo com o apelido ao lado, pra dar pra reconhecer quem é antes de escolher</div>
+      <div class="cl-item">A tradução apelido para nome completo virou VB_apelidoNomes, usada pelos três lugares</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.250.2</span><span class="cl-ver-date">04/08/2026</span></div>
