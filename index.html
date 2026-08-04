@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.247.2</title>
+<title>VB - v1.248.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10595,7 +10595,7 @@ function REN_render(){
       +'<div onclick="REN_ficha(\''+REN_key(x)+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;">'+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+REN_nm(x)+(Number(b.valor_recebido)!==Number(x.valor)?(' \u00b7 '+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)):'')+(b.nota?(' \u00b7 '+CLIP_esc(b.nota)):'')+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
-      +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(Number(b.repasse_valor)>0&&!b.repassado_em) return '<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor))+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+(b.repasse_nota?(' \u00b7 '+CLIP_esc(b.repasse_nota)):'')+'</div>'; return ''; })()
+      +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(Number(b.repasse_valor)>0&&!b.repassado_em) return '<div style="font-size:10px;color:'+((String(x.venc||'').slice(0,10)<=REN_hojeISO())?'var(--red)':'var(--tx)')+';font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor))+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+(b.repasse_nota?(' \u00b7 '+CLIP_esc(b.repasse_nota)):'')+'</div>'; return ''; })()
       +'</div>'
       +'<button onclick="REN_desfaz(this,\''+b.id+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u21a9\ufe0e</button>'
       +'</div>';
@@ -10870,11 +10870,12 @@ function REN_ficha(k, exp){
     else { st='A VENCER'; stC='var(--so)'; }
     var _seu=null;
     if(oi){ var _rp=yb?(Number(yb.repasse_valor)||0):REN_repAlvo(oi,y); _seu=Math.round((y.valor-_rp)*100)/100; }
+    var _vl=yb?(Number(yb.valor_recebido)||0):y.valor;
     var _cor=(atual?'var(--tx)':'var(--mu)');
     /* largura fixa em cada peca: mesmo formato de antes, mas as colunas nao dancam entre as linhas */
     var _c1='display:inline-block;min-width:84px;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(y.valor)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span>'
+      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(_vl)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span>'
         +(_seu!=null?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
       +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>';
   });
@@ -10913,7 +10914,7 @@ function REN_ficha(k, exp){
       /* a nota fecha a linha entre parenteses, no mesmo tamanho: em 9px e --so2 (#ccc) ela nao lia.
          Fica em --mu, um degrau abaixo do numero, e nunca em vermelho -- vermelho e do estado. */
       if(b.repasse_nota) _rtx+='<span style="color:var(--mu);font-weight:600;"> ('+CLIP_esc(b.repasse_nota)+')</span>';
-      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+(b.repassado_em?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
+      _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+((b.repassado_em || String(x.venc||'').slice(0,10)>REN_hojeISO())?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
     }
   }
   if(oi){
@@ -15625,6 +15626,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.248.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">A correção do vermelho do repasse tinha parado no card da seção A REPASSAR, e outros dois lugares continuavam acendendo sozinhos: a linha REPASSE PENDENTE do card em RECEBIDAS e o bloco REPASSE da ficha da parcela. Eram três cópias da mesma decisão de cor — agora os três usam a mesma régua, vermelho só a partir do dia do vencimento</div>
+      <div class="cl-item">Na linha do tempo PARCELAS DA OPERAÇÃO, a parcela recebida mostrava o valor que era devido, não o que entrou: uma baixa de R$ 15.000 numa parcela de R$ 27.500 aparecia como 27.500 com o visto do lado. Agora mostra o que entrou — que é o mesmo número que o resumo colapsado logo acima já somava. As duas metades da mesma lista discordavam</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.247.2</span><span class="cl-ver-date">04/08/2026</span></div>
