@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.259.0</title>
+<title>VB - v1.259.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -7569,8 +7569,8 @@ function ANT_gerarResumoFoto(){
   VB_drawWatermark(ctx,W,H);
 
   function setLS(v){ try{ ctx.letterSpacing=v; }catch(e){} }
-  function olk(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#aaa'; ctx.font='500 11px Helvetica,Arial,sans-serif'; setLS('1.5px'); ctx.fillText(t,x,by); setLS('0px'); }
-  function ov(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#111'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.fillText(t,x,by); }
+  function olk(t,x,by,al,fs){ ctx.textAlign=al; ctx.fillStyle='#aaa'; ctx.font='500 '+(fs||11)+'px Helvetica,Arial,sans-serif'; setLS('1.5px'); ctx.fillText(t,x,by); setLS('0px'); }
+  function ov(t,x,by,al,fs){ ctx.textAlign=al; ctx.fillStyle='#111'; ctx.font='700 '+(fs||11)+'px Helvetica,Arial,sans-serif'; ctx.fillText(t,x,by); }
   function card(yy,hh){ ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.fill(); ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.stroke(); }
 
   // HEADER (igual ao resumo HTML)
@@ -7586,12 +7586,15 @@ function ANT_gerarResumoFoto(){
 
   // CARD 1 (data/prazo/taxa/qtd) — label sobre valor, dois por linha
   card(y,card1H);
-  var iy=y+12;
-  olk('DATA DA OPERAÇÃO',cardL+18,iy+12,'left');  ov(dataStr,cardL+18,iy+30,'left');
-  olk('PRAZO MÉDIO',cardR-18,iy+12,'right');       ov(prazoStr,cardR-18,iy+30,'right');
-  var iy2=iy+32;
-  olk('TAXA',cardL+18,iy2+12,'left');               ov(taxaStr,cardL+18,iy2+30,'left');
-  olk('QUANTIDADE',cardR-18,iy2+12,'right');        ov(qtdStr,cardR-18,iy2+30,'right');
+  /* Ritmo: 14px DENTRO do par, 24px ENTRE pares. Estava ao contrario (18 dentro, 14 entre),
+     e o olho grudava o valor no rotulo de baixo. Rotulo 9px e valor 12px porque aqui a separacao
+     nao vem da posicao, como vem nos cards de TITULOS e VALORES. */
+  var iy=y+10;
+  olk('DATA DA OPERAÇÃO',cardL+18,iy+12,'left',9);  ov(dataStr,cardL+18,iy+26,'left',12);
+  olk('PRAZO MÉDIO',cardR-18,iy+12,'right',9);      ov(prazoStr,cardR-18,iy+26,'right',12);
+  var iy2=iy+38;
+  olk('TAXA',cardL+18,iy2+12,'left',9);             ov(taxaStr,cardL+18,iy2+26,'left',12);
+  olk('QUANTIDADE',cardR-18,iy2+12,'right',9);      ov(qtdStr,cardR-18,iy2+26,'right',12);
   y+=card1H+cardGap;
 
   // CARD TÍTULOS (modo personalizado) — entre os dois cards
@@ -13613,8 +13616,8 @@ function QUIT_compartilhar(){
   VB_drawWatermark(ctx,W,H);
 
   function setLS(v){ try{ ctx.letterSpacing=v; }catch(e){} }
-  function olk(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#aaa'; ctx.font='500 11px Helvetica,Arial,sans-serif'; setLS('1.5px'); ctx.fillText(t,x,by); setLS('0px'); }
-  function ov(t,x,by,al){ ctx.textAlign=al; ctx.fillStyle='#111'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.fillText(t,x,by); }
+  function olk(t,x,by,al,fs){ ctx.textAlign=al; ctx.fillStyle='#aaa'; ctx.font='500 '+(fs||11)+'px Helvetica,Arial,sans-serif'; setLS('1.5px'); ctx.fillText(t,x,by); setLS('0px'); }
+  function ov(t,x,by,al,fs){ ctx.textAlign=al; ctx.fillStyle='#111'; ctx.font='700 '+(fs||11)+'px Helvetica,Arial,sans-serif'; ctx.fillText(t,x,by); }
   function card(yy,hh){ ctx.fillStyle='#fff'; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.fill(); ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=0.5; VB_roundRect(ctx,cardL,yy,cardW,hh,14); ctx.stroke(); }
 
   // HEADER
@@ -15869,6 +15872,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.259.1</span><span class="cl-ver-date">05/08/2026</span></div>
+      <div class="cl-item">Foto da antecipação: o primeiro card tinha o espaçamento invertido — 18px entre o rótulo e o valor dele, 14px entre um par e o seguinte. O olho agrupa o que está mais perto, então cada número parecia pertencer ao rótulo de baixo. Agora são 14 dentro do par e 24 entre pares, com rótulo 9px e valor 12px: naquele card a separação não vem da posição, como vem em TÍTULOS e VALORES</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.259.0</span><span class="cl-ver-date">05/08/2026</span></div>
