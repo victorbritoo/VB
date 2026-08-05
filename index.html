@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.258.0</title>
+<title>VB - v1.259.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -392,6 +392,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
       <div><div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">REF</div><input id="mer-ref" type="text" placeholder="126610" onclick="if(!this.value)this.select()" oninput="MER_dirtyPaint()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
       <div><div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">SN</div><input id="mer-sn" type="text" placeholder="3Y166494" onclick="if(!this.value)this.select()" onblur="MER_snReconhece(this)" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;"></div>
     </div>
+    <div id="mer-sn-info" style="display:none;margin-top:6px;font-size:10px;font-weight:600;color:var(--mu);text-align:center;"></div>
     <div style="margin-top:6px;">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:2px;text-align:center;">ACOMPANHA</div>
       <textarea id="mer-infos" rows="1" placeholder="CAIXA, DOCUMENTOS, CERTIFICADO..." oninput="VB_autoGrow(this)" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;resize:none;overflow:hidden;line-height:1.4;"></textarea>
@@ -1765,17 +1766,23 @@ function HIST_abrevNome(n){
   if(ps.length<=1) return ps.join('');
   return ps[0]+' '+ps.slice(1).map(function(x){ return x.charAt(0).toUpperCase()+'.'; }).join(' ');
 }
+/* Le carimbo como TEXTO, nunca como instante: VB_carimbo grava relogio de parede rotulado Z.
+   Lendo com new Date(), 21:45 saia 18:45 e madrugada voltava um dia. Campo antigo (UTC real) cai no fallback. */
+function VB_leCarimbo(iso){
+  var s=String(iso||''); if(!s) return null;
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if(m) return {dt:m[3]+'/'+m[2]+'/'+m[1], hr:(m[4]?(m[4]+':'+m[5]):'')};
+  var d=new Date(s); if(isNaN(d.getTime())) return null;
+  var p=function(n){ return ('0'+n).slice(-2); };
+  return {dt:p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(), hr:p(d.getHours())+':'+p(d.getMinutes())};
+}
 function HIST_fmtHora(iso){
-  if(!iso) return '';
-  var d=new Date(iso);
-  if(isNaN(d.getTime())) return '';
-  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  var c=VB_leCarimbo(iso);
+  return c ? c.hr : '';
 }
 function HIST_fmtDataLocal(iso){
-  if(!iso) return '--';
-  var d=new Date(iso);
-  if(isNaN(d.getTime())) return '--';
-  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  var c=VB_leCarimbo(iso);
+  return c ? c.dt : '--';
 }
 // Soma meses travando no último dia do mês: 31/01 + 1 = 28/02, nunca 03/03.
 // "ancora" é o dia contratual do vencimento (dia da 1ª parcela); sem ele usa o dia da base.
@@ -7380,10 +7387,8 @@ var VB_carimboTS = null;
 function VB_carimboData(ctx, W, opt){
   try{
     var o=opt||{};
-    var d = VB_carimboTS ? new Date(VB_carimboTS) : new Date();
-    if(isNaN(d.getTime())) d=new Date();
-    var p=function(n){return String(n).padStart(2,'0');};
-    var txt=p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
+    var k = (VB_carimboTS ? VB_leCarimbo(VB_carimboTS) : null) || VB_leCarimbo(VB_carimbo());
+    var txt = k ? (k.dt+(k.hr?(' '+k.hr):'')) : '';
     ctx.save();
     try{ ctx.letterSpacing='0px'; }catch(e){}   /* letter-spacing sobra depois da ultima letra e desalinha a direita */
     ctx.font='500 '+(o.fs||9)+'px Helvetica, Arial, sans-serif';
@@ -12114,6 +12119,8 @@ function MER_toggleForm(force){
     var _d=document.getElementById('mer-detalhes'), _t=document.getElementById('mer-det-toggle');
     if(_d) _d.style.display='block';
     if(_t) _t.textContent='\u2212 OCULTAR DETALHES';
+    try{ MER_sugAttach('mer-sn','sn'); MER_sugAttach('mer-ref','ref'); MER_sugAttach('mer-modelo','modelo'); }catch(e){}
+    try{ if(MER_editId) MER_snInfoLimpa(); else MER_snCheck(); }catch(e){}
   }
   if(b){ b.textContent='+'; b.style.fontSize='24px'; }
   var t=document.getElementById('mer-form-titulo');
@@ -12762,7 +12769,7 @@ function MER_viewFecharExec(){
 }
 function MER_cancelEdit(){
   MER_editId=null;
-  ['mer-modelo','mer-ano','mer-ref','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
+  ['mer-modelo','mer-ano','mer-ref','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); try{ MER_snInfoLimpa(); }catch(e){} VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
   MER_updateAddBtn();
   var f=document.getElementById('mer-form'), b=document.getElementById('mer-form-open');
   if(f && f.style.display!=='none'){ f.style.display='none'; if(b){ b.textContent='+'; b.style.fontSize='24px'; } }
@@ -12869,21 +12876,142 @@ function MER_passToggle(el,ev){
   d.style.display=aberto?'none':'block';
   if(c) c.style.transform=aberto?'':'rotate(90deg)';
 }
-function MER_snReconhece(el){
-  if(MER_editId) return; // só no cadastro novo
-  var sn=(el.value||'').trim().toUpperCase(); if(!sn) return;
-  var antigos=(MER_rows||[]).filter(function(x){ return (x.sn||'').toUpperCase()===sn; });
-  if(!antigos.length) return;
-  var vendas=antigos.filter(function(x){ return x.status==='vendida'; }).length;
-  var ult=antigos[antigos.length-1];
-  var cx=(ult.marca||ult.modelo||ult.ano)?{marca:ult.marca||'',modelo:ult.modelo||'',ano:ult.ano||''}:MER_desmontar(ult.descricao||'');
-  var preencheu=[];
-  [['mer-modelo',cx.modelo],['mer-ano',cx.ano]].forEach(function(par){
-    var f=document.getElementById(par[0]);
-    if(f && !f.value && par[1]){ f.value=par[1]; preencheu.push(par[0]); }
-  });
-  VB_toast('Este relógio já passou por você'+(vendas?(' — '+vendas+' venda'+(vendas>1?'s':'')+' anterior'+(vendas>1?'es':'')):'')+(preencheu.length?'. Detalhes preenchidos.':'.'));
+/* SUGESTAO DO ESTOQUE
+   SN e da PECA e nunca se repete -> reconhecer o serial e reconhecer o relogio inteiro.
+   REF e MODELO sao o mesmo dado escrito de duas formas (114060 = SUB 40MM NO DATE) -> um sugere o outro.
+   O catalogo sai do que ja foi digitado em mercadorias: por isso SUGERE e o VB escolhe, nunca preenche a revelia.
+   Nunca sobrescreve campo preenchido e NUNCA toca em custo: custo e desta compra, nao da anterior. */
+var MER_snDup=null, MER_snTok=0;
+function MER_sugBox(){
+  var b=document.getElementById('vb-mer-sug');
+  if(!b){ b=document.createElement('div'); b.id='vb-mer-sug';
+    b.style.cssText='position:absolute;z-index:100026;display:none;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.18);max-height:190px;overflow-y:auto;font-family:-apple-system,sans-serif;-webkit-text-size-adjust:100%;';
+    b.addEventListener('touchstart', function(e){ var t=e.touches[0]; b._sx=t.clientX; b._sy=t.clientY; }, {passive:true});
+    document.body.appendChild(b); }
+  return b;
 }
+function MER_sugFechar(){ var b=document.getElementById('vb-mer-sug'); if(b) b.style.display='none'; }
+function MER_sugCtx(r){
+  var cx=(r.marca||r.modelo||r.ano)?{marca:r.marca||'',modelo:r.modelo||'',ano:r.ano||''}:MER_desmontar(r.descricao||'');
+  return {modelo:(cx.modelo||''), ano:(cx.ano||'')};
+}
+function MER_sugHits(tipo, termo){
+  var t=VB_cliNorm(termo); if(!t) return [];
+  var rows=MER_rows||[], out=[], vistos={};
+  if(tipo==='sn'){
+    rows.forEach(function(r){
+      var sn=VB_cliNorm(r.sn);
+      if(!sn || sn.indexOf(t)<0) return;
+      if(vistos[sn]) return; vistos[sn]=1;  /* mesma peca que passou duas vezes = uma linha so, a mais recente */
+      out.push(r);
+    });
+    return out.slice(0,5);
+  }
+  rows.forEach(function(r){
+    var cx=MER_sugCtx(r), ref=String(r.ref||'').trim(), mo=String(cx.modelo||'').trim();
+    if(!ref || !mo) return;
+    var campo=VB_cliNorm(tipo==='ref'?ref:mo);
+    if(campo.indexOf(t)<0) return;
+    var k=VB_cliNorm(ref)+'|'+VB_cliNorm(mo); if(vistos[k]) return; vistos[k]=1;
+    out.push({ref:ref, modelo:mo});
+  });
+  return out.slice(0,5);
+}
+function MER_sugAttach(inputId, tipo){
+  var el=document.getElementById(inputId); if(!el || el._merSug) return; el._merSug=true;
+  function render(){
+    var b=MER_sugBox(), v=(el.value||'').trim(), min=(tipo==='sn'?3:2);
+    if(MER_editId || v.length<min){ b.style.display='none'; return; }
+    var hits=MER_sugHits(tipo, v);
+    if(!hits.length){ b.style.display='none'; return; }
+    b.innerHTML=hits.map(function(r,i){
+      var txt;
+      if(tipo==='sn'){
+        var cx=MER_sugCtx(r);
+        txt='<span style="color:var(--tx);">'+HIST_esc(String(r.sn||''))+'</span>'
+           +'<span style="color:var(--mu);"> \u00b7 '+HIST_esc(cx.modelo||'\u2014')+(cx.ano?(' \u00b7 '+HIST_esc(cx.ano)):'')+'</span>'
+           +'<span style="color:var(--mu2);"> \u00b7 '+(r.status==='vendida'?'VENDIDA':'EM ESTOQUE')+'</span>';
+      } else {
+        txt='<span style="color:var(--tx);">'+HIST_esc(r.modelo)+'</span><span style="color:var(--mu);"> \u00b7 '+HIST_esc(r.ref)+'</span>';
+      }
+      return '<div data-i="'+i+'" style="padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:0.5px solid var(--ln3);text-transform:uppercase;">'+txt+'</div>';
+    }).join('');
+    Array.prototype.forEach.call(b.children, function(ch){
+      function pick(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var r=hits[Number(ch.getAttribute('data-i'))||0]; if(!r) return;
+        MER_sugFechar();
+        if(tipo==='sn') MER_snAplica(r, true); else MER_refAplica(r);
+        try{ MER_dirtyPaint(); }catch(e){}
+      }
+      ch.addEventListener('touchend', function(ev){ var t=ev.changedTouches&&ev.changedTouches[0]; if(t && (Math.abs(t.clientX-(b._sx||t.clientX))>10 || Math.abs(t.clientY-(b._sy||t.clientY))>10)) return; pick(ev); });
+      ch.addEventListener('mousedown', pick);
+    });
+    VB_cliSugPos(el,b); b.style.display='block';
+  }
+  el.addEventListener('input', function(){ render(); if(tipo==='sn') MER_snCheck(); });
+  el.addEventListener('focus', render);
+  el.addEventListener('blur', function(){ setTimeout(MER_sugFechar,250); });
+}
+function MER_refAplica(r){
+  var m=document.getElementById('mer-modelo'), f=document.getElementById('mer-ref');
+  if(m) m.value=String(r.modelo||'').toUpperCase();
+  if(f) f.value=String(r.ref||'').toUpperCase();
+}
+function MER_snAplica(r, escreverSN){
+  var f=document.getElementById('mer-sn');
+  if(f && escreverSN) f.value=String(r.sn||'').toUpperCase();
+  var cx=MER_sugCtx(r);
+  [['mer-modelo',cx.modelo],['mer-ano',cx.ano],['mer-ref',r.ref]].forEach(function(par){
+    var e=document.getElementById(par[0]);
+    if(e && !(e.value||'').trim() && par[1]) e.value=String(par[1]).toUpperCase();
+  });
+  MER_snLinha(r);
+}
+function MER_snInfoLimpa(){
+  MER_snDup=null; MER_snTok++;
+  var e=document.getElementById('mer-sn-info'); if(e){ e.style.display='none'; e.innerHTML=''; }
+}
+function MER_snLinha(r){
+  var e=document.getElementById('mer-sn-info'); if(!e || !r) return;
+  var tok=++MER_snTok;
+  var dt=MER_fmtData(r.data_compra)||'', cst=(Number(r.custo)>0?(' \u00b7 '+VB_kFmt(Number(r.custo))):'');
+  if(r.status!=='vendida'){
+    /* mesmo serial ainda no estoque = cadastro duplicado, nao recompra */
+    MER_snDup=String(r.sn||'').trim().toUpperCase();
+    e.style.color='var(--red)';
+    e.innerHTML='J\u00c1 EST\u00c1 NO ESTOQUE'+(dt?(' \u00b7 COMPRA '+dt):'')+cst;
+    e.style.display='block';
+    return;
+  }
+  MER_snDup=null;
+  e.style.color='var(--mu)';
+  e.innerHTML='J\u00c1 PASSOU AQUI'+(dt?(' \u00b7 COMPRA '+dt):'')+cst;
+  e.style.display='block';
+  if(r.venda_id){
+    try{
+      sb.from('vendas').select('valor_total').eq('id', r.venda_id).limit(1).then(function(q){
+        if(tok!==MER_snTok) return; /* o VB continuou digitando: resposta velha nao pinta */
+        var v=(q&&q.data&&q.data[0])||null; if(!v || v.valor_total==null) return;
+        e.innerHTML=e.innerHTML+' \u2192 VENDA '+VB_kFmt(Number(v.valor_total));
+      }).catch(function(){});
+    }catch(err){}
+  }
+}
+function MER_snCheck(){
+  if(MER_editId){ MER_snInfoLimpa(); return; }
+  var el=document.getElementById('mer-sn'); if(!el) return;
+  var sn=VB_cliNorm(el.value);
+  if(!sn){ MER_snInfoLimpa(); return; }
+  var iguais=(MER_rows||[]).filter(function(r){ return VB_cliNorm(r.sn)===sn; });
+  if(!iguais.length){ MER_snInfoLimpa(); return; }
+  /* peca ainda no estoque manda: e o caso caro. Senao, a mais recente (MER_rows vem em ordem decrescente). */
+  var hit=null;
+  iguais.forEach(function(r){ if(!hit && r.status!=='vendida') hit=r; });
+  if(!hit) hit=iguais[0];
+  MER_snAplica(hit, false);
+}
+function MER_snReconhece(el){ MER_snCheck(); }
 function MER_add(btn){
   var desc=MER_compor();
   var custo=VEN_parseBR(document.getElementById('mer-custo').value);
@@ -12897,6 +13025,8 @@ function MER_add(btn){
   var socio=(document.getElementById('mer-socio').value||'').trim().toUpperCase();
   var vSocio=VEN_parseBR(document.getElementById('mer-valorSocio').value);
   if(MER_editId && !MER_isDirty()){ VB_toast('Nada alterado.'); return; }
+  var _snNovo=(document.getElementById('mer-sn').value||'').trim().toUpperCase();
+  if(!MER_editId && MER_snDup && MER_snDup===_snNovo){ VB_toast('Este SN j\u00e1 est\u00e1 no estoque.'); return; }
   if(!VB_gravando('MER_add')) return;
   var _rEd = MER_editId ? (MER_rows||[]).filter(function(x){ return String(x.id)===String(MER_editId); })[0] : null;
   var payload={
@@ -12924,7 +13054,7 @@ function MER_add(btn){
     var _mid=MER_editId;
     var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
     MER_editId=null;
-    ['mer-modelo','mer-ano','mer-ref','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
+    ['mer-modelo','mer-ano','mer-ref','mer-sn','mer-infos','mer-custo','mer-fornecedor','mer-pagamento','mer-socio','mer-valorSocio','mer-baixaNota'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); try{ MER_snInfoLimpa(); }catch(e){} VB_autoGrow(document.getElementById('mer-infos')); VB_autoGrow(document.getElementById('mer-pagamento')); var _md=document.getElementById('mer-data'); if(_md) _md.value=MER_hojeBR(); var _bw=document.getElementById('mer-baixaNota-wrap'); if(_bw) _bw.style.display='none'; MER_pctLive(); MER_dirtyPaint();
     MER_updateAddBtn();
     MER_toggleForm(false);
     var _detEd = editava&&_r0 ? VB_logDiff(_r0, payload) : '';
@@ -15290,11 +15420,8 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
 }
 var CON_rows=[];
 function CON_dtHora(iso){
-  if(!iso) return '';
-  try{
-    var d=new Date(iso);
-    return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-  }catch(e){ return (iso||'').slice(0,10).split('-').reverse().join('/'); }
+  var c=VB_leCarimbo(iso);
+  return c ? (c.dt+(c.hr?(' '+c.hr):'')) : '';
 }
 var CON_orfaos={};
 function CON_aguarda(c){
@@ -15742,6 +15869,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.259.0</span><span class="cl-ver-date">05/08/2026</span></div>
+      <div class="cl-item">O carimbo mostrava a hora errada. O app grava relógio de parede e essas quatro funções liam como instante: 21:45 saa 18:45, e operação salva de madrugada voltava um dia. Valia na foto, no card do Histórico e no contrato — os três concordavam porque erravam igual. Virou uma leitura só, VB_leCarimbo, que lê o campo como texto</div>
+      <div class="cl-item">NOVA PEÇA: digitar o SN passa a sugerir a peça a partir do 3º caractere — serial, modelo, ano e se está vendida ou em estoque. Tocar (ou terminar de digitar) preenche modelo, ano e ref, e só o que estiver vazio: custo e fornecedor são desta compra, não da anterior</div>
+      <div class="cl-item">Reconhecida a peça, a linha embaixo do SN mostra JÁ PASSOU AQUI · COMPRA data · custo → VENDA valor. Antes era um toast que sumia e não trazia número nenhum — justo o que decide a negociação de uma recompra</div>
+      <div class="cl-item">E se o serial ainda estiver no estoque, a linha fica vermelha dizendo JÁ ESTÁ NO ESTOQUE e o ADICIONAR recusa: aí não é recompra, é a mesma peça cadastrada duas vezes</div>
+      <div class="cl-item">REF e MODELO são o mesmo dado escrito de duas formas, então um sugere o outro: digitou 1140, aparece o modelo que você já usou com aquela referência. A lista sai do que você mesmo digitou, por isso ela sugere e você escolhe — nada é preenchido à revelia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.258.0</span><span class="cl-ver-date">05/08/2026</span></div>
