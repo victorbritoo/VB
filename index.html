@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.252.1</title>
+<title>VB - v1.255.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4690,6 +4690,18 @@ try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
    existia no codigo e nao existia no dedo. Aqui ha um piso de 400ms, e o botao trava depois
    de executar para que um terceiro toque nao grave de novo enquanto o banco responde.
    Devolve TRUE quando pode executar; FALSE quando o chamador deve (re)armar e sair. */
+/* Botao de UM toque (SALVAR, DAR BAIXA, CONFIRMAR) nao passa pelo VB_podeExec: ele nasce
+   pronto, porque executa decisao ja tomada. Mas o segundo toque enquanto o banco responde
+   gravava de novo. A trava e por OPERACAO, nao por botao: nao depende de "this", nao mexe
+   em onclick nenhum e nao alcanca botao que nao grava (o + TITULO tocado duas vezes rapido
+   continua criando duas linhas, que e o certo). */
+var VB_gravandoMap={};
+function VB_gravando(chave){
+  var t=Date.now(), a=Number(VB_gravandoMap[chave]||0);
+  if(a && (t-a)<1500) return false;
+  VB_gravandoMap[chave]=t;
+  return true;
+}
 function VB_podeExec(btn){
   if(!btn || !btn.dataset) return true;
   if(String(btn.dataset.busy)==='1') return false;
@@ -5567,6 +5579,7 @@ function FIN_paintSimChip(){ var c=document.getElementById('fin-chipSim'); if(!c
 function FIN_toggleSim(){ FIN_simFlag=!FIN_simFlag; FIN_paintSimChip(); FIN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('fin'); }
 var FIN_nomeChecked=false;
 function FIN_confirmarOperacao(btn){
+  if(!VB_gravando('FIN_confirmarOperacao')) return;
   VB_carimboTS = null;
   var _nomeEl=document.getElementById('fin-tabelaDesc');
   if(!(_nomeEl.value||'').trim() && !FIN_nomeChecked){
@@ -6464,6 +6477,7 @@ function VEN_paintSimChip(){ var c=document.getElementById('ven-chipSim'); if(!c
 function VEN_toggleSim(){ VEN_simFlag=!VEN_simFlag; VEN_paintSimChip(); VEN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('ven'); }
 var VEN_nomeChecked=false;
 function VEN_confirmarOperacao(btn){
+  if(!VB_gravando('VEN_confirmarOperacao')) return;
   VB_carimboTS = null;
   var _nomeEl=document.getElementById('ven-tabelaDesc');
   if(!(_nomeEl.value||'').trim() && !VEN_nomeChecked){
@@ -6551,7 +6565,7 @@ function VEN_confirmarOperacao(btn){
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var dv=row.data_venda;
       if(VEN_merVinculo){
-        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv, baixa_em:new Date().toISOString()}).eq('id', VEN_merVinculo)
+        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv, baixa_em:VB_carimbo()}).eq('id', VEN_merVinculo)
           .then(function(r2){ if(!r2.error){ VB_toast('Item baixado no estoque.'); } });
         VEN_merVinculo=null;
       } else {
@@ -6559,7 +6573,7 @@ function VEN_confirmarOperacao(btn){
         /* status e baixa entram aqui tambem: se a venda tinha virado simulacao, o relogio
            esta no estoque e precisa sair de novo ao voltar a ser venda. Em venda que ja estava
            baixada, isto nao muda nada. */
-        var _novoM={status:'vendida', baixa_em:new Date().toISOString(), data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
+        var _novoM={status:'vendida', baixa_em:VB_carimbo(), data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
         sb.from('mercadorias').select('*').eq('venda_id', vendaId).then(function(rq){
           var _mOld=(rq.data&&rq.data[0])||null;
           sb.from('mercadorias').update(_novoM).eq('venda_id', vendaId).select().then(function(rm){
@@ -7402,6 +7416,7 @@ function ANT_paintSimChip(){ var c=document.getElementById('ant-chipSim'); if(!c
 function ANT_toggleSim(){ ANT_simFlag=!ANT_simFlag; ANT_paintSimChip(); ANT_updateConfirmarBtnLabel(); VB_dirtyPaintTela('ant'); }
 var ANT_nomeChecked=false;
 function ANT_confirmarOperacao(btn){
+  if(!VB_gravando('ANT_confirmarOperacao')) return;
   VB_carimboTS = null;
   var _nomeEl=document.getElementById('ant-tabelaCliente');
   if(!(_nomeEl.value||'').trim() && !ANT_nomeChecked && !ANT_simFlag){
@@ -8142,6 +8157,7 @@ function PAG_updateConfirmarBtnLabel(){
 }
 var PAG_nomeChecked=false;
 function PAG_confirmarOperacao(btn){
+  if(!VB_gravando('PAG_confirmarOperacao')) return;
   VB_carimboTS = null;
   var _nomeEl=document.getElementById('pag-nome');
   if(!(_nomeEl.value||'').trim() && !PAG_nomeChecked){
@@ -9875,7 +9891,7 @@ function REN_prevProblema(tab, opId, oi){
   var tem=false, soma=0, excede=false;
   ps.forEach(function(i){
     var b=REN_cache.bx[REN_key(i)];
-    if(b){ soma+=(Number(b.repasse_valor)||0); return; }
+    if(b){ soma+=REN_repDe(i, b); return; }
     var pv=REN_repPrev(i);
     if(pv!=null){
       tem=true;
@@ -9899,7 +9915,7 @@ function REN_prevDistrib(tab, opId, oi){
   var soma=0;
   REN_opParcelas(tab, opId).forEach(function(i){
     var b=REN_cache.bx[REN_key(i)];
-    if(b) soma+=(Number(b.repasse_valor)||0);
+    if(b) soma+=REN_repDe(i, b);
     else { var pv=REN_repPrev(i); soma+=(pv!=null?pv:REN_repDef(oi,i)); }
   });
   return Math.round(soma*100)/100;
@@ -10226,6 +10242,7 @@ function REN_cpSheet(id){
   try{ VB_cliAttach('rencp-credor'); }catch(e){}
 }
 function REN_cpSalvar(id){
+  if(!VB_gravando('REN_cpSalvar')) return;
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
   var v=REN_num((document.getElementById('rencp-valor')||{}).value);
@@ -10443,7 +10460,9 @@ function REN_proSalvar(){
   if(!REN_proPode()) return;
   /* o banco guarda o TOTAL da parcela: o que ja entrou mais o que ficou pra frente */
   var total=Math.round((REN_pagoTot(x)+Number(saldo))*100)/100;
-  var reg={op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx, venc_novo:d, valor_novo:total, nota:(nt||null)};
+  /* o mes do acordo decide em qual Fechamento o juro entra: com o now() do banco, um acordo
+     fechado depois das 21h no ultimo dia do mes caia no mes seguinte */
+  var reg={op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx, venc_novo:d, valor_novo:total, nota:(nt||null), created_at:VB_carimbo()};
   sb.from('parcela_prorroga').upsert(reg, {onConflict:'op_tab,op_id,parcela_idx'}).then(function(res){
     if(res && res.error){ VB_erro(res.error.message, 'N\u00e3o salvou a prorroga\u00e7\u00e3o.'); return; }
     try{ VB_log('RECEB\u00cdVEIS','prorrogou', x.cliente, x.rot+' \u00b7 '+HIST_fmtData(x.venc)+' \u2192 '+HIST_fmtData(d)+' \u00b7 '+HIST_fmtMoeda(saldo)); }catch(e){}
@@ -11125,7 +11144,7 @@ function REN_prevSheet(k){
   ps.forEach(function(i, ix){
     var b=REN_cache.bx[REN_key(i)];
     var pv=REN_repPrev(i);
-    var val=(b?(Number(b.repasse_valor)||0):(pv!=null?pv:REN_repDef(oi,i)));
+    var val=(b?REN_repDe(i, b):(pv!=null?pv:REN_repDef(oi,i)));
     var txt=Number(val||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     linhas+='<div style="display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:8px;align-items:center;margin-bottom:7px;">'
       +'<div style="min-width:0;"><div style="font-size:11px;color:var(--tx);font-weight:600;">'+REN_termo(i.tab,false,true)+' '+REN_nm(i)+' \u00b7 '+HIST_fmtData(i.venc)+'</div>'
@@ -11171,7 +11190,7 @@ function REN_prevSoma(){
   var soma=0;
   c.ps.forEach(function(i, ix){
     var b=REN_cache.bx[REN_key(i)];
-    if(b){ soma+=(Number(b.repasse_valor)||0); return; }
+    if(b){ soma+=REN_repDe(i, b); return; }
     var inp=document.getElementById('renp-'+ix);
     soma+=inp?(REN_num(inp.value)||0):0;
   });
@@ -11204,7 +11223,7 @@ function REN_prevSocioPrim(){
   var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
   c.ps.forEach(function(i){
     var b=REN_cache.bx[REN_key(i)];
-    if(b) resta-=(Number(b.repasse_valor)||0);
+    if(b) resta-=REN_repDe(i, b);
   });
   resta=Math.round(resta*100)/100;
   var tem=false;
@@ -11221,6 +11240,7 @@ function REN_prevSocioPrim(){
   REN_prevSoma();
 }
 function REN_prevSalvar(){
+  if(!VB_gravando('REN_prevSalvar')) return;
   var c=REN_prevCtx; if(!c) return;
   var linhas=[];
   c.ps.forEach(function(i, ix){
@@ -11333,6 +11353,7 @@ function REN_quick(btn, k){
 /* Cada entrada de dinheiro vira uma linha. A parcela so e considerada paga (e so ai nasce o
    repasse) quando a soma dos pagamentos alcanca o valor dela. */
 function REN_gravaBaixa(x, valor, dataISO, nota){
+  if(!VB_gravando('REN_gravaBaixa')) return;
   var jaTinha=REN_pagoTot(x);
   var _pg={op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx, valor:Math.round((Number(valor)||0)*100)/100, data:dataISO, nota:(nota||null)};
   sb.from('parcela_pagamentos').insert(_pg).then(function(res){
@@ -11349,6 +11370,7 @@ function REN_gravaBaixa(x, valor, dataISO, nota){
 }
 /* Fecha a parcela: cria a baixa (que e o que dispara o repasse ao socio). */
 function REN_fechaParcela(x, total, dataISO, nota){
+  if(!VB_gravando('REN_fechaParcela')) return;
   var _rem=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
   var _pay={op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:total, recebido_em:_rem, nota:(nota||null)};
   var _oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
@@ -11491,9 +11513,33 @@ function FM_calcMes(ym, res, _merMap){
       if(c.pago_em && String(c.pago_em).slice(0,7)===ym){ _cpPago+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; _cpPagoN++; }
     });
     var dSai={vence:_cpVence, venceN:_cpVenceN, pago:_cpPago, pagoN:_cpPagoN};
-    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, venLucVB:venLucVB, rend:rendMes,
+    /* PRORROGACAO e receita a parte, nao lucro da operacao original: se entrasse nela, quem
+       prorrogou pareceria ter feito um negocio melhor do que fez. Conta por competencia, no mes
+       do acordo, que e a mesma regua do resto do Fechamento. O juro e uma subtracao so --
+       valor novo menos o valor original da parcela --, entao prorrogar de novo se resolve sozinho. */
+    var _proJ=0, _proN=0;
+    var _proRows=((res[7]&&res[7].data)||[]);
+    if(_proRows.length){
+      if(!res._proMap){ /* REN_coleta e caro: uma vez por carregamento, nao por mes */
+        res._proMap={};
+        try{
+          REN_coleta(VB_antReais(res[0].data||[]), res[1].data||[], res[2].data||[]).forEach(function(px){
+            res._proMap[REN_key(px)]=px;
+          });
+        }catch(e){}
+      }
+      _proRows.forEach(function(pr){
+        if(String(pr.created_at||'').slice(0,7)!==ym) return;
+        var px=res._proMap[String(pr.op_tab)+'|'+String(pr.op_id)+'|'+String(pr.parcela_idx)];
+        if(!px) return;
+        var j=(Number(pr.valor_novo)||0)-(Number(px.valor)||0);
+        if(j>0.005){ _proJ+=j; _proN++; }
+      });
+    }
+    var dPro={n:_proN, juros:_proJ};
+    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:dPro, venLucVB:venLucVB, rend:rendMes,
       rendDet:{aL:_aL,aCM:_aCM,vL:_vL,vCM:_vCM,estCap:_estCap,rendTot:rendTot},
-      lucroTotal:dAnt.luc+dFin.luc+venLucVB, nOps:(dAnt.n+dFin.n+dVen.n)};
+      lucroTotal:dAnt.luc+dFin.luc+venLucVB+_proJ, nOps:(dAnt.n+dFin.n+dVen.n+_proN)};
 }
 function FM_load(){
   var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
@@ -11507,7 +11553,8 @@ function FM_load(){
     sb.from('pagamentos').select('*').limit(10000),
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
     sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
-    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago').limit(10000)
+    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago').limit(10000),
+    sb.from('parcela_prorroga').select('*').limit(10000)
   ]).then(function(res){
     var _merMap={};
     ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
@@ -11516,7 +11563,7 @@ function FM_load(){
     var _pd=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
     var _pym=_pd.getFullYear()+'-'+('0'+(_pd.getMonth()+1)).slice(-2);
     var _prev=FM_calcMes(_pym, res, _merMap);
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:_c.pro, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -11538,6 +11585,9 @@ function FM_load(){
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     hh+=bloco('VENDAS · '+dVen.n, vlin);
+    /* so aparece no mes em que houve acordo: linha de zero todo mes seria ruido permanente */
+    var _dPro=(FM_dados&&FM_dados.pro)||{n:0,juros:0};
+    if(_dPro.n>0) hh+=bloco('PRORROGAÇÃO · '+_dPro.n+(_dPro.n===1?' ACORDO':' ACORDOS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]]);
     if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
       var slin=[];
       if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
@@ -11608,6 +11658,8 @@ function FM_foto(){
   }
   var linVen=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
   (d.ven.partes||[]).forEach(function(pp){ linVen.push([pp[0], HIST_fmtMoeda(pp[1])]); });
+  var linPro=[];
+  if(d.pro && d.pro.n>0) linPro.push(['Juros', HIST_fmtMoeda(d.pro.juros)]);
   var linSai=[];
   if(d.sai && d.sai.venceN>0) linSai.push(['Vence no mês', HIST_fmtMoeda(d.sai.vence)]);
   if(d.sai && d.sai.pagoN>0) linSai.push(['Pago no mês', HIST_fmtMoeda(d.sai.pago)]);
@@ -11641,6 +11693,7 @@ function FM_foto(){
   selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
   selo('FINANCIAMENTOS · '+d.fin.n, linFin);
   selo('VENDAS · '+d.ven.n, linVen);
+  if(linPro.length) selo('PRORROGAÇÃO · '+d.pro.n+(d.pro.n===1?' ACORDO':' ACORDOS'), linPro);
   if(linSai.length) selo('SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), linSai);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
@@ -11769,6 +11822,7 @@ function SOC_toggleForm(force){
   if(!abrir && SOC_editId) SOC_cancelEdit();
 }
 function SOC_salvar(btn){
+  if(!VB_gravando('SOC_salvar')) return;
   var nome=(document.getElementById('soc-nome').value||'').trim();
   var tel=(document.getElementById('soc-tel').value||'').trim();
   if(!nome){ VB_toast('Informe o nome.'); return; }
@@ -12359,6 +12413,7 @@ function MER_cpRemove(i){
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpSalvar(){
+  if(!VB_gravando('MER_cpSalvar')) return;
   var id=MER_cpId; if(!id) return;
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); }); if(!r) return;
   var validas=MER_cpLinhas.filter(function(l){ return !l.pago && (Number(l.valor)>0 || l.venc); });
@@ -12733,7 +12788,7 @@ function MER_baixaExec(merId){
   var ov=document.getElementById('mer-baixa-overlay'); if(ov) ov.style.display='none';
   var nota=((document.getElementById('mer-baixa-nota')||{}).value||'').trim().toUpperCase()||null;
   var hoje=(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})();
-  sb.from('mercadorias').update({status:'vendida', data_venda:hoje, baixa_em:new Date().toISOString(), baixa_nota:nota}).eq('id',merId).then(function(res){
+  sb.from('mercadorias').update({status:'vendida', data_venda:hoje, baixa_em:VB_carimbo(), baixa_nota:nota}).eq('id',merId).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o deu baixa. Tente de novo.'); return; }
     try{ var _mb=MER_rows.find(function(x){return String(x.id)===String(merId);}); VB_log('ESTOQUE','baixa (vendido)', (_mb&&_mb.descricao)||'', nota||''); }catch(e){}
     VB_toast('Baixa dada: VENDIDA.');
@@ -12817,6 +12872,7 @@ function MER_snReconhece(el){
   VB_toast('Este relógio já passou por você'+(vendas?(' — '+vendas+' venda'+(vendas>1?'s':'')+' anterior'+(vendas>1?'es':'')):'')+(preencheu.length?'. Detalhes preenchidos.':'.'));
 }
 function MER_add(btn){
+  if(!VB_gravando('MER_add')) return;
   var desc=MER_compor();
   var custo=VEN_parseBR(document.getElementById('mer-custo').value);
   var dataStr=(document.getElementById('mer-data').value||'');
@@ -13986,7 +14042,7 @@ function REC_rowHTML(it){
 function REC_toggleItem(acId,idx,ev){
   if(ev&&ev.stopPropagation) ev.stopPropagation();
   var ac=REC_acordoById(acId); if(!ac) return; var p=ac.parcelas[idx]; if(!p) return;
-  p.recebido=!p.recebido; p.recebido_em=p.recebido?new Date().toISOString():null;
+  p.recebido=!p.recebido; p.recebido_em=p.recebido?VB_carimbo():null;
   REC_render();
   sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não salvou (sem conexão?).'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão.'); REC_load(); });
 }
@@ -14106,7 +14162,7 @@ function REC_renderParcEditor(){
 }
 function REC_parcValInput(idx,el){ REC_maskVal(el); if(REC_editParc[idx]) REC_editParc[idx].valor=REC_parseBR(el.value); }
 function REC_parcDataBlur(idx,el){ if(typeof autoCompleteDate==='function'){ autoCompleteDate(el); } if(REC_editParc[idx]) REC_editParc[idx].venc=REC_brToIso(el.value); }
-function REC_togParc(idx){ var p=REC_editParc[idx]; if(!p) return; p.recebido=!p.recebido; p.recebido_em=p.recebido?new Date().toISOString():null; REC_renderParcEditor(); }
+function REC_togParc(idx){ var p=REC_editParc[idx]; if(!p) return; p.recebido=!p.recebido; p.recebido_em=p.recebido?VB_carimbo():null; REC_renderParcEditor(); }
 function REC_addParc(){ REC_editParc.push({valor:0,venc:'',recebido:false,recebido_em:null,rateio:REC_defRateio(),pagamentos:[]}); REC_renderParcEditor(); }
 
 function REC_addMonthsISO(iso,k){ var p=(''+iso).split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10), d=parseInt(p[2],10); var idx=(m-1)+k; var ny=y+Math.floor(idx/12); var nm=(idx%12)+1; var nd=Math.min(d, REC_diasNoMes(ny,nm)); return ny+'-'+('0'+nm).slice(-2)+'-'+('0'+nd).slice(-2); }
@@ -14153,12 +14209,13 @@ function REC_defRateio(){ return REC_rateioOn?REC_cleanRateio(REC_editRateio):[]
 function REC_aplicarRateioTodas(){ var d=REC_defRateio(); REC_editParc.forEach(function(p){ p.rateio=d.map(function(x){ return {nome:x.nome,valor:x.valor}; }); }); REC_renderParcEditor(); VB_toast(d.length?'Rateio aplicado a todas as parcelas.':'Rateio limpo das parcelas.'); }
 function REC_parcRtVal(idx,j,el){ REC_maskVal(el); if(REC_editParc[idx]&&REC_editParc[idx].rateio&&REC_editParc[idx].rateio[j]) REC_editParc[idx].rateio[j].valor=REC_parseBR(el.value); }
 function REC_addParcRt(idx){ if(!REC_editParc[idx].rateio) REC_editParc[idx].rateio=[]; REC_editParc[idx].rateio.push({nome:'',valor:0,pago:false,pago_em:null}); REC_editParc[idx]._open=true; REC_renderParcEditor(); }
-function REC_togParcRtPago(idx,j){ var rt=REC_editParc[idx]&&REC_editParc[idx].rateio?REC_editParc[idx].rateio[j]:null; if(!rt) return; rt.pago=!rt.pago; rt.pago_em=rt.pago?new Date().toISOString():null; REC_renderParcEditor(); }
+function REC_togParcRtPago(idx,j){ var rt=REC_editParc[idx]&&REC_editParc[idx].rateio?REC_editParc[idx].rateio[j]:null; if(!rt) return; rt.pago=!rt.pago; rt.pago_em=rt.pago?VB_carimbo():null; REC_renderParcEditor(); }
 function REC_addPag(idx){ if(!REC_editParc[idx].pagamentos) REC_editParc[idx].pagamentos=[]; REC_editParc[idx].pagamentos.push({valor:0,data:REC_hojeISO()}); REC_editParc[idx]._pagOpen=true; REC_renderParcEditor(); }
 function REC_pagVal(idx,j,el){ REC_maskVal(el); if(REC_editParc[idx]&&REC_editParc[idx].pagamentos&&REC_editParc[idx].pagamentos[j]) REC_editParc[idx].pagamentos[j].valor=REC_parseBR(el.value); }
 function REC_pagData(idx,j,el){ if(typeof autoCompleteDate==='function') autoCompleteDate(el); if(REC_editParc[idx]&&REC_editParc[idx].pagamentos&&REC_editParc[idx].pagamentos[j]) REC_editParc[idx].pagamentos[j].data=REC_brToIso(el.value); }
 
 function REC_salvar(btn){
+  if(!VB_gravando('REC_salvar')) return;
   var cli=((document.getElementById('rec-f-cli')||{}).value||'').trim();
   if(!cli){ VB_toast('Informe o nome/cliente.'); return; }
   var desc=((document.getElementById('rec-f-desc')||{}).value||'').trim()||null;
@@ -14173,7 +14230,7 @@ function REC_salvar(btn){
     var v=Number(p.valor)||0;
     var rec=!!p.recebido || (v>0 && somap>=v-0.005);
     var recem=p.recebido_em||null;
-    if(rec && !recem){ var ult=null; pg.forEach(function(x){ if(x.data&&(!ult||x.data>ult)) ult=x.data; }); recem=ult?ult+'T12:00:00.000Z':new Date().toISOString(); }
+    if(rec && !recem){ var ult=null; pg.forEach(function(x){ if(x.data&&(!ult||x.data>ult)) ult=x.data; }); recem=ult?ult+'T12:00:00.000Z':VB_carimbo(); }
     if(!rec) recem=null;
     return {valor:v, venc:p.venc||null, recebido:rec, recebido_em:recem, rateio:pr, pagamentos:pg};
   });
@@ -14679,6 +14736,7 @@ function CLI_montar(g){
   return pay;
 }
 function CLI_fichaSalvar(ov){
+  if(!VB_gravando('CLI_fichaSalvar')) return;
   var g=function(k){ var el=document.getElementById('clif-'+k); return el?(el.value||'').trim():''; };
   var pay=CLI_montar(g);
   if(!pay.nome){ VB_toast('Informe o nome.'); return; }
@@ -14722,6 +14780,7 @@ function CLI_cancelEdit(){
   document.getElementById('cli-cancel-btn').style.display='none';
 }
 function CLI_salvar(btn){
+  if(!VB_gravando('CLI_salvar')) return;
   var map={nome:'cli-nome',estado_civil:'cli-ec',profissao:'cli-prof',cpf:'cli-cpf',doc_tipo:'cli-doctipo',doc_num:'cli-docnum',
     end1:'cli-end1',numero:'cli-num',end2:'cli-end2',bairro:'cli-bairro',cidade:'cli-cidade',uf:'cli-uf',cep:'cli-cep',nacionalidade:null};
   var g=function(k){ var id=map[k]; if(!id) return ''; var el=document.getElementById(id); return el?(el.value||'').trim():''; };
@@ -15109,7 +15168,7 @@ function CON_fichaObj(c, aoGerarNovo){
       VB_toast('Enviando\u2026');
       sb.storage.from('contratos').upload(path, f, {upsert:true, contentType:'application/pdf'}).then(function(up){
         if(up.error){ VB_erro(up.error.message,'N\u00e3o enviou. Tente de novo.'); return; }
-        sb.from('contratos').update({assinado_path:path, assinado_em:new Date().toISOString()}).eq('id',c.id).then(function(res){
+        sb.from('contratos').update({assinado_path:path, assinado_em:VB_carimbo()}).eq('id',c.id).then(function(res){
           if(res.error){ VB_erro(res.error.message); return; }
           VB_log('CONTRATOS','anexou assinado', c.cliente_nome||'', f.name);
 
@@ -15196,6 +15255,7 @@ function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
   ov.querySelector('#ctrp-share').addEventListener('click',function(){ CTR_shareEscolha(blob, file.name); });
 }
 function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
+  if(!VB_gravando('CTR_salvarRegistro')) return;
   try{
     var fr=new FileReader();
     fr.onload=function(){
@@ -15669,6 +15729,30 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.255.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">Os juros de prorrogação entraram no resultado. Aparecem como PRORROGAÇÃO no Fechamento, com a contagem de acordos, e somam no LUCRO DO MÊS — são receita à parte, não lucro da operação original: somados nela, quem prorrogou pareceria ter feito um negócio melhor do que fez</div>
+      <div class="cl-item">O juro é o valor novo menos o valor original da parcela, contado no mês do acordo. Prorrogar de novo se resolve sozinho, sem histórico. A linha só aparece nos meses em que houve acordo</div>
+      <div class="cl-item">E o carimbo do acordo passou a ser o relógio local: com o now() do banco, uma prorrogação fechada depois das 21h no último dia do mês contava no mês seguinte</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.254.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">O carimbo do relógio de parede chegou nos últimos lugares que ainda gravavam UTC real: parcela recebida e rateio pago nas calculadoras de Pagamentos, a baixa do relógio no Estoque e a data de assinatura do contrato. Nos três casos o campo é lido como texto — dia, mês, ordenação —, então marcar algo entre 21h e meia-noite gravava o dia seguinte</div>
+      <div class="cl-item">O carimbo do backup continua em UTC de verdade, de propósito: ali é um instante, e serve pra contar quantos dias faz que o último foi feito</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.253.1</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">O REPASSE COMBINADO era o último lugar que ainda lia só o valor gravado no banco: numa parcela baixada antes de o sócio existir na operação, ele contava zero, e a conferência dizia que faltava distribuir um dinheiro que já estava distribuído. Os cinco pontos da folha passaram a usar REN_repDe, a mesma regra do resto do app</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.253.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">Botão de um toque podia gravar duas vezes. SALVAR, DAR BAIXA e CONFIRMAR nascem prontos de propósito — executam decisão já tomada —, então ficavam fora do VB_podeExec, e um segundo toque enquanto o banco respondia criava a linha de novo. Agora as quinze gravações que criam registro passam por VB_gravando, que ignora a mesma operação repetida em menos de 1,5 segundo</div>
+      <div class="cl-item">A trava é por operação e não por botão: não depende do elemento tocado e não alcança botão que não grava — o + TÍTULO tocado duas vezes rápido continua criando duas linhas, que é o certo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.252.1</span><span class="cl-ver-date">04/08/2026</span></div>
