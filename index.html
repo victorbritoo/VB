@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.255.0</title>
+<title>VB - v1.256.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11514,9 +11514,12 @@ function FM_calcMes(ym, res, _merMap){
     });
     var dSai={vence:_cpVence, venceN:_cpVenceN, pago:_cpPago, pagoN:_cpPagoN};
     /* PRORROGACAO e receita a parte, nao lucro da operacao original: se entrasse nela, quem
-       prorrogou pareceria ter feito um negocio melhor do que fez. Conta por competencia, no mes
-       do acordo, que e a mesma regua do resto do Fechamento. O juro e uma subtracao so --
-       valor novo menos o valor original da parcela --, entao prorrogar de novo se resolve sozinho. */
+       prorrogou pareceria ter feito um negocio melhor do que fez.
+       O juro e O QUE ENTROU A MAIS do que a parcela valia -- nao o que foi combinado. O acordo
+       e a regua da cobranca; o resultado e o que caiu na conta. Assim o cliente que paga menos,
+       paga antes com desconto ou so o principal se resolve sozinho, sem VB corrigir nada.
+       E conta no mes em que a parcela FECHOU: enquanto nao entra, o acordo ainda pode ser
+       desfeito ou refeito, e lucro nao deve mudar porque uma negociacao mudou. */
     var _proJ=0, _proN=0;
     var _proRows=((res[7]&&res[7].data)||[]);
     if(_proRows.length){
@@ -11528,11 +11531,19 @@ function FM_calcMes(ym, res, _merMap){
           });
         }catch(e){}
       }
+      if(!res._bxMap){
+        res._bxMap={};
+        ((res[8]&&res[8].data)||[]).forEach(function(b){
+          res._bxMap[String(b.op_tab)+'|'+String(b.op_id)+'|'+String(b.parcela_idx)]=b;
+        });
+      }
       _proRows.forEach(function(pr){
-        if(String(pr.created_at||'').slice(0,7)!==ym) return;
-        var px=res._proMap[String(pr.op_tab)+'|'+String(pr.op_id)+'|'+String(pr.parcela_idx)];
+        var kk=String(pr.op_tab)+'|'+String(pr.op_id)+'|'+String(pr.parcela_idx);
+        var bx=res._bxMap[kk];
+        if(!bx || String(bx.recebido_em||'').slice(0,7)!==ym) return; /* so quando o dinheiro entrou */
+        var px=res._proMap[kk];
         if(!px) return;
-        var j=(Number(pr.valor_novo)||0)-(Number(px.valor)||0);
+        var j=(Number(bx.valor_recebido)||0)-(Number(px.valor)||0);
         if(j>0.005){ _proJ+=j; _proN++; }
       });
     }
@@ -11554,7 +11565,8 @@ function FM_load(){
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
     sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
     sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago').limit(10000),
-    sb.from('parcela_prorroga').select('*').limit(10000)
+    sb.from('parcela_prorroga').select('*').limit(10000),
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,valor_recebido,recebido_em').limit(20000)
   ]).then(function(res){
     var _merMap={};
     ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
@@ -11587,7 +11599,7 @@ function FM_load(){
     hh+=bloco('VENDAS · '+dVen.n, vlin);
     /* so aparece no mes em que houve acordo: linha de zero todo mes seria ruido permanente */
     var _dPro=(FM_dados&&FM_dados.pro)||{n:0,juros:0};
-    if(_dPro.n>0) hh+=bloco('PRORROGAÇÃO · '+_dPro.n+(_dPro.n===1?' ACORDO':' ACORDOS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]]);
+    if(_dPro.n>0) hh+=bloco('PRORROGAÇÃO · '+_dPro.n+(_dPro.n===1?' RECEBIDA':' RECEBIDAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]]);
     if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
       var slin=[];
       if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
@@ -11693,7 +11705,7 @@ function FM_foto(){
   selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
   selo('FINANCIAMENTOS · '+d.fin.n, linFin);
   selo('VENDAS · '+d.ven.n, linVen);
-  if(linPro.length) selo('PRORROGAÇÃO · '+d.pro.n+(d.pro.n===1?' ACORDO':' ACORDOS'), linPro);
+  if(linPro.length) selo('PRORROGAÇÃO · '+d.pro.n+(d.pro.n===1?' RECEBIDA':' RECEBIDAS'), linPro);
   if(linSai.length) selo('SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), linSai);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
@@ -15729,6 +15741,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.256.0</span><span class="cl-ver-date">04/08/2026</span></div>
+      <div class="cl-item">O juro de prorrogação passou a ser o que ENTROU a mais do que a parcela valia, e não o que foi combinado. O acordo é a régua da cobrança; o resultado é o que caiu na conta. Cliente que paga menos, paga antes com desconto ou paga só o principal se resolve sozinho — o juro encolhe ou some sem ninguém corrigir nada</div>
+      <div class="cl-item">E conta no mês em que a parcela FECHOU, não no do acordo. Prorrogação pendente não vira lucro: enquanto o dinheiro não entra o acordo ainda pode ser desfeito ou refeito, e lucro não deve mudar porque uma negociação mudou. É uma régua diferente da venda, que lança na competencia — e é de propósito: o juro nasce de quem já falhou uma vez</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.255.0</span><span class="cl-ver-date">04/08/2026</span></div>
