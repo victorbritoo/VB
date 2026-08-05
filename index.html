@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.257.0</title>
+<title>VB - v1.258.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5491,6 +5491,7 @@ function VB_simFoto(cfg){
     ctx.fillText(t[1], W-pad-20, y+30); ctx.textAlign='left';
     y+=54;
   });
+  VB_carimboData(ctx, W, {mg:18, cor:MU2});
   VB_fotoPreview(cv, cfg.fname);
 }
 function FIN_simFoto(){
@@ -7376,18 +7377,20 @@ function ANT_gerarTabela(){
 // Timestamp da operação carregada (created_at) p/ carimbo bater com o Histórico; null = usa agora
 var VB_carimboTS = null;
 // Carimbo de data/hora no topo-direita das fotos geradas (coords lógicas, largura W)
-function VB_carimboData(ctx, W){
+function VB_carimboData(ctx, W, opt){
   try{
+    var o=opt||{};
     var d = VB_carimboTS ? new Date(VB_carimboTS) : new Date();
     if(isNaN(d.getTime())) d=new Date();
     var p=function(n){return String(n).padStart(2,'0');};
     var txt=p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
     ctx.save();
-    ctx.font='500 9px Helvetica, Arial, sans-serif';
-    ctx.fillStyle='#b3b3b3';
+    try{ ctx.letterSpacing='0px'; }catch(e){}   /* letter-spacing sobra depois da ultima letra e desalinha a direita */
+    ctx.font='500 '+(o.fs||9)+'px Helvetica, Arial, sans-serif';
+    ctx.fillStyle=o.cor||'#b3b3b3';
     ctx.textAlign='right';
     ctx.textBaseline='top';
-    ctx.fillText(txt, W-14, 12);
+    ctx.fillText(txt, W-(o.mg||14), (o.y||12));
     ctx.restore();
   }catch(e){}
 }
@@ -11719,9 +11722,7 @@ function FM_foto(){
     c.font='700 14px -apple-system, Helvetica, sans-serif'; c.fillStyle='#111'; c.textAlign='right';
     c.fillText(d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.', PAD+CW-22, y+10); c.textAlign='left';
   }
-  var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-  c.fillText('Gerado em '+ds, W-PAD, H-20); c.textAlign='left';
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
   VB_fotoPreview(cv, 'VB - Fechamento '+d.titulo+'.jpg');
 }
 var SOC_viewData=null;
@@ -11822,8 +11823,7 @@ function SOC_extratoFoto(){
     c.fillText('Sem operações registradas.', PAD, y+30); y+=60;
   }
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  c.fillStyle='#bbb'; c.font='500 12px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
-  c.fillText('Gerado em '+ds, W-PAD, H-20); c.textAlign='left';
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
   VB_fotoPreview(cv, 'VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg');
 }
 function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
@@ -15742,6 +15742,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.258.0</span><span class="cl-ver-date">05/08/2026</span></div>
+      <div class="cl-item">A foto da SIMULAÇÃO era a única peça que saía sem data. Ganhou o mesmo carimbo das outras, no canto de cima à direita, na cor do tema — taxa e preço mudam, e a foto some da conversa sem dizer de quando é</div>
+      <div class="cl-item">Fechamento e Extrato do Sócio diziam Gerado em DD/MM no rodapé, sem hora. Passaram ao carimbo único do app, com hora: quem recebe duas versões do extrato no mesmo dia agora sabe qual é a nova. Onze peças, um carimbo só</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.257.0</span><span class="cl-ver-date">05/08/2026</span></div>
