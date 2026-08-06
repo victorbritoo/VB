@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.259.1</title>
+<title>VB - v1.260.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11533,8 +11533,8 @@ function FM_calcMes(ym, res, _merMap){
        E conta no mes em que a parcela FECHOU: enquanto nao entra, o acordo ainda pode ser
        desfeito ou refeito, e lucro nao deve mudar porque uma negociacao mudou. */
     var _proJ=0, _proN=0;
-    var _proRows=((res[7]&&res[7].data)||[]);
-    if(_proRows.length){
+    var _bxRows=((res[8]&&res[8].data)||[]);
+    if(_bxRows.length){
       if(!res._proMap){ /* REN_coleta e caro: uma vez por carregamento, nao por mes */
         res._proMap={};
         try{
@@ -11543,16 +11543,15 @@ function FM_calcMes(ym, res, _merMap){
           });
         }catch(e){}
       }
-      if(!res._bxMap){
-        res._bxMap={};
-        ((res[8]&&res[8].data)||[]).forEach(function(b){
-          res._bxMap[String(b.op_tab)+'|'+String(b.op_id)+'|'+String(b.parcela_idx)]=b;
-        });
-      }
-      _proRows.forEach(function(pr){
-        var kk=String(pr.op_tab)+'|'+String(pr.op_id)+'|'+String(pr.parcela_idx);
-        var bx=res._bxMap[kk];
-        if(!bx || String(bx.recebido_em||'').slice(0,7)!==ym) return; /* so quando o dinheiro entrou */
+      /* O GATILHO E A BAIXA, NAO A PRORROGACAO (v1.260.0). Antes so contava parcela que tinha
+         passado pelo botao PRORROGAR -- entao atrasada paga corrigida, sem acordo registrado,
+         entrava no caixa e nao virava lucro em lugar nenhum. A regua ja era "o que entrou a mais";
+         ela media o acordo, nao a entrada. Agora vale pra toda parcela que fecha acima do valor
+         original, com ou sem acordo. Sem piso: se entrou a mais, e juro. O 0,005 e so ponto
+         flutuante. O juro e 100% VB -- o repasse ao socio e calculado sobre o valor da parcela. */
+      _bxRows.forEach(function(bx){
+        if(String(bx.recebido_em||'').slice(0,7)!==ym) return; /* so quando o dinheiro entrou */
+        var kk=String(bx.op_tab)+'|'+String(bx.op_id)+'|'+String(bx.parcela_idx);
         var px=res._proMap[kk];
         if(!px) return;
         var j=(Number(bx.valor_recebido)||0)-(Number(px.valor)||0);
@@ -11611,7 +11610,7 @@ function FM_load(){
     hh+=bloco('VENDAS · '+dVen.n, vlin);
     /* so aparece no mes em que houve acordo: linha de zero todo mes seria ruido permanente */
     var _dPro=(FM_dados&&FM_dados.pro)||{n:0,juros:0};
-    if(_dPro.n>0) hh+=bloco('PRORROGAÇÃO · '+_dPro.n+(_dPro.n===1?' RECEBIDA':' RECEBIDAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]]);
+    if(_dPro.n>0) hh+=bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]]);
     if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
       var slin=[];
       if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
@@ -11717,7 +11716,7 @@ function FM_foto(){
   selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
   selo('FINANCIAMENTOS · '+d.fin.n, linFin);
   selo('VENDAS · '+d.ven.n, linVen);
-  if(linPro.length) selo('PRORROGAÇÃO · '+d.pro.n+(d.pro.n===1?' RECEBIDA':' RECEBIDAS'), linPro);
+  if(linPro.length) selo('JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), linPro);
   if(linSai.length) selo('SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), linSai);
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
@@ -15872,6 +15871,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.260.0</span><span class="cl-ver-date">05/08/2026</span></div>
+      <div class="cl-item">O juro só contava se a parcela tivesse passado pelo botão PRORROGAR. Parcela atrasada que o cliente pagou corrigida, sem acordo registrado, entrava no caixa e não virava lucro em lugar nenhum. A régua já era o que entrou a mais — mas ela estava medindo o acordo, não a entrada</div>
+      <div class="cl-item">Agora o gatilho é a baixa: toda parcela que fecha recebendo mais que o valor original conta a diferença como juro, no mês em que fechou, com ou sem prorrogação. Sem piso — se entrou a mais, é juro. O bloco do Fechamento deixou de se chamar PRORROGAÇÃO e virou JUROS RECEBIDOS, porque nem todo juro nasce de acordo</div>
+      <div class="cl-item">O juro é 100% da VB, decidido: o repasse ao sócio continua calculado sobre o valor da parcela, então o que entra a mais fica com a VB sem nenhuma conta nova</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.259.1</span><span class="cl-ver-date">05/08/2026</span></div>
