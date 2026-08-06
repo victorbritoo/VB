@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.260.0</title>
+<title>VB - v1.261.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -984,6 +984,7 @@ body{ text-transform:uppercase; }
     </div>
     <div id="ven-margem" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
     <div id="ven-rend" onclick="VEN_rendToggle()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;cursor:pointer;"></div>
+    <div id="ven-alvo" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
     <div id="ven-rend-box" style="display:none;margin-top:6px;padding:8px 10px;border:0.5px dashed var(--ln);border-radius:12px;text-align:center;font-family:-apple-system,sans-serif;">
       <span style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
@@ -5869,7 +5870,50 @@ function VEN_limpar(){
   try{ VEN_updateLucro(); }catch(e){}
 }
 
+/* PRECO ALVO x PRECO FEITO
+   Mesma regua do PRECO SUGERIDO do Estoque, ao contrario: alvo = custo +20% em 1+4 no dia 0,
+   trazido a valor presente a 3% a.m.; peca propria corrige pelos dias parados ate a VENDA
+   (nao ate hoje), consignada nao corrige. O feito e o valor presente do que foi combinado,
+   descontando cada parcela a mesma taxa a partir da data da venda -- entrada e troca sao
+   pagamento do dia 0. Venda com troca entra normal: troca e dinheiro (decisao do VB). */
+function VEN_pvParcelas(dv){
+  if(!dv) return null;
+  var tot=0, achou=false;
+  (VEN_parcelas||[]).forEach(function(pp){
+    var v=VEN_parseBR(pp.valor||''); if(!(v>0)) return;
+    var d=VB_brToDate((pp.data||'').trim()); if(!d) return;
+    var meses=(d.getTime()-dv.getTime())/(1000*60*60*24*30.4375);
+    if(meses<0) meses=0;
+    tot+=v/Math.pow(1+MER_TX, meses); achou=true;
+  });
+  return achou?tot:null;
+}
+function VEN_alvoPinta(){
+  var el=document.getElementById('ven-alvo'); if(!el) return;
+  el.style.display='none'; el.innerHTML='';
+  var c=VEN_parseBR((document.getElementById('ven-custo')||{}).value);
+  if(!(c>0)) return;
+  var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value); if(!dv) return;
+  var feito=VEN_pvParcelas(dv); if(!(feito>0)) return;
+  var consig=VB_consigVen(VEN_socioNome, VEN_socioValor, c, null);
+  var dias=0;
+  if(!consig && VEN_merDataCompra){
+    var dc=new Date(String(VEN_merDataCompra).slice(0,10)+'T12:00:00');
+    if(!isNaN(dc.getTime())) dias=Math.max(0, Math.round((dv.getTime()-dc.getTime())/86400000));
+  }
+  var alvo=(c*1.20/5)*MER_fatorPV(5);
+  if(!consig && dias>0) alvo=alvo*Math.pow(1+MER_TX, dias/30);
+  if(!(alvo>0)) return;
+  var dp=(feito-alvo)/alvo*100;
+  var sin=(dp>=0?'+':'\u2212');
+  el.innerHTML='<span style="color:var(--mu);">ALVO</span> '+VB_kFmt(alvo)
+    +' <span style="color:var(--so);">\u00b7</span> <span style="color:var(--mu);">FEITO</span> '+VB_kFmt(feito)
+    +' <span style="'+(dp<0?'color:var(--red);font-weight:700;':'')+'">'+sin+Math.abs(dp).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%</span>'
+    +(dias>0?('<span style="color:var(--so);"> \u00b7 '+dias+'D PARADO</span>'):'');
+  el.style.display='block';
+}
 function VEN_updateLucro(){
+  try{ VEN_alvoPinta(); }catch(e){}
   var el=document.getElementById('ven-lucro'); if(!el) return;
   var mg=document.getElementById('ven-margem');
   var t=VEN_parseBR(document.getElementById('ven-total').value);
@@ -12903,7 +12947,7 @@ function MER_sugHits(tipo, termo){
   if(tipo==='sn'){
     rows.forEach(function(r){
       var sn=VB_cliNorm(r.sn);
-      if(!sn || sn.indexOf(t)<0) return;
+      if(!sn || sn.indexOf(t)!==0) return;   /* serial se digita do comeco: buscar pelo meio so cria ruido */
       if(vistos[sn]) return; vistos[sn]=1;  /* mesma peca que passou duas vezes = uma linha so, a mais recente */
       out.push(r);
     });
@@ -15871,6 +15915,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.0</span><span class="cl-ver-date">06/08/2026</span></div>
+      <div class="cl-item">A venda passou a se comparar com o próprio preço-alvo: ALVO · FEITO · desvio, embaixo do rendimento. O alvo é a mesma régua do PREÇO SUGERIDO do Estoque — custo +20% em 1+4 trazido a valor presente a 3% a.m., corrigido pelos dias parados até o dia da venda. O feito é o valor presente do que foi combinado. Até aqui o app sugeria o preço e nunca conferia se ele aconteceu</div>
+      <div class="cl-item">A sugestão do SN passou a casar pelo INÍCIO do serial. Os 26 seriais da base estão gravados inteiros e começando do começo, então procurar pelo meio só criava ruído</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.260.0</span><span class="cl-ver-date">05/08/2026</span></div>
