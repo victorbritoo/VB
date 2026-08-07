@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.261.5</title>
+<title>VB - v1.261.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10131,7 +10131,7 @@ function REN_cpTotAberto(){
 }
 function REN_cpFiltra(arr){
   if(!REN_busca) return arr;
-  return arr.filter(function(c){ return (String(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')).toUpperCase().indexOf(REN_busca)>=0; });
+  return arr.filter(function(c){ return (String(c.credor||'')+' '+VB_nomeCurto(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')).toUpperCase().indexOf(REN_busca)>=0; });
 }
 function REN_cpOv(oid){
   var ov=document.getElementById(oid);
@@ -10597,7 +10597,7 @@ function REN_buscaVal(v){
 function REN_limparBusca(){ REN_busca=''; REN_bset=''; REN_render(); var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); }
 function REN_toggleBusca(){ REN_buscaOn=!REN_buscaOn; if(!REN_buscaOn){ REN_busca=''; REN_bset=''; } REN_render(); if(REN_buscaOn){ var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); } }
 function REN_buscaInput(el){ REN_busca=String(el.value||'').toUpperCase(); REN_bset=''; clearTimeout(REN_buscaInput._t); REN_buscaInput._t=setTimeout(function(){ var i=document.getElementById('ren-busca-inp'); var pos=i?i.selectionStart:0; REN_render(); i=document.getElementById('ren-busca-inp'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(e){} } },250); }
-function REN_filtra(arr){ if(!REN_busca) return arr; return arr.filter(function(x){ return (String(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor)).toUpperCase().indexOf(REN_busca)>=0; }); }
+function REN_filtra(arr){ if(!REN_busca) return arr; return arr.filter(function(x){ return (String(x.cliente||'')+' '+VB_nomeCurto(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor)).toUpperCase().indexOf(REN_busca)>=0; }); }
 function REN_ordena(arr){
   var a=arr.slice();
   if(REN_sort==='valor') a.sort(function(x,y){ return y.valor-x.valor; });
@@ -15964,6 +15964,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.6</span><span class="cl-ver-date">07/08/2026</span></div>
+      <div class="cl-item">A busca de ENTRADAS/SAÍDAS não achava por apelido. O card mostra o apelido e o filtro lia o nome do banco — duas strings diferentes, então procurar pelo que estava escrito na tela não achava nada. Agora procura nas duas formas, nos dois sentidos: digitar o apelido acha, digitar o nome completo também</div>
+      <div class="cl-item">Vale igual em SAÍDAS, onde o credor também aparece encurtado no card</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.5</span><span class="cl-ver-date">06/08/2026</span></div>
