@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.261.2</title>
+<title>VB - v1.261.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -986,9 +986,9 @@ body{ text-transform:uppercase; }
     <div id="ven-rend" onclick="VEN_rendToggle()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;cursor:pointer;"></div>
     <div id="ven-alvo" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
     <div id="ven-rend-box" style="display:none;margin-top:6px;padding:8px 10px;border:0.5px dashed var(--ln);border-radius:12px;text-align:center;font-family:-apple-system,sans-serif;">
-      <span style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
+      <span id="ven-rend-lbl" style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
-      <span style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
+      <span id="ven-rend-un" style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
       <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
     </div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
@@ -5906,8 +5906,8 @@ function VEN_alvoPinta(){
   if(!(alvo>0)) return;
   var dp=(feito-alvo)/alvo*100;
   var sin=(dp>=0?'+':'\u2212');
-  el.innerHTML='<span style="color:var(--mu);">ALVO</span> '+VB_kFmt(alvo)
-    +' <span style="color:var(--so);">\u00b7</span> <span style="color:var(--mu);">FEITO</span> '+VB_kFmt(feito)
+  el.innerHTML='<span style="color:var(--mu);">ALVO:</span> '+VB_kFmt(alvo)
+    +' <span style="color:var(--so);">\u00b7</span> <span style="color:var(--mu);">FEITO:</span> '+VB_kFmt(feito)
     +' <span style="'+(dp<0?'color:var(--red);font-weight:700;':'')+'">'+sin+Math.abs(dp).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%</span>'
     +(dias>0?('<span style="color:var(--so);"> \u00b7 '+dias+'D PARADO</span>'):'');
   el.style.display='block';
@@ -5959,11 +5959,11 @@ function VEN_updateLucro(){
     if(_tm!=null && _curto){
       var _mg=(_meuC>0)?(_meuL/_meuC*100):null;
       rd.innerHTML='<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
-        +'<div style="margin-top:5px;"><span style="display:inline-block;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);">SIMULAR</span></div>';
+        +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
       rd.style.display='block';
     } else if(_tm!=null){
       rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
-        +'<div style="margin-top:5px;"><span style="display:inline-block;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);">SIMULAR</span></div>';
+        +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
       rd.style.display='block';
     } else if(_ok && c>0 && !(_meuC>0)){
       /* consignado: capital do VB e zero. Mostra a taxa que o dinheiro empregado rende no parcelamento. */
@@ -5977,6 +5977,7 @@ function VEN_updateLucro(){
       });
       var _ti=(_fl.length>1)?VB_irrFluxo(_fl):null;
       if(_ti!=null && isFinite(_ti)){
+        rd._consig=true;
         rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_ti.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 capital do consignante.</span>';
         rd.style.display='block';
       } else { rd.style.display='none'; rd.innerHTML=''; }
@@ -13182,9 +13183,21 @@ function VEN_rendMask(el){
   el.value = raw ? VEN_formatBR(parseInt(raw)/100) : '';
   VEN_rendCalc();
 }
+function VEN_rendLabels(){
+  var d=VEN_rendDados(), consig=(d && !(d.meuC>0));
+  var l=document.getElementById('ven-rend-lbl'), u=document.getElementById('ven-rend-un');
+  if(l) l.textContent = consig ? 'VENDA POR R$' : 'MANTER';
+  if(u) u.textContent = consig ? '' : '% A.M.';
+  var i=document.getElementById('ven-rend-alvo');
+  if(i) i.style.width = consig ? '86px' : '52px';
+}
 function VEN_rendBlur(){
   var inp=document.getElementById('ven-rend-alvo'); if(!inp || (inp.value||'').trim()!=='') return;
   var d=VEN_rendDados();
+  if(d && !(d.meuC>0)){   /* consignado: nasce com o preco que ja esta na tela, pra editar a partir dele */
+    if(d.t!=null && d.t>0){ inp.value=VEN_formatBR(d.t); VEN_rendCalc(); }
+    return;
+  }
   if(d && d.t!=null && d.meuC>0 && d.cic){ var atual=VB_termometro((d.t-d.c)*d.pV/100, d.meuC, d.cic); if(atual!=null) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
   VEN_rendCalc();
 }
@@ -13212,6 +13225,7 @@ function VEN_rendAplicar(){
   VB_toast('Parcelas ajustadas pro alvo de '+alvo.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
 }
 function VEN_rendToggle(){
+  try{ VEN_rendLabels(); }catch(e){}
   var box=document.getElementById('ven-rend-box'); if(!box) return;
   if(box.style.display==='none'||!box.style.display){
     var inp=document.getElementById('ven-rend-alvo');
@@ -13222,10 +13236,45 @@ function VEN_rendToggle(){
     box.style.display='block'; VEN_rendCalc();
   } else { box.style.display='none'; var _i=document.getElementById('ven-rend-alvo'); if(_i) _i.value=''; } // fechou, zera: reabrir nasce na realidade
 }
+/* CONSIGNADO: o capital do VB e zero, entao "% do meu capital" nao existe.
+   A taxa que a linha mostra e a do CAPITAL EMPREGADO (o do consignante), e e por ela
+   que o simular pergunta: dada a taxa alvo, por quanto a peca tem que sair.
+   Resolve por bisseccao escalando as parcelas, mantendo a forma do parcelamento.
+   Dias parados nao entram, por decisao do VB -- o fluxo comeca na data da venda. */
+function VEN_rendFluxo(k){
+  var c=VEN_parseBR((document.getElementById('ven-custo')||{}).value)||0;
+  var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+  var fl=[{m:0, v:-c}], achou=false;
+  (VEN_parcelas||[]).forEach(function(p){
+    var v=VEN_parseBR(p.valor||''); if(!(v>0)) return;
+    var d2=VB_brToDate((p.data||'').trim()); if(!d2) return;
+    fl.push({m:Math.max(0,(d2-dv)/86400000/30), v:v*k}); achou=true;
+  });
+  return achou?fl:null;
+}
 function VEN_rendCalc(){
   var out=document.getElementById('ven-rend-out'); if(!out) return;
   var d=VEN_rendDados();
   var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(',','.'));
+  if(d && !(d.meuC>0)){
+    /* Consignado: o capital nao e da VB, entao nao ha investimento pra render.
+       O VB digita o PRECO e recebe a taxa do capital empregado. Sem dias parados: o fluxo
+       comeca na data da venda, por decisao do VB. */
+    var tot=VEN_parseBR((document.getElementById('ven-rend-alvo')||{}).value);
+    if(isNaN(tot) || !(tot>0)){ out.textContent='—'; return; }
+    var base=0;
+    (VEN_parcelas||[]).forEach(function(p){ var v=VEN_parseBR(p.valor||''); if(v>0) base+=v; });
+    if(!(base>0)){ out.textContent='—'; return; }
+    var fl=VEN_rendFluxo(tot/base);
+    var r=fl?VB_irrFluxo(fl):null;
+    var meu=(tot-d.c)*(d.pV/100);
+    if(r==null || !isFinite(r)){
+      out.innerHTML='<span style="color:var(--so);">Nem devolve o custo</span>';
+      return;
+    }
+    out.innerHTML='<b>\u2248 '+r.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</b> <span style="color:var(--so);">(Sua parte: R$ '+VEN_formatBR(meu)+')</span>';
+    return;
+  }
   if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
   var meuLNec = (alvo/100)*d.meuC*d.cic;
   var lucroTotNec = meuLNec/(d.pV/100);
@@ -15915,6 +15964,24 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.5</span><span class="cl-ver-date">06/08/2026</span></div>
+      <div class="cl-item">Na peça consignada o simular inverteu: você digita o preço e ele devolve o % a.m. do capital empregado, mais quanto daquilo é seu. Na peça com capital seu ele continua como sempre foi — você diz a taxa que quer manter e ele devolve o preço</div>
+      <div class="cl-item">A folha nasce com o preço que já está na tela, pra você mexer a partir do que está negociando. O tempo de estoque não entra: em consignação a VB não investiu no relógio, então o fluxo começa na data da venda</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.4</span><span class="cl-ver-date">06/08/2026</span></div>
+      <div class="cl-item">O simular passou a existir na peça consignada. Lá o capital da VB é zero, então a taxa é a do capital empregado — a mesma que a linha de cima mostra. Você digita a taxa que quer e ele devolve por quanto a peça tem que sair, e quanto disso é seu</div>
+      <div class="cl-item">O preço sai por bissecção, escalando as parcelas e mantendo a forma do parcelamento — entrada, prazos e datas continuam como você montou. Os dias parados não entram no rendimento do consignado, por decisão do VB: o fluxo começa na data da venda</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.3</span><span class="cl-ver-date">06/08/2026</span></div>
+      <div class="cl-item">O SIMULAR nunca foi botão: a linha inteira do rendimento já abre ao toque, e aquilo era só uma etiqueta dizendo que dá. Por isso quebrava a linha — texto no meio de texto. Virou um ⌄ no fim da linha</div>
+      <div class="cl-item">ALVO e FEITO ganharam dois-pontos, para casar com o resto do card</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.2</span><span class="cl-ver-date">06/08/2026</span></div>
