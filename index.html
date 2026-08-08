@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.261.6</title>
+<title>VB - v1.262.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4497,9 +4497,9 @@ function HIST_renderRows(tab, rows){
         var _temTroca=(r.parcelas||[]).some(function(p){ return p && p.t; });
         if(_cic<0.5){
           var _mgC=(_cap>0)?(_meuL/_cap*100):null;
-          campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u00b7 com troca':''), w:1});
+          campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u21c4':''), w:1});
         } else {
-        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' · com troca':'')});
+        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
         }
       })();
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
@@ -5895,14 +5895,20 @@ function VEN_alvoPinta(){
   if(!(c>0)) return;
   var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value); if(!dv) return;
   var feito=VEN_pvParcelas(dv); if(!(feito>0)) return;
-  var consig=VB_consigVen(VEN_socioNome, VEN_socioValor, c, null);
+  /* Dias parados corrigem o alvo so quando ha capital da VB parado ali. Antes isso era
+     decidido pelo SELO de consignacao (VB_consigVen), que responde outra pergunta: o selo
+     exige capital 100% do socio E lucro 100% VB. Peca com capital 100% do socio e lucro
+     rachado e SOCIEDADE pelo selo -- e o alvo corrigia por dias parados num capital que
+     nao e da VB. Agora a pergunta e uma so: o dinheiro parado ali e meu? */
+  var _temS=(VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<=c);
+  var meuCap=_temS?(c-VEN_socioValor):c;
   var dias=0;
-  if(!consig && VEN_merDataCompra){
+  if(meuCap>0 && VEN_merDataCompra){
     var dc=new Date(String(VEN_merDataCompra).slice(0,10)+'T12:00:00');
     if(!isNaN(dc.getTime())) dias=Math.max(0, Math.round((dv.getTime()-dc.getTime())/86400000));
   }
   var alvo=(c*1.20/5)*MER_fatorPV(5);
-  if(!consig && dias>0) alvo=alvo*Math.pow(1+MER_TX, dias/30);
+  if(dias>0) alvo=alvo*Math.pow(1+MER_TX, dias/30);
   if(!(alvo>0)) return;
   var dp=(feito-alvo)/alvo*100;
   var sin=(dp>=0?'+':'\u2212');
@@ -5958,7 +5964,7 @@ function VEN_updateLucro(){
     var _curto=(_cic!=null && _cic<0.5);
     if(_tm!=null && _curto){
       var _mg=(_meuC>0)?(_meuL/_meuC*100):null;
-      rd.innerHTML='<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' \u00b7 com troca':'')+'.</span>'
+      rd.innerHTML='<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
         +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
       rd.style.display='block';
     } else if(_tm!=null){
@@ -5978,7 +5984,16 @@ function VEN_updateLucro(){
       var _ti=(_fl.length>1)?VB_irrFluxo(_fl):null;
       if(_ti!=null && isFinite(_ti)){
         rd._consig=true;
-        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_ti.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 capital do consignante.</span>';
+        if(_curto){
+          /* Ciclo curto tambem mente aqui: taxa mensal de 10 dias nao significa nada.
+             Na peca propria o app troca por MARGEM; sem capital da VB nao existe margem
+             pra mostrar, entao a taxa some e fica so o que e verdade. */
+          rd.innerHTML='<span style="color:var(--mu);">CICLO CURTO</span> <span style="color:var(--so);">\u00b7 '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m \u00b7 capital do consignante.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+            +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+        } else {
+        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_ti.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 capital do consignante'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+          +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+        }
         rd.style.display='block';
       } else { rd.style.display='none'; rd.innerHTML=''; }
     } else { rd.style.display='none'; rd.innerHTML=''; var _bx=document.getElementById('ven-rend-box'); if(_bx){ _bx.style.display='none'; } }
@@ -15964,6 +15979,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.262.0</span><span class="cl-ver-date">07/08/2026</span></div>
+      <div class="cl-item">O ALVO corrigia pelos dias parados usando o selo de consignação, que responde outra pergunta — o selo exige capital do sócio E lucro 100% seu. Peça com capital 100% do sócio e lucro rachado é sociedade pelo selo, e o alvo subia por dias parados de um dinheiro que não é seu. Agora a pergunta é uma só: tem capital da VB parado ali</div>
+      <div class="cl-item">Na consignada de ciclo curto a taxa mensal sumiu. Ela mente tanto quanto na peça própria, onde o app já troca por MARGEM — mas sem capital da VB não existe margem pra mostrar, então fica só o ciclo</div>
+      <div class="cl-item">A consignada ganhou o que faltava e as outras já tinham: o ⌄ dizendo que dá pra simular, o símbolo de troca e o aviso de venda direta</div>
+      <div class="cl-item">No card do Histórico, COM TROCA virou o mesmo símbolo da tela de venda. De quebra a linha do RENDIMENTO parou de quebrar em duas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.261.6</span><span class="cl-ver-date">07/08/2026</span></div>
