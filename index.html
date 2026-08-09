@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.262.0</title>
+<title>VB - v1.262.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1595,6 +1595,17 @@ function HIST_setTabStyle(tab){
     if(t===tab){ b.style.background='var(--acc)'; b.style.color='var(--acc-tx)'; b.style.borderColor='var(--acc)'; }
     else { b.style.background='var(--sf)'; b.style.color='var(--mu2)'; b.style.borderColor='var(--ln)'; }
   });
+}
+/* Ano so quando nao for o corrente. Em ATRASADAS e A REPASSAR nao ha cabecalho de mes,
+   entao a data vem completa -- mas o ano repetido em toda parcela comia o nome do cliente,
+   e na prorrogada, que carrega DUAS datas, o nome virava "PEDR...". Parcela de outro ano
+   continua mostrando o ano, que e exatamente quando ele informa alguma coisa.
+   Le como texto (VB_leCarimbo/VB_carimbo), nunca new Date sobre o ISO. */
+function REN_dataCard(iso){
+  if(!iso) return '--';
+  var p=String(iso).split('-'); if(p.length!==3) return String(iso);
+  var anoAgora=String(VB_carimbo()).slice(0,4);
+  return p[2]+'/'+p[1]+(p[0]===anoAgora?'':('/'+p[0]));
 }
 function HIST_fmtData(iso){
   if(!iso) return '--';
@@ -10170,7 +10181,7 @@ function REN_cpCard(c){
   var dPag=String(c.pago_em||'').slice(8,10)+'/'+String(c.pago_em||'').slice(5,7);
   var dVen=dtv?(dtv.slice(8,10)+'/'+dtv.slice(5,7)):'';
   var dt=pago?((dVen&&dVen!==dPag)?(dVen+' \u2192 '+dPag):dPag)
-             :((dtv===hoje)?'<b>HOJE</b>':HIST_fmtData(dtv));
+             :((dtv===hoje)?'<b>HOJE</b>':REN_dataCard(dtv));
   var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(Number(c.valor)||0);
   var tit=String(c.credor||c.descricao||'\u2014');
   var sub=(c.credor&&c.descricao)?String(c.descricao):'';
@@ -10703,8 +10714,8 @@ function REN_render(){
        entao ele acende junto com o atraso. A secao continua sendo A RECEBER: em dia inclui
        o dia do vencimento — quem esta atrasado e outra pergunta. */
     var _al=(atrasada || x.venc===hoje);
-    var dt=(x.venc===hoje)?'<b>HOJE</b>':(dataCurta?(x.venc.slice(8,10)+'/'+x.venc.slice(5,7)):HIST_fmtData(x.venc));
-    if(x.prorrogada) dt='<span style="color:var(--mu);font-weight:600;">'+(dataCurta?(x.vencOrig.slice(8,10)+'/'+x.vencOrig.slice(5,7)):HIST_fmtData(x.vencOrig))+' \u2192 </span>'+dt;
+    var dt=(x.venc===hoje)?'<b>HOJE</b>':(dataCurta?(x.venc.slice(8,10)+'/'+x.venc.slice(5,7)):REN_dataCard(x.venc));
+    if(x.prorrogada) dt='<span style="color:var(--mu);font-weight:600;">'+(dataCurta?(x.vencOrig.slice(8,10)+'/'+x.vencOrig.slice(5,7)):REN_dataCard(x.vencOrig))+' \u2192 </span>'+dt;
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
@@ -15979,6 +15990,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.262.1</span><span class="cl-ver-date">09/08/2026</span></div>
+      <div class="cl-item">Nos cards de ATRASADAS e A REPASSAR o ano só aparece quando não é o ano corrente. Lá não existe cabeçalho de mês, então a data vinha completa — e na prorrogada, que carrega duas datas, o ano repetido comia o nome do cliente até virar PEDR...</div>
+      <div class="cl-item">Parcela de outro ano continua mostrando o ano, que é justamente quando ele informa alguma coisa. Vale igual em SAÍDAS. O HIST_fmtData não foi tocado: ele tem 46 consumidores e em quase todos o ano é necessário</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.262.0</span><span class="cl-ver-date">07/08/2026</span></div>
