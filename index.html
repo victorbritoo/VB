@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.272.0</title>
+<title>VB - v1.272.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11009,7 +11009,7 @@ function REN_abrir(){
         vt2=Math.round(Math.max(0, vt2-_vTroca)*100)/100;
         if(!consig2) vsTot=Math.round(vsTot*(vt2>0?(vt2/(vt2+_vTroca)):0)*100)/100;
       }
-      opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO', consig:consig2};
+      opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO', consig:consig2, pctVB:pctVB2};
     });
     (res[1].data||[]).forEach(function(r){
       if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:VB_nomeCurto(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
@@ -11603,7 +11603,11 @@ function REN_prevSheet(k){
     +linhas
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
     +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
-    +'<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'
+    /* SOCIO PRIMEIRO so faz sentido em consignacao, onde o capital e todo do outro e as
+       primeiras parcelas devolvem o dele. Em sociedade a regua do VB e proporcional -- o socio
+       recebe a medida que ele recebe -- e um botao que oferece pratica que ele nunca teve so
+       serve pra ser tocado por engano. */
+    +(oi.consig?('<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'):'')
     +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
     +'<button onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
@@ -11674,9 +11678,11 @@ function REN_prevExtraVB(tab, opId){
   var oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo['ven|'+vid];
   if(!oi || oi.consig) return 0;                    /* consignada: o repasse ja e do dono */
   var ex=MER_gastoTotal(pid, true); if(!(ex>0)) return 0;
-  var vt=Number(oi.vt)||0; if(!(vt>0)) return 0;
-  /* a parte do socio no que a VB adiantou = o quanto do gasto saiu do bolso dele */
-  var pctS=(Number(oi.vs)||0)/vt;
+  /* A parte do socio no extra e a DIVISAO DO LUCRO, nao a fatia dele no valor da venda:
+     o gasto derruba o lucro, e o lucro racha pelo pctVB. Usar vs/vt dava 567,73 onde a queda
+     real na parte do socio era 575 -- base errada para o mesmo fato. */
+  var pctVB=(oi.pctVB!=null?Number(oi.pctVB):50);
+  var pctS=Math.max(0, Math.min(1, 1-(Number(pctVB)||0)/100));
   return Math.round(ex*pctS*100)/100;
 }
 function REN_prevExtraPrim(){
@@ -16507,6 +16513,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.2</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">SÓCIO PRIMEIRO passou a aparecer só em consignação, onde o capital é todo do outro e as primeiras parcelas devolvem o dele. Em sociedade a régua é proporcional — o sócio recebe à medida que a VB recebe — e um botão que oferece uma prática que nunca existiu só serve pra ser tocado por engano</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.1</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO usava a base errada: a fatia do sócio no valor da venda, e não a divisão do lucro. O gasto derruba o lucro, e o lucro racha pelo percentual combinado — num 50/50 o sócio banca metade do extra. Dava 567,73 onde a queda real na parte dele era 575</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.0</span><span class="cl-ver-date">10/08/2026</span></div>
