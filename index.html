@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.266.0</title>
+<title>VB - v1.267.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8607,8 +8607,44 @@ function MER_pctLive(){
   var l1=document.getElementById('mer-lbl-socio'); if(l1) l1.textContent=_consig?'CONSIGNANTE':'S\u00d3CIO';
   var l2=document.getElementById('mer-lbl-parte'); if(l2) l2.childNodes[0].nodeValue=_consig?'VALOR':'PARTE DO S\u00d3CIO';
 }
+/* GASTOS DA PECA
+   Polimento, caixa, revisao: custo que aparece DEPOIS que a peca ja esta no estoque, e as vezes
+   depois de vendida. O motivo de existir nao e contabil -- e nao esquecer de cobrar: gasto
+   marcado COBRAR entra no custo, e o PRECO SUGERIDO sobe sozinho antes de o VB abrir a boca.
+   Gasto NAO COBRAR nao toca no preco (caso tipico da consignada, onde ele ganha sem investir),
+   mas continua registrado: ele quer saber quanto essa escolha custa no ano. */
+var MER_gastos={}, MER_gastosErro='';
+function MER_gastosDe(id){ return (MER_gastos[String(id)]||[]); }
+function MER_gastoTotal(id, soCobrar){
+  var t=0;
+  MER_gastosDe(id).forEach(function(g){
+    if(soCobrar && !g.cobrar) return;
+    t+=Number(g.valor)||0;
+  });
+  return Math.round(t*100)/100;
+}
+/* custo que as contas devem usar: o da peca mais o que foi marcado pra cobrar */
+function MER_custoCheio(r){
+  if(!r) return 0;
+  return Math.round(((Number(r.custo)||0)+MER_gastoTotal(r.id, true))*100)/100;
+}
+function MER_gastosCarrega(cb){
+  sb.from('mercadoria_custos').select('*').limit(20000).then(function(res){
+    MER_gastos={}; MER_gastosErro='';
+    if(res.error){ MER_gastosErro=String(res.error.message||res.error.code||''); if(cb) cb(); return; }
+    (res.data||[]).forEach(function(g){
+      var k=String(g.mercadoria_id);
+      (MER_gastos[k]=MER_gastos[k]||[]).push(g);
+    });
+    Object.keys(MER_gastos).forEach(function(k){
+      MER_gastos[k].sort(function(a,b){ return String(a.data||'')<String(b.data||'')?-1:1; });
+    });
+    if(cb) cb();
+  }).catch(function(){ if(cb) cb(); });
+}
 function MER_load(){
   try{ VB_apelidosCarrega(); }catch(e){}
+  try{ MER_gastosCarrega(function(){ try{ if(MER_viewId) MER_abrir(MER_viewId); }catch(e){} }); }catch(e){}
   var hoje=new Date();
   var el=document.getElementById('mer-data');
   if(el && !el.value) el.value=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
@@ -12507,6 +12543,22 @@ function MER_abrir(id){
   hh+=lin('Marca',cx.marca)+lin('Modelo',cx.modelo)+lin('Ano',cx.ano)+lin('Ref',r.ref||'')+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
   hh+='</div><div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
+  (function(){
+    var gs=MER_gastosDe(r.id);
+    var tc=MER_gastoTotal(r.id,true), tn=Math.round((MER_gastoTotal(r.id,false)-tc)*100)/100;
+    if(gs.length){
+      var res=[];
+      if(tc>0) res.push('R$ '+MER_fmtBR(tc));
+      if(tn>0) res.push('R$ '+MER_fmtBR(tn)+' N\u00c3O COBRADO');
+      hh+=lin('Gastos', res.join(' \u00b7 '));
+      gs.forEach(function(g){
+        hh+='<div onclick="MER_gastoSheet(\''+String(r.id)+'\',\''+String(g.id)+'\')" style="display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--so);padding:2px 0 2px 10px;cursor:pointer;text-transform:uppercase;">'
+          +'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(String(g.descricao||'GASTO'))+(g.cobrar?'':' \u00b7 N\u00c3O COBRADO')+'</span>'
+          +'<span style="flex:none;font-weight:700;color:'+(g.cobrar?'var(--mu)':'var(--so2)')+';">R$ '+MER_fmtBR(Number(g.valor)||0)+'</span></div>';
+      });
+    }
+    if(!MER_gastosErro) hh+='<div onclick="MER_gastoSheet(\''+String(r.id)+'\',\'\')" style="margin-top:6px;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ GASTO</div>';
+  })();
   hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
 
@@ -12843,9 +12895,79 @@ var MER_CENARIOS=[{rot:'\u00c0 VISTA', pct:13, n:1},{rot:'1+4', pct:15, n:5},{ro
 var MER_possDados=null;
 var MER_TX=0.03;  /* taxa de financiamento do VB: 3% a.m. */
 function MER_fatorPV(n){ var s=0; for(var k=0;k<n;k++) s+=1/Math.pow(1+MER_TX,k); return s; } /* n pagamentos, o 1o hoje */
+function MER_gastoSheet(pecaId, gastoId){
+  if(MER_gastosErro){ VB_toast('Rode o SQL da mercadoria_custos primeiro.'); return; }
+  var r=null; (MER_rows||[]).forEach(function(y){ if(String(y.id)===String(pecaId)) r=y; });
+  var g=null; MER_gastosDe(pecaId).forEach(function(y){ if(String(y.id)===String(gastoId)) g=y; });
+  /* palpite inicial: consignada nasce NAO COBRAR, porque ali o VB ganha sem investir e
+     costuma bancar. Nas outras nasce COBRAR. Ele troca em qualquer uma. */
+  var consigP = r ? VB_consigVen(r.socio, r.valor_socio, r.custo, null) : false;
+  var cob = g ? !!g.cobrar : !consigP;
+  var ov=REN_cpOv('mer-gasto-ov');
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
+  var vBR=g?Number(g.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+  var dBR=(g&&g.data)?String(g.data).slice(0,10).split('-').reverse().join('/'):REN_hojeISO().split('-').reverse().join('/');
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(g?'EDITAR GASTO':'NOVO GASTO')+'</div>'
+    +'<div style="'+RT+'">O QUE FOI</div>'
+    +'<input id="merg-desc" placeholder="POLIMENTO \u00b7 CAIXA \u00b7 REVIS\u00c3O" value="'+CLIP_esc(g&&g.descricao||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
+    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="merg-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">DATA</div><input data-selall id="merg-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+dBR+'" style="'+IN+'"></div>'
+    +'</div>'
+    +'<div id="merg-cob" data-on="'+(cob?'1':'0')+'" onclick="MER_gastoCobToggle()" style="margin-top:10px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;text-align:center;cursor:pointer;background:'+(cob?'var(--acc)':'var(--sf2)')+';color:'+(cob?'var(--acc-tx)':'var(--mu2)')+';font-size:10px;letter-spacing:2px;font-weight:700;">'+(cob?'COBRAR DO CLIENTE':'N\u00c3O COBRAR \u00b7 SAI DO SEU LUCRO')+'</div>'
+    +'<div style="font-size:9px;color:var(--so);text-align:center;margin-top:5px;line-height:1.5;">COBRANDO, o gasto entra no custo e o pre\u00e7o sugerido sobe sozinho.</div>'
+    +'<button onclick="MER_gastoSalvar(\'' + String(pecaId) + '\',\'' + String(gastoId||'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
+    +(g?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
+        +'<button onclick="MER_gastoExcluir(this,\'' + String(gastoId) + '\')" style="padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
+        +'<button onclick="document.getElementById(\'mer-gasto-ov\').style.display=\'none\'" style="padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>'
+      +'</div>')
+      :('<button onclick="document.getElementById(\'mer-gasto-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
+    +'</div>';
+  ov.style.display='flex';
+}
+function MER_gastoCobToggle(){
+  var e=document.getElementById('merg-cob'); if(!e) return;
+  var on=(e.getAttribute('data-on')==='1')?0:1;
+  e.setAttribute('data-on', on?'1':'0');
+  e.style.background = on?'var(--acc)':'var(--sf2)';
+  e.style.color = on?'var(--acc-tx)':'var(--mu2)';
+  e.textContent = on?'COBRAR DO CLIENTE':'N\u00c3O COBRAR \u00b7 SAI DO SEU LUCRO';
+}
+function MER_gastoSalvar(pecaId, gastoId){
+  var ds=((document.getElementById('merg-desc')||{}).value||'').trim().toUpperCase();
+  var v=REN_num((document.getElementById('merg-valor')||{}).value);
+  var d=REN_brToISO((document.getElementById('merg-data')||{}).value);
+  var cob=((document.getElementById('merg-cob')||{}).getAttribute?document.getElementById('merg-cob').getAttribute('data-on'):'1')==='1';
+  if(!ds){ VB_toast('Diga o que foi o gasto.'); return; }
+  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
+  if(!VB_gravando('MER_gastoSalvar')) return;
+  var reg={mercadoria_id:pecaId, descricao:ds, valor:v, data:d, cobrar:cob};
+  var q=gastoId?sb.from('mercadoria_custos').update(reg).eq('id',gastoId):sb.from('mercadoria_custos').insert(reg);
+  q.then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou o gasto.'); return; }
+    try{ VB_log('GASTO DA PE\u00c7A', gastoId?'editou gasto':'novo gasto', ds, HIST_fmtMoeda(v)+(cob?' \u00b7 COBRAR':' \u00b7 N\u00c3O COBRAR')); }catch(e){}
+    var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
+    VB_toast('Gasto salvo.');
+    MER_gastosCarrega(function(){ try{ MER_abrir(pecaId); }catch(e){} try{ MER_render(); }catch(e){} });
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+function MER_gastoExcluir(btn, gastoId){
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; } },2500); return; }
+  var pid=null;
+  Object.keys(MER_gastos).forEach(function(k){ MER_gastos[k].forEach(function(g){ if(String(g.id)===String(gastoId)) pid=k; }); });
+  sb.from('mercadoria_custos').delete().eq('id',gastoId).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu.'); return; }
+    var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
+    VB_toast('Gasto exclu\u00eddo.');
+    MER_gastosCarrega(function(){ try{ if(pid) MER_abrir(pid); }catch(e){} try{ MER_render(); }catch(e){} });
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
 function MER_possibilidades(r){
   MER_possDados=null;
-  var c=Number(r.custo)||0; if(!(c>0)) return '';
+  var c=MER_custoCheio(r); if(!(c>0)) return '';   /* custo + gastos marcados COBRAR */
   var vs=Number(r.valor_socio)||0;
   var consig=VB_consigVen(r.socio, r.valor_socio, r.custo, null);
   var temS=(r.socio&&vs>0&&vs<=c);
@@ -16273,6 +16395,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.267.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">A peça passou a aceitar gastos depois de entrar no estoque: polimento, caixa, revisão. Uma linha por gasto, com o que foi, quanto e quando — e um interruptor COBRAR DO CLIENTE</div>
+      <div class="cl-item">Marcado COBRAR, o gasto entra no custo e o PREÇO SUGERIDO sobe sozinho. O motivo de existir não é contábil: é não esquecer de cobrar o polimento de 250 que sempre passa batido</div>
+      <div class="cl-item">Marcado NÃO COBRAR, não toca no preço — caso da consignada, onde a VB ganha sem ter investido e costuma bancar. Mas fica registrado, porque a escolha de bancar também tem um valor no fim do ano. Consignada nasce em NÃO COBRAR; as outras, em COBRAR</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.266.0</span><span class="cl-ver-date">10/08/2026</span></div>
