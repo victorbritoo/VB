@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.272.3</title>
+<title>VB - v1.273.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11682,9 +11682,9 @@ function REN_prevSoma(){
    nas ultimas fica com VB. E a regra de capital antes de lucro, num toque. */
 /* MEU EXTRA PRIMEIRO: o VB adianta polimento, caixa e revisao do proprio bolso e o socio nao
    paga no ato. O VALOR ja se acerta sozinho -- o gasto entra no custo, o lucro cai e a parte do
-   socio cai junto. O que falta e a ORDEM: sem isto, a metade que e do socio volta diluida em
-   todas as parcelas. Aqui ela sai das primeiras. Metade de 250 nao muda nada; metade de uma
-   caixa de 1.500 numa venda de 42 parcelas leva tres anos e meio pra voltar. */
+   socio cai junto. O que falta e a ORDEM, e a regua e do VB (sessao 20): o extra INTEIRO volta
+   pra ele no primeiro dinheiro que entra, e so o que sobra racha na proporcao do alvo. Troca
+   nao e dinheiro e nem chega aqui: REN_coleta pula p.t. */
 function REN_prevExtraVB(tab, opId){
   if(tab!=='ven') return 0;
   var vid=String(opId);
@@ -11692,35 +11692,42 @@ function REN_prevExtraVB(tab, opId){
   if(!oi || oi.consig) return 0;                    /* consignada: o repasse ja e do dono */
   var ex=(REN_cache&&REN_cache.exVenda&&REN_cache.exVenda[vid])||0;
   if(!(ex>0)) return 0;
-  /* A parte do socio no extra e a DIVISAO DO LUCRO, nao a fatia dele no valor da venda:
-     o gasto derruba o lucro, e o lucro racha pelo pctVB. Usar vs/vt dava 567,73 onde a queda
-     real na parte do socio era 575 -- base errada para o mesmo fato. */
-  var pctVB=(oi.pctVB!=null?Number(oi.pctVB):50);
-  var pctS=Math.max(0, Math.min(1, 1-(Number(pctVB)||0)/100));
-  return Math.round(ex*pctS*100)/100;
+  /* O botao vale o extra INTEIRO: e o que saiu do bolso do VB e volta primeiro. A parte do
+     socio no custo ja se acertou no lucro; aqui a conversa e so sobre ORDEM. */
+  return Math.round(ex*100)/100;
 }
 function REN_prevExtraPrim(){
   var c=REN_prevCtx; if(!c) return;
-  var seg=REN_prevExtraVB(c.tab, c.opId);
-  if(!(seg>0)){ VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
+  var ex=REN_prevExtraVB(c.tab, c.opId);
+  if(!(ex>0)){ VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
   var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
   c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) resta-=REN_repDe(i, b); });
-  resta=Math.round(resta*100)/100;
-  var reter=Math.min(seg, Math.max(0,resta));       /* nunca retem mais do que o socio tem a receber */
-  var tem=false;
+  resta=Math.round(Math.max(0,resta)*100)/100;
+  /* O extra sai do TOPO da primeira parcela em aberto e o que sobra no pote racha na
+     proporcao do alvo -- capital igual e lucro meio a meio dao exatamente metade. A ultima
+     parcela fecha os centavos pra soma bater com o alvo, sem FALTAM sobrando na tela. */
+  var abertas=[], aberto=0;
   c.ps.forEach(function(i, ix){
     if(REN_cache.bx[REN_key(i)]) return;
-    var inp=document.getElementById('renp-'+ix); if(!inp) return;
-    tem=true;
-    var prop=Number(REN_repDef(c.oi,i)||0);
-    var corte=Math.min(prop, reter);
-    reter=Math.round((reter-corte)*100)/100;
-    var v=Math.round(Math.max(0, prop-corte)*100)/100;
-    inp.value=v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(!document.getElementById('renp-'+ix)) return;
+    abertas.push({i:i, ix:ix}); aberto+=Number(i.valor)||0;
   });
-  if(!tem){ VB_toast('Nenhuma parcela em aberto.'); return; }
+  if(!abertas.length){ VB_toast('Nenhuma parcela em aberto.'); return; }
+  var tira=Math.min(ex, aberto);
+  var pote=Math.round((aberto-tira)*100)/100;
+  var prop=(pote>0)?(resta/pote):0;
+  var sobraEx=tira, soma=0;
+  abertas.forEach(function(a, n){
+    var val=Number(a.i.valor)||0;
+    var corte=Math.min(val, sobraEx);
+    sobraEx=Math.round((sobraEx-corte)*100)/100;
+    var v=Math.round((val-corte)*prop*100)/100;
+    if(n===abertas.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
+    soma=Math.round((soma+v)*100)/100;
+    document.getElementById('renp-'+a.ix).value=v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
   REN_prevSoma();
-  VB_toast('Seu extra de '+HIST_fmtMoeda(seg)+' sai das primeiras.');
+  VB_toast('Seu extra de '+HIST_fmtMoeda(ex)+' volta primeiro.');
 }
 function REN_prevSocioPrim(){
   var c=REN_prevCtx; if(!c) return;
@@ -16527,6 +16534,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.273.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO mudou de régua, a pedido do VB: o extra inteiro volta pra você no primeiro dinheiro que entra, e só o que sobra racha na proporção do sócio. No Daytona: 25.000 − 1.250 = 23.750, metade 11.875 pro Vicente na primeira; as demais 5.500. O total dele continua batendo exato no alvo, sem FALTAM na tela — antes o botão retinha só a metade do sócio no extra e a conta ficava aberta</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.3</span><span class="cl-ver-date">10/08/2026</span></div>
