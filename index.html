@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.262.1</title>
+<title>VB - v1.263.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9870,7 +9870,7 @@ function VB_nomePUS(nome){
    ou testa VB_ehSimulacao(). Consumidor novo que não usar isto está errado. */
 function VB_ehSimulacao(r){ return !!(r && r.simulacao); }
 function VB_antReais(rows){ return (rows||[]).filter(function(r){ return !VB_ehSimulacao(r); }); }
-function REN_vfa(tab){ return GLB_badge(tab==='ven'?'V':(tab==='fin'?'F':'A')); }
+function REN_vfa(tab){ return GLB_badge(tab==='ven'?'V':(tab==='fin'?'F':(tab==='cr'?'M':'A'))); }
 function REN_coleta(ant, fin, ven){
   var out=[];
   function fecha(ops){ ops.forEach(function(p){ p.tot=ops.length; out.push(p); }); }
@@ -10146,6 +10146,168 @@ function VB_kFmt(v){
    linha (pago_em / valor_pago). Uma tabela so, sem cronograma derivado.
    Consignacao NAO entra aqui: o repasse ao consignante ja vive em A REPASSAR e contar nos
    dois lugares dobraria a mesma divida. */
+
+/* ============================================================
+   ENTRADA MANUAL (contas_receber) -- gemea do contas_pagar.
+   Existe porque nem todo dinheiro que entra nasce de uma operacao do app.
+   E CAIXA, NAO LUCRO: entra no TOTAL A RECEBER e no panorama, fica fora do LUCRO DO MES.
+   Sem socio e sem repasse: e 100% VB ate decisao em contrario.
+   ============================================================ */
+var REN_crForm=null, REN_crEditId='';
+function REN_crDe(id){
+  var achou=null; if(!id) return null;
+  ((REN_cache&&REN_cache.cr)||[]).forEach(function(y){ if(String(y.id)===String(id)) achou=y; });
+  return achou;
+}
+function REN_crEstado(){
+  function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
+  return [g('rencr-dev'),g('rencr-desc'),g('rencr-valor'),g('rencr-venc'),g('rencr-nota')].join('\u241f');
+}
+function REN_crDirty(){
+  var b=document.getElementById('rencr-salvar'); if(!b) return;
+  var v=REN_num((document.getElementById('rencr-valor')||{}).value||'');
+  var d=REN_brToISO((document.getElementById('rencr-venc')||{}).value||'');
+  var cr=((document.getElementById('rencr-dev')||{}).value||'').trim();
+  var ok=(!!cr && Number(v)>0 && !!d) && (REN_crForm===null || REN_crEstado()!==REN_crForm);
+  b.style.background=ok?'var(--acc)':'var(--sf3)';
+  b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
+  b.style.cursor=ok?'pointer':'not-allowed';
+  b.style.pointerEvents=ok?'':'none';
+}
+function REN_crFecharGuard(){
+  function fecha(){ var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none'; }
+  if(REN_crForm===null || REN_crEstado()===REN_crForm){ fecha(); return; }
+  VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar) REN_crSalvar(REN_crEditId||'');
+    else fecha();
+  });
+}
+function REN_crSheet(id){
+  if(REN_cache&&REN_cache.crErro){ VB_toast('Rode o SQL da contas_receber primeiro.'); return; }
+  var c=REN_crDe(id);
+  var ov=REN_cpOv('ren-cr-ov');
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
+  var vBR=c?Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+  var dBR=(c&&c.venc)?String(c.venc).slice(0,10).split('-').reverse().join('/'):'';
+  function esc(v){ return CLIP_esc(v==null?'':v).replace(/"/g,'&quot;'); }
+  ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR ENTRADA':'NOVA ENTRADA')+'</div>'
+    +'<div style="'+RT+'">DE QUEM</div>'
+    +'<input id="rencr-dev" oninput="REN_crDirty()" placeholder="QUEM VAI TE PAGAR" value="'+esc(c&&c.devedor)+'" style="'+IN+'">'
+    +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
+    +'<input id="rencr-desc" oninput="REN_crDirty()" placeholder="ALUGUEL \u00b7 EMPR\u00c9STIMO \u00b7 COMISS\u00c3O" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
+    +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencr-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_crDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencr-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_crDirty()" oninput="REC_maskData(this);REN_crDirty()" value="'+dBR+'" style="'+IN+'"></div>'
+    +'</div>'
+    +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
+    +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
+    +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
+    +((c&&!c.recebido_em)?('<button onclick="REN_crBaixaSheet(\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DAR BAIXA</button>'):'')
+    +((c&&c.recebido_em)?('<button onclick="REN_crDesfaz(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER BAIXA</button>'):'')
+    +(c?('<button onclick="REN_crExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
+    +'<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+  REN_crForm = c ? REN_crEstado() : null;
+  REN_crEditId = c ? String(c.id) : '';
+  REN_crDirty();
+  try{ VB_cliAttach('rencr-dev'); }catch(e){}
+}
+function REN_crSalvar(id){
+  var dv=((document.getElementById('rencr-dev')||{}).value||'').trim().toUpperCase();
+  var ds=((document.getElementById('rencr-desc')||{}).value||'').trim().toUpperCase();
+  var v=REN_num((document.getElementById('rencr-valor')||{}).value);
+  var d=REN_brToISO((document.getElementById('rencr-venc')||{}).value);
+  var nt=((document.getElementById('rencr-nota')||{}).value||'').trim().toUpperCase();
+  if(!dv){ VB_toast('Diga quem vai te pagar.'); return; }
+  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+  if(!VB_gravando('REN_crSalvar')) return;
+  var reg={devedor:(dv||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
+  var q=id?sb.from('contas_receber').update(reg).eq('id',id):sb.from('contas_receber').insert(reg);
+  q.then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a entrada.'); return; }
+    try{ VB_log('ENTRADA MANUAL', id?'editou entrada':'nova entrada', dv||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
+    var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
+    VB_toast(id?'Entrada salva.':'Entrada lan\u00e7ada.');
+    REN_abrir();
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+function REN_crExcluir(btn, id){
+  var _cX=REN_crDe(id)||{};
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--so2)'; } },2500); return; }
+  sb.from('contas_receber').delete().eq('id',id).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
+    try{ VB_log('ENTRADA MANUAL','excluiu entrada', _cX.devedor||_cX.descricao||'', HIST_fmtMoeda(Number(_cX.valor)||0)+(_cX.venc?(' \u00b7 VENCIA '+String(_cX.venc).split('-').reverse().join('/')):'')+(_cX.recebido_em?' \u00b7 ESTAVA RECEBIDA':'')); }catch(e){}
+    var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
+    VB_toast('Entrada exclu\u00edda.');
+    REN_abrir();
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+function REN_crQuick(btn, id){
+  if(REN_cache&&REN_cache.crErro){ VB_toast('Rode o SQL da contas_receber primeiro.'); return; }
+  var c=REN_crDe(id); if(!c) return;
+  if(c.recebido_em){
+    if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
+    REN_crDesfazDireto(c); return;
+  }
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
+  REN_crGravaRec(c, Number(c.valor)||0, REN_hojeISO(), null);
+}
+function REN_crGravaRec(c, valor, dataISO, nota){
+  var ts=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
+  sb.from('contas_receber').update({recebido_em:ts, valor_recebido:Math.round((Number(valor)||0)*100)/100, nota_baixa:(nota||null)}).eq('id', c.id).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
+    try{ VB_log('ENTRADA MANUAL','recebeu', c.devedor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
+    ['ren-cr-ov','ren-crb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
+    VB_toast('Entrada recebida.');
+    REN_abrir();
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+function REN_crDesfazDireto(c){
+  sb.from('contas_receber').update({recebido_em:null, valor_recebido:null, nota_baixa:null}).eq('id', c.id).then(function(res){
+    if(res.error){ VB_erro(res.error.message); return; }
+    try{ VB_log('ENTRADA MANUAL','desfez recebimento', c.devedor||c.descricao||'', HIST_fmtMoeda(Number(c.valor_recebido!=null?c.valor_recebido:c.valor)||0)); }catch(e){}
+    var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
+    VB_toast('Recebimento desfeito.');
+    REN_abrir();
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+function REN_crDesfaz(btn, id){
+  var c=REN_crDe(id); if(!c) return;
+  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER BAIXA'; } },2500); return; }
+  REN_crDesfazDireto(c);
+}
+function REN_crBaixaSheet(id){
+  var c=REN_crDe(id); if(!c) return;
+  var ov=REN_cpOv('ren-crb-ov');
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.devedor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
+    +'<div><div style="'+RT+'">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencrb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">DATA DO RECEBIMENTO</div><input data-selall id="rencrb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
+    +'</div>'
+    +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
+    +'<input id="rencrb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'
+    +'<button onclick="REN_crBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR RECEBIMENTO</button>'
+    +'<button onclick="document.getElementById(\'ren-crb-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function REN_crBaixaSalvar(id){
+  var c=REN_crDe(id); if(!c) return;
+  var v=REN_num((document.getElementById('rencrb-valor')||{}).value);
+  var d=REN_brToISO((document.getElementById('rencrb-data')||{}).value);
+  var nt=((document.getElementById('rencrb-nota')||{}).value||'').trim().toUpperCase();
+  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
+  REN_crGravaRec(c, v, d, nt);
+}
 function REN_cpDe(id){
   var achou=null; if(!id) return null;
   ((REN_cache&&REN_cache.cp)||[]).forEach(function(y){ if(String(y.id)===String(id)) achou=y; });
@@ -10169,6 +10331,7 @@ function REN_cpOv(oid){
     ov.addEventListener('click', function(e){
       if(e.target!==ov) return;
       if(oid==='ren-cp-ov'){ REN_cpFecharGuard(); return; }
+      if(oid==='ren-cr-ov'){ REN_crFecharGuard(); return; }
       ov.style.display='none';
     });
   }
@@ -10643,12 +10806,26 @@ function REN_abrir(){
     sb.from('parcela_pagamentos').select('*').limit(20000),
     sb.from('parcela_notas').select('*').limit(20000),
     sb.from('contas_pagar').select('*').limit(20000),
-    sb.from('parcela_prorroga').select('*').limit(20000)
+    sb.from('parcela_prorroga').select('*').limit(20000),
+    sb.from('contas_receber').select('*').limit(20000)
   ]).then(function(res){
     var semTabela=!!(res[3]&&res[3].error);
     var erroBx=semTabela?String((res[3].error&&res[3].error.message)||''):'';
     REN_erroBx=erroBx;
     var itens=REN_coleta(res[0].data||[], res[1].data||[], res[2].data||[]);
+    /* ENTRADA MANUAL: gemea da conta a pagar. Uma linha por vencimento, digitada, nao derivada.
+       Vira item com a mesma forma dos outros -- lista, busca, cabecalho de mes, panorama e
+       TOTAL A RECEBER passam a conta-la sem que nenhum deles precise saber que ela existe.
+       Nao tem socio nem repasse: entrada manual e 100% VB.
+       E CAIXA, NAO LUCRO -- espelho da regra das SAIDAS, que nunca descontam do lucro. */
+    var crErro=(res[9]&&res[9].error)?String((res[9].error&&res[9].error.message)||''):'';
+    var crRows=((res[9]&&res[9].data)||[]).slice();
+    crRows.forEach(function(c){
+      itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
+        cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
+        rot:String(c.descricao||'ENTRADA MANUAL'),
+        tab:'cr', opId:String(c.id), idx:0, tot:1, dnum:1, cr:c});
+    });
     /* PRORROGACAO: mora em tabela lateral, como a nota e o repasse. A data e o valor ORIGINAIS
        continuam sendo os da operacao e ficam guardados em vencOrig/valorOrig. Como o resto do app
        le x.venc e x.valor, a lista, o panorama, a busca, o cabecalho de mes e o alerta de atrasada
@@ -10661,6 +10838,15 @@ function REN_abrir(){
       if(pp.valor_novo!=null) x.valor=Math.round((Number(pp.valor_novo)||0)*100)/100;
     });
     var bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
+    /* a baixa da entrada manual vive na propria linha (recebido_em), nao em parcela_baixas --
+       mas entra no mesmo mapa pra RECEBIDAS, totais e panorama nao precisarem de excecao */
+    crRows.forEach(function(c){
+      if(!c.recebido_em) return;
+      bx['cr|'+String(c.id)+'|0']={op_tab:'cr', op_id:String(c.id), parcela_idx:0,
+        recebido_em:c.recebido_em,
+        valor_recebido:(c.valor_recebido!=null?c.valor_recebido:c.valor),
+        nota:(c.nota_baixa||null)};
+    });
     var map={}; itens.forEach(function(x){ map[REN_key(x)]=x; });
     var opInfo={};
     (res[2].data||[]).forEach(function(r){
@@ -10689,7 +10875,7 @@ function REN_abrir(){
     var cpErro=(res[7]&&res[7].error)?String((res[7].error&&res[7].error.message)||''):'';
     var cp=((res[7]&&res[7].data)||[]).slice();
     cp.sort(function(a,b2){ return String(a.venc||'')<String(b2.venc||'')?-1:1; });
-    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro};
+    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro};
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
   });
@@ -10914,6 +11100,7 @@ function REN_render(){
   hh+='<div onclick="REN_painel()" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
   /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
   hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipOrd()
+    +'<span onclick="REN_crSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);margin-left:6px;margin-right:auto;">+</span>'
     +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS \u2192</span></div>';
   var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && REN_repDe(x, b2)>0 && !b2.repassado_em; });
   if(repPend.length){
@@ -10967,6 +11154,7 @@ function REN_ficha(k, exp){
   /* mata folha que tenha ficado aberta por tras: ja apareceu DAR BAIXA sozinha ao voltar */
   ['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  if(x.tab==='cr'){ REN_crSheet(x.opId); return; }   /* linha digitada: a folha dela e a ficha */
   var b=REN_cache.bx[k]||null;
   var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
   var hoje=REN_hojeISO();
@@ -11428,6 +11616,8 @@ function REN_desfazDireto(baixaId){
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_quick(btn, k){
+  var _xq=REN_cache&&REN_cache.map[k];
+  if(_xq && _xq.tab==='cr'){ REN_crQuick(btn, _xq.opId); return; }
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -15990,6 +16180,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.263.0</span><span class="cl-ver-date">09/08/2026</span></div>
+      <div class="cl-item">ENTRADAS ganhou a gêmea da conta a pagar: entrada manual, linha digitada em vez de derivada de operação. Nem todo dinheiro que entra nasce de uma venda, antecipação ou financiamento — e o que não nascia ficava fora do TOTAL A RECEBER</div>
+      <div class="cl-item">Ela entra na lista com selo M, no cabeçalho do mês, na busca, no panorama e no total, porque vira item com a mesma forma dos outros — nenhuma dessas telas precisou saber que ela existe</div>
+      <div class="cl-item">É CAIXA, NÃO LUCRO: espelho da regra das SAÍDAS, que nunca descontam do lucro. Fica fora do LUCRO DO MÊS. E não tem sócio nem repasse — entrada manual é 100% VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.262.1</span><span class="cl-ver-date">09/08/2026</span></div>
