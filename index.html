@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.269.3</title>
+<title>VB - v1.270.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2639,7 +2639,7 @@ function VB_fetchPag(tabela, cols){
 function VB_fetchTudo(onOk, onErr){
   /* baixas, pagamentos e repasse combinado sao dado operacional: sem eles a restauracao
      devolve as vendas com todas as parcelas em aberto de novo. */
-  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber'];
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
   Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
@@ -3062,7 +3062,7 @@ function VB_diffCampos(a,b){
 }
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
-  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber'];
+  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
   Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
@@ -3108,8 +3108,8 @@ function VB_restaurarModal(){
   document.body.appendChild(ov);
 }
 function VB_restaurarResumoHTML(P){
-  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos', contas_pagar:'Contas a Pagar', contas_receber:'Entradas Manuais'};
-  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber'];
+  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos', contas_pagar:'Contas a Pagar', contas_receber:'Entradas Manuais', mercadoria_custos:'Custos da Pe\u00e7a'};
+  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
   var h='';
   if(P.diff && P.diffOk){
     var tN=0,tA=0,tI=0, allAlt=[], allNovas=[];
@@ -3171,7 +3171,7 @@ function VB_restaurarExec(){
   if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
   var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
   var d=P.data.dados;
-  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]], ['parcela_baixas', d.parcela_baixas||[]], ['parcela_notas', d.parcela_notas||[]], ['contas_pagar', d.contas_pagar||[]], ['parcela_pagamentos', d.parcela_pagamentos||[]], ['repasse_previsto', d.repasse_previsto||[]], ['parcela_prorroga', d.parcela_prorroga||[]], ['contas_receber', d.contas_receber||[]]];
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]], ['parcela_baixas', d.parcela_baixas||[]], ['parcela_notas', d.parcela_notas||[]], ['contas_pagar', d.contas_pagar||[]], ['parcela_pagamentos', d.parcela_pagamentos||[]], ['repasse_previsto', d.repasse_previsto||[]], ['parcela_prorroga', d.parcela_prorroga||[]], ['contas_receber', d.contas_receber||[]], ['mercadoria_custos', d.mercadoria_custos||[]]];
   var i=0, okCount=0, erros=[];
   function next(){
     if(i>=tabelas.length){ done(); return; }
@@ -16442,6 +16442,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.270.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">A tabela dos custos da peça entrou no backup — baixar, conferir, comparar e restaurar. Nasceu hoje e tinha ficado de fora das quatro listas, mesma falha da tabela de entradas manuais ontem. <b>Refazer o backup depois de subir.</b></div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.269.3</span><span class="cl-ver-date">10/08/2026</span></div>
