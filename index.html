@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.268.0</title>
+<title>VB - v1.268.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9885,6 +9885,14 @@ function VB_apelidosCarrega(){
   });
 }
 /* Nome curto: apelido quando existe, senao primeiro + ultimo. */
+/* Aplica o apelido SO quando o campo e um nome puro. Campo que pode carregar frase composta
+   (fornecedor em troca) passa por aqui, nao pelo VB_nomeCurto direto. */
+function VB_nomeSePuro(s){
+  var t=String(s||'');
+  if(!t.trim()) return t;
+  if(t.indexOf('\u2014')>=0 || t.indexOf('\u00b7')>=0 || t.indexOf(':')>=0) return t;
+  return VB_nomeCurto(t);
+}
 function VB_nomeCurto(nome){
   var n=String(nome||'').trim(); if(!n) return n;
   if(VB_apelidos && typeof VB_apelidos==='object'){ var a=VB_apelidos[n.toUpperCase()]; if(a) return a; }
@@ -10431,6 +10439,7 @@ function REN_cpOv(oid){
       if(e.target!==ov) return;
       if(oid==='ren-cp-ov'){ REN_cpFecharGuard(); return; }
       if(oid==='ren-cr-ov'){ REN_crFecharGuard(); return; }
+      if(oid==='mer-gasto-ov'){ MER_gastoFecharGuard(); return; }
       ov.style.display='none';
     });
   }
@@ -12391,7 +12400,7 @@ function MER_render(){
             }
             return '<div style="font-size:11px;color:var(--tx);margin-top:1px;">Saída: <span style="font-weight:700;color:var(--ink);">'+(r.data_venda?MER_fmtData(r.data_venda):'VENDIDO')+'</span>'+g+'</div>';
           })() : (
-          '<div style="font-size:11px;color:var(--tx);margin-top:1px;">Custo: R$ '+MER_fmtBR(r.custo||0)
+          '<div style="font-size:11px;color:var(--tx);margin-top:1px;">Custo: R$ '+MER_fmtBR(MER_custoCheio(r)||r.custo||0)
           +(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')
           +((r.data_compra&&MER_dias(r.data_compra)!=null)?(function(){
               var dd=MER_dias(r.data_compra);
@@ -12562,7 +12571,9 @@ function MER_abrir(id){
   hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
 
-  hh+=lin('De Quem Comprei', VB_nomeCurto(r.fornecedor||''))+lin('Forma de Pagamento', r.pagamento||'');
+  /* o fornecedor NEM SEMPRE e um nome: em troca ele e uma frase (TROCA \u2014 modelo \u00b7 nome).
+     Encurtar nome ali pegava a primeira e a ultima palavra e virava "TROCA FILHO". */
+  hh+=lin('De Quem Comprei', VB_nomeSePuro(r.fornecedor||''))+lin('Forma de Pagamento', r.pagamento||'');
   /* a FORMA diz como; as PARCELAS dizem quanto e quando. Duas perguntas, duas linhas. */
   hh+='<div id="mer-view-parcinfo"></div>';
   hh+=lin('Sócio', r.socio||'');
@@ -12909,22 +12920,32 @@ function MER_gastoSheet(pecaId, gastoId){
   var vBR=g?Number(g.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
   var dBR=(g&&g.data)?String(g.data).slice(0,10).split('-').reverse().join('/'):REN_hojeISO().split('-').reverse().join('/');
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(g?'EDITAR GASTO':'NOVO GASTO')+'</div>'
-    +'<div style="'+RT+'">O QUE FOI</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+'CUSTOS'+'</div>'
     +'<input id="merg-desc" placeholder="POLIMENTO \u00b7 CAIXA \u00b7 REVIS\u00c3O" value="'+CLIP_esc(g&&g.descricao||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
     +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="merg-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">DATA</div><input data-selall id="merg-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div id="merg-cob" data-on="'+(cob?'1':'0')+'" onclick="MER_gastoCobToggle()" style="margin-top:10px;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;letter-spacing:2px;font-weight:700;color:'+(cob?'var(--tx)':'var(--so2)')+';">'+(cob?'\u25c9 COBRAR DO CLIENTE':'\u25cb N\u00c3O COBRAR')+'</div>'
-    +'<button onclick="MER_gastoSalvar(\'' + String(pecaId) + '\',\'' + String(gastoId||'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
+    +'<button onclick="MER_gastoSalvar(\'' + String(pecaId) + '\',\'' + String(gastoId||'') + '\')" id="merg-salvar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +(g?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
         +'<button onclick="MER_gastoExcluir(this,\'' + String(gastoId) + '\')" style="padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
         +'<button onclick="document.getElementById(\'mer-gasto-ov\').style.display=\'none\'" style="padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>'
       +'</div>')
-      :('<button onclick="document.getElementById(\'mer-gasto-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
+      :('<button onclick="MER_gastoFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
+}
+/* Toque fora fechava sem avisar e levava junto o que estava digitado. */
+function MER_gastoFecharGuard(){
+  var o=document.getElementById('mer-gasto-ov');
+  var ds=((document.getElementById('merg-desc')||{}).value||'').trim();
+  var vv=((document.getElementById('merg-valor')||{}).value||'').trim();
+  if(!ds && !vv){ if(o) o.style.display='none'; return; }
+  VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar){ var b=document.getElementById('merg-salvar'); if(b) b.click(); }
+    else if(o) o.style.display='none';
+  });
 }
 function MER_gastoCobToggle(){
   var e=document.getElementById('merg-cob'); if(!e) return;
@@ -13584,7 +13605,7 @@ function VEN_abrirEstoque(){
     rows.forEach(function(r){
       html+='<button onclick="VEN_pegarEstoque(\''+r.id+'\')" style="width:100%;text-align:left;background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="font-size:13px;font-weight:700;color:var(--ink);">'+HIST_esc(r.descricao||'(sem descrição)')+'</div>'
-        +'<div style="font-size:11px;color:var(--tx);margin-top:1px;">Custo: R$ '+MER_fmtBR(r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+'</div>'
+        +'<div style="font-size:11px;color:var(--tx);margin-top:1px;">Custo: R$ '+MER_fmtBR(MER_custoCheio(r)||r.custo||0)+(r.data_compra?(' · '+MER_fmtData(r.data_compra)):'')+'</div>'
         +'</button>';
     });
     lista.innerHTML=html;
@@ -16393,6 +16414,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.268.1</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">DE QUEM COMPREI virou TROCA FILHO. O fornecedor nem sempre é um nome — em troca ele é uma frase (TROCA — modelo · nome), e encurtar nome ali pega a primeira e a última palavra e come o resto. O apelido agora só entra quando o campo é nome puro</div>
+      <div class="cl-item">Os cards da lista continuavam com o custo sem os gastos. Passaram a mostrar o total, como a ficha</div>
+      <div class="cl-item">A folha do custo fechava ao toque fora e levava junto o que estava digitado. Agora pergunta se salva ou descarta</div>
+      <div class="cl-item">Título CUSTOS, e o rótulo O QUE FOI saiu</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.268.0</span><span class="cl-ver-date">10/08/2026</span></div>
