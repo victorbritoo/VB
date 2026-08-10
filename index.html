@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.268.3</title>
+<title>VB - v1.269.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9890,7 +9890,16 @@ function VB_apelidosCarrega(){
 function VB_nomeSePuro(s){
   var t=String(s||'');
   if(!t.trim()) return t;
-  if(t.indexOf('\u2014')>=0 || t.indexOf('\u00b7')>=0 || t.indexOf(':')>=0) return t;
+  /* Frase composta (TROCA \u2014 modelo \u00b7 nome): o nome mora depois do ultimo ponto medio.
+     Encurtar a frase inteira comia o meio e virava "TROCA FILHO"; nao encurtar nada deixava
+     o nome longo. Encurta so o pedaco que e nome. */
+  var i=t.lastIndexOf('\u00b7');
+  if(i>=0){
+    var cab=t.slice(0,i+1), nm=t.slice(i+1).trim();
+    if(nm && nm.indexOf('\u2014')<0) return cab+' '+VB_nomeCurto(nm);
+    return t;
+  }
+  if(t.indexOf('\u2014')>=0 || t.indexOf(':')>=0) return t;
   return VB_nomeCurto(t);
 }
 function VB_nomeCurto(nome){
@@ -10981,6 +10990,18 @@ function REN_abrir(){
       var consig2=false; try{ consig2=!!VB_consigVen(r.socio, vsC, cu2, r.lucro_vb_pct); }catch(e){}
       var pctVB2=(r.lucro_vb_pct!=null&&r.lucro_vb_pct!=='')?Number(r.lucro_vb_pct):50;
       var vsTot=consig2?vsC:(vsC + luc2*(1-pctVB2/100)); // capital do sócio + lucro do sócio (consig: valor já é o total)
+      /* PARCELA PAGA EM TROCA NAO GERA REPASSE (v1.269.0).
+         O que o socio tinha ali voltou em RELOGIO, e o relogio entrou no estoque -- a parte dele
+         mora na peca nova, nao numa divida em dinheiro. Cobrar nos dois lugares seria contar a
+         mesma coisa duas vezes. O alvo do socio passa a ser proporcional so ao que ainda entra
+         em dinheiro. Se um dia ele quiser o dinheiro da troca em vez da peca, isso vira uma
+         entrada manual ou a participacao dele na peca -- decisao do VB, nao regra do app. */
+      var _vTroca=0;
+      try{ (r.parcelas||[]).forEach(function(pp){ if(pp && pp.troca) _vTroca+=(VEN_parseBR(pp.v||pp.valor||'')||0); }); }catch(e){}
+      if(_vTroca>0 && vt2>0){
+        vt2=Math.round(Math.max(0, vt2-_vTroca)*100)/100;
+        if(!consig2) vsTot=Math.round(vsTot*(vt2>0?(vt2/(vt2+_vTroca)):0)*100)/100;
+      }
       opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO', consig:consig2};
     });
     (res[1].data||[]).forEach(function(r){
@@ -16414,6 +16435,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.269.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Parcela paga em troca deixou de gerar repasse ao sócio. O que ele tinha ali voltou em relógio, e o relógio entrou no estoque — a parte dele mora na peça nova, não numa dívida em dinheiro. Cobrar nos dois lugares era contar a mesma coisa duas vezes, e era de onde vinha o FALTAM que não fechava com nada</div>
+      <div class="cl-item">O alvo do sócio passou a ser proporcional só ao que ainda entra em dinheiro. Se um dia ele quiser o dinheiro da troca em vez da peça, isso vira entrada manual ou participação dele na peça — decisão sua, não regra do app</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.268.4</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Na compra por troca o apelido não aparecia. O campo é uma frase (TROCA — modelo · nome) e eu tinha desligado a frase inteira depois do TROCA FILHO. Agora o apelido entra só no pedaço que é nome, depois do último ponto médio</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.268.3</span><span class="cl-ver-date">10/08/2026</span></div>
