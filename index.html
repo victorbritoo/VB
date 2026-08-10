@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.271.0</title>
+<title>VB - v1.272.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11604,6 +11604,7 @@ function REN_prevSheet(k){
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
     +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
     +'<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'
+    +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
     +'<button onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
     +'</div>';
@@ -11660,6 +11661,47 @@ function REN_prevSoma(){
 }
 /* Preenche as parcelas em ordem de vencimento ate quitar o que e do socio; o que sobra
    nas ultimas fica com VB. E a regra de capital antes de lucro, num toque. */
+/* MEU EXTRA PRIMEIRO: o VB adianta polimento, caixa e revisao do proprio bolso e o socio nao
+   paga no ato. O VALOR ja se acerta sozinho -- o gasto entra no custo, o lucro cai e a parte do
+   socio cai junto. O que falta e a ORDEM: sem isto, a metade que e do socio volta diluida em
+   todas as parcelas. Aqui ela sai das primeiras. Metade de 250 nao muda nada; metade de uma
+   caixa de 1.500 numa venda de 42 parcelas leva tres anos e meio pra voltar. */
+function REN_prevExtraVB(tab, opId){
+  if(tab!=='ven') return 0;
+  var vid=String(opId), pid=null;
+  (MER_rows||[]).forEach(function(m){ if(String(m.venda_id)===vid) pid=String(m.id); });
+  if(!pid) return 0;
+  var oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo['ven|'+vid];
+  if(!oi || oi.consig) return 0;                    /* consignada: o repasse ja e do dono */
+  var ex=MER_gastoTotal(pid, true); if(!(ex>0)) return 0;
+  var vt=Number(oi.vt)||0; if(!(vt>0)) return 0;
+  /* a parte do socio no que a VB adiantou = o quanto do gasto saiu do bolso dele */
+  var pctS=(Number(oi.vs)||0)/vt;
+  return Math.round(ex*pctS*100)/100;
+}
+function REN_prevExtraPrim(){
+  var c=REN_prevCtx; if(!c) return;
+  var seg=REN_prevExtraVB(c.tab, c.opId);
+  if(!(seg>0)){ VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
+  var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
+  c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) resta-=REN_repDe(i, b); });
+  resta=Math.round(resta*100)/100;
+  var reter=Math.min(seg, Math.max(0,resta));       /* nunca retem mais do que o socio tem a receber */
+  var tem=false;
+  c.ps.forEach(function(i, ix){
+    if(REN_cache.bx[REN_key(i)]) return;
+    var inp=document.getElementById('renp-'+ix); if(!inp) return;
+    tem=true;
+    var prop=Number(REN_repDef(c.oi,i)||0);
+    var corte=Math.min(prop, reter);
+    reter=Math.round((reter-corte)*100)/100;
+    var v=Math.round(Math.max(0, prop-corte)*100)/100;
+    inp.value=v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
+  if(!tem){ VB_toast('Nenhuma parcela em aberto.'); return; }
+  REN_prevSoma();
+  VB_toast('Seu extra de '+HIST_fmtMoeda(seg)+' sai das primeiras.');
+}
 function REN_prevSocioPrim(){
   var c=REN_prevCtx; if(!c) return;
   var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
@@ -16465,6 +16507,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO no repasse combinado, irmão do Sócio Primeiro. Você adianta polimento e caixa do bolso e o sócio não paga no ato — o valor já se acerta sozinho porque o gasto entra no custo e a parte dele cai junto, mas voltava diluído em todas as parcelas. Agora sai das primeiras</div>
+      <div class="cl-item">O botão só aparece quando existe extra adiantado naquela operação, e mostra quanto é. Nunca retém mais do que o sócio tem a receber. Em consignação não aparece: lá o repasse já é todo do dono</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.271.0</span><span class="cl-ver-date">10/08/2026</span></div>
