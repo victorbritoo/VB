@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.270.0</title>
+<title>VB - v1.271.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12982,6 +12982,21 @@ function MER_gastoCobToggle(){
   e.style.color = on?'var(--tx)':'var(--so2)';
   e.textContent = on?'\u25c9 COBRAR DO CLIENTE':'\u25cb N\u00c3O COBRAR';
 }
+/* Peca ja vendida: o gasto marcado COBRAR entra no CUSTO DA VENDA, que e a mesma origem
+   que o lucro, o repasse e o Fechamento ja usam. Uma fonte so -- criar uma segunda conta de
+   custo faria o mesmo numero existir em dois lugares, que e o que o app passou o mes desfazendo.
+   Consequencia aceita e dita ao VB: o lucro daquela venda cai, e o mes em que ela fechou encolhe.
+   NAO COBRAR ainda nao desconta aqui: teria que sair so do lado da VB, e isso pede campo novo. */
+function MER_gastoSyncVenda(pecaId, cb){
+  var r=null; (MER_rows||[]).forEach(function(y){ if(String(y.id)===String(pecaId)) r=y; });
+  if(!r || !r.venda_id){ if(cb) cb(); return; }
+  var novo=Math.round(((Number(r.custo)||0)+MER_gastoTotal(pecaId,true))*100)/100;
+  sb.from('vendas').update({custo:novo}).eq('id', r.venda_id).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'Gasto salvo, mas o custo da venda n\u00e3o atualizou.'); if(cb) cb(); return; }
+    try{ VB_log('GASTO DA PE\u00c7A','custo da venda atualizado', String(r.descricao||''), HIST_fmtMoeda(novo)); }catch(e){}
+    if(cb) cb();
+  }).catch(function(){ if(cb) cb(); });
+}
 function MER_gastoSalvar(pecaId, gastoId){
   var ds=((document.getElementById('merg-desc')||{}).value||'').trim().toUpperCase();
   var v=REN_num((document.getElementById('merg-valor')||{}).value);
@@ -12998,7 +13013,11 @@ function MER_gastoSalvar(pecaId, gastoId){
     try{ VB_log('GASTO DA PE\u00c7A', gastoId?'editou gasto':'novo gasto', ds, HIST_fmtMoeda(v)+(cob?' \u00b7 COBRAR':' \u00b7 N\u00c3O COBRAR')); }catch(e){}
     var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
     VB_toast('Gasto salvo.');
-    MER_gastosCarrega(function(){ try{ MER_abrir(pecaId); }catch(e){} try{ MER_render(); }catch(e){} });
+    MER_gastosCarrega(function(){
+      MER_gastoSyncVenda(pecaId, function(){
+        try{ MER_abrir(pecaId); }catch(e){} try{ MER_render(); }catch(e){} try{ MER_load(); }catch(e){}
+      });
+    });
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function MER_gastoExcluir(btn, gastoId){
@@ -13009,7 +13028,11 @@ function MER_gastoExcluir(btn, gastoId){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu.'); return; }
     var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
     VB_toast('Gasto exclu\u00eddo.');
-    MER_gastosCarrega(function(){ try{ if(pid) MER_abrir(pid); }catch(e){} try{ MER_render(); }catch(e){} });
+    MER_gastosCarrega(function(){
+      MER_gastoSyncVenda(pid, function(){
+        try{ if(pid) MER_abrir(pid); }catch(e){} try{ MER_render(); }catch(e){} try{ MER_load(); }catch(e){}
+      });
+    });
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function MER_possibilidades(r){
@@ -16442,6 +16465,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.271.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Gasto lançado numa peça já vendida passou a entrar no custo da venda. Antes ele só mexia no preço sugerido e sumia do resultado — o polimento existia para sugerir preço e não existia no lucro</div>
+      <div class="cl-item">Entra pelo custo da própria venda, que é a origem que o lucro, o repasse e o Fechamento já usam. Uma fonte só: criar uma segunda conta de custo faria o mesmo número existir em dois lugares. <b>O lucro daquela venda cai e o mês em que ela fechou encolhe</b> — é o correto, e é um número que você talvez já tenha olhado</div>
+      <div class="cl-item">Gasto marcado NÃO COBRAR ainda não desconta em peça vendida: ele teria que sair só do lado da VB, sem tocar no do sócio, e isso pede campo novo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.270.0</span><span class="cl-ver-date">10/08/2026</span></div>
