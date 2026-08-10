@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.263.2</title>
+<title>VB - v1.264.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9917,6 +9917,44 @@ function REN_termo(tab, plural, caixaAlta){
 /* TITULO e masculino, PARCELA e feminino: um lugar so decide o artigo, como ja acontece
    com a palavra. Sem isto sai "NOTA DA TITULO". */
 function REN_rotNota(tab){ return 'NOTA D'+((tab==='ant')?'O ':'A ')+REN_termo(tab,false,true); }
+/* VALOR HOJE: 0,2% ao dia, JURO SIMPLES sobre o valor da parcela -- 10 dias = 2%, 100 vira 102.
+   Nunca compoe. O relogio comeca depois do primeiro dia UTIL a partir do vencimento: parcela
+   que venceu no sabado nao corre na segunda; na terca conta desde o sabado (3 dias).
+   Datas lidas como texto, nunca new Date sobre ISO com Z. */
+var REN_JUROD=0.002;
+function REN_diaUtil(iso){
+  var p=String(iso||'').slice(0,10).split('-'); if(p.length!==3) return iso;
+  var d=new Date(+p[0], +p[1]-1, +p[2]);
+  while(d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()+1);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function REN_diasAtraso(venc, hoje){
+  var v=String(venc||'').slice(0,10), t=String(hoje||REN_hojeISO()).slice(0,10);
+  if(!v || !t) return 0;
+  if(t<=REN_diaUtil(v)) return 0;      /* cobranca so comeca depois do primeiro dia util */
+  var a=v.split('-'), b=t.split('-');
+  var d1=Date.UTC(+a[0],+a[1]-1,+a[2]), d2=Date.UTC(+b[0],+b[1]-1,+b[2]);
+  var n=Math.round((d2-d1)/86400000);
+  return n>0?n:0;
+}
+function REN_valorHoje(x){
+  var dias=REN_diasAtraso(x&&x.venc);
+  var base=Math.round(((Number(x&&x.valor)||0)-REN_pagoTot(x))*100)/100;
+  if(!(base>0) || !dias) return null;
+  return {dias:dias, pct:dias*REN_JUROD*100, valor:Math.round(base*(1+dias*REN_JUROD)*100)/100};
+}
+function REN_copia(txt, msg){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(String(txt)); VB_toast(msg||'Copiado.'); return;
+    }
+  }catch(e){}
+  try{
+    var ta=document.createElement('textarea'); ta.value=String(txt);
+    ta.style.cssText='position:fixed;top:-1000px;'; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); VB_toast(msg||'Copiado.');
+  }catch(e){ VB_toast('N\u00e3o consegui copiar.'); }
+}
 function REN_nm(x){ if(x && x.tab==='cr') return ''; /* entrada manual e titulo solto, nao parcela de cronograma */
   var _d=(x.dnum!=null?x.dnum:x.idx); return ('0'+(_d+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
 /* Repasse combinado de antemao para uma parcela ainda em aberto. Null = nao foi combinado nada,
@@ -10265,8 +10303,6 @@ function REN_crSheet(id){
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
-    +((c&&!c.recebido_em)?('<button onclick="REN_crBaixaSheet(\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DAR BAIXA</button>'):'')
-    +((c&&c.recebido_em)?('<button onclick="REN_crDesfaz(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER BAIXA</button>'):'')
     +(c?('<button onclick="REN_crExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
     +'<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
@@ -10322,68 +10358,6 @@ function REN_crExcluir(btn, id){
     VB_toast('Entrada exclu\u00edda.');
     REN_abrir();
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
-}
-function REN_crQuick(btn, id){
-  if(REN_cache&&REN_cache.crErro){ VB_toast('Rode o SQL da contas_receber primeiro.'); return; }
-  var c=REN_crDe(id); if(!c) return;
-  if(c.recebido_em){
-    if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
-    REN_crDesfazDireto(c); return;
-  }
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
-  REN_crGravaRec(c, Number(c.valor)||0, REN_hojeISO(), null);
-}
-function REN_crGravaRec(c, valor, dataISO, nota){
-  var ts=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
-  sb.from('contas_receber').update({recebido_em:ts, valor_recebido:Math.round((Number(valor)||0)*100)/100, nota_baixa:(nota||null)}).eq('id', c.id).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
-    try{ VB_log('ENTRADA MANUAL','recebeu', c.devedor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
-    ['ren-cr-ov','ren-crb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
-    VB_toast('Entrada recebida.');
-    REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
-}
-function REN_crDesfazDireto(c){
-  sb.from('contas_receber').update({recebido_em:null, valor_recebido:null, nota_baixa:null}).eq('id', c.id).then(function(res){
-    if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('ENTRADA MANUAL','desfez recebimento', c.devedor||c.descricao||'', HIST_fmtMoeda(Number(c.valor_recebido!=null?c.valor_recebido:c.valor)||0)); }catch(e){}
-    var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
-    VB_toast('Recebimento desfeito.');
-    REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
-}
-function REN_crDesfaz(btn, id){
-  var c=REN_crDe(id); if(!c) return;
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para desfazer.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER BAIXA'; } },2500); return; }
-  REN_crDesfazDireto(c);
-}
-function REN_crBaixaSheet(id){
-  var c=REN_crDe(id); if(!c) return;
-  var ov=REN_cpOv('ren-crb-ov');
-  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
-  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
-  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.devedor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
-    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
-    +'<div><div style="'+RT+'">VALOR RECEBIDO</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencrb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
-    +'<div><div style="'+RT+'">DATA DO RECEBIMENTO</div><input data-selall id="rencrb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
-    +'</div>'
-    +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
-    +'<input id="rencrb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'
-    +'<button onclick="REN_crBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR RECEBIMENTO</button>'
-    +'<button onclick="document.getElementById(\'ren-crb-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
-    +'</div>';
-  ov.style.display='flex';
-}
-function REN_crBaixaSalvar(id){
-  var c=REN_crDe(id); if(!c) return;
-  var v=REN_num((document.getElementById('rencrb-valor')||{}).value);
-  var d=REN_brToISO((document.getElementById('rencrb-data')||{}).value);
-  var nt=((document.getElementById('rencrb-nota')||{}).value||'').trim().toUpperCase();
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
-  if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
-  REN_crGravaRec(c, v, d, nt);
 }
 function REN_cpDe(id){
   var achou=null; if(!id) return null;
@@ -10915,15 +10889,11 @@ function REN_abrir(){
       if(pp.valor_novo!=null) x.valor=Math.round((Number(pp.valor_novo)||0)*100)/100;
     });
     var bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
-    /* a baixa da entrada manual vive na propria linha (recebido_em), nao em parcela_baixas --
-       mas entra no mesmo mapa pra RECEBIDAS, totais e panorama nao precisarem de excecao */
-    crRows.forEach(function(c){
-      if(!c.recebido_em) return;
-      bx['cr|'+String(c.id)+'|0']={op_tab:'cr', op_id:String(c.id), parcela_idx:0,
-        recebido_em:c.recebido_em,
-        valor_recebido:(c.valor_recebido!=null?c.valor_recebido:c.valor),
-        nota:(c.nota_baixa||null)};
-    });
+    /* A baixa da entrada manual mora em parcela_baixas, como a de qualquer parcela (v1.264.0).
+       Espelhar a conta a pagar foi erro: la nao existe baixa parcial nem juro, e as duas
+       regras vivem naquelas tabelas. Assim ela herda parcial, juro, nota e prorrogacao
+       sem uma linha de codigo nova. As colunas recebido_em/valor_recebido da contas_receber
+       ficaram sem uso -- nao sao mais lidas nem escritas. */
     var map={}; itens.forEach(function(x){ map[REN_key(x)]=x; });
     var opInfo={};
     (res[2].data||[]).forEach(function(r){
@@ -11231,7 +11201,6 @@ function REN_ficha(k, exp){
   /* mata folha que tenha ficado aberta por tras: ja apareceu DAR BAIXA sozinha ao voltar */
   ['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
-  if(x.tab==='cr'){ REN_crSheet(x.opId); return; }   /* linha digitada: a folha dela e a ficha */
   var b=REN_cache.bx[k]||null;
   var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
   var hoje=REN_hojeISO();
@@ -11295,14 +11264,26 @@ function REN_ficha(k, exp){
   var hh='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+REN_termo(x.tab,false,true)+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',HIST_fmtData(x.venc),red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
+  var _venc=HIST_fmtData(x.venc);
   if(x.prorrogada){
-    /* VENCIMENTO e VALOR logo acima ja dizem o que vale hoje: aqui so entra o que nao esta na tela */
     var _pv=HIST_fmtData(x.vencOrig);
     if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _pv+=' \u00b7 '+HIST_fmtMoeda(x.valorOrig);
-    hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('ERA', _pv)+'</div>';
-    if(x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
+    _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+_pv+'</div>';
   }
+  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  /* VALOR HOJE: so existe quando ha atraso correndo e sobra a receber. Toque copia so o numero,
+     que e o que vai colado na conversa com o cliente. */
+  (function(){
+    if(b) return;
+    var vh=REN_valorHoje(x); if(!vh) return;
+    var _txt=Number(vh.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    hh+='<div style="display:grid;grid-template-columns:1fr;"><div onclick="REN_copia(\''+_txt+'\',\'Valor de hoje copiado.\')" style="cursor:pointer;">'
+      +bloco('VALOR HOJE \u00b7 '+vh.dias+'D \u00b7 '+vh.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%',
+             HIST_fmtMoeda(vh.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span>', true)
+      +'</div></div>';
+  })();
+  if(x.prorrogada && x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
   (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
   if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' ('+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   /* REPASSE e SOCIO dividem uma linha: eram dois blocos de largura cheia e a ficha crescia demais */
@@ -11376,7 +11357,9 @@ function REN_ficha(k, exp){
      sao raras: lado a lado, a folha encurta duas linhas sem achatar a acao principal. */
   hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">'
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_notaSheet(\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(REN_notaDe(x)?'EDITAR NOTA':'NOTA')+'</button>'
-    +'<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'
+    +((x.tab==='cr')
+      ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+x.opId+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
+      : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
     +'</div>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
@@ -11693,8 +11676,6 @@ function REN_desfazDireto(baixaId){
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_quick(btn, k){
-  var _xq=REN_cache&&REN_cache.map[k];
-  if(_xq && _xq.tab==='cr'){ REN_crQuick(btn, _xq.opId); return; }
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -16257,6 +16238,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.264.1</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Ao mandar a entrada manual pela ficha comum, eu tinha deixado ela sem jeito de editar e sem jeito de excluir. Na ficha dela o botão OPERAÇÃO virou EDITAR — não há operação por trás de uma linha digitada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.264.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">A baixa da entrada manual mudou de lugar: saíu da própria linha e foi para parcela_baixas, como a de qualquer parcela. Espelhar a conta a pagar foi erro meu — lá não existe baixa parcial nem juro, então receber menos fechava a linha e receber mais não virava juro. Agora ela herda parcial, juro, nota e prorrogação sem código novo</div>
+      <div class="cl-item">Parcela atrasada ganhou VALOR HOJE: 0,2% ao dia, juro simples — 10 dias são 2%, e 100 vira 102. Tocar copia só o número, que é o que vai colado na conversa</div>
+      <div class="cl-item">O relógio do atraso só começa depois do primeiro dia útil a partir do vencimento: venceu no sábado, a segunda não corre; na terça conta desde o sábado, três dias. É como a cobrança acontece</div>
+      <div class="cl-item">O ERA desceu para baixo do VENCIMENTO. Duas datas do mesmo fato lidas juntas, e uma linha a menos na ficha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.263.2</span><span class="cl-ver-date">10/08/2026</span></div>
