@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.265.0</title>
+<title>VB - v1.265.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10633,7 +10633,13 @@ function REN_cpBaixaSalvar(id){
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   REN_cpGravaPag(c, v, d, nt);
 }
-function REN_notaDe(x){ return (REN_cache&&REN_cache.notas&&REN_cache.notas[REN_key(x)])||''; }
+function REN_notaDe(x){
+  var n=(REN_cache&&REN_cache.notas&&REN_cache.notas[REN_key(x)])||'';
+  /* entrada manual: a nota digitada no lancamento vale pros titulos daquele lote ate voce
+     escrever uma nota propria naquele titulo pela ficha -- ai a do titulo manda. */
+  if(!n && x && x.tab==='cr' && x.cr && x.cr.nota) return String(x.cr.nota);
+  return n;
+}
 function REN_notaSheet(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var ov=document.getElementById('ren-nota-ov');
@@ -11291,11 +11297,12 @@ function REN_ficha(k, exp){
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+REN_termo(x.tab,false,true)+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
+  /* prorrogada: a data velha e a nova na MESMA linha, com a seta -- a gramatica que o card
+     da lista ja usa. Bloco proprio pra ERA quebrava a grade e nao pertencia a coluna nenhuma. */
   var _venc=HIST_fmtData(x.venc);
   if(x.prorrogada){
-    var _pv=HIST_fmtData(x.vencOrig);
-    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _pv+=' \u00b7 '+HIST_fmtMoeda(x.valorOrig);
-    _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+_pv+'</div>';
+    _venc='<span style="color:var(--so);font-weight:600;">'+String(x.vencOrig||'').slice(8,10)+'/'+String(x.vencOrig||'').slice(5,7)+' \u2192 </span>'+_venc;
+    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+HIST_fmtMoeda(x.valorOrig)+'</div>';
   }
   hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
   /* VALOR HOJE: so existe quando ha atraso correndo e sobra a receber. Toque copia so o numero,
@@ -11305,7 +11312,7 @@ function REN_ficha(k, exp){
     var vh=REN_valorHoje(x); if(!vh) return;
     var _txt=Number(vh.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     hh+='<div style="display:grid;grid-template-columns:1fr;"><div onclick="REN_copia(\''+_txt+'\',\'Valor de hoje copiado.\')" style="cursor:pointer;">'
-      +bloco('VALOR HOJE \u00b7 '+vh.dias+'D \u00b7 '+vh.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%',
+      +bloco('VALOR HOJE \u00b7 '+vh.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%',
              HIST_fmtMoeda(vh.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span>', true)
       +'</div></div>';
   })();
@@ -16264,6 +16271,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.265.1</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Na ficha, a data antiga da prorrogação voltou pra mesma linha do vencimento, com a seta — 03/08 → 07/08, a mesma gramática do card da lista. Como bloco separado ela quebrava a grade e não pertencia a coluna nenhuma</div>
+      <div class="cl-item">VALOR HOJE perdeu os dias do rótulo: o STATUS ao lado já diz 3D. Ficou só o percentual, que não está em lugar nenhum</div>
+      <div class="cl-item">A nota digitada no lançamento da entrada manual não aparecia no card nem na ficha. Agora vale para os títulos daquele lote até você escrever uma nota própria no título pela ficha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.265.0</span><span class="cl-ver-date">10/08/2026</span></div>
