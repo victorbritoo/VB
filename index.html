@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.267.0</title>
+<title>VB - v1.268.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -458,6 +458,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
     <div id="mer-view-body" style="margin-top:12px;"></div>
     <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
     <div style="display:flex;gap:8px;margin-top:8px;">
+      <button id="mer-view-custos" onclick="MER_gastoSheet(MER_viewId,'')" style="flex:1;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CUSTOS</button>
       <button id="mer-view-parc" onclick="MER_cpSheet()" style="display:none;flex:1;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PARCELAS DA COMPRA</button>
       <button id="mer-view-editar" style="flex:1;padding:11px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>
     </div>
@@ -9158,7 +9159,7 @@ function GLB_buscar(){
       GLB_cache[key]=it.r;
       html+='<button data-gt="'+it.tipo+'" data-gi="'+String(it.r.id)+'" onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'
-          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(it.nome)+(function(){ var d=GLB_dica(it.tipo, it.r); if(!d) return ''; return (d.b?GLB_badge(d.b):'')+'<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d.n)+'</span>'; })()+'</span>'
+          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc((it.tipo==='cli')?it.nome:VB_nomeCurto(it.nome))+(function(){ var d=GLB_dica(it.tipo, it.r); if(!d) return ''; return (d.b?GLB_badge(d.b):'')+'<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d.n)+'</span>'; })()+'</span>'
           +'<span style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+it.rot+'</span>'
         +'</div>'
       +'</button>';
@@ -9679,7 +9680,9 @@ function CLIP_abrir(nome, cliId, voltarK){
     }
     function ln(esq, dir, red){ return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+dir+'</span></div>'; }
     var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
-    hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(alvo)+'</div>';
+    /* apelido e o padrao de exibicao no app inteiro; nome completo so em contrato,
+       cadastro do cliente e relatorio -- onde ele e o nome legal, nao um rotulo */
+    hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(alvo))+'</div>';
     hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
     /* linha com valor a direita e o lucro logo abaixo, em cinza */
     /* Sem percentual: nao existe denominador honesto para as tres formas. Em peca propria a base
@@ -12544,25 +12547,22 @@ function MER_abrir(id){
   hh+='</div><div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
   (function(){
-    var gs=MER_gastosDe(r.id);
-    var tc=MER_gastoTotal(r.id,true), tn=Math.round((MER_gastoTotal(r.id,false)-tc)*100)/100;
-    if(gs.length){
-      var res=[];
-      if(tc>0) res.push('R$ '+MER_fmtBR(tc));
-      if(tn>0) res.push('R$ '+MER_fmtBR(tn)+' N\u00c3O COBRADO');
-      hh+=lin('Gastos', res.join(' \u00b7 '));
-      gs.forEach(function(g){
-        hh+='<div onclick="MER_gastoSheet(\''+String(r.id)+'\',\''+String(g.id)+'\')" style="display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--so);padding:2px 0 2px 10px;cursor:pointer;text-transform:uppercase;">'
-          +'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(String(g.descricao||'GASTO'))+(g.cobrar?'':' \u00b7 N\u00c3O COBRADO')+'</span>'
-          +'<span style="flex:none;font-weight:700;color:'+(g.cobrar?'var(--mu)':'var(--so2)')+';">R$ '+MER_fmtBR(Number(g.valor)||0)+'</span></div>';
-      });
-    }
-    if(!MER_gastosErro) hh+='<div onclick="MER_gastoSheet(\''+String(r.id)+'\',\'\')" style="margin-top:6px;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ GASTO</div>';
+    /* Cada custo na sua linha e o TOTAL fechando embaixo: o preco sugerido usa o total, e sem
+       ele na tela o VB via o preco subir sem ver por que. O que nao e cobrado fica fora da soma
+       e marcado, porque ele decidiu bancar -- mas quer saber quanto isso custa. */
+    var gs=MER_gastosDe(r.id); if(!gs.length) return;
+    gs.forEach(function(g){
+      hh+='<div onclick="MER_gastoSheet(\''+String(r.id)+'\',\''+String(g.id)+'\')" style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--mu);padding:2px 0;cursor:pointer;text-transform:uppercase;">'
+        +'<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(String(g.descricao||'GASTO'))+(g.cobrar?'':' \u00b7 N\u00c3O COBRADO')+'</span>'
+        +'<span style="flex:none;font-weight:700;color:'+(g.cobrar?'var(--tx)':'var(--so2)')+';">R$ '+MER_fmtBR(Number(g.valor)||0)+'</span></div>';
+    });
+    var tot=MER_custoCheio(r);
+    if(tot>(Number(r.custo)||0)+0.005) hh+=lin('Custo Total', 'R$ '+MER_fmtBR(tot));
   })();
   hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
 
-  hh+=lin('De Quem Comprei', r.fornecedor||'')+lin('Forma de Pagamento', r.pagamento||'');
+  hh+=lin('De Quem Comprei', VB_nomeCurto(r.fornecedor||''))+lin('Forma de Pagamento', r.pagamento||'');
   /* a FORMA diz como; as PARCELAS dizem quanto e quando. Duas perguntas, duas linhas. */
   hh+='<div id="mer-view-parcinfo"></div>';
   hh+=lin('Sócio', r.socio||'');
@@ -12916,8 +12916,7 @@ function MER_gastoSheet(pecaId, gastoId){
     +'<div><div style="'+RT+'">VALOR</div><div style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="merg-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">DATA</div><input data-selall id="merg-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'
-    +'<div id="merg-cob" data-on="'+(cob?'1':'0')+'" onclick="MER_gastoCobToggle()" style="margin-top:10px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;text-align:center;cursor:pointer;background:'+(cob?'var(--acc)':'var(--sf2)')+';color:'+(cob?'var(--acc-tx)':'var(--mu2)')+';font-size:10px;letter-spacing:2px;font-weight:700;">'+(cob?'COBRAR DO CLIENTE':'N\u00c3O COBRAR \u00b7 SAI DO SEU LUCRO')+'</div>'
-    +'<div style="font-size:9px;color:var(--so);text-align:center;margin-top:5px;line-height:1.5;">COBRANDO, o gasto entra no custo e o pre\u00e7o sugerido sobe sozinho.</div>'
+    +'<div id="merg-cob" data-on="'+(cob?'1':'0')+'" onclick="MER_gastoCobToggle()" style="margin-top:10px;padding:9px 4px;text-align:center;cursor:pointer;font-size:10px;letter-spacing:2px;font-weight:700;color:'+(cob?'var(--tx)':'var(--so2)')+';">'+(cob?'\u25c9 COBRAR DO CLIENTE':'\u25cb N\u00c3O COBRAR')+'</div>'
     +'<button onclick="MER_gastoSalvar(\'' + String(pecaId) + '\',\'' + String(gastoId||'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +(g?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
         +'<button onclick="MER_gastoExcluir(this,\'' + String(gastoId) + '\')" style="padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
@@ -12931,9 +12930,8 @@ function MER_gastoCobToggle(){
   var e=document.getElementById('merg-cob'); if(!e) return;
   var on=(e.getAttribute('data-on')==='1')?0:1;
   e.setAttribute('data-on', on?'1':'0');
-  e.style.background = on?'var(--acc)':'var(--sf2)';
-  e.style.color = on?'var(--acc-tx)':'var(--mu2)';
-  e.textContent = on?'COBRAR DO CLIENTE':'N\u00c3O COBRAR \u00b7 SAI DO SEU LUCRO';
+  e.style.color = on?'var(--tx)':'var(--so2)';
+  e.textContent = on?'\u25c9 COBRAR DO CLIENTE':'\u25cb N\u00c3O COBRAR';
 }
 function MER_gastoSalvar(pecaId, gastoId){
   var ds=((document.getElementById('merg-desc')||{}).value||'').trim().toUpperCase();
@@ -16395,6 +16393,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.268.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">A ficha da peça mostrava CUSTO 60.000 enquanto o preço sugerido já usava 60.150. A conta estava certa e o número na tela, não. Agora cada gasto tem sua linha e o CUSTO TOTAL fecha embaixo</div>
+      <div class="cl-item">O interruptor do gasto virou uma linha discreta, sem o parágrafo explicando</div>
+      <div class="cl-item">O APELIDO virou o padrão de exibição: panorama, busca geral e o fornecedor da peça passaram a mostrá-lo. A função existia desde a sessão 15 e estava ligada em poucos lugares — o nome completo era o padrão e devia ser a exceção</div>
+      <div class="cl-item">Nome completo fica onde ele é o nome legal e não um rótulo: contrato, cadastro do cliente e relatório. Na busca, o resultado do tipo CLIENTE também mantém o nome inteiro — é o cadastro que você vai abrir</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.267.0</span><span class="cl-ver-date">10/08/2026</span></div>
