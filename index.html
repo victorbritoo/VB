@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.274.1</title>
+<title>VB - v1.274.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12702,7 +12702,7 @@ function MER_abrir(id){
   hh+=lin('De Quem Comprei', VB_nomeSePuro(r.fornecedor||''))+lin('Forma de Pagamento', r.pagamento||'');
   /* a FORMA diz como; as PARCELAS dizem quanto e quando. Duas perguntas, duas linhas. */
   hh+='<div id="mer-view-parcinfo"></div>';
-  hh+=lin('Sócio', r.socio||'');
+  hh+=lin('Sócio', VB_nomeCurto(r.socio||''));
   if(r.valor_socio!=null && Number(r.valor_socio)>0){
     var _pS=(Number(r.custo)>0)?(' ('+Math.round(Number(r.valor_socio)/Number(r.custo)*100)+'%)'):'';
     hh+=lin('Parte do Sócio', 'R$ '+MER_fmtBR(r.valor_socio)+_pS);
@@ -12728,7 +12728,7 @@ function MER_abrir(id){
       det+=lin('Compra', MER_fmtData(o.data_compra)||'');
       det+=lin('Venda', MER_fmtData(o.data_venda)||(o.status==='vendida'?'':'Em estoque'));
       if(giro!=null&&giro>=0) det+=lin('Giro', giro+'d');
-      if(vo&&vo.cliente) det+=lin('Cliente', vo.cliente);
+      if(vo&&vo.cliente) det+=lin('Cliente', VB_nomeCurto(vo.cliente));
       if(cst!=null) det+=lin('Custo', 'R$ '+MER_fmtBR(cst));
       if(vo&&vo.valor_total!=null){
         var vt=Number(vo.valor_total)||0;
@@ -12785,7 +12785,7 @@ function MER_abrir(id){
         if(!v){ alvo.innerHTML='<div style="text-align:center;color:var(--mu);font-size:11px;padding:8px;">Venda vinculada não encontrada.</div>'; return; }
         var vh='<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;text-align:center;margin:12px 0 6px;">VENDA</div>';
         vh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;">';
-        vh+=lin('Cliente', v.cliente||v.nome||'');
+        vh+=lin('Cliente', VB_nomeCurto(v.cliente||v.nome||''));
         var _dvd=v.data_venda||r.data_venda||null;
         var _dv=_dvd?String(_dvd).split('-'):null;
         var _giro=(r.data_compra&&_dvd&&MER_diasEntre(r.data_compra,_dvd)!=null)?(' ('+MER_diasEntre(r.data_compra,_dvd)+'d)'):'';
@@ -13979,7 +13979,7 @@ function VEN_resumoSocioTexto(d){
       var _n=String(cl.d||''); _n=_n.charAt(0).toUpperCase()+_n.slice(1).toLowerCase();
       L.push('*'+_n+'*: '+HIST_fmtMoeda(cl.v)+'.');
     });
-    L.push('*Custo total*: '+HIST_fmtMoeda(d.custo)+'.');
+    L.push('*Custo Total*: '+HIST_fmtMoeda(d.custo)+'.');
   } else {
     L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
   }
@@ -16613,6 +16613,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.2</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Ficha da peça passou a chamar as pessoas pelo apelido, como o resto do app: SÓCIO e as duas linhas de CLIENTE (na venda vinculada e no bloco de detalhes) eram as últimas de leitura rápida que ainda mostravam o nome inteiro. DE QUEM COMPREI já encurtava. Nome completo segue onde é documento: contrato, cadastro e CSV</div>
+      <div class="cl-item">No texto do resumo do sócio, Custo Total com T maiúsculo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.1</span><span class="cl-ver-date">10/08/2026</span></div>
