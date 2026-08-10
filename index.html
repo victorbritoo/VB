@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.273.0</title>
+<title>VB - v1.274.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6350,7 +6350,8 @@ function VEN_gerarTabela(){
   if(VEN_socioExtra){
     // RESUMO hdr+div, CUSTO+VENDA, faixa LUCRO, MARGEM(+REND+CICLO), div pontilhado, SÓCIO 2 linhas, CAPITAL, faixa LUCRO
     var _nP = (VEN_socioExtra.rend!=null?2:0) + (VEN_socioExtra.diasEst!=null?1:0);   // linhas de % (tempo op, rendimento, ciclo) — margem vive na faixa
-    socioBlkH = 8+6 + 18 + 6 + 20*2 + 4 + 26 + 4 + _nP*20 + 10 + 6 + 15 + 17 + 6 + 20 + 4 + 26 + 4 + 4;
+    var _nC = (VEN_socioExtra.custoLinhas && VEN_socioExtra.custoLinhas.length) ? VEN_socioExtra.custoLinhas.length : 0;
+    socioBlkH = 8+6 + 18 + 6 + 20*2 + 4 + 26 + 4 + _nP*20 + 10 + 6 + 15 + 17 + 6 + 20 + 4 + 26 + 4 + 4 + _nC*17;
   }
   H += socioBlkH;
 
@@ -6477,6 +6478,14 @@ function VEN_gerarTabela(){
       ctx.fillText(val, W-padH, ys+13);
       ys+=20;
     }
+    /* linha de composicao do custo: menor e cinza, para nao competir com o total */
+    function _sSub(lab,val){
+      ctx.fillStyle='#888'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(lab, padH+8, ys+11);
+      ctx.textAlign='right';
+      ctx.fillText(val, W-padH, ys+11);
+      ys+=17;
+    }
     function _sFaixa(lab,val){
       ctx.fillStyle='#111'; ctx.fillRect(padH, ys, W-padH*2, 26);
       ctx.fillStyle='#fff'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='left';
@@ -6490,7 +6499,12 @@ function VEN_gerarTabela(){
     ctx.fillStyle='#111'; ctx.font='700 11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText('RESUMO', W/2, ys+12); ctx.textAlign='left'; ys+=18;
     _sDiv(false); ys+=6;
-    _sLin('CUSTO', HIST_fmtMoeda(sd.custo));
+    if(sd.custoLinhas && sd.custoLinhas.length){
+      sd.custoLinhas.forEach(function(cl){ _sSub(cl.d, HIST_fmtMoeda(cl.v)); });
+      _sLin('CUSTO TOTAL', HIST_fmtMoeda(sd.custo));
+    } else {
+      _sLin('CUSTO', HIST_fmtMoeda(sd.custo));
+    }
     _sLin('VENDA', HIST_fmtMoeda(sd.total));
     ys+=4;
     _sFaixa('LUCRO', HIST_fmtMoeda(sd.lucroTot)+(sd.margem!=null?(' ('+Math.round(sd.margem)+'%)'):''));
@@ -6653,15 +6667,27 @@ function VEN_confirmarOperacao(btn){
         /* status e baixa entram aqui tambem: se a venda tinha virado simulacao, o relogio
            esta no estoque e precisa sair de novo ao voltar a ser venda. Em venda que ja estava
            baixada, isto nao muda nada. */
-        var _novoM={status:'vendida', baixa_em:VB_carimbo(), data_venda:dv, custo:row.custo, socio:row.socio||null, valor_socio:row.valor_socio||null};
+        /* CUSTO tem dois sentidos: na peca e a COMPRA, na venda e compra + gastos COBRAR.
+           Copiar um no outro sem traduzir inflava a compra a cada salvamento e o sync seguinte
+           somava os gastos de novo (sessao 20). Aqui desconta antes de gravar. */
         sb.from('mercadorias').select('*').eq('venda_id', vendaId).then(function(rq){
           var _mOld=(rq.data&&rq.data[0])||null;
-          sb.from('mercadorias').update(_novoM).eq('venda_id', vendaId).select().then(function(rm){
-            if(!rm.error && rm.data && rm.data.length){
-              var _dm2=_mOld?VB_logDiff(_mOld,_novoM):'';
-              if(_dm2) VB_log('ESTOQUE','editou', rm.data[0].descricao||'', 'Atualizado pela venda · '+_dm2);
-            }
-          });
+          function _aplicaM(_ex){
+            var _cm=Math.round(((Number(row.custo)||0)-(Number(_ex)||0))*100)/100;
+            if(!(_cm>0)) _cm=Number(row.custo)||0;   /* gasto maior que o custo: nao inventa compra negativa */
+            var _novoM={status:'vendida', baixa_em:VB_carimbo(), data_venda:dv, custo:_cm, socio:row.socio||null, valor_socio:row.valor_socio||null};
+            sb.from('mercadorias').update(_novoM).eq('venda_id', vendaId).select().then(function(rm){
+              if(!rm.error && rm.data && rm.data.length){
+                var _dm2=_mOld?VB_logDiff(_mOld,_novoM):'';
+                if(_dm2) VB_log('ESTOQUE','editou', rm.data[0].descricao||'', 'Atualizado pela venda · '+_dm2);
+              }
+            });
+          }
+          if(!_mOld || !_mOld.id){ _aplicaM(0); return; }
+          sb.from('mercadoria_custos').select('valor,cobrar').eq('mercadoria_id', _mOld.id).then(function(rg){
+            var _ex=0; (((rg&&rg.data)||[])).forEach(function(g){ if(g.cobrar) _ex+=Number(g.valor)||0; });
+            _aplicaM(Math.round(_ex*100)/100);
+          }).catch(function(){ _aplicaM(0); });
         });
       }
     })();
@@ -13856,6 +13882,34 @@ function VEN_rendCalc(){
 }
 // ===== Resumo da operação pro sócio (vendas em sociedade) =====
 var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null, VEN_fotoVoltaSocio=null;
+/* Detalhe do custo na folha do socio: a compra da peca e os gastos marcados COBRAR.
+   O vinculo e mercadorias.venda_id e os gastos vivem em mercadoria_custos. Carrega por conta
+   propria porque a folha abre pelo Historico, sem passar pelo Estoque (onde MER_gastos nasce). */
+var VEN_custoDet=null; // null | 'loading' | mapa venda_id -> {compra, itens:[{d,v}]}
+function VEN_custoDetCarrega(cb){
+  if(VEN_custoDet && VEN_custoDet!=='loading'){ if(cb) cb(); return; }
+  VEN_custoDet='loading';
+  Promise.all([
+    sb.from('mercadorias').select('id,venda_id,custo').not('venda_id','is',null).limit(20000),
+    sb.from('mercadoria_custos').select('mercadoria_id,descricao,valor,cobrar,data').limit(20000)
+  ]).then(function(res){
+    var mapa={}, pecaDe={};
+    ((res[0]&&res[0].data)||[]).forEach(function(m){
+      if(!m.venda_id) return;
+      pecaDe[String(m.id)]=String(m.venda_id);
+      mapa[String(m.venda_id)]={compra:Number(m.custo)||0, itens:[]};
+    });
+    var gs=((res[1]&&res[1].data)||[]).slice();
+    gs.sort(function(a,b){ return String(a.data||'')<String(b.data||'')?-1:1; });
+    gs.forEach(function(g){
+      if(!g.cobrar) return;
+      var vid=pecaDe[String(g.mercadoria_id)]; if(!vid||!mapa[vid]) return;
+      mapa[vid].itens.push({d:String(g.descricao||'GASTO').toUpperCase(), v:Number(g.valor)||0});
+    });
+    VEN_custoDet=mapa;
+    if(cb) cb();
+  }).catch(function(){ VEN_custoDet={}; if(cb) cb(); });
+}
 function VEN_resumoSocioDados(r, dcHint){
   if(!r) return null;
   var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
@@ -13897,7 +13951,17 @@ function VEN_resumoSocioDados(r, dcHint){
     if(isFinite(m2)&&m2>0) cic=m2;
   })();
   var rend=(cic&&c>0)?VB_termometro(l, c, cic):null; // rendimento do NEGÓCIO: lucro total sobre custo total
-  return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(VB_nomeCurto(r.socio)).toUpperCase(),
+  /* so detalha quando a conta fecha: compra + gastos COBRAR = custo gravado na venda.
+     Gasto mexido depois da venda faz a soma divergir; folha assinada nao mostra soma que nao fecha. */
+  var custoLinhas=null;
+  (function(){
+    if(!VEN_custoDet || VEN_custoDet==='loading') return;
+    var dd=VEN_custoDet[String(r.id)]; if(!dd || !dd.itens.length) return;
+    var som=0; dd.itens.forEach(function(x){ som+=x.v; });
+    if(Math.abs((dd.compra+som)-c) > 0.5) return;
+    custoLinhas=[{d:'COMPRA', v:dd.compra}].concat(dd.itens);
+  })();
+  return { titulo:titulo, sn:sn, cliente:(r.cliente||null), socio:String(VB_nomeCurto(r.socio)).toUpperCase(), custoLinhas:custoLinhas,
     dataVenda:(r.data_venda?HIST_fmtData(r.data_venda):null), total:Number(r.valor_total)||0,
     parc:parc, custo:c, lucroTot:l, margem:(c>0?(l/c*100):null), cic:cic, rend:rend, diasEst:diasEst,
     capS:vs, lucroS:lS, pctS:(vs>0?(lS/vs*100):null), racha:(100-pVB) };
@@ -13907,7 +13971,15 @@ function VEN_resumoSocioTexto(d){
   L.push('*'+d.titulo+'*.');
   var l2=[]; if(d.sn) l2.push('*SN*: '+d.sn); if(d.dataVenda) l2.push('*Venda*: '+d.dataVenda);
   if(l2.length) L.push(l2.join(' \u00b7 ')+'.');
-  L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
+  if(d.custoLinhas && d.custoLinhas.length){
+    d.custoLinhas.forEach(function(cl){
+      var _n=String(cl.d||''); _n=_n.charAt(0).toUpperCase()+_n.slice(1).toLowerCase();
+      L.push('*'+_n+'*: '+HIST_fmtMoeda(cl.v)+'.');
+    });
+    L.push('*Custo total*: '+HIST_fmtMoeda(d.custo)+'.');
+  } else {
+    L.push('*Custo*: '+HIST_fmtMoeda(d.custo)+'.');
+  }
   L.push('*Venda*: '+HIST_fmtMoeda(d.total)+'.');
   L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
   if(d.diasEst!=null){ L.push('*Tempo de opera\u00e7\u00e3o*: '+d.diasEst+' '+(d.diasEst===1?'dia':'dias')+'.'); }
@@ -13939,6 +14011,10 @@ function VEN_resumoSocioCopiar(d){
   }catch(e){ fallback(); }
 }
 function VEN_resumoSocioSheet(r, dcHint){
+  if(!VEN_custoDet || VEN_custoDet==='loading'){
+    if(VEN_custoDet!=='loading') VEN_custoDetCarrega(function(){ VEN_resumoSocioSheet(r, dcHint); });
+    return;
+  }
   var d=VEN_resumoSocioDados(r, dcHint);
   if(!d){ VB_toast('Essa venda n\u00e3o \u00e9 sociedade.'); return; }
   VEN_resumoAtual=d; VEN_resumoAtualRow=r;
@@ -16534,6 +16610,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">CUSTO tinha dois sentidos e o app copiava um no outro sem traduzir: na peça ele é a COMPRA, na venda é compra + gastos marcados COBRAR. Salvar a venda gravava o custo cheio no campo de compra da peça — o Daytona virou 61.250 de compra quando foram 60.000, a Sub 40 virou 50.250 quando foram 50.000 — e o próximo gasto tocado somava os gastos de novo por cima. Agora a volta venda → peça desconta os gastos, e as duas peças se corrigem sozinhas no primeiro salvamento de cada venda</div>
+      <div class="cl-item">A folha do sócio abre o custo em linhas quando a peça teve gasto: COMPRA, cada gasto marcado COBRAR pelo nome, e CUSTO TOTAL fechando embaixo. Vai na foto e no texto copiado, que saem juntos. Só detalha quando a soma fecha exatamente no custo gravado na venda — folha assinada não mostra conta que não fecha, então gasto mexido depois da venda faz a folha voltar a uma linha só. Os gastos são lidos por conta própria, sem depender de o Estoque ter sido aberto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.273.0</span><span class="cl-ver-date">10/08/2026</span></div>
