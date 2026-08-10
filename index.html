@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.265.2</title>
+<title>VB - v1.265.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11299,10 +11299,13 @@ function REN_ficha(k, exp){
      da lista ja usa. Bloco proprio pra ERA quebrava a grade e nao pertencia a coluna nenhuma. */
   var _venc=HIST_fmtData(x.venc);
   if(x.prorrogada){
-    _venc='<span style="color:var(--so);font-weight:600;">'+String(x.vencOrig||'').slice(8,10)+'/'+String(x.vencOrig||'').slice(5,7)+' \u2192 </span>'+_venc;
-    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+HIST_fmtMoeda(x.valorOrig)+'</div>';
+    /* a data velha desce DENTRO da celula do vencimento: alargar a coluna so mudava
+       a vitima do corte -- o STATUS ao lado passava a sair com reticencias */
+    var _era=String(x.vencOrig||'').slice(8,10)+'/'+String(x.vencOrig||'').slice(5,7);
+    if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _era+=' \u00b7 '+HIST_fmtMoeda(x.valorOrig);
+    _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+_era+'</div>';
   }
-  hh+='<div style="display:grid;grid-template-columns:'+(x.prorrogada?'1fr 1.45fr 0.95fr 0.75fr':'1.1fr 1fr 1fr 0.9fr')+';gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
   /* VALOR HOJE: so existe quando ha atraso correndo e sobra a receber. Toque copia so o numero,
      que e o que vai colado na conversa com o cliente. */
   (function(){
@@ -16270,6 +16273,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.265.3</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Alargar a coluna do vencimento na prorrogada só mudou a vítima do corte: o STATUS ao lado passou a sair com reticências. As larguras voltaram ao normal e a data antiga desceu DENTRO da própria célula, sem roubar espaço de ninguém</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.265.2</span><span class="cl-ver-date">10/08/2026</span></div>
