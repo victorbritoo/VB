@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.264.1</title>
+<title>VB - v1.265.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9955,7 +9955,7 @@ function REN_copia(txt, msg){
     ta.select(); document.execCommand('copy'); ta.remove(); VB_toast(msg||'Copiado.');
   }catch(e){ VB_toast('N\u00e3o consegui copiar.'); }
 }
-function REN_nm(x){ if(x && x.tab==='cr') return ''; /* entrada manual e titulo solto, nao parcela de cronograma */
+function REN_nm(x){ if(x && x.tab==='cr' && !(Number(x.tot)>1)) return ''; /* titulo solto nao tem o que contar */
   var _d=(x.dnum!=null?x.dnum:x.idx); return ('0'+(_d+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
 /* Repasse combinado de antemao para uma parcela ainda em aberto. Null = nao foi combinado nada,
    entao vale o proporcional. */
@@ -10303,8 +10303,11 @@ function REN_crSheet(id){
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
-    +(c?('<button onclick="REN_crExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
-    +'<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +(c?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
+        +'<button onclick="REN_crExcluir(this,\'' + String(c.id) + '\')" style="' + 'padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+'color:var(--so2);background:transparent;">EXCLUIR</button>'
+        +'<button onclick="REN_crFecharGuard()" style="' + 'padding:11px 4px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+'color:var(--mu2);font-weight:500;">FECHAR</button>'
+      +'</div>')
+      :('<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
   REN_crEditId = c ? String(c.id) : '';
@@ -10330,10 +10333,16 @@ function REN_crSalvar(id){
     REN_crParcLe();
     var linhas=[];
     var ruim=false;
-    (REN_crParc||[]).forEach(function(pp){
+    var _lote=(function(){
+      try{ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(ch){
+        var r=Math.random()*16|0; return (ch==='x'?r:((r&0x3)|0x8)).toString(16);
+      });
+    })();
+    (REN_crParc||[]).forEach(function(pp, i){
       var vv=REN_num(pp.valor), dd=REN_brToISO(pp.data);
       if(!(vv>0) || !dd){ ruim=true; return; }
-      linhas.push({devedor:(dv||null), descricao:(ds||null), valor:vv, venc:dd, nota:(nt||null)});
+      linhas.push({devedor:(dv||null), descricao:(ds||null), valor:vv, venc:dd, nota:(nt||null), lote:_lote, ordem:i});
     });
     if(ruim || !linhas.length){ VB_toast('Preencha valor e vencimento de todos os t\u00edtulos.'); return; }
     reg=linhas; nT=linhas.length; v=linhas[0].valor; d=linhas[0].venc;
@@ -10871,11 +10880,28 @@ function REN_abrir(){
        E CAIXA, NAO LUCRO -- espelho da regra das SAIDAS, que nunca descontam do lucro. */
     var crErro=(res[9]&&res[9].error)?String((res[9].error&&res[9].error.message)||''):'';
     var crRows=((res[9]&&res[9].data)||[]).slice();
+    /* LOTE: dois cheques lancados juntos sao irmaos, nao dois lancamentos soltos.
+       opId = lote e idx = ordem fazem deles parcelas da mesma "operacao" -- e a ficha,
+       o contador NN de NN e a lista de irmaos passam a funcionar sem excecao nenhuma.
+       Linha antiga, sem lote, cai no proprio id: fica sozinha, que e o que ela e. */
+    var _lotes={};
     crRows.forEach(function(c){
-      itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
-        cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
-        rot:String(c.descricao||'ENTRADA MANUAL'),
-        tab:'cr', opId:String(c.id), idx:0, tot:1, dnum:0, cr:c});
+      var L=String(c.lote||c.id);
+      (_lotes[L]=_lotes[L]||[]).push(c);
+    });
+    Object.keys(_lotes).forEach(function(L){
+      var g=_lotes[L].slice();
+      g.sort(function(a,b2){
+        var oa=Number(a.ordem)||0, ob=Number(b2.ordem)||0;
+        if(oa!==ob) return oa-ob;
+        return String(a.venc||'')<String(b2.venc||'')?-1:1;
+      });
+      g.forEach(function(c, i){
+        itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
+          cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
+          rot:String(c.descricao||'ENTRADA MANUAL'),
+          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:i, cr:c});
+      });
     });
     /* PRORROGACAO: mora em tabela lateral, como a nota e o repasse. A data e o valor ORIGINAIS
        continuam sendo os da operacao e ficam guardados em vencOrig/valorOrig. Como o resto do app
@@ -11358,7 +11384,7 @@ function REN_ficha(k, exp){
   hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">'
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_notaSheet(\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(REN_notaDe(x)?'EDITAR NOTA':'NOTA')+'</button>'
     +((x.tab==='cr')
-      ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+x.opId+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
+      ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+((x.cr&&x.cr.id)||x.opId)+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
       : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
     +'</div>';
@@ -16238,6 +16264,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.265.0</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Os títulos lançados juntos passaram a ser irmãos. Dois cheques do mesmo terceiro agora têm lote em comum, aparecem como 01 DE 02 e a ficha de um lista o outro — igual à ficha de uma operação. Antes eram dois lançamentos soltos que só a sua cabeça ligava</div>
+      <div class="cl-item">Título sozinho continua sem contador: 01 DE 01 não diz nada. Entrada antiga, sem lote, fica sozinha — que é o que ela é</div>
+      <div class="cl-item">EXCLUIR e FECHAR lado a lado na folha da entrada, em vez de empilhados</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.264.1</span><span class="cl-ver-date">10/08/2026</span></div>
