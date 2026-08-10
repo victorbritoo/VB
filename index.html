@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.272.2</title>
+<title>VB - v1.272.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10932,7 +10932,9 @@ function REN_abrir(){
     sb.from('parcela_notas').select('*').limit(20000),
     sb.from('contas_pagar').select('*').limit(20000),
     sb.from('parcela_prorroga').select('*').limit(20000),
-    sb.from('contas_receber').select('*').limit(20000)
+    sb.from('contas_receber').select('*').limit(20000),
+    sb.from('mercadorias').select('id,venda_id').not('venda_id','is',null).limit(20000),
+    sb.from('mercadoria_custos').select('mercadoria_id,valor,cobrar').limit(20000)
   ]).then(function(res){
     var semTabela=!!(res[3]&&res[3].error);
     var erroBx=semTabela?String((res[3].error&&res[3].error.message)||''):'';
@@ -11028,7 +11030,20 @@ function REN_abrir(){
     var cpErro=(res[7]&&res[7].error)?String((res[7].error&&res[7].error.message)||''):'';
     var cp=((res[7]&&res[7].data)||[]).slice();
     cp.sort(function(a,b2){ return String(a.venc||'')<String(b2.venc||'')?-1:1; });
-    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro};
+        /* O extra adiantado precisa ser lido AQUI: antes ele saia de MER_rows/MER_gastos, que so
+       existem depois de o VB abrir a tela de Estoque. Vindo direto para ENTRADAS a memoria
+       estava vazia e o botao MEU EXTRA PRIMEIRO se escondia achando que nao havia extra. */
+    var exVenda={};
+    (function(){
+      var pecaDe={};
+      ((res[10]&&res[10].data)||[]).forEach(function(m){ pecaDe[String(m.id)]=String(m.venda_id); });
+      ((res[11]&&res[11].data)||[]).forEach(function(g){
+        if(!g.cobrar) return;
+        var vid=pecaDe[String(g.mercadoria_id)]; if(!vid) return;
+        exVenda[vid]=Math.round(((exVenda[vid]||0)+(Number(g.valor)||0))*100)/100;
+      });
+    })();
+    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro, exVenda:exVenda};
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
   });
@@ -11672,12 +11687,11 @@ function REN_prevSoma(){
    caixa de 1.500 numa venda de 42 parcelas leva tres anos e meio pra voltar. */
 function REN_prevExtraVB(tab, opId){
   if(tab!=='ven') return 0;
-  var vid=String(opId), pid=null;
-  (MER_rows||[]).forEach(function(m){ if(String(m.venda_id)===vid) pid=String(m.id); });
-  if(!pid) return 0;
+  var vid=String(opId);
   var oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo['ven|'+vid];
   if(!oi || oi.consig) return 0;                    /* consignada: o repasse ja e do dono */
-  var ex=MER_gastoTotal(pid, true); if(!(ex>0)) return 0;
+  var ex=(REN_cache&&REN_cache.exVenda&&REN_cache.exVenda[vid])||0;
+  if(!(ex>0)) return 0;
   /* A parte do socio no extra e a DIVISAO DO LUCRO, nao a fatia dele no valor da venda:
      o gasto derruba o lucro, e o lucro racha pelo pctVB. Usar vs/vt dava 567,73 onde a queda
      real na parte do socio era 575 -- base errada para o mesmo fato. */
@@ -16513,6 +16527,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.3</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO não aparecia. Ele lia os gastos da memória do Estoque, que só é carregada quando essa tela é aberta — vindo direto para ENTRADAS ela estava vazia e o botão se escondia achando que não havia extra. Agora o extra é lido junto com o resto das entradas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.272.2</span><span class="cl-ver-date">10/08/2026</span></div>
