@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.269.0</title>
+<title>VB - v1.269.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10996,8 +10996,11 @@ function REN_abrir(){
          mesma coisa duas vezes. O alvo do socio passa a ser proporcional so ao que ainda entra
          em dinheiro. Se um dia ele quiser o dinheiro da troca em vez da peca, isso vira uma
          entrada manual ou a participacao dele na peca -- decisao do VB, nao regra do app. */
+      /* O campo da troca na parcela gravada chama "t" (com m/sn/mid da peca que entrou),
+         nao "troca" -- esse e o nome so enquanto a venda esta sendo montada na tela. */
       var _vTroca=0;
-      try{ (r.parcelas||[]).forEach(function(pp){ if(pp && pp.troca) _vTroca+=(VEN_parseBR(pp.v||pp.valor||'')||0); }); }catch(e){}
+      try{ (r.parcelas||[]).forEach(function(pp){ if(pp && (pp.t || pp.troca)) _vTroca+=(VEN_parseBR((pp.v||pp.valor)||'')||0); }); }catch(e){}
+      _vTroca=Math.round(_vTroca*100)/100;
       if(_vTroca>0 && vt2>0){
         vt2=Math.round(Math.max(0, vt2-_vTroca)*100)/100;
         if(!consig2) vsTot=Math.round(vsTot*(vt2>0?(vt2/(vt2+_vTroca)):0)*100)/100;
@@ -16435,6 +16438,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.269.2</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">O campo da troca na parcela gravada chama t, não troca — troca é o nome só enquanto a venda está sendo montada na tela. Eu tinha chutado o nome duas vezes sem abrir o dado. Agora o alvo do sócio na venda com troca cai de verdade</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.269.1</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">A regra da troca não pegava: eu procurava a troca dentro das parcelas da venda e ela não mora lá — é gravada na peça que entrou. Agora o app compara o valor total com a soma das parcelas, e a diferença é a troca, não importa onde esteja guardada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.269.0</span><span class="cl-ver-date">10/08/2026</span></div>
