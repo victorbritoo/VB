@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.276.1</title>
+<title>VB - v1.276.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11518,20 +11518,30 @@ function REN_ficha(k, exp){
       var _txt;
       /* Se o combinado desta parcela e exatamente o que o MEU EXTRA PRIMEIRO produz, o motivo
          tem nome. Fora isso, diz so o tamanho da diferenca, sem inventar causa. */
-      var _bate=false;
+      /* _bate so vale na parcela de onde o extra foi REALMENTE descontado. No modo extra todas
+         as parcelas mudam de valor, porque o que sobra e redistribuido: sem olhar o corte, a
+         frase do custo aparecia em todas e dizia que 1.250 saiu de cada uma. */
+      var _bate=false, _fora=false;
       if(_ex>0){
         var _sv=REN_prevCtx;
         REN_prevCtx={tab:x.tab, opId:x.opId, oi:oi, ps:REN_opParcelas(x.tab,x.opId), voltar:null};
         try{
           var _lst=REN_prevCalcExtraSemDOM();
-          if(_lst){ for(var _n=0;_n<_lst.length;_n++){ if(_lst[_n].key===REN_key(x)){ _bate=Math.abs(_lst[_n].v-_rp)<=0.005; break; } } }
+          if(_lst){ for(var _n=0;_n<_lst.length;_n++){ if(_lst[_n].key===REN_key(x)){
+            var _ig=Math.abs(_lst[_n].v-_rp)<=0.005;
+            _bate=_ig && (_lst[_n].corte>0.005);
+            _fora=_ig && !(_lst[_n].corte>0.005);   /* mudou so por tabela, quem explica e a outra */
+            break;
+          } } }
         }catch(e){}
         REN_prevCtx=_sv;
       }
       /* Tres frases, da mais concreta para a mais generica: o socio nao leva nada desta parcela;
          o que sai daqui e o seu custo, e com o nome de cada gasto; ou, sem causa conhecida,
          so o tamanho da diferenca. Nunca inventar motivo. */
-      if(_rp<=0.005){
+      if(_fora){
+        _txt='';
+      } else if(_rp<=0.005){
         _txt='SEM REPASSE AO S\u00d3CIO';
       } else if(_bate){
         var _nms=(REN_cache.exNomes&&x.tab==='ven')?(REN_cache.exNomes[String(x.opId)]||[]):[];
@@ -11540,7 +11550,7 @@ function REN_ficha(k, exp){
       } else {
         _txt='COMBINADO \u00b7 '+HIST_fmtMoeda(Math.abs(_dif))+(_dif>0?' A MENOS':' A MAIS')+' QUE O RATEIO';
       }
-      hh+='<div style="margin:0 0 6px;font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;">'+_txt+'</div>';
+      if(_txt) hh+='<div style="margin:0 0 6px;font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;">'+_txt+'</div>';
     }
   }
   if(_bRep) hh+=_bRep;
@@ -11825,7 +11835,7 @@ function REN_prevCalcExtraSemDOM(){
     var v=Math.round((val-corte)*prop*100)/100;
     if(n===ab.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
     soma=Math.round((soma+v)*100)/100;
-    out.push({key:REN_key(i), v:v});
+    out.push({key:REN_key(i), v:v, corte:corte});
   });
   return out;
 }
@@ -16780,6 +16790,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.2</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">A frase do custo aparecia em todas as parcelas da operação, dizendo que os mesmos R$ 1.250,00 saíram de cada uma. No MEU EXTRA PRIMEIRO todas mudam de valor, porque o que sobra é redistribuído — mas o extra sai de uma só. Agora a frase fica na parcela de onde ele foi descontado, e as demais não dizem nada: quem explica a diferença delas é a primeira</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.1</span><span class="cl-ver-date">11/08/2026</span></div>
