@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.275.8</title>
+<title>VB - v1.275.9</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11686,8 +11686,8 @@ function REN_prevSheet(k){
        recebe a medida que ele recebe -- e um botao que oferece pratica que ele nunca teve so
        serve pra ser tocado por engano. */
     +(oi.consig?('<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'):'')
-    +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
-    +'<button onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
+    +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button id="renp-b-extra" onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
+    +'<button id="renp-b-prop" onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
@@ -11713,6 +11713,70 @@ function REN_prevVoltar(){
   var c=REN_prevCtx;
   var ov=document.getElementById('ren-prev-ov'); if(ov) ov.style.display='none';
   if(c && c.voltar) REN_ficha(c.voltar);
+}
+/* Cada modo calcula sua lista sem escrever na tela. Assim o mesmo numero serve pra aplicar
+   e pra saber se o botao ja esta aplicado -- botao que oferece o que ja esta feito e botao
+   que o dedo aprende a ignorar. */
+function REN_prevAbertas(){
+  var c=REN_prevCtx, ab=[]; if(!c) return ab;
+  c.ps.forEach(function(i, ix){
+    if(REN_cache.bx[REN_key(i)]) return;
+    if(!document.getElementById('renp-'+ix)) return;
+    ab.push({i:i, ix:ix});
+  });
+  return ab;
+}
+function REN_prevResta(){
+  var c=REN_prevCtx; if(!c) return 0;
+  var r=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
+  c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) r-=REN_repDe(i, b); });
+  return Math.round(Math.max(0,r)*100)/100;
+}
+function REN_prevCalcProp(){
+  var c=REN_prevCtx; if(!c) return null;
+  var ab=REN_prevAbertas(); if(!ab.length) return null;
+  var resta=REN_prevResta(), soma=0, out=[];
+  ab.forEach(function(a, n){
+    var v=Math.round((Number(REN_repDef(c.oi,a.i))||0)*100)/100;
+    if(n===ab.length-1) v=Math.min(Number(a.i.valor)||0, Math.max(0, Math.round((resta-soma)*100)/100));
+    soma=Math.round((soma+v)*100)/100; out.push({ix:a.ix, v:v});
+  });
+  return out;
+}
+function REN_prevCalcExtra(){
+  var c=REN_prevCtx; if(!c) return null;
+  var ex=REN_prevExtraVB(c.tab, c.opId); if(!(ex>0)) return null;
+  var ab=REN_prevAbertas(); if(!ab.length) return null;
+  var resta=REN_prevResta(), aberto=0;
+  ab.forEach(function(a){ aberto+=Number(a.i.valor)||0; });
+  var tira=Math.min(ex, aberto);
+  var pote=Math.round((aberto-tira)*100)/100;
+  var prop=(pote>0)?(resta/pote):0;
+  var sobraEx=tira, soma=0, out=[];
+  ab.forEach(function(a, n){
+    var val=Number(a.i.valor)||0;
+    var corte=Math.min(val, sobraEx);
+    sobraEx=Math.round((sobraEx-corte)*100)/100;
+    var v=Math.round((val-corte)*prop*100)/100;
+    if(n===ab.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
+    soma=Math.round((soma+v)*100)/100; out.push({ix:a.ix, v:v});
+  });
+  return out;
+}
+function REN_prevAplica(lista){
+  if(!lista) return;
+  lista.forEach(function(o){
+    var el=document.getElementById('renp-'+o.ix); if(!el) return;
+    el.value=Number(o.v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
+}
+function REN_prevIgual(lista){
+  if(!lista) return false;
+  for(var n=0;n<lista.length;n++){
+    var el=document.getElementById('renp-'+lista[n].ix); if(!el) return false;
+    if(Math.abs((REN_num(el.value)||0)-lista[n].v)>0.005) return false;
+  }
+  return true;
 }
 function REN_prevSoma(){
   var c=REN_prevCtx; if(!c) return;
@@ -11740,6 +11804,12 @@ function REN_prevSoma(){
     bs.style.color=sujo?'var(--acc-tx)':'var(--mu2)';
     bs.style.border=sujo?'none':'0.5px solid var(--ln3)';
   }
+  [['renp-b-extra', REN_prevCalcExtra()], ['renp-b-prop', REN_prevCalcProp()]].forEach(function(par){
+    var b=document.getElementById(par[0]); if(!b) return;
+    var feito=REN_prevIgual(par[1]);
+    b.style.pointerEvents=feito?'none':'';
+    b.style.opacity=feito?'0.4':'';
+  });
   el.innerHTML='<div style="'+L+'"><span style="'+R+'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">'+CLIP_esc(String(c.oi.socio).toUpperCase())+':</span>'
       +'<span style="font-size:11px;font-weight:700;white-space:nowrap;flex:none;padding-left:8px;color:'+(fecha?'var(--tx)':'var(--red)')+';">'+HIST_fmtMoeda(soma)+' DE '+HIST_fmtMoeda(alvo)+'</span></div>'
     +(fecha?'':('<div style="text-align:right;font-size:10px;font-weight:700;color:var(--red);margin-top:1px;">'+(falta>0?'FALTAM ':'SOBRAM ')+HIST_fmtMoeda(Math.abs(falta))+'</div>'))
@@ -11768,32 +11838,9 @@ function REN_prevExtraPrim(auto){
   var c=REN_prevCtx; if(!c) return;
   var ex=REN_prevExtraVB(c.tab, c.opId);
   if(!(ex>0)){ if(!auto) VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
-  var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
-  c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) resta-=REN_repDe(i, b); });
-  resta=Math.round(Math.max(0,resta)*100)/100;
-  /* O extra sai do TOPO da primeira parcela em aberto e o que sobra no pote racha na
-     proporcao do alvo -- capital igual e lucro meio a meio dao exatamente metade. A ultima
-     parcela fecha os centavos pra soma bater com o alvo, sem FALTAM sobrando na tela. */
-  var abertas=[], aberto=0;
-  c.ps.forEach(function(i, ix){
-    if(REN_cache.bx[REN_key(i)]) return;
-    if(!document.getElementById('renp-'+ix)) return;
-    abertas.push({i:i, ix:ix}); aberto+=Number(i.valor)||0;
-  });
-  if(!abertas.length){ VB_toast('Nenhuma parcela em aberto.'); return; }
-  var tira=Math.min(ex, aberto);
-  var pote=Math.round((aberto-tira)*100)/100;
-  var prop=(pote>0)?(resta/pote):0;
-  var sobraEx=tira, soma=0;
-  abertas.forEach(function(a, n){
-    var val=Number(a.i.valor)||0;
-    var corte=Math.min(val, sobraEx);
-    sobraEx=Math.round((sobraEx-corte)*100)/100;
-    var v=Math.round((val-corte)*prop*100)/100;
-    if(n===abertas.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
-    soma=Math.round((soma+v)*100)/100;
-    document.getElementById('renp-'+a.ix).value=v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  });
+  var lista=REN_prevCalcExtra();
+  if(!lista){ if(!auto) VB_toast('Nenhuma parcela em aberto.'); return; }
+  REN_prevAplica(lista);
   REN_prevSoma();
   /* Regra que mexe em dinheiro nao pode ser invisivel: a folha diz de onde saiu. */
   var _nt=document.getElementById('renp-nota');
@@ -11845,25 +11892,7 @@ function REN_prevSalvar(){
 }
 function REN_prevProp(){
   var c=REN_prevCtx; if(!c) return;
-  /* O rateio arredonda cada parcela e a soma ficava um centavo abaixo do alvo, acendendo
-     FALTAM numa folha certa. A ultima em aberto fecha a diferenca, como o extra ja faz.
-     Vermelho que aparece a toa e vermelho que se para de ler. */
-  var _alvo=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
-  c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) _alvo-=REN_repDe(i, b); });
-  _alvo=Math.round(_alvo*100)/100;
-  var _ab=[];
-  c.ps.forEach(function(i, ix){
-    if(REN_cache.bx[REN_key(i)]) return;
-    if(!document.getElementById('renp-'+ix)) return;
-    _ab.push({i:i, ix:ix});
-  });
-  var _soma=0;
-  _ab.forEach(function(a, n){
-    var v=Math.round((Number(REN_repDef(c.oi,a.i))||0)*100)/100;
-    if(n===_ab.length-1) v=Math.min(Number(a.i.valor)||0, Math.max(0, Math.round((_alvo-_soma)*100)/100));
-    _soma=Math.round((_soma+v)*100)/100;
-    document.getElementById('renp-'+a.ix).value=Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  });
+  REN_prevAplica(REN_prevCalcProp());
   var _nt=document.getElementById('renp-nota'); if(_nt){ _nt.style.display='none'; _nt.textContent=''; }
   REN_prevSoma();
 }
@@ -16685,6 +16714,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.9</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO e VOLTAR AO PROPORCIONAL continuavam acesos mesmo com o resultado deles já na tela, e tocá-los não fazia nada. Agora cada um calcula o próprio resultado, compara com o que está nos campos e se apaga quando já está aplicado — mesma linguagem do SALVAR. O cálculo de cada modo passou a viver separado da escrita na tela, então é o mesmo número que aplica e que responde se já foi aplicado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.8</span><span class="cl-ver-date">11/08/2026</span></div>
