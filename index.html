@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.274.9</title>
+<title>VB - v1.275.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6084,6 +6084,9 @@ function VEN_syncFromParcelas(){
   var _pv=document.getElementById('ven-tabelaData');
   if(_pv && count>0){ var _d1=(VEN_parcelas[0].data||'').trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(_d1) && _pv.value!==_d1) _pv.value=_d1; }
   VEN_updateLucro();
+  /* Apagar ou repetir parcela mexe na lista por codigo: nao dispara input, e o botao de salvar
+     ficava apagado com a venda ja alterada. Repinta aqui, que e por onde toda mexida passa. */
+  try{ VB_dirtyPaintTela('ven'); }catch(e){}
 }
 
 // Fluxo único: a lista de parcelas é gerada dos campos de cima e fica sempre editável.
@@ -6111,7 +6114,19 @@ function VEN_repetirParcela(btn){
   if(last && last.data){
     var pp=last.data.split('/');
     if(pp.length===3){
-      var _p0=(VEN_parcelas[0]&&VEN_parcelas[0].data)?VEN_parcelas[0].data.split('/'):null;var _anc=(_p0&&_p0.length===3)?parseInt(_p0[0],10):null;var d=VB_mesData(new Date(parseInt(pp[2]),parseInt(pp[1])-1,parseInt(pp[0])),1,_anc); /* +1 mes, travado no ultimo dia */
+      /* A ancora do +1 mes vem da propria ultima parcela: a serie pode ter mudado de dia no
+         meio (1a parcela na data da venda, o resto todo dia 20) e ancorar na primeira devolvia
+         o dia dela. Se a ultima caiu no ultimo dia do mes, pode ter sido truncada (31/01 -> 28/02),
+         entao a penultima recupera o dia cheio. */
+      var _diaU=parseInt(pp[0],10);
+      var _ultDiaMes=new Date(parseInt(pp[2]),parseInt(pp[1]),0).getDate();
+      var _anc=_diaU;
+      if(_diaU===_ultDiaMes && VEN_parcelas.length>1){
+        var _pen=VEN_parcelas[VEN_parcelas.length-2];
+        var _pp2=(_pen&&_pen.data)?String(_pen.data).split('/'):null;
+        if(_pp2&&_pp2.length===3){ var _d2=parseInt(_pp2[0],10); if(_d2>_anc) _anc=_d2; }
+      }
+      var d=VB_mesData(new Date(parseInt(pp[2]),parseInt(pp[1])-1,parseInt(pp[0])),1,_anc); /* +1 mes, travado no ultimo dia */
       novo.data=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
     }
   }
@@ -16635,6 +16650,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.0</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">Apagar parcela no × não acendia o ATUALIZAR: o botão só reagia a digitação, e mexer na lista acontece por código. A venda ficava alterada na tela com o botão apagado, e sair descartava calado. Vale também pro + REPETIR ÚLTIMA e pra qualquer mexida na lista</div>
+      <div class="cl-item">+ REPETIR ÚLTIMA puxava o dia da PRIMEIRA parcela: numa venda cuja 1ª cai na data da troca (07) e o resto vence todo dia 20, repetir depois de 20/05 devolvia 07/06. Agora o dia vem da própria última parcela — e quando ela caiu no último dia do mês (31/01 vira 28/02), a penúltima devolve o dia cheio</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.9</span><span class="cl-ver-date">11/08/2026</span></div>
