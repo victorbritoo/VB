@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.275.7</title>
+<title>VB - v1.275.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11845,10 +11845,24 @@ function REN_prevSalvar(){
 }
 function REN_prevProp(){
   var c=REN_prevCtx; if(!c) return;
+  /* O rateio arredonda cada parcela e a soma ficava um centavo abaixo do alvo, acendendo
+     FALTAM numa folha certa. A ultima em aberto fecha a diferenca, como o extra ja faz.
+     Vermelho que aparece a toa e vermelho que se para de ler. */
+  var _alvo=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
+  c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) _alvo-=REN_repDe(i, b); });
+  _alvo=Math.round(_alvo*100)/100;
+  var _ab=[];
   c.ps.forEach(function(i, ix){
     if(REN_cache.bx[REN_key(i)]) return;
-    var inp=document.getElementById('renp-'+ix); if(!inp) return;
-    inp.value=Number(REN_repDef(c.oi,i)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(!document.getElementById('renp-'+ix)) return;
+    _ab.push({i:i, ix:ix});
+  });
+  var _soma=0;
+  _ab.forEach(function(a, n){
+    var v=Math.round((Number(REN_repDef(c.oi,a.i))||0)*100)/100;
+    if(n===_ab.length-1) v=Math.min(Number(a.i.valor)||0, Math.max(0, Math.round((_alvo-_soma)*100)/100));
+    _soma=Math.round((_soma+v)*100)/100;
+    document.getElementById('renp-'+a.ix).value=Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   });
   var _nt=document.getElementById('renp-nota'); if(_nt){ _nt.style.display='none'; _nt.textContent=''; }
   REN_prevSoma();
@@ -16671,6 +16685,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.8</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">VOLTAR AO PROPORCIONAL deixava FALTAM R$ 0,01 numa folha correta: o rateio arredondava cada parcela e a soma ficava um centavo abaixo do alvo. A última parcela em aberto passou a fechar a diferença, como o MEU EXTRA PRIMEIRO já fazia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.7</span><span class="cl-ver-date">11/08/2026</span></div>
