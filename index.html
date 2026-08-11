@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.276.2</title>
+<title>VB - v1.276.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13223,13 +13223,24 @@ function MER_gastoSheet(pecaId, gastoId){
       :('<button onclick="MER_gastoFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
+  MER_gastoIni=MER_gastoLeitura();
 }
 /* Toque fora fechava sem avisar e levava junto o que estava digitado. */
+var MER_gastoIni=null;
+function MER_gastoLeitura(){
+  function v(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+  var c=document.getElementById('merg-cob');
+  return [v('merg-desc'), v('merg-valor'), v('merg-data'), (c?c.getAttribute('data-on'):'')].join('\u0001');
+}
 function MER_gastoFecharGuard(){
   var o=document.getElementById('mer-gasto-ov');
   var ds=((document.getElementById('merg-desc')||{}).value||'').trim();
   var vv=((document.getElementById('merg-valor')||{}).value||'').trim();
   if(!ds && !vv){ if(o) o.style.display='none'; return; }
+  /* Antes bastava haver texto nos campos pra perguntar, e num custo ja gravado eles sempre
+     estao preenchidos: sair sem tocar em nada acusava alteracao. Agora compara com o estado
+     de quando a folha abriu. Pergunta que aparece a toa e pergunta que se responde no reflexo. */
+  if(MER_gastoIni!=null && MER_gastoLeitura()===MER_gastoIni){ if(o) o.style.display='none'; return; }
   VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
     if(salvar){ var b=document.getElementById('merg-salvar'); if(b) b.click(); }
     else if(o) o.style.display='none';
@@ -16790,6 +16801,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.3</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">Abrir um custo já gravado e fechar sem mexer em nada acusava ALTERAÇÕES FEITAS: a checagem só olhava se os campos tinham texto, e num custo existente eles sempre têm. Agora compara com o estado de quando a folha abriu, incluindo o COBRAR DO CLIENTE</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.2</span><span class="cl-ver-date">11/08/2026</span></div>
