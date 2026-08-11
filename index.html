@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.277.2</title>
+<title>VB - v1.278.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -624,6 +624,7 @@ body{ text-transform:uppercase; }
     </button>
 <!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
          <button onclick="PIN_request('rec')">Recebimentos</button> -->
+    <div id="home-pagar" onclick="HOME_irPagar()" style="display:none;text-align:center;margin-top:14px;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
   </div>
 </div>
@@ -2311,6 +2312,33 @@ function VB_updateBackupStatus(){
       }
     });
   }catch(e){}
+}
+/* ===== A PAGAR na Home =====
+   O total a pagar so existia dentro do painel do ENTRADAS -- lugar onde o VB so entra quando
+   ja lembrou da conta, e ai o aviso chegou tarde. A Home e a unica tela que ele abre sem estar
+   procurando nada. Mostra so ATRASADO e HOJE: e o que muda o que ele faz agora. Sete dias vira
+   paisagem, fica aceso quase sempre e para de ser lido -- o fim de todo aviso que grita demais.
+   Sem nada vencendo, a linha nao aparece: linha vazia e ruido. */
+function HOME_irPagar(){ HOME_pagarIr=true; PIN_request('ren'); }
+var HOME_pagarIr=false;
+function HOME_pagarCarrega(){
+  var el=document.getElementById('home-pagar'); if(!el) return;
+  try{
+    var hoje=REN_hojeISO();   /* dia LOCAL: depois das 21h o UTC ja acha que e amanha */
+    sb.from('contas_pagar').select('valor,venc,pago_em').is('pago_em', null).lte('venc', hoje).limit(2000)
+      .then(function(r){
+        var rows=(r&&r.data)||[];
+        if(!rows.length){ el.style.display='none'; return; }
+        var tot=0, atras=0;
+        rows.forEach(function(c){
+          tot+=Number(c.valor)||0;
+          if(String(c.venc||'')<hoje) atras++;
+        });
+        el.textContent='A PAGAR '+(atras?'\u00b7 '+atras+(atras>1?' ATRASADAS':' ATRASADA'):'HOJE')+' \u00b7 '+HIST_fmtMoeda(tot)+' \u00b7 '+rows.length+(rows.length>1?' CONTAS':' CONTA');
+        el.style.color=atras?'var(--red)':'var(--tx)';
+        el.style.display='';
+      }).catch(function(){ el.style.display='none'; });
+  }catch(e){ el.style.display='none'; }
 }
 function VB_lerBackupLocal(){
   try{ return localStorage.getItem(VB_BACKUP_LS); }catch(e){ return null; }
@@ -5039,6 +5067,7 @@ function showScreen(name){
     var _sm=document.getElementById('screen-mer');
     if(_sm && _sm.style.display==='block'){ MER_dirtyGuard(function(){ showScreen(name); }); return; }
   }
+  if(name==='home'){ HOME_pagarCarrega(); }   /* toda volta pra Home reconfere: conta paga some da linha */
   if(name==='home' && GLB_reabrir){ GLB_reabrir=false; setTimeout(function(){ var ov=document.getElementById('glb-overlay'); if(ov) ov.style.display='flex'; },260); }
   if(name==='mer' && MER_reabrirId){
     var _rid=MER_reabrirId; MER_reabrirId=null;
@@ -5082,7 +5111,7 @@ function showScreen(name){
   if(name==='ges'){ VB_telaAnterior='home'; var _bm=document.getElementById('ges-btn-mig'); if(_bm) _bm.style.display=(Number(localStorage.getItem('vb_mig_duv')||0)>0)?'flex':'none'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
   /* abrir a tela e sempre comecar em ENTRADAS: sem isso REN_aba ficava com o ultimo valor em memoria */
-  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_aba='aberto'; REN_abrir(); VB_telaAnterior='home'; }
+  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_aba=(HOME_pagarIr?'cp':'aberto'); HOME_pagarIr=false; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
@@ -8782,7 +8811,14 @@ function MER_gastosCarrega(cb){
 }
 function MER_load(){
   try{ VB_apelidosCarrega(); }catch(e){}
-  try{ MER_gastosCarrega(function(){ try{ if(MER_viewId) MER_abrir(MER_viewId); }catch(e){} }); }catch(e){}
+  /* Redesenhar a ficha quando os gastos chegam so faz sentido se ela estiver ABERTA na tela.
+     MER_viewId guarda a ultima ficha vista e nao e limpo ao fechar: se a carga terminasse depois
+     de o VB entrar no Estoque, a ficha antiga reabria sozinha. Segundo caminho do mesmo sintoma
+     da v1.274.3 -- la a marca era MER_reabrirId, aqui e o proprio MER_viewId. */
+  try{ MER_gastosCarrega(function(){ try{
+    var _ov=document.getElementById('mer-view-overlay');
+    if(MER_viewId && _ov && _ov.style.display==='flex') MER_abrir(MER_viewId);
+  }catch(e){} }); }catch(e){}
   var hoje=new Date();
   var el=document.getElementById('mer-data');
   if(el && !el.value) el.value=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
@@ -9964,6 +10000,7 @@ function VB_folhaObserva(){
 }
 /* folhas criadas em JS entram depois: reobserva de vez em quando, barato e sem efeito colateral */
 document.addEventListener('DOMContentLoaded', function(){ VB_folhaObserva(); setInterval(VB_folhaObserva, 3000); });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(HOME_pagarCarrega, 1200); });   /* primeira carga: espera a sessao subir */
 
 /* ===== ESTADO PRESSIONADO (motor) =====
    Marca UM elemento por toque. Sobe no maximo 6 niveis procurando o tocavel mais proximo e
@@ -13686,7 +13723,7 @@ function MER_viewFechar(){
 }
 function MER_viewFecharExec(){
   MER_viewEdit=false; MER_viewEditRow=null;
-  GLB_fichaDaBusca=false; MER_fichaDoHist=false; MER_reabrirId=null; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
+  GLB_fichaDaBusca=false; MER_fichaDoHist=false; MER_reabrirId=null; MER_viewId=null; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
 }
 function MER_cancelEdit(){
   MER_editId=null;
@@ -16904,6 +16941,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.278.1</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">Segundo caminho da ficha que reabria sozinha: quando os custos das peças terminam de carregar, a ficha se redesenha para mostrar o valor novo — mas ela era reaberta mesmo estando fechada, bastando a carga terminar depois de se entrar no Estoque. Agora só redesenha se a ficha estiver de fato na tela, e fechar limpa a referência. A v1.274.3 tratou o outro caminho, o de voltar de uma venda</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.278.0</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">A Home passou a avisar o que há a pagar. Antes esse número só existia dentro do painel do ENTRADAS — tela em que só se entra quando já se lembrou da conta, e aí o aviso chegou tarde. Mostra só o que está atrasado ou vence hoje, porque é o que muda o que se faz agora; sete dias viraria paisagem e pararia de ser lido. Vermelho quando há atrasada. Tocar abre o ENTRADAS já na aba SAÍDAS. Sem nada vencendo, a linha não aparece</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.2</span><span class="cl-ver-date">11/08/2026</span></div>
