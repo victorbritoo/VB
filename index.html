@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.276.3</title>
+<title>VB - v1.276.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4911,6 +4911,45 @@ function VB_dirtyPaintTela(tela){
     var sc=document.getElementById('screen-'+t);
     if(sc) sc.addEventListener('input', function(){ VB_dirtyPaintTela(t); });
     if(sc) sc.addEventListener('change', function(){ VB_dirtyPaintTela(t); });
+  });
+})();
+/* ---- Folhas (sheets) que EDITAM registro existente ----------------------------------------
+   As telas grandes ja tinham isso desde a 1.76.0: botao apagado ate haver alteracao de fato.
+   As folhas nasceram sem, e abriam com o SALVAR aceso mesmo em registro que voce so foi
+   consultar -- o que faz o dedo salvar por reflexo e regravar o que ja estava la.
+   Uma folha registra os campos que a compoem, tira uma foto ao abrir e compara a cada toque.
+   Folhas de ACAO NOVA (baixa, prorrogacao, nota nova) ficam de fora de proposito: la o botao
+   existe justamente para criar o que ainda nao existe. */
+var VB_folhaCfg={};
+function VB_folhaLe(ids){
+  return ids.map(function(id){
+    var e=document.getElementById(id); if(!e) return '';
+    var d=e.getAttribute('data-on'); if(d!=null) return d;
+    return String(e.value!=null?e.value:(e.textContent||'')).trim();
+  }).join('\u0001');
+}
+function VB_folhaPinta(nome){
+  var c=VB_folhaCfg[nome]; if(!c) return;
+  var b=document.getElementById(c.btn); if(!b) return;
+  var sujo=(c.ini==null) || (VB_folhaLe(c.ids)!==c.ini);
+  b.style.pointerEvents=sujo?'auto':'none';
+  b.style.background=sujo?'var(--acc)':'var(--sf2)';
+  b.style.color=sujo?'var(--acc-tx)':'var(--mu2)';
+  b.style.border=sujo?'none':'0.5px solid var(--ln3)';
+}
+/* edicao=true tira a foto (registro que ja existe); false deixa o botao aceso desde o inicio. */
+function VB_folhaAbre(nome, btn, ids, edicao){
+  VB_folhaCfg[nome]={btn:btn, ids:ids, ini:null};
+  if(edicao) VB_folhaCfg[nome].ini=VB_folhaLe(ids);
+  VB_folhaPinta(nome);
+}
+function VB_folhaMudou(nome){ VB_folhaPinta(nome); }
+(function(){
+  /* Um listener no documento cobre folha que ainda nem existe no DOM na hora do carregamento. */
+  ['input','change','click'].forEach(function(ev){
+    document.addEventListener(ev, function(){
+      setTimeout(function(){ Object.keys(VB_folhaCfg).forEach(VB_folhaPinta); }, 0);
+    }, true);
   });
 })();
 var VB_sairCfg=null;
@@ -10423,6 +10462,7 @@ function REN_crSheet(id){
       :('<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
+  VB_folhaAbre('cr','rencr-salvar',['rencr-dev','rencr-desc','rencr-valor','rencr-venc','rencr-parc','rencr-nota'], !!c);
   REN_crEditId = c ? String(c.id) : '';
   if(!c){ REN_crParc=[{valor:'',data:''}]; REN_crPinta(); }
   else { REN_crParc=[]; }
@@ -10655,6 +10695,7 @@ function REN_cpSheet(id){
     +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
+  VB_folhaAbre('cp','rencp-salvar',['rencp-credor','rencp-desc','rencp-valor','rencp-venc','rencp-nota'], !!c);
   REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
   REN_cpEditId = c ? String(c.id) : '';
   REN_cpDirty();
@@ -13223,6 +13264,7 @@ function MER_gastoSheet(pecaId, gastoId){
       :('<button onclick="MER_gastoFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
+  VB_folhaAbre('gasto','merg-salvar',['merg-desc','merg-valor','merg-data','merg-cob'], !!gastoId);
   MER_gastoIni=MER_gastoLeitura();
 }
 /* Toque fora fechava sem avisar e levava junto o que estava digitado. */
@@ -16801,6 +16843,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.4</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">O SALVAR das folhas que editam registro existente passou a nascer apagado e só acender quando algo muda de fato — mesma regra que as telas grandes já seguiam desde a 1.76.0. Vale para o custo da peça, a conta a pagar e a entrada a receber. Folhas de ação nova (baixa, prorrogação, nota, lançar parcelas) ficam de fora de propósito: ali o botão existe para criar o que ainda não existe. Auditadas as dez folhas do app; as demais já tinham tratamento próprio</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.3</span><span class="cl-ver-date">11/08/2026</span></div>
