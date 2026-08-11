@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.274.4</title>
+<title>VB - v1.274.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -993,7 +993,7 @@ body{ text-transform:uppercase; }
       <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
     </div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
-      <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — SUA PARTE (%)</div>
+      <div id="ven-divlucro-lbl" style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — PARTE DO SÓCIO (%)</div>
       <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
         <input id="ven-lucroPct" type="text" inputmode="numeric" placeholder="50" onclick="this.select()" oninput="VEN_onLucroPct()" style="border:none;background:transparent;outline:none;font-size:18px;font-weight:700;color:var(--tx);width:48px;text-align:center;font-family:-apple-system,sans-serif;">
         <span style="font-size:12px;color:var(--mu2);font-weight:600;">%</span>
@@ -1692,7 +1692,7 @@ function HIST_carregarVen(r){
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
   VEN_lucroVBpct = (r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):null;
-  var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value=(VEN_lucroVBpct!=null?String(VEN_lucroVBpct):'');
+  VEN_pctPintaInput();
   VEN_updateLucro();
   document.getElementById('ven-tabelaDesc').value = r.descricao || '';
   document.getElementById('ven-cliente').value = r.cliente||'';
@@ -5869,7 +5869,7 @@ function VEN_limpar(){
   VEN_snapshot = null;
   VEN_merDataCompra=null;
   VEN_parcelaManual = false;
-  VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value='';
+  VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; VEN_pctPintaInput();
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-cliente','ven-custo','ven-notas'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
@@ -5953,6 +5953,8 @@ function VEN_updateLucro(){
        acontece de a divisao ser combinada diferente, e antes disso o campo sumia justo no caso
        em que era preciso. Vazio continua valendo 50 — nada muda em venda ja feita. */
     if(dl) dl.style.display = temSocio ? 'block' : 'none';
+    var dlb=document.getElementById('ven-divlucro-lbl');
+    if(dlb && temSocio) dlb.textContent='DIVISÃO DO LUCRO — PARTE DE '+String(VB_nomeCurto(VEN_socioNome)||'SÓCIO').toUpperCase()+' (%)';
     if(temSocio && custoMeioMeio && VEN_lucroVBpct==null && pctIn && !pctIn.value){ pctIn.value='50'; }
     if(mg){
       if(temSocio){
@@ -13382,7 +13384,7 @@ function MER_venderItem(id){
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
   VEN_lucroVBpct = (r.socio && Number(r.valor_socio)>0) ? 50 : null;
-  var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value=(VEN_lucroVBpct!=null?String(VEN_lucroVBpct):'');
+  VEN_pctPintaInput();
   VEN_merDataCompra=r.data_compra||null;
   VEN_updateLucro();
   VEN_merVinculo=r.id;
@@ -13768,7 +13770,20 @@ function VEN_abrirEstoque(){
 }
 var VEN_estoqueCache=[];
 var VEN_socioNome=null, VEN_socioValor=0, VEN_lucroVBpct=null;
-function VEN_onLucroPct(){ var v=parseFloat((document.getElementById('ven-lucroPct').value||'').replace(',','.')); VEN_lucroVBpct=(isNaN(v)?null:Math.max(0,Math.min(100,v))); VEN_updateLucro(); }
+/* O campo na tela e a PARTE DO SOCIO; o banco guarda a parte da VB (lucro_vb_pct).
+   A inversao vive so nestas duas funcoes — todo ponto que le ou escreve o campo
+   passa por elas, senao o numero volta espelhado (66 virando 34) sem avisar. */
+function VEN_pctTxt(n){ n=Math.round(n*100)/100; return String(n).replace('.',','); }
+function VEN_pctPintaInput(){
+  var pi=document.getElementById('ven-lucroPct'); if(!pi) return;
+  pi.value = (VEN_lucroVBpct!=null) ? VEN_pctTxt(100-VEN_lucroVBpct) : '';
+}
+function VEN_onLucroPct(){
+  var v=parseFloat((document.getElementById('ven-lucroPct').value||'').replace(',','.'));
+  if(isNaN(v)){ VEN_lucroVBpct=null; }
+  else { v=Math.max(0,Math.min(100,v)); VEN_lucroVBpct=Math.round((100-v)*100)/100; }
+  VEN_updateLucro();
+}
 var VEN_merVinculo=null;
 var VEN_merDataCompra=null;
 function VEN_rendDados(){
@@ -14112,7 +14127,7 @@ function VEN_pegarEstoque(id){
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
   VEN_lucroVBpct = (r.socio && Number(r.valor_socio)>0) ? 50 : null;
-  var _pi=document.getElementById('ven-lucroPct'); if(_pi) _pi.value=(VEN_lucroVBpct!=null?String(VEN_lucroVBpct):'');
+  VEN_pctPintaInput();
   VEN_updateLucro();
   VEN_fecharEstoque();
   VB_toast('Puxado do estoque. Baixa ao salvar.');
@@ -16618,6 +16633,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.5</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">O campo de divisão do lucro passou a ser a PARTE DO SÓCIO, com o nome dele no rótulo — é sempre esse o número que você decide, e pedir o complemento convidava a digitar espelhado. O banco continua guardando a parte da VB: a inversão acontece só na tela, em duas funções por onde todos os pontos passam. Nenhuma venda salva muda de valor</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.4</span><span class="cl-ver-date">10/08/2026</span></div>
