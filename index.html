@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.275.2</title>
+<title>VB - v1.275.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11421,9 +11421,13 @@ function REN_ficha(k, exp){
     var _vl=yb?(Number(yb.valor_recebido)||0):y.valor;
     var _cor=(atual?'var(--tx)':'var(--mu)');
     /* largura fixa em cada peca: mesmo formato de antes, mas as colunas nao dancam entre as linhas */
-    var _c1='display:inline-block;min-width:84px;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
+    /* Valor alinhado a direita e data a esquerda encostam no separador pelos dois lados; com
+       margem igual nele, o ponto fica no meio. Antes o valor sobrava dentro da coluna e o ponto
+       nascia longe dele e colado na data. */
+    var _c1='display:inline-block;min-width:84px;text-align:right;', _c2='display:inline-block;min-width:76px;', _c3='display:inline-block;min-width:54px;';
+    var _sep='<span style="display:inline-block;margin:0 6px;">\u00b7</span>';
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(_vl)+'</span> \u00b7 <span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span> \u00b7 <span style="'+_c3+'">'+REN_nm(y)+'</span>'
+      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(_vl)+'</span>'+_sep+'<span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span>'+_sep+'<span style="'+_c3+'">'+REN_nm(y)+'</span>'
         +(_seu!=null?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
       +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>';
   });
@@ -11508,7 +11512,7 @@ function REN_ficha(k, exp){
     var ph='';
     pgs.forEach(function(pg){
       ph+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;">'
-        +'<span style="color:var(--mu);white-space:nowrap;"><span style="display:inline-block;min-width:84px;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span> \u00b7 <span style="display:inline-block;min-width:76px;">'+HIST_fmtData(String(pg.data).slice(0,10))+'</span>'+(pg.nota?('<span style="font-size:9px;color:var(--mu);margin-left:4px;">'+CLIP_esc(pg.nota)+'</span>'):'')+'</span>'
+        +'<span style="color:var(--mu);white-space:nowrap;"><span style="display:inline-block;min-width:84px;text-align:right;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span><span style="display:inline-block;margin:0 6px;">\u00b7</span><span style="display:inline-block;min-width:76px;">'+HIST_fmtData(String(pg.data).slice(0,10))+'</span>'+(pg.nota?('<span style="font-size:9px;color:var(--mu);margin-left:4px;">'+CLIP_esc(pg.nota)+'</span>'):'')+'</span>'
         +(pg.id?('<span onclick="REN_apagaPag(\''+pg.id+'\',\''+k+'\')" style="color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;padding:0 4px;">\u2715</span>'):'')
         +'</div>';
     });
@@ -16662,6 +16666,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.4</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">O mesmo separador desalinhado estava na lista de pagamentos parciais da ficha, que aparece quando a parcela foi recebida em mais de uma vez. Corrigido do mesmo jeito</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.3</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">Em PARCELAS DA OPERAÇÃO o separador nascia longe do valor e colado na data: a coluna do valor tem largura fixa e o número, mais curto que ela, deixava a sobra do lado do ponto. Valor passou a alinhar à direita e o ponto ganhou margem igual dos dois lados. As colunas seguem sem dançar entre as linhas, e os valores agora alinham pela unidade</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.2</span><span class="cl-ver-date">11/08/2026</span></div>
