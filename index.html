@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.275.9</title>
+<title>VB - v1.276.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11505,6 +11505,31 @@ function REN_ficha(k, exp){
   /* SOCIO | VB dividem a linha; o REPASSE desce, porque agora sao tres blocos e tres nao cabem */
   if(_bSoc && _bVb) hh+='<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:2px 10px;">'+_bSoc+_bVb+'</div>';
   else hh+=(_bSoc||'');
+  /* Por que ESTA parcela foge do rateio. So aparece na que difere -- nas outras seria ruido.
+     E medido na hora contra o rateio de agora, entao nao envelhece quando a venda muda. */
+  if(oi && !REN_cache.bx[REN_key(x)] && REN_repPrev(x)!=null){
+    var _rp=REN_repAlvo(oi, x), _rt=Math.round((Number(REN_repDef(oi,x))||0)*100)/100;
+    var _dif=Math.round((_rt-_rp)*100)/100;
+    if(Math.abs(_dif)>0.005){
+      var _ex=REN_prevExtraVB(x.tab, x.opId);
+      var _txt;
+      /* Se o combinado desta parcela e exatamente o que o MEU EXTRA PRIMEIRO produz, o motivo
+         tem nome. Fora isso, diz so o tamanho da diferenca, sem inventar causa. */
+      var _bate=false;
+      if(_ex>0){
+        var _sv=REN_prevCtx;
+        REN_prevCtx={tab:x.tab, opId:x.opId, oi:oi, ps:REN_opParcelas(x.tab,x.opId), voltar:null};
+        try{
+          var _lst=REN_prevCalcExtraSemDOM();
+          if(_lst){ for(var _n=0;_n<_lst.length;_n++){ if(_lst[_n].key===REN_key(x)){ _bate=Math.abs(_lst[_n].v-_rp)<=0.005; break; } } }
+        }catch(e){}
+        REN_prevCtx=_sv;
+      }
+      _txt = _bate ? ('SEU EXTRA DE '+HIST_fmtMoeda(_ex)+' RETIDO NESTA PARCELA')
+                   : ('COMBINADO \u00b7 '+HIST_fmtMoeda(Math.abs(_dif))+(_dif>0?' A MENOS':' A MAIS')+' QUE O RATEIO');
+      hh+='<div style="margin:0 0 6px;font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;">'+_txt+'</div>';
+    }
+  }
   if(_bRep) hh+=_bRep;
   (function(){
     var pb=REN_prevProblema(x.tab, x.opId, oi);
@@ -11760,6 +11785,34 @@ function REN_prevCalcExtra(){
     var v=Math.round((val-corte)*prop*100)/100;
     if(n===ab.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
     soma=Math.round((soma+v)*100)/100; out.push({ix:a.ix, v:v});
+  });
+  return out;
+}
+/* Mesma conta do MEU EXTRA PRIMEIRO, porem sobre TODAS as parcelas em aberto da operacao e
+   devolvendo a chave de cada uma. Serve fora da folha, onde nao existem os campos na tela. */
+function REN_prevCalcExtraSemDOM(){
+  var c=REN_prevCtx; if(!c) return null;
+  var ex=REN_prevExtraVB(c.tab, c.opId); if(!(ex>0)) return null;
+  var ab=[], aberto=0, resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
+  c.ps.forEach(function(i){
+    var b=REN_cache.bx[REN_key(i)];
+    if(b){ resta-=REN_repDe(i, b); return; }
+    ab.push(i); aberto+=Number(i.valor)||0;
+  });
+  if(!ab.length) return null;
+  resta=Math.round(Math.max(0,resta)*100)/100;
+  var tira=Math.min(ex, aberto);
+  var pote=Math.round((aberto-tira)*100)/100;
+  var prop=(pote>0)?(resta/pote):0;
+  var sobraEx=tira, soma=0, out=[];
+  ab.forEach(function(i, n){
+    var val=Number(i.valor)||0;
+    var corte=Math.min(val, sobraEx);
+    sobraEx=Math.round((sobraEx-corte)*100)/100;
+    var v=Math.round((val-corte)*prop*100)/100;
+    if(n===ab.length-1) v=Math.min(val, Math.max(0, Math.round((resta-soma)*100)/100));
+    soma=Math.round((soma+v)*100)/100;
+    out.push({key:REN_key(i), v:v});
   });
   return out;
 }
@@ -16714,6 +16767,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.0</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">A ficha da parcela passou a dizer por que aquela parcela foge do rateio. Na Daytona, a primeira ficava 13.125 em vez de 12.500 e nada explicava: agora mostra SEU EXTRA DE R$ 1.250,00 RETIDO NESTA PARCELA. Quando a diferença não vem do extra, diz apenas o tamanho dela em relação ao rateio, sem inventar motivo. Só aparece na parcela que difere — nas outras seria ruído — e é medido na hora, então não envelhece quando a venda muda</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.9</span><span class="cl-ver-date">11/08/2026</span></div>
