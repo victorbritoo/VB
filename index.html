@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.277.1</title>
+<title>VB - v1.277.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6738,11 +6738,11 @@ function VEN_confirmarOperacao(btn){
           /* Toast some sozinho, e some justamente enquanto se olha outra coisa. Aqui o aviso
              para o VB e ja oferece o caminho: a folha do repasse desta venda, sem procurar. */
           setTimeout(function(){
-            VB_confirm2('O repasse combinado desta venda pode ter ficado velho.', 'REVER AGORA', 'DEPOIS', function(rever){
+            VB_confirm2('A venda foi salva. O repasse combinado dela pode ter ficado velho.', 'REVER AGORA', 'DEPOIS', function(rever){
               if(!rever) return;
               REN_prevPend=_opAviso;
               showScreen('ren');
-            });
+            }, true);
           }, 1200);
         });
     }
@@ -8796,10 +8796,13 @@ function MER_load(){
   });
 }
 var VB_c2Cb=null;
-function VB_confirm2(msg, yesLabel, noLabel, cb){
+/* semVoltar: aviso que chega DEPOIS de a gravacao ja ter acontecido. Ali o VOLTAR nao tem o
+   que cancelar e so promete um desfazer que nao existe. */
+function VB_confirm2(msg, yesLabel, noLabel, cb, semVoltar){
   document.getElementById('vb-c2-msg').textContent=msg;
   document.getElementById('vb-c2-yes').textContent=yesLabel||'SALVAR';
   document.getElementById('vb-c2-no').textContent=noLabel||'DESCARTAR';
+  var _bk=document.getElementById('vb-c2-back'); if(_bk) _bk.style.display=semVoltar?'none':'';
   VB_c2Cb=cb;
   var ov=document.getElementById('vb-c2-overlay'); if(ov) ov.style.display='flex';
 }
@@ -16901,6 +16904,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.2</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">O aviso do repasse velho vinha com um VOLTAR que não cancelava nada: quando ele aparece, a venda já foi salva. Botão que promete um desfazer inexistente saiu, e o texto agora diz de saída que a venda foi salva. As perguntas de verdade (salvar ou descartar antes de sair) seguem com o VOLTAR</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.1</span><span class="cl-ver-date">11/08/2026</span></div>
