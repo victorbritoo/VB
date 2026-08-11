@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.277.0</title>
+<title>VB - v1.277.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6731,11 +6731,19 @@ function VEN_confirmarOperacao(btn){
        feita. O aviso da ficha da parcela so aparece pra quem abre aquela parcela, e ninguem
        abre parcela depois de editar uma venda. */
     if(_avisaRep && VEN_currentOperationId){
-      sb.from('repasse_previsto').select('parcela_idx').eq('op_tab','ven').eq('op_id', VEN_currentOperationId).limit(1)
+      var _opAviso=VEN_currentOperationId;
+      sb.from('repasse_previsto').select('parcela_idx').eq('op_tab','ven').eq('op_id', _opAviso).limit(1)
         .then(function(rr){
-          if(rr && rr.data && rr.data.length){
-            setTimeout(function(){ VB_toast('Repasse combinado desta venda pode ter ficado velho \u2014 confira em ENTRADAS.'); }, 1600);
-          }
+          if(!(rr && rr.data && rr.data.length)) return;
+          /* Toast some sozinho, e some justamente enquanto se olha outra coisa. Aqui o aviso
+             para o VB e ja oferece o caminho: a folha do repasse desta venda, sem procurar. */
+          setTimeout(function(){
+            VB_confirm2('O repasse combinado desta venda pode ter ficado velho.', 'REVER AGORA', 'DEPOIS', function(rever){
+              if(!rever) return;
+              REN_prevPend=_opAviso;
+              showScreen('ren');
+            });
+          }, 1200);
         });
     }
     // vínculo com o estoque: baixa o item puxado e mantém a data da venda em sincronia
@@ -11180,6 +11188,18 @@ function REN_abrir(){
     REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro, exVenda:exVenda, exNomes:exNomes};
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
+    /* Vindo do aviso de repasse velho: abre a folha do combinado desta venda direto, na primeira
+       parcela em aberto (a folha e da operacao inteira, a parcela e so a porta de entrada). */
+    if(REN_prevPend){
+      var _op=REN_prevPend; REN_prevPend=null;
+      var _ps=itens.filter(function(i){ return i.tab==='ven' && String(i.opId)===String(_op); });
+      _ps.sort(function(a,b){ return (a.idx||0)-(b.idx||0); });
+      var _alvo=null;
+      for(var _i=0;_i<_ps.length;_i++){ if(!bx[REN_key(_ps[_i])]){ _alvo=_ps[_i]; break; } }
+      if(!_alvo && _ps.length) _alvo=_ps[0];
+      if(_alvo) setTimeout(function(){ REN_prevSheet(REN_key(_alvo)); }, 60);
+      else VB_toast('Esta venda n\u00e3o tem parcelas em aberto.');
+    }
   });
 }
 function REN_render(){
@@ -11825,7 +11845,7 @@ function REN_prevSheet(k){
   if(!_temPrev && REN_prevExtraVB(x.tab, x.opId)>0){ REN_prevExtraPrim(true); }
   REN_prevSoma();
 }
-var REN_prevCtx=null, REN_prevIni=null;
+var REN_prevCtx=null, REN_prevIni=null, REN_prevPend=null;
 /* Estado atual dos campos, pra saber se houve mudanca de verdade. */
 function REN_prevLeitura(){
   var c=REN_prevCtx; if(!c) return '';
@@ -16881,6 +16901,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.1</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">O aviso do repasse velho virou pergunta com atalho: REVER AGORA abre a folha do combinado daquela venda direto, sem procurar a parcela em ENTRADAS. Como toast ele sumia sozinho, e sumia justamente enquanto se olhava outra coisa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.0</span><span class="cl-ver-date">11/08/2026</span></div>
