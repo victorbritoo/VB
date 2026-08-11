@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.276.4</title>
+<title>VB - v1.277.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1686,6 +1686,10 @@ function HIST_carregarAnt(r){
 function HIST_carregarVen(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   VEN_currentOperationId = r.id;
+  /* Guarda a linha como ela veio do banco: e contra ela que o salvamento decide se o repasse
+     combinado ficou velho. VEN_resumoAtualRow nao serve -- so existe depois de abrir a folha
+     do socio, e a maioria das edicoes nunca passa por la. */
+  VEN_rowOrig = r;
   VB_carimboTS = r.created_at||null;
   VEN_simFlag=!!r.simulacao; try{VEN_paintSimChip();}catch(e){}
   document.getElementById('ven-custo').value = r.custo!=null ? VEN_formatBR(Number(r.custo)) : '';
@@ -5910,7 +5914,7 @@ function VEN_limpar(){
   VEN_snapshot = null;
   VEN_merDataCompra=null;
   VEN_parcelaManual = false;
-  VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; VEN_pctPintaInput();
+  VEN_socioNome=null; VEN_socioValor=0; VEN_lucroVBpct=null; VEN_rowOrig=null; VEN_pctPintaInput();
   VEN_modoPersonalizado=false; VEN_parcelas=[]; VEN_parcelaCounter=0; VEN_renderParcelas(); VEN_mostrarLista(false);
   ['ven-total','ven-qtd','ven-parcela','ven-tabelaDesc','ven-cliente','ven-custo','ven-notas'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value='';
@@ -6678,13 +6682,34 @@ function VEN_confirmarOperacao(btn){
     cliente_id: VB_cliIdDe((document.getElementById('ven-cliente').value||'').trim()),
     socio: VEN_socioNome||null,
     valor_socio: (VEN_socioValor>0)?VEN_socioValor:null,
-    lucro_vb_pct: (VEN_socioValor>0 && VEN_lucroVBpct!=null)?VEN_lucroVBpct:null,
+    /* Havendo socio, a divisao vai GRAVADA mesmo quando e a meio a meio. Campo vazio valia 50
+       por convencao, e convencao invisivel governando reparticao de lucro e o tipo de coisa que
+       este app passou a sessao 20 extinguindo. Sem socio continua nulo. */
+    lucro_vb_pct: (VEN_socioValor>0)?((VEN_lucroVBpct!=null)?VEN_lucroVBpct:50):null,
     notas: (document.getElementById('ven-notas').value||'').trim().toUpperCase()||null,
     simulacao: VEN_simFlag
   };
 
   if(!VB_gravando('VEN_confirmarOperacao')) return;
   var ehAtualizacao = !!VEN_currentOperationId;
+  /* Repasse combinado nao acompanha a venda: ele e uma lista de valores em reais, gravada uma
+     vez. Mexer no valor da venda, no custo ou na divisao muda o alvo do socio e deixa o
+     combinado velho -- em silencio, ate alguem abrir aquela parcela. Aconteceu tres vezes num
+     dia so. Aqui compara o que vai ser gravado com o que estava, e so avisa quando a mudanca
+     realmente move o alvo: mexer em nota ou cliente nao acende nada. */
+  var _avisaRep=null;
+  if(ehAtualizacao){
+    _avisaRep=(function(){
+      var v=VEN_rowOrig; if(!v) return null;
+      function n2(x){ return Math.round((Number(x)||0)*100)/100; }
+      var mudou = (n2(v.valor_total)!==n2(row.valor_total))
+               || (n2(v.custo)!==n2(row.custo))
+               || (n2(v.valor_socio)!==n2(row.valor_socio))
+               || (n2(v.lucro_vb_pct)!==n2(row.lucro_vb_pct))
+               || (String(v.socio||'')!==String(row.socio||''));
+      return mudou?true:null;
+    })();
+  }
   row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
@@ -6701,6 +6726,18 @@ function VEN_confirmarOperacao(btn){
       return;
     }
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
+    VEN_rowOrig = (res.data && res.data[0]) ? res.data[0] : VEN_rowOrig;   /* salvou: esta e a nova referencia */
+    /* Alvo do socio mudou e existe combinado gravado: avisa AGORA, na tela onde a mudanca foi
+       feita. O aviso da ficha da parcela so aparece pra quem abre aquela parcela, e ninguem
+       abre parcela depois de editar uma venda. */
+    if(_avisaRep && VEN_currentOperationId){
+      sb.from('repasse_previsto').select('parcela_idx').eq('op_tab','ven').eq('op_id', VEN_currentOperationId).limit(1)
+        .then(function(rr){
+          if(rr && rr.data && rr.data.length){
+            setTimeout(function(){ VB_toast('Repasse combinado desta venda pode ter ficado velho \u2014 confira em ENTRADAS.'); }, 1600);
+          }
+        });
+    }
     // vínculo com o estoque: baixa o item puxado e mantém a data da venda em sincronia
     (function(){
       if(row.simulacao){
@@ -14114,6 +14151,7 @@ function VEN_rendCalc(){
     +'</span>';
 }
 // ===== Resumo da operação pro sócio (vendas em sociedade) =====
+var VEN_rowOrig=null;
 var VEN_resumoAtual=null, VEN_resumoAtualRow=null, VEN_socioExtra=null, VEN_fotoVoltaSocio=null;
 /* Detalhe do custo na folha do socio: a compra da peca e os gastos marcados COBRAR.
    O vinculo e mercadorias.venda_id e os gastos vivem em mercadoria_custos. Carrega por conta
@@ -16843,6 +16881,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.277.0</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">Salvar uma venda que mexe no alvo do sócio agora avisa que o repasse combinado pode ter ficado velho. O combinado é uma lista de valores em reais, gravada uma vez: mudar o valor da venda, o custo, o capital do sócio ou a divisão move o alvo e deixa o combinado desatualizado em silêncio — aconteceu três vezes num dia só, e o aviso que existia só aparecia para quem abrisse aquela parcela. Só avisa quando existe combinado gravado e quando a mudança realmente move o alvo: mexer em nota, cliente ou datas não acende nada</div>
+      <div class="cl-item">Venda com sócio passou a gravar a divisão do lucro mesmo quando é meio a meio. Antes o campo ficava vazio e valia 50 por convenção — regra invisível governando repartição de lucro. Vendas antigas seguem funcionando: vazio continua valendo 50 na leitura</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.276.4</span><span class="cl-ver-date">11/08/2026</span></div>
