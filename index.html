@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.274.2</title>
+<title>VB - v1.274.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4984,6 +4984,11 @@ function VB_tapShield(ms){
 }
 function showScreen(name){
   VB_tapShield(350);
+  /* MER_reabrirId so deve sobreviver a ida-e-volta mer<->ven (venda em andamento ou
+     "abrir venda" a partir da ficha). Qualquer outra tela no meio (home, hist, etc.)
+     encerra essa intencao — sem isso, uma ficha de dias atras reabria sozinha ao
+     voltar pro Estoque por um caminho sem relacao nenhuma com ela. */
+  if(MER_reabrirId && name!=='mer' && name!=='ven'){ MER_reabrirId=null; }
   // Saindo do Estoque no meio de uma edição: mudou → pergunta; não mudou → fecha em silêncio
   if(name!=='mer' && typeof MER_editId!=='undefined' && MER_editId){
     var _sm=document.getElementById('screen-mer');
@@ -5944,16 +5949,16 @@ function VEN_updateLucro(){
     var temSocio = (VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<=c);
     var custoMeioMeio = temSocio && (Math.abs(VEN_socioValor/c - 0.5) < 0.005);
     var dl=document.getElementById('ven-divlucro'), pctIn=document.getElementById('ven-lucroPct');
-    // campo de divisão só aparece quando o custo NÃO é 50/50
-    if(dl) dl.style.display = (temSocio && !custoMeioMeio) ? 'block' : 'none';
+    /* O campo aparece sempre que houver socio. Capital meio a meio nao obriga lucro meio a meio:
+       acontece de a divisao ser combinada diferente, e antes disso o campo sumia justo no caso
+       em que era preciso. Vazio continua valendo 50 — nada muda em venda ja feita. */
+    if(dl) dl.style.display = temSocio ? 'block' : 'none';
+    if(temSocio && custoMeioMeio && VEN_lucroVBpct==null && pctIn && !pctIn.value){ pctIn.value='50'; }
     if(mg){
       if(temSocio){
         var pV;
-        if(custoMeioMeio){ pV=50; }
-        else {
-          if(VEN_lucroVBpct==null && pctIn && !pctIn.value){ pctIn.value='50'; }
-          pV = (VEN_lucroVBpct!=null) ? VEN_lucroVBpct : 50;
-        }
+        if(VEN_lucroVBpct==null && pctIn && !pctIn.value){ pctIn.value='50'; }
+        pV = (VEN_lucroVBpct!=null) ? VEN_lucroVBpct : 50;
         var pS = 100-pV;
         var lV = lucro*(pV/100), lS = lucro*(pS/100);
         var cV = c-VEN_socioValor;
@@ -5968,7 +5973,7 @@ function VEN_updateLucro(){
     var _ok=(!isNaN(t)&&t>0&&!isNaN(c)&&c>0);
     var _tem=(VEN_socioNome && VEN_socioValor>0 && VEN_socioValor<=c);
     var _pV2=100;
-    if(_tem){ _pV2=(Math.abs(VEN_socioValor/c-0.5)<0.005)?50:((VEN_lucroVBpct!=null)?VEN_lucroVBpct:50); }
+    if(_tem){ _pV2=(VEN_lucroVBpct!=null)?VEN_lucroVBpct:50; }
     var _meuC=_tem?(c-VEN_socioValor):c;
     var _meuL=_ok?((t-c)*_pV2/100):null;
     var _cic=VEN_cicloMeses();
@@ -13411,7 +13416,7 @@ function MER_viewFechar(){
 }
 function MER_viewFecharExec(){
   MER_viewEdit=false; MER_viewEditRow=null;
-  GLB_fichaDaBusca=false; MER_fichaDoHist=false; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
+  GLB_fichaDaBusca=false; MER_fichaDoHist=false; MER_reabrirId=null; var ov=document.getElementById('mer-view-overlay'); if(ov) ov.style.display='none';
 }
 function MER_cancelEdit(){
   MER_editId=null;
@@ -16613,6 +16618,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.4</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">DIVISÃO DO LUCRO agora aparece sempre que a operação tem sócio. Antes ela sumia quando o capital era meio a meio, assumindo 50/50 por baixo — mas capital igual não obriga lucro igual, e o campo desaparecia justamente na venda em que era preciso mexer nele. Vazio continua valendo 50: nenhuma venda já feita muda de número. Aceita decimal (33,9)</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.3</span><span class="cl-ver-date">10/08/2026</span></div>
+      <div class="cl-item">Ficha do Estoque reabrindo sozinha, do nada: um id ficava marcado pra reabertura depois de VENDER um item ou tocar ABRIR VENDA numa ficha de vendido, e não era esquecido enquanto você não voltasse ao Estoque — podia ser horas e telas depois, numa ficha sem nenhuma relação com o que você estava fazendo. Agora essa marca só sobrevive na ida-e-volta Estoque↔Venda; qualquer outra tela no meio (Home, Histórico etc.) encerra a intenção. Fechar uma ficha pelo X também limpa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.274.2</span><span class="cl-ver-date">10/08/2026</span></div>
