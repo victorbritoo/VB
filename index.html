@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.275.1</title>
+<title>VB - v1.275.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11668,6 +11668,7 @@ function REN_prevSheet(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;max-height:88vh;overflow:auto;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">REPASSE COMBINADO</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:14px;">'+CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 '+CLIP_esc(REN_rotCurto(x.rot)||x.rot)+'</div>'
+    +'<div id="renp-nota" style="display:none;text-align:center;font-size:10px;color:var(--so);font-weight:600;margin:-8px 0 12px;"></div>'
     +linhas
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
     +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
@@ -11682,6 +11683,11 @@ function REN_prevSheet(k){
     +'</div>';
   ov.style.display='flex';
   REN_prevIni=REN_prevLeitura();
+  /* MEU EXTRA PRIMEIRO e a regua da casa, entao ja vem aplicado em conta NOVA. Repasse
+     gravado nao e recalculado: numero combinado nao muda sozinho entre uma abertura e outra.
+     Como REN_prevIni fica com o proporcional, o SALVAR ja acende — ha o que gravar. */
+  var _temPrev=ps.some(function(i){ return REN_repPrev(i)!=null; });
+  if(!_temPrev && REN_prevExtraVB(x.tab, x.opId)>0){ REN_prevExtraPrim(true); }
   REN_prevSoma();
 }
 var REN_prevCtx=null, REN_prevIni=null;
@@ -11749,10 +11755,10 @@ function REN_prevExtraVB(tab, opId){
      socio no custo ja se acertou no lucro; aqui a conversa e so sobre ORDEM. */
   return Math.round(ex*100)/100;
 }
-function REN_prevExtraPrim(){
+function REN_prevExtraPrim(auto){
   var c=REN_prevCtx; if(!c) return;
   var ex=REN_prevExtraVB(c.tab, c.opId);
-  if(!(ex>0)){ VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
+  if(!(ex>0)){ if(!auto) VB_toast('Sem extra adiantado nesta opera\u00e7\u00e3o.'); return; }
   var resta=REN_prevAlvoTotal(c.oi, c.tab, c.opId);
   c.ps.forEach(function(i){ var b=REN_cache.bx[REN_key(i)]; if(b) resta-=REN_repDe(i, b); });
   resta=Math.round(Math.max(0,resta)*100)/100;
@@ -11780,7 +11786,10 @@ function REN_prevExtraPrim(){
     document.getElementById('renp-'+a.ix).value=v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   });
   REN_prevSoma();
-  VB_toast('Seu extra de '+HIST_fmtMoeda(ex)+' volta primeiro.');
+  /* Regra que mexe em dinheiro nao pode ser invisivel: a folha diz de onde saiu. */
+  var _nt=document.getElementById('renp-nota');
+  if(_nt){ _nt.textContent='SEU EXTRA DE '+HIST_fmtMoeda(ex)+' SAIU DO TOPO DA 1\u00aa PARCELA'; _nt.style.display='block'; }
+  if(!auto) VB_toast('Seu extra de '+HIST_fmtMoeda(ex)+' volta primeiro.');
 }
 function REN_prevSocioPrim(){
   var c=REN_prevCtx; if(!c) return;
@@ -11832,6 +11841,7 @@ function REN_prevProp(){
     var inp=document.getElementById('renp-'+ix); if(!inp) return;
     inp.value=Number(REN_repDef(c.oi,i)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   });
+  var _nt=document.getElementById('renp-nota'); if(_nt){ _nt.style.display='none'; _nt.textContent=''; }
   REN_prevSoma();
 }
 function REN_repassar(k){
@@ -16652,6 +16662,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.2</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO virou o padrão: abrindo o repasse de uma operação com gasto adiantado por você, a folha já vem com o extra retirado do topo da primeira parcela. Uma linha no alto diz de quanto foi e de onde saiu — regra que mexe em dinheiro não pode agir calada. Repasse já gravado não é recalculado: número combinado não muda sozinho entre uma abertura e outra. Pra dividir o gasto com o sócio, VOLTAR AO PROPORCIONAL, que também apaga o aviso</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.275.1</span><span class="cl-ver-date">11/08/2026</span></div>
