@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.279.0</title>
+<title>VB - v1.279.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2004,11 +2004,12 @@ function HIST_csv(tab, rows){
       var cic=HIST_cicloVenda(dc, r);
       var tm=(cap>0&&cic&&meuL!=null)?VB_termometro(meuL, cap, cic):null;
       var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r)):null;   /* CSV leva as duas: e o lugar de conferencia */
+      var tirTx=(tir==null)?'':((tir>100)?'>100':tir.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
       var diasE='';
       if(dc && r.data_venda){ try{ diasE=Math.max(0, Math.round(MER_diasEntre(String(dc).split('T')[0], String(r.data_venda).split('T')[0]))); }catch(e){ diasE=''; } }
       lin.push([(r.nome||r.descricao||''), (r.cliente||''), HIST_fmtData(r.data_venda), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', r.modo||'', HIST_fmtMoeda(r.valor_total),
         HIST_fmtMoeda(c), (r.socio||''), (temS?HIST_fmtMoeda(vs):''), HIST_fmtMoeda(cap), (lv!=null?HIST_fmtMoeda(lv):''), (meuL!=null?HIST_fmtMoeda(meuL):''),
-        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''), (tir!=null?tir.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')]);
+        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''), tirTx]);
     });
   } else {
     head=['Data','Qtd lançamentos','Total'];
@@ -4235,11 +4236,16 @@ function VB_irrFluxo(fluxo){
   if(!fluxo||fluxo.length<2) return null;
   var soma=0; fluxo.forEach(function(x){ soma+=Number(x.v)||0; });
   if(!(soma>0)) return null;
-  var lo=-0.9, hi=3;
-  for(var k=0;k<250;k++){ var i=(lo+hi)/2, s=0;
-    for(var j=0;j<fluxo.length;j++) s+=(Number(fluxo[j].v)||0)/Math.pow(1+i, Number(fluxo[j].m)||0);
-    if(s>0) lo=i; else hi=i; }
-  return (lo+hi)/2*100;
+  function npv(i){ var s=0; for(var j=0;j<fluxo.length;j++) s+=(Number(fluxo[j].v)||0)/Math.pow(1+i, Number(fluxo[j].m)||0); return s; }
+  /* O teto era 3 (300% a.m.) e a bissecao PARAVA nele: dinheiro que volta em dois dias tem taxa
+     mensal acima disso, e o app devolvia 300 como se fosse conta fechada -- numero inventado com
+     cara de resultado. Teto largo e, se ainda assim nao houver raiz, devolve null em vez de
+     chutar. Quem exibe decide o que dizer; aqui nao se inventa. */
+  var lo=-0.9, hi=100;
+  if(npv(hi)>0) return null;
+  for(var k=0;k<300;k++){ var i=(lo+hi)/2; if(npv(i)>0) lo=i; else hi=i; }
+  var r=(lo+hi)/2*100;
+  return isFinite(r)?r:null;
 }
 /* ===== TIR mensal (sessao 20) =============================================================
    A regua de comparacao do VB e 3,5% a.m. -- o que o dinheiro dele rende fora do comercio.
@@ -6154,7 +6160,7 @@ function VEN_updateLucro(){
         _fl.push({m:Math.max(0,(_d2-_dv)/86400000/30), v:_v});
       });
       var _ti=(_fl.length>1)?VB_irrFluxo(_fl):null;
-      if(_ti!=null && isFinite(_ti)){
+      if(_ti!=null && isFinite(_ti)){   /* VB_tirTxt aplica o teto de leitura, igual ao resto */
         rd._consig=true;
         if(_curto){
           /* Ciclo curto tambem mente aqui: taxa mensal de 10 dias nao significa nada.
@@ -6163,7 +6169,7 @@ function VEN_updateLucro(){
           rd.innerHTML='<span style="color:var(--mu);">CICLO CURTO</span> <span style="color:var(--so);">\u00b7 '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m \u00b7 capital do consignante.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
             +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
         } else {
-        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_ti.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 capital do consignante'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_ti)+'</span> <span style="color:var(--so);">\u00b7 capital do consignante'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
           +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
         }
         rd.style.display='block';
@@ -17034,6 +17040,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.1</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">A busca da TIR parava em 300% a.m. e devolvia esse limite como se fosse conta fechada: a Sub 40 exportava 300,00 no CSV, número inventado com cara de resultado. Agora, se não houver taxa dentro de um teto largo, não devolve nada em vez de chutar — e o CSV escreve &gt;100 igual à tela. Vale também para o consignado, que usa a mesma busca desde antes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.0</span><span class="cl-ver-date">11/08/2026</span></div>
