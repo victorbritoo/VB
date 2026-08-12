@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.282.4</title>
+<title>VB - v1.282.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -16403,9 +16403,28 @@ function CTR_paginas(doc){
       y+=8;
     }
     var _li=0;
+    /* Bloco das assinaturas inteiro na mesma pagina. O espaco de 90px acima de cada linha ja
+       existia, mas cada assinatura decidia sozinha: a do CREDOR cabia no fim da pagina e a do
+       DEVEDOR ia sozinha pra seguinte (4 dos 5 ultimos contratos sairam assim). Agora a
+       primeira linha so comeca se o bloco TODO couber. A marca do Word nao resolve aqui --
+       quem pagina este PDF e o proprio app, e ela e para o Word. */
+    function ehLinhaAss(p){ return p && p.length && p._c && /^_{6,}/.test(String(p[0][1])); }
+    var _iAss=-1;
+    doc.paras.forEach(function(p,i){ if(_iAss<0 && ehLinhaAss(p)) _iAss=i; });
+    function _altAss(){
+      var t=0;
+      for(var i=_iAss;i<doc.paras.length;i++){
+        var q=doc.paras[i];
+        if(q==='IMG') continue;
+        if(!q || !q.length){ t+=14; continue; }
+        t += ehLinhaAss(q) ? (90+lh+8) : (lh+8);
+      }
+      return t;
+    }
     function desenha(fotoImg){
       nova();
-      doc.paras.forEach(function(p){
+      doc.paras.forEach(function(p,_ip){
+        if(_ip===_iAss && y+_altAss()>maxY) nova();
         if(p==='IMG'){
           if(fotoImg){
             var iw=W-2*M, ih=iw*fotoImg.height/fotoImg.width;
@@ -17302,6 +17321,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.5</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">As duas assinaturas do PDF passaram a andar juntas de verdade. Cada linha de assinatura decidia sozinha se cabia, então a do CREDOR fechava a página e a do DEVEDOR ia sozinha pra seguinte — aconteceu em quatro dos cinco últimos contratos. Agora o bloco inteiro só começa se couber. Quem pagina este PDF é o próprio app, então a marca equivalente do Word não resolvia sozinha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.4</span><span class="cl-ver-date">12/08/2026</span></div>
