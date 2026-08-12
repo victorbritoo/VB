@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.279.1</title>
+<title>VB - v1.279.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4045,10 +4045,14 @@ function HIST_rendRow(tab, r){
     if(tab==='ven'){
       var vs=Number(r.valor_socio)||0, c=Number(r.custo)||0;
       var temS=(r.socio&&vs>0&&c>0&&vs<=c);
-      var cap=temS?(c-vs):c; if(!(cap>0)) return null;
+      var cap=temS?(c-vs):c;
       var lv=HIST_lucroRow('ven', r); if(lv==null) return null;
-      var meuL=temS?lv*(((r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50)/100):lv;
       var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
+      /* Consignada: capital da VB e zero e o card ficava SEM rendimento nenhum -- justamente a
+         venda em que a taxa e o unico numero que importa, porque nao ha capital proprio pra
+         render. A tela de venda ja tratava isso; o card nunca tratou. Mede o que o dinheiro
+         empregado rende no parcelamento, igual la. */
+      if(!(cap>0)) return VB_tirVendaReg(dc, r, c, 1);
       return VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r));   /* TIR do MEU fluxo: meu capital sai, minha parte entra */
     }
   }catch(e){}
@@ -4601,16 +4605,18 @@ function HIST_renderRows(tab, rows){
       if(_lvL!=null && _temSocio){ campos.push({l:'Lucro total', v:HIST_fmtMoeda(_lvL)}); }
       (function(){
         if(_lvL==null) return;
-        var _cap=_temSocio?(_c-_vs):_c; if(!(_cap>0)) return;
+        var _cap=_temSocio?(_c-_vs):_c;
+        var _consig=!(_cap>0);
         var _dc=((HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null)||(r.data_compra||null);
         var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
-        var _tm=VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r)); if(_tm==null) return;
+        var _tm=_consig?VB_tirVendaReg(_dc, r, _c, 1):VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r));
+        if(_tm==null) return;
         var _temTroca=(r.parcelas||[]).some(function(p){ return p && p.t; });
-        if(_cic<0.5){
+        if(_cic<0.5 && !_consig){
           var _mgC=(_cap>0)?(_meuL/_cap*100):null;
           campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u21c4':''), w:1});
         } else {
-        campos.push({l:'Rendimento', v:VB_tirTxt(_tm)+' · prazo médio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
+        campos.push({l:'Rendimento', v:VB_tirTxt(_tm)+' \u00b7 '+(_consig?'capital do consignante':('prazo m\u00e9dio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'))+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
         }
       })();
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
@@ -17040,6 +17046,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.2</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">Venda consignada não mostrava rendimento nenhum no card do Histórico nem no CSV — justamente a venda em que a taxa é o único número que importa, porque não há capital próprio para render. A conta exigia capital da VB maior que zero e desistia. Agora mede o que o dinheiro empregado rende no parcelamento e diz "capital do consignante", como a tela de venda já fazia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.1</span><span class="cl-ver-date">12/08/2026</span></div>
