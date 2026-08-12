@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.281.2</title>
+<title>VB - v1.282.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6916,6 +6916,15 @@ function VEN_confirmarOperacao(btn){
            E o espelho do que ja acontece com o relogio recebido em troca. */
         var _vs=VEN_currentOperationId;
         if(_vs){
+          /* Simulacao NASCIDA do estoque: o vinculo so existia em VEN_merVinculo, que e memoria
+             de tela e morre ao sair. Efetivar depois procurava a peca por venda_id, nao achava
+             nada e o relogio ficava na vitrine com a venda valendo. Aqui o vinculo e GRAVADO,
+             sem tirar a peca do estoque -- e o mesmo estado que a venda-que-virou-simulacao ja
+             produz logo abaixo (estoque com venda_id). Sessao 21. */
+          if(VEN_merVinculo){
+            sb.from('mercadorias').update({venda_id:_vs}).eq('id', VEN_merVinculo).then(function(){});
+            VEN_merVinculo=null;
+          }
           /* o venda_id NAO e limpo de proposito: e por ele que o caminho de volta reencontra
              a mercadoria. Limpando, desmarcar a simulacao deixava o relogio no estoque E a venda
              valendo - o mesmo relogio contado duas vezes. */
@@ -17033,6 +17042,32 @@ function CTR_abrirForm(idx){
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#ctr-cancel').addEventListener('click',function(){ ov.remove(); });
   ov.querySelector('#ctr-gerar').addEventListener('click',function(){ CTR_gerar(ov); });
+  /* REF nao existe na venda -- mora na ficha da peca. Busca depois de montar a folha, porque a
+     folha e sincrona. Acha pelo vinculo (venda_id) e, se nao houver, pelo SN, que e o fio da
+     identidade da peca; havendo recompra do mesmo SN, fica a mais recente. So preenche se o
+     campo continuar vazio e a folha ainda estiver aberta -- resposta velha nao pisa em cima
+     do que o VB digitou. */
+  (function(){
+    try{
+      var _vid=r.id, _sn=_snPre;
+      if(!_vid && !_sn) return;
+      var q=sb.from('mercadorias').select('ref,sn,venda_id,data_compra');
+      q=_sn?q.or('venda_id.eq.'+_vid+',sn.eq.'+_sn):q.eq('venda_id',_vid);
+      q.then(function(res){
+        var el=document.getElementById('ctr-ref');
+        if(!el || el.value || !document.getElementById('vb-ctr-sheet')) return;
+        var rs=(res&&res.data)||[]; if(!rs.length) return;
+        var hit=null;
+        rs.forEach(function(m){ if(!hit && m.ref && String(m.venda_id||'')===String(_vid)) hit=m; });
+        if(!hit){
+          rs.filter(function(m){ return m.ref; })
+            .sort(function(a,b){ return String(b.data_compra||'').localeCompare(String(a.data_compra||'')); })
+            .forEach(function(m){ if(!hit) hit=m; });
+        }
+        if(hit && hit.ref) el.value=hit.ref;
+      }).catch(function(){});
+    }catch(e){}
+  })();
   CTR_clientes=[];
   try{
     sb.from('clientes').select('*').order('nome',{ascending:true}).then(function(res){
@@ -17184,6 +17219,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.0</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">Simulação feita com peça puxada do estoque não gravava o vínculo: ele só existia na memória da tela e morria ao sair. Ao efetivar depois, o app procurava a peça e não achava — o relógio ficava na vitrine com a venda valendo, contado duas vezes. Agora a simulação grava o vínculo sem tirar a peça do estoque, que é o mesmo estado que a venda-que-virou-simulação já produzia pelo caminho contrário</div>
+      <div class="cl-item">A folha do contrato passou a puxar a REF. da ficha do relógio. Ela não existe na venda, só na peça — vinha sempre vazia e era digitada à mão. Acha pelo vínculo e, na falta dele, pelo SN. Não sobrescreve o que você já tiver digitado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.281.2</span><span class="cl-ver-date">12/08/2026</span></div>
