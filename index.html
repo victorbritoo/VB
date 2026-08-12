@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.278.1</title>
+<title>VB - v1.279.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1993,7 +1993,7 @@ function HIST_csv(tab, rows){
         (r.tem_investidor?(r.investidor_nome||'SIM'):''), (lf!=null?HIST_fmtMoeda(lf):''), rendF]);
     });
   } else if(tab==='ven'){
-    head=['Descrição','Cliente','Data venda','1ª parcela','Qtd parcelas','Modo','Total','Custo','Sócio','Valor sócio','Capital VB','Lucro total','Lucro VB','Data compra','Dias estoque','Ciclo (m)','Rendimento (% a.m.)'];
+    head=['Descrição','Cliente','Data venda','1ª parcela','Qtd parcelas','Modo','Total','Custo','Sócio','Valor sócio','Capital VB','Lucro total','Lucro VB','Data compra','Dias estoque','Ciclo (m)','Rendimento médio (% a.m.)','TIR (% a.m.)'];
     rows.forEach(function(r){
       var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
       var temS=(r.socio&&vs>0&&c>0&&vs<=c);
@@ -2003,11 +2003,12 @@ function HIST_csv(tab, rows){
       var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
       var cic=HIST_cicloVenda(dc, r);
       var tm=(cap>0&&cic&&meuL!=null)?VB_termometro(meuL, cap, cic):null;
+      var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r)):null;   /* CSV leva as duas: e o lugar de conferencia */
       var diasE='';
       if(dc && r.data_venda){ try{ diasE=Math.max(0, Math.round(MER_diasEntre(String(dc).split('T')[0], String(r.data_venda).split('T')[0]))); }catch(e){ diasE=''; } }
       lin.push([(r.nome||r.descricao||''), (r.cliente||''), HIST_fmtData(r.data_venda), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', r.modo||'', HIST_fmtMoeda(r.valor_total),
         HIST_fmtMoeda(c), (r.socio||''), (temS?HIST_fmtMoeda(vs):''), HIST_fmtMoeda(cap), (lv!=null?HIST_fmtMoeda(lv):''), (meuL!=null?HIST_fmtMoeda(meuL):''),
-        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')]);
+        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''), (tir!=null?tir.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')]);
     });
   } else {
     head=['Data','Qtd lançamentos','Total'];
@@ -3258,8 +3259,8 @@ function VB_relatorioPDF(dados, total, returnImages){
   function vSemSN(t){ return String(t||'').replace(/\bSN\s*:?\s*[A-Za-z0-9-]+/i,'').replace(/\s{2,}/g,' ').trim(); }
   function vRend(r){
     if(r.custo==null) return null; var c=Number(r.custo)||0; if(!(c>0)) return null;
-    var m=merMap[r.id]; var cic=HIST_cicloVenda((m&&m.data_compra)?m.data_compra:null, r); if(!cic) return null;
-    var l=Number(r.valor_total||0)-c; var v=VB_termometro(l, c, cic);
+    var m=merMap[r.id];
+    var v=VB_tirVendaReg((m&&m.data_compra)?m.data_compra:null, r, c, 1);   /* TIR do negocio: fluxo inteiro */
     return (v!=null&&isFinite(v))?v:null;
   }
   var tAnt=sum(ant.filter(function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); }),function(r){return r.valor_bruto;});
@@ -4047,8 +4048,7 @@ function HIST_rendRow(tab, r){
       var lv=HIST_lucroRow('ven', r); if(lv==null) return null;
       var meuL=temS?lv*(((r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50)/100):lv;
       var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
-      var cic=HIST_cicloVenda(dc, r); if(!cic) return null;
-      return VB_termometro(meuL, cap, cic);
+      return VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r));   /* TIR do MEU fluxo: meu capital sai, minha parte entra */
     }
   }catch(e){}
   return null;
@@ -4240,6 +4240,67 @@ function VB_irrFluxo(fluxo){
     for(var j=0;j<fluxo.length;j++) s+=(Number(fluxo[j].v)||0)/Math.pow(1+i, Number(fluxo[j].m)||0);
     if(s>0) lo=i; else hi=i; }
   return (lo+hi)/2*100;
+}
+/* ===== TIR mensal (sessao 20) =============================================================
+   A regua de comparacao do VB e 3,5% a.m. -- o que o dinheiro dele rende fora do comercio.
+   O termometro antigo (lucro / capital / prazo medio) credita o capital INTEIRO pelo prazo
+   inteiro, mas quase toda venda devolve parte cedo: a media sai sempre um pouco maior que a
+   taxa real, e a comparacao com os 3,5% fica viciada a favor do comercio. A TIR e a taxa que
+   fecha o fluxo respeitando a data de cada entrada -- e a MESMA regua do preco (descontar a
+   3% a.m. e cobrar TIR de 3%: provado em Node na sessao 20). Bissecao; mes = 30 dias.
+   O termometro segue vivo no simulador (formula inversa) e na antecipacao, por enquanto. */
+/* Parte do VB no fluxo: capital dele + lucro dele, sobre o total. Quando lucro e capital
+   seguem a mesma proporcao, escala nao muda TIR (a do VB = a da operacao); quando o VB tem
+   % de lucro diferente do capital (Sub 40), o fluxo dele difere e a TIR dele tambem. */
+function VB_tirFatorVB(r){
+  var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0, t=Number(r.valor_total)||0;
+  if(!(t>0&&c>0)) return null;
+  var temS=(r.socio&&vs>0&&vs<=c);
+  if(!temS) return 1;
+  var pV=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50;
+  var capVB=c-vs, lucroVB=(t-c)*pV/100;
+  var f=(capVB+lucroVB)/t;
+  return (isFinite(f)&&f>0&&f<=1)?f:null;
+}
+/* A bissecao canonica ja existia: VB_irrFluxo, usada no consignado desde antes. Uma TIR so
+   no app inteiro -- aqui apenas converte dias para meses e delega. */
+function VB_tirMensal(cf){
+  if(!cf || cf.length<2) return null;
+  return VB_irrFluxo(cf.map(function(c){ return {m:(Number(c.d)||0)/30, v:Number(c.v)||0}; }));
+}
+/* Fluxo da venda a partir do registro: saida no dia da compra (ou da venda, se venda direta),
+   entradas nas datas das parcelas. `fator` escala as entradas (parte do VB); `saida` e o
+   capital de quem esta medindo. Usa o MESMO parser de datas do ciclo. */
+function VB_tirVendaReg(dcIso, r, saida, fator){
+  if(!(saida>0)) return null;
+  var dv=null;
+  if(r.data_venda){ var vv=String(r.data_venda).split('T')[0].split('-'); if(vv.length===3) dv=new Date(+vv[0],+vv[1]-1,+vv[2]); }
+  if(!dv||isNaN(dv.getTime())) return null;
+  var dias=0;
+  if(dcIso){ var pp=String(dcIso).split('T')[0].split('-'); if(pp.length===3){ var dc=new Date(+pp[0],+pp[1]-1,+pp[2]); if(!isNaN(dc.getTime())){ dias=(dv-dc)/86400000; if(!isFinite(dias)||dias<0) dias=0; } } }
+  var cf=[{d:0, v:-saida}], tem=false;
+  (r.parcelas||[]).forEach(function(p){
+    var v=PAG_parseBR(p.v||''); var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.d||'').trim());
+    if(!isNaN(v)&&v>0&&m){ var d2=new Date(+m[3],+m[2]-1,+m[1]); var dd=(d2-dv)/86400000; if(dd<0)dd=0; cf.push({d:dias+dd, v:v*(fator!=null?fator:1)}); tem=true; }
+  });
+  if(!tem){
+    var _n=Number(r.quantidade_parcelas)||0, _vp=Number(r.valor_parcela)||0;
+    if(_n>0 && !(_vp>0)){ var _vt=Number(r.valor_total)||0; if(_vt>0) _vp=_vt/_n; }
+    var _d1=r.data_primeira_parcela?String(r.data_primeira_parcela).split('T')[0].split('-'):null;
+    if(_n>0 && _vp>0 && _d1 && _d1.length===3){
+      var _base=new Date(+_d1[0],+_d1[1]-1,+_d1[2]);
+      for(var _k=0;_k<_n;_k++){ var _dt=VB_mesData(_base,_k); var _dd=(_dt-dv)/86400000; if(_dd<0)_dd=0; cf.push({d:dias+_dd, v:_vp*(fator!=null?fator:1)}); tem=true; }
+    }
+  }
+  if(!tem) return null;
+  return VB_tirMensal(cf);
+}
+/* Texto padrao: acima de 100% a.m. a taxa mensal nao significa nada util (dinheiro que voltou
+   em dias, elevado a mes) -- mostra o teto em vez de um numero absurdo. */
+function VB_tirTxt(t){
+  if(t==null) return null;
+  if(t>100) return '>100% a.m.';
+  return t.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
 }
 function VB_termometro(lucro, capital, meses){
   lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
@@ -4537,13 +4598,13 @@ function HIST_renderRows(tab, rows){
         var _cap=_temSocio?(_c-_vs):_c; if(!(_cap>0)) return;
         var _dc=((HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null)||(r.data_compra||null);
         var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
-        var _tm=VB_termometro(_meuL, _cap, _cic); if(_tm==null) return;
+        var _tm=VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r)); if(_tm==null) return;
         var _temTroca=(r.parcelas||[]).some(function(p){ return p && p.t; });
         if(_cic<0.5){
           var _mgC=(_cap>0)?(_meuL/_cap*100):null;
           campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u21c4':''), w:1});
         } else {
-        campos.push({l:'Rendimento', v:_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m. · ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
+        campos.push({l:'Rendimento', v:VB_tirTxt(_tm)+' · prazo médio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
         }
       })();
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
@@ -6053,7 +6114,25 @@ function VEN_updateLucro(){
     var _meuC=_tem?(c-VEN_socioValor):c;
     var _meuL=_ok?((t-c)*_pV2/100):null;
     var _cic=VEN_cicloMeses();
-    var _tm=(_ok&&_meuC>0&&_cic)?VB_termometro(_meuL,_meuC,_cic):null;
+    /* TIR do meu fluxo: meu capital sai na compra (dias de estoque antes da venda), minha parte
+       de cada parcela entra na data dela. A parte e (meu capital + meu lucro) / total. */
+    var _tm=null;
+    if(_ok && _meuC>0){
+      var _fat=(_meuC+((t-c)*_pV2/100))/t;
+      if(isFinite(_fat)&&_fat>0){
+        var _dv2=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+        var _dEst=0; if(VEN_merDataCompra){ var _de2=VEN_diasEstoque(); if(_de2!=null) _dEst=_de2; }
+        var _cf=[{d:0, v:-_meuC}], _temP=false;
+        (VEN_parcelas||[]).forEach(function(p){
+          var _v=VEN_parseBR(p.valor||''); if(!(_v>0)) return;
+          var _mm=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.data||'').trim()); if(!_mm) return;
+          var _d2=new Date(+_mm[3],+_mm[2]-1,+_mm[1]);
+          var _dd=(_d2-_dv2)/86400000; if(_dd<0)_dd=0;
+          _cf.push({d:_dEst+_dd, v:_v*_fat}); _temP=true;
+        });
+        if(_temP) _tm=VB_tirMensal(_cf);
+      }
+    }
     var _curto=(_cic!=null && _cic<0.5);
     if(_tm!=null && _curto){
       var _mg=(_meuC>0)?(_meuL/_meuC*100):null;
@@ -6061,7 +6140,7 @@ function VEN_updateLucro(){
         +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
       rd.style.display='block';
     } else if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+_tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</span> <span style="color:var(--so);">\u00b7 Ciclo '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+      rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_tm)+'</span> <span style="color:var(--so);">\u00b7 Prazo m\u00e9dio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
         +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
       rd.style.display='block';
     } else if(_ok && c>0 && !(_meuC>0)){
@@ -6609,8 +6688,8 @@ function VEN_gerarTabela(){
     _sFaixa('LUCRO', HIST_fmtMoeda(sd.lucroTot)+(sd.margem!=null?(' ('+Math.round(sd.margem)+'%)'):''));
     if(sd.diasEst!=null){ _sLin('TEMPO DE OPERA\u00c7\u00c3O', sd.diasEst+' '+(sd.diasEst===1?'Dia':'Dias')); }
     if(sd.rend!=null){
-      _sLin('RENDIMENTO', sd.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
-      _sLin('CICLO DE CAPITAL', sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+' Meses');
+      _sLin('RENDIMENTO', VB_tirTxt(sd.rend));
+      _sLin('PRAZO M\u00c9DIO', sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+' Meses');
     }
     ys+=10;
     _sDiv(true); ys+=6;
@@ -14281,7 +14360,21 @@ function VEN_resumoSocioDados(r, dcHint){
     var m2=(dias+pm)/30;
     if(isFinite(m2)&&m2>0) cic=m2;
   })();
-  var rend=(cic&&c>0)?VB_termometro(l, c, cic):null; // rendimento do NEGÓCIO: lucro total sobre custo total
+  /* rendimento do NEGOCIO na folha: TIR do fluxo inteiro (custo total sai, cada parcela entra
+     na data dela). Mesma regua dos 3,5% a.m. com que o VB compara. */
+  var rend=null;
+  if(c>0){
+    var _cfS=[{d:0, v:-c}], _temS2=false, _dEstS=(diasEst!=null&&diasEst>0)?diasEst:0;
+    (parc||[]).forEach(function(p){
+      var m3=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec((p.d||'').trim());
+      if(m3&&p.v>0){
+        var dvS=null;
+        if(r.data_venda){ var vv3=String(r.data_venda).split('T')[0].split('-'); if(vv3.length===3) dvS=new Date(+vv3[0],+vv3[1]-1,+vv3[2]); }
+        if(dvS&&!isNaN(dvS.getTime())){ var d3=new Date(+m3[3],+m3[2]-1,+m3[1]); var dd3=(d3-dvS)/86400000; if(dd3<0)dd3=0; _cfS.push({d:_dEstS+dd3, v:p.v}); _temS2=true; }
+      }
+    });
+    if(_temS2) rend=VB_tirMensal(_cfS);
+  }
   /* so detalha quando a conta fecha: compra + gastos COBRAR = custo gravado na venda.
      Gasto mexido depois da venda faz a soma divergir; folha assinada nao mostra soma que nao fecha. */
   var custoLinhas=null;
@@ -14315,8 +14408,8 @@ function VEN_resumoSocioTexto(d){
   L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
   if(d.diasEst!=null){ L.push('*Tempo de opera\u00e7\u00e3o*: '+d.diasEst+' '+(d.diasEst===1?'dia':'dias')+'.'); }
   if(d.rend!=null){
-    L.push('*Rendimento*: '+d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
-    L.push('*Ciclo de Capital*: '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
+    L.push('*Rendimento*: '+VB_tirTxt(d.rend));
+    L.push('*Prazo M\u00e9dio*: '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
   }
   L.push('');
   L.push('*S\u00d3CIO: '+d.socio+' ('+d.racha+'%)*.');
@@ -16941,6 +17034,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.0</span><span class="cl-ver-date">11/08/2026</span></div>
+      <div class="cl-item">RENDIMENTO da venda passou a ser TIR — a taxa que fecha o fluxo respeitando a data de cada entrada, calculada pela mesma bissecção que o consignado já usava. A conta antiga (lucro ÷ capital ÷ prazo médio) creditava o capital inteiro pelo prazo inteiro, mas quase toda venda devolve parte cedo: a média saía sempre um pouco maior que a taxa real, e a comparação com os 3,5% a.m. ficava viciada a favor do comércio. Vale na tela de venda, no card do Histórico, no relatório e na folha do sócio; com sócio, a TIR é a do SEU fluxo (seu capital sai, sua parte de cada parcela entra). Acima de 100% a.m. mostra "&gt;100% a.m." — dinheiro que voltou em dias, elevado a mês, não significa nada útil. CICLO DE CAPITAL virou PRAZO MÉDIO, que é o que ele sempre foi. O CSV exporta as duas contas, lado a lado, para conferência. Vendas antigas passam a EXIBIR números um pouco menores — nenhum dado muda, só a régua ficou honesta. Simulador e antecipação seguem na conta antiga por enquanto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.278.1</span><span class="cl-ver-date">11/08/2026</span></div>
