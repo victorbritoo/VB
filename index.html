@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.279.2</title>
+<title>VB - v1.279.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -2003,7 +2003,9 @@ function HIST_csv(tab, rows){
       var dc=(HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null;
       var cic=HIST_cicloVenda(dc, r);
       var tm=(cap>0&&cic&&meuL!=null)?VB_termometro(meuL, cap, cic):null;
-      var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r)):null;   /* CSV leva as duas: e o lugar de conferencia */
+      /* Consignada tambem entra: capital da VB e zero, entao mede o dinheiro empregado (custo
+         cheio) contra o fluxo inteiro -- mesma conta do card. */
+      var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r)):((c>0)?VB_tirVendaReg(dc, r, c, 1):null);
       var tirTx=(tir==null)?'':((tir>100)?'>100':tir.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
       var diasE='';
       if(dc && r.data_venda){ try{ diasE=Math.max(0, Math.round(MER_diasEntre(String(dc).split('T')[0], String(r.data_venda).split('T')[0]))); }catch(e){ diasE=''; } }
@@ -17046,6 +17048,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.3</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">O CSV continuava sem rendimento nas consignadas: a exportação tem conta própria e ficou de fora quando o card foi corrigido. Agora usa a mesma regra — sem capital da VB, mede o dinheiro empregado contra o fluxo inteiro</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.2</span><span class="cl-ver-date">12/08/2026</span></div>
