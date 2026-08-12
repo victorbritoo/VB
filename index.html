@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.282.0</title>
+<title>VB - v1.282.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -17010,31 +17010,37 @@ function CTR_abrirForm(idx){
   var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
   var SL='padding:9px 2px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:12px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-align-last:center;width:100%;box-sizing:border-box;';
   function inp(id,ph,val,extra){ return '<input id="'+id+'" placeholder="'+ph+'" '+(extra||'')+' value="'+CTR_esc(val||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'; }
+  /* Rotulo FIXO acima de cada campo. O placeholder sumia ao preencher e a folha ficava com
+     `114060 . 2020 . 29Q6P343` lado a lado, sem dizer qual e REF, ano ou SN -- e isto sai no
+     docx. O `padding-left:1px` compensa o espaco que o letter-spacing deixa depois da ultima
+     letra, que desloca texto centralizado. */
+  var LB='display:block;font-size:8px;letter-spacing:1px;color:var(--mu2);font-weight:600;text-align:center;padding-left:1px;margin-bottom:3px;';
+  function campo(id,rot,val,extra,ph){ return '<div><span style="'+LB+'">'+CTR_esc(rot)+'</span>'+inp(id,(ph||''),val,extra)+'</div>'; }
   var ov=document.createElement('div');
   ov.id='vb-ctr-sheet';
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO — '+CTR_esc(titulo)+'</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO</div>'
     +'<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;margin:2px 0 5px;">DEVEDOR</div>'
     +'<div style="position:relative;">'
-    +inp('ctr-nome','NOME COMPLETO (DIGITE PARA BUSCAR)','','oninput="CTR_buscaCli(this)"')
+    +campo('ctr-nome','NOME COMPLETO','','oninput="CTR_buscaCli(this)"','DIGITE PARA BUSCAR')
     +'<div id="ctr-cli-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
     +'</div>'
-    +inp('ctr-qual','QUALIFICAÇÃO','brasileiro, casado, empresário')
+    +campo('ctr-qual','QUALIFICAÇÃO','brasileiro, casado, empresário')
     +'<div style="display:grid;grid-template-columns:1.3fr 74px 1fr;gap:6px;">'
-    +inp('ctr-cpf','CPF','','inputmode="numeric" oninput="CLI_maskCPF(this)"')
-    +'<select id="ctr-doctipo" style="'+SL+'"><option>RG</option><option>CNH</option><option value="Passaporte">PASS.</option></select>'
-    +inp('ctr-docnum','Nº DOCUMENTO','')
+    +campo('ctr-cpf','CPF','','inputmode="numeric" oninput="CLI_maskCPF(this)"')
+    +'<div><span style="'+LB+'">TIPO</span><select id="ctr-doctipo" style="'+SL+'"><option>RG</option><option>CNH</option><option value="Passaporte">PASS.</option></select></div>'
+    +campo('ctr-docnum','Nº DOCUMENTO','')
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;">'
-    +inp('ctr-cep','CEP','','inputmode="numeric" oninput="CLI_cepInput(this)"')
-    +inp('ctr-end1','ENDEREÇO','')
+    +campo('ctr-cep','CEP','','inputmode="numeric" oninput="CLI_cepInput(this)"')
+    +campo('ctr-end1','ENDEREÇO','')
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:54px 1fr 1fr;gap:6px;">'+inp('ctr-numero','Nº','')+inp('ctr-end2','COMP.','')+inp('ctr-bairro','BAIRRO','')+'</div>'
-    +'<div style="display:grid;grid-template-columns:1.6fr 60px;gap:6px;">'+inp('ctr-cidade','CIDADE','')+inp('ctr-uf','UF','','maxlength="2"')+'</div>'
+    +'<div style="display:grid;grid-template-columns:54px 1fr 1fr;gap:6px;">'+campo('ctr-numero','Nº','')+campo('ctr-end2','COMPL.','')+campo('ctr-bairro','BAIRRO','')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1.6fr 60px;gap:6px;">'+campo('ctr-cidade','CIDADE','')+campo('ctr-uf','UF','','maxlength="2"')+'</div>'
     +'<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;margin:6px 0 5px;">RELÓGIO</div>'
-    +inp('ctr-marca','MARCA E MODELO',_modeloPre||titulo)
-    +'<div style="display:grid;grid-template-columns:1fr 76px 1fr;gap:6px;">'+inp('ctr-ref','REF.','')+inp('ctr-ano','ANO',_anoPre)+inp('ctr-sn','SN',_snPre)+'</div>'
+    +campo('ctr-marca','MARCA E MODELO',_modeloPre||titulo)
+    +'<div style="display:grid;grid-template-columns:1fr 76px 1fr;gap:6px;">'+campo('ctr-ref','REF.','')+campo('ctr-ano','ANO',_anoPre)+campo('ctr-sn','SN',_snPre)+'</div>'
     +'<button id="ctr-gerar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR CONTRATO (.docx)</button>'
     +'<button id="ctr-cancel" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CANCELAR</button>'
     +'</div>';
@@ -17219,6 +17225,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.1</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">A folha do contrato ganhou rótulo fixo em cada campo. Antes o nome do campo era o texto de dentro e sumia ao preencher: a linha do relógio virava 114060 · 2020 · 29Q6P343 sem dizer qual era REF, ano ou SN — e isso sai no docx. O título passou a ser só CONTRATO, já que modelo, ano e SN estão logo abaixo e o SN comprido quebrava o cabeçalho em duas linhas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.0</span><span class="cl-ver-date">12/08/2026</span></div>
