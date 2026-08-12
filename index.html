@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.282.1</title>
+<title>VB - v1.282.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -16697,7 +16697,7 @@ function CTR_itensLinhas(parcelas, dataVendaBR){
 }
 function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
   var old=document.getElementById('vb-ctr-prev'); if(old) old.remove();
-  var body=CTR_PREV_TPL;
+  var body=CTR_prevRealce(CTR_PREV_TPL);
   Object.keys(vals).forEach(function(k){ body=body.split(k).join(CTR_esc(vals[k])); });
   if(CTR_semDoc){ body=body.replace(/,\s*e\s+do\s*((?:\s|<[^>]*>)*),/g, ',$1'); }
   var itens=CTR_itensLinhas(parcelas,dvBR).map(function(segs){
@@ -16843,6 +16843,69 @@ function CTR_unzipBytes(z){
     p+=46+nlen+elen+clen;
   }
   return Promise.all(jobs).then(function(){ return parts; });
+}
+/* ===== REALCE DO CONTRATO (sessao 21) ==================================================
+   O .docx ja saia com negrito+sublinhado em 32 trechos; quem estava sem era a PRE-VISUALIZACAO,
+   e e dela que sai a foto/PDF que o VB manda. O texto do contrato NAO muda -- so o realce.
+   Regras combinadas:
+   - todo trecho em negrito ganha sublinhado, junto quando esta junto (numeral + extenso);
+   - pontuacao solta em negrito (o ponto depois de "Clausula 1a") NAO entra, senao o traco
+     passa da palavra;
+   - PIX CNPJ + o numero viram negrito e sublinhado ate o fim do numeral;
+   - os DOIS NOMES das assinaturas ficam so em negrito: eles ja sentam sobre uma linha, e
+     sublinhar criaria dois tracos encostados. */
+var CTR_PIX_TXT='PIX CNPJ: 24.505.024/0001-60';
+function CTR_prevRealce(html){
+  var achados=[], re=/<b>(.*?)<\/b>/g, m;
+  while((m=re.exec(html))!==null) achados.push(m.index);
+  var corta=achados.length-2;      /* as duas ultimas ocorrencias sao as assinaturas */
+  var i=-1;
+  html=html.replace(/<b>(.*?)<\/b>/g, function(todo, dentro){
+    i++;
+    if(i>=corta) return todo;                       /* assinaturas: so negrito */
+    if(!/[0-9A-Za-z\u00C0-\u017F]/.test(dentro)) return todo;  /* pontuacao solta */
+    return '<b><u>'+dentro+'</u></b>';
+  });
+  return html.split(CTR_PIX_TXT).join('<b><u>'+CTR_PIX_TXT+'</u></b>');
+}
+/* No .docx faltavam so tres rotulos e o PIX. Cirurgia no XML gerado, como ja e feito com
+   REF/SN vazios -- o modelo embutido continua intocado. */
+function CTR_xmlSublinha(doc, alvos){
+  alvos.forEach(function(txt){
+    var pos=doc.indexOf('<w:t>'+txt+'</w:t>');
+    if(pos<0) pos=doc.indexOf('<w:t xml:space="preserve">'+txt+'</w:t>');
+    if(pos<0) return;
+    var ini=doc.lastIndexOf('<w:r>', pos); if(ini<0) return;
+    var fimP=doc.indexOf('</w:rPr>', ini); if(fimP<0 || fimP>pos) return;
+    if(doc.slice(ini,fimP).indexOf('<w:u ')>=0) return;   /* ja sublinhado */
+    doc=doc.slice(0,fimP)+'<w:u w:val="single"/>'+doc.slice(fimP);
+  });
+  return doc;
+}
+function CTR_xmlPix(doc){
+  var pos=doc.indexOf(CTR_PIX_TXT); if(pos<0) return doc;
+  var ini=doc.lastIndexOf('<w:r>', pos), fim=doc.indexOf('</w:r>', pos);
+  if(ini<0||fim<0) return doc;
+  var run=doc.slice(ini, fim+6);   /* '</w:r>' tem SEIS caracteres */
+  var mp=run.match(/<w:rPr>[\s\S]*?<\/w:rPr>/); if(!mp) return doc;
+  /* ordem dentro do rPr importa: b vem logo depois de rFonts, u depois de szCs */
+  var rpr=mp[0], rprF=rpr.replace(/(<w:rFonts[^>]*\/>)/, '$1<w:b/>').replace('</w:rPr>','<w:u w:val="single"/></w:rPr>');
+  var mt=run.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/); if(!mt) return doc;
+  var txt=mt[1], k=txt.indexOf(CTR_PIX_TXT); if(k<0) return doc;
+  function bloco(pr, t){ return '<w:r>'+pr+'<w:t xml:space="preserve">'+t+'</w:t></w:r>'; }
+  var novo=bloco(rpr, txt.slice(0,k))+bloco(rprF, CTR_PIX_TXT)+bloco(rpr, txt.slice(k+CTR_PIX_TXT.length));
+  return doc.slice(0,ini)+novo+doc.slice(fim+6);
+}
+/* Assinaturas juntas: da linha da data ate o fim do corpo, todo paragrafo vira "manter com o
+   proximo". Quando o grupo nao cabe, o Word desce ele INTEIRO -- antes o CREDOR fechava uma
+   pagina e o DEVEDOR ficava sozinho na seguinte (4 dos 5 ultimos contratos). */
+function CTR_xmlAssinaturaJunta(doc){
+  var pos=doc.indexOf('{{DATA_EXTENSO}}'); if(pos<0) return doc;
+  var ini=doc.lastIndexOf('<w:p ', pos); if(ini<0) ini=doc.lastIndexOf('<w:p>', pos);
+  if(ini<0) return doc;
+  var fim=doc.indexOf('<w:sectPr'); if(fim<0) fim=doc.length;
+  var meio=doc.slice(ini, fim).replace(/<w:pPr>/g, '<w:pPr><w:keepNext/>');
+  return doc.slice(0,ini)+meio+doc.slice(fim);
 }
 function CTR_lerModelo(){
   if(CTR_partsCache) return Promise.resolve(CTR_partsCache);
@@ -17141,6 +17204,9 @@ function CTR_gerar(ov){
     var parts=rr[0], foto=rr[1];
     var dec=new TextDecoder(), enc=new TextEncoder();
     var doc=dec.decode(parts['word/document.xml']);
+    doc=CTR_xmlSublinha(doc, ['Marca e Modelo','REF.:','SN.']);
+    doc=CTR_xmlPix(doc);
+    doc=CTR_xmlAssinaturaJunta(doc);
     var hd=dec.decode(parts['word/header1.xml']);
     var _allparc=CTR_parcelasDaVenda(r);
     var _trocas=_allparc.filter(function(p){ return p.t; });
@@ -17225,6 +17291,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.2</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">As duas assinaturas do contrato passaram a andar juntas. Nos últimos contratos o CREDOR fechava uma página e o DEVEDOR ficava sozinho na seguinte; agora a data e os dois nomes descem em bloco quando não cabem</div>
+      <div class="cl-item">Sublinhado nos negritos. O .docx já saía com negrito e sublinhado em 32 trechos — quem estava sem era a pré-visualização, e é dela que sai a foto que você manda. Agora as duas batem. Entraram também MARCA E MODELO, REF., SN e o PIX CNPJ com o número. Pontuação solta fica de fora, e os nomes sob as linhas de assinatura seguem só em negrito para não criar dois traços encostados. O texto do contrato não mudou</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.1</span><span class="cl-ver-date">12/08/2026</span></div>
