@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.279.3</title>
+<title>VB - v1.279.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6700,7 +6700,10 @@ function VEN_gerarTabela(){
     _sLin('VENDA', HIST_fmtMoeda(sd.total));
     ys+=4;
     _sFaixa('LUCRO', HIST_fmtMoeda(sd.lucroTot)+(sd.margem!=null?(' ('+Math.round(sd.margem)+'%)'):''));
-    if(sd.diasEst!=null){ _sLin('TEMPO DE OPERA\u00c7\u00c3O', sd.diasEst+' '+(sd.diasEst===1?'Dia':'Dias')); }
+    /* Sao os dias entre a COMPRA e a VENDA -- estoque parado. A operacao so termina no ultimo
+       recebimento (no AP Vampire, 226 dias): chamar isso de tempo de operacao fazia o numero
+       parecer melhor do que e. */
+    if(sd.diasEst!=null){ _sLin('DIAS EM ESTOQUE', sd.diasEst+' '+(sd.diasEst===1?'Dia':'Dias')); }
     if(sd.rend!=null){
       _sLin('RENDIMENTO', VB_tirTxt(sd.rend));
       _sLin('PRAZO M\u00c9DIO', sd.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+' Meses');
@@ -6736,7 +6739,16 @@ function VEN_gerarTabela(){
     ctx.restore();
   }
 
-  VB_carimboData(ctx, W);
+  /* A tabela do CLIENTE carimba a data da venda: e documento do negocio, a data e do fato.
+     A folha do SOCIO e um extrato tirado agora -- carimbar a venda fazia a folha gerada hoje
+     dizer a hora de dias atras. Aqui, e so aqui, o carimbo e do momento da geracao. */
+  if(VEN_socioExtra){
+    var _tsAntes=VB_carimboTS; VB_carimboTS=null;
+    VB_carimboData(ctx, W);
+    VB_carimboTS=_tsAntes;
+  } else {
+    VB_carimboData(ctx, W);
+  }
   if(typeof CTR_capturando!=='undefined' && CTR_capturando){ CTR_canvas=cv; CTR_capturando=false; return; }
   img.src = cv.toDataURL('image/png');
   img.style.display = 'block';
@@ -14420,7 +14432,7 @@ function VEN_resumoSocioTexto(d){
   }
   L.push('*Venda*: '+HIST_fmtMoeda(d.total)+'.');
   L.push('*Lucro*: '+HIST_fmtMoeda(d.lucroTot)+(d.margem!=null?(' ('+Math.round(d.margem)+'%)'):'')+'.');
-  if(d.diasEst!=null){ L.push('*Tempo de opera\u00e7\u00e3o*: '+d.diasEst+' '+(d.diasEst===1?'dia':'dias')+'.'); }
+  if(d.diasEst!=null){ L.push('*Dias em estoque*: '+d.diasEst+' '+(d.diasEst===1?'dia':'dias')+'.'); }
   if(d.rend!=null){
     L.push('*Rendimento*: '+VB_tirTxt(d.rend));
     L.push('*Prazo M\u00e9dio*: '+d.cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m.');
@@ -17048,6 +17060,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.4</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">TEMPO DE OPERAÇÃO virou DIAS EM ESTOQUE, na foto e no texto copiado. São os dias entre a compra e a venda; a operação só termina no último recebimento — no AP Vampire, 226 dias, não 104. O nome antigo fazia o número parecer melhor do que é</div>
+      <div class="cl-item">A folha do sócio passou a carimbar a hora em que foi gerada. Usava a data da venda, então uma folha tirada hoje dizia a hora de dias atrás. A tabela do cliente continua carimbando a data da venda: ali é documento do negócio, e a data é a do fato</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.3</span><span class="cl-ver-date">12/08/2026</span></div>
