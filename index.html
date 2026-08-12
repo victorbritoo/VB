@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.282.2</title>
+<title>VB - v1.282.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -16283,10 +16283,13 @@ function CTR_docxParse(bytes){
       while((r=reR.exec(p))){
         var run=r[1], t='', tm, reT=/<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
         while((tm=reT.exec(run))) t+=tm[1];
-        if(t) segs.push([run.indexOf('<w:b/>')>=0?1:0, unesc(t)]);
+        /* o terceiro campo e o SUBLINHADO. Ate a v1.282.2 o leitor so olhava <w:b/>: o .docx
+           saía sublinhado e o PDF do proprio app nascia sem, porque quem desenha e este
+           renderizador, nao o Word. */
+        if(t) segs.push([run.indexOf('<w:b/>')>=0?1:0, unesc(t), run.indexOf('<w:u ')>=0?1:0]);
       }
       var fus=[];
-      segs.forEach(function(s){ if(fus.length && fus[fus.length-1][0]===s[0]) fus[fus.length-1][1]+=s[1]; else fus.push([s[0],s[1]]); });
+      segs.forEach(function(s){ if(fus.length && fus[fus.length-1][0]===s[0] && fus[fus.length-1][2]===s[2]) fus[fus.length-1][1]+=s[1]; else fus.push([s[0],s[1],s[2]]); });
       segs=fus;
       if(p.indexOf('<w:numPr>')>=0) segs._num=true;
       if(p.indexOf('<w:jc w:val="center"')>=0) segs._c=true;
@@ -16352,7 +16355,7 @@ function CTR_paginas(doc){
           if(/^\s+$/.test(w)){ toks._esp=true; return; }
           if(!toks._esp && toks.length && pi===0){ toks[toks.length-1][1]+=w; }
           else if(/^[,.;:!?)\]]/.test(w) && toks.length){ toks[toks.length-1][1]+=w; }
-          else toks.push([s[0],w]);
+          else toks.push([s[0],w,s[2]||0]);
           toks._esp=false;
         });
       });
@@ -16365,7 +16368,7 @@ function CTR_paginas(doc){
         var wd=ctx.measureText(t[1]).width;
         var lim=maxW-(lines.length>0?ind:0);
         if(cur.length && curW+SW+wd>lim){ lines.push([cur,curW]); cur=[]; curW=0; }
-        cur.push([t[0],t[1],wd]);
+        cur.push([t[0],t[1],wd,t[2]||0]);
         curW+= (cur.length>1?SW:0)+wd;
       });
       if(cur.length) lines.push([cur,curW]);
@@ -16385,6 +16388,9 @@ function CTR_paginas(doc){
         L[0].forEach(function(t,k){
           fonte(t[0]===1);
           ctx.fillText(t[1], x, y);
+          /* o traco acompanha a palavra, nao o espaco depois dela -- por isso e desenhado
+             token a token e nao de ponta a ponta da linha. */
+          if(t[3]) ctx.fillRect(x, y+6, t[2], 2);
           x+=t[2]+(k<gaps?(SW+extra):0);
         });
         y+=lh;
@@ -17291,6 +17297,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.3</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">Achado o motivo de o sublinhado não aparecer: quem desenha o PDF do contrato é o próprio app, não o Word — e o leitor dele só enxergava negrito, ignorando o sublinhado que o .docx sempre teve. No cabeçalho o traço aparecia porque lá ele era pintado embaixo de todo negrito, sem ler o arquivo. Agora o corpo lê o sublinhado de verdade e desenha palavra por palavra</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.2</span><span class="cl-ver-date">12/08/2026</span></div>
