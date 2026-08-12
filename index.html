@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.281.0</title>
+<title>VB - v1.281.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13661,20 +13661,56 @@ function MER_possCalc(){
   }
   tb.innerHTML=out;
 }
+/* Aviso do repasse velho, lado do ESTOQUE (sessao 21). Gemeo do que existe ao salvar a venda:
+   se a peca muda o custo ou o socio, o alvo do combinado muda junto e o numero gravado fica
+   velho em silencio. Mesmo texto de acao (REVER AGORA leva a folha daquela venda). */
+function MER_avisaRepasse(vid){
+  if(!vid) return;
+  sb.from('repasse_previsto').select('parcela_idx').eq('op_tab','ven').eq('op_id', String(vid)).limit(1)
+    .then(function(rr){
+      if(!(rr && rr.data && rr.data.length)) return;
+      setTimeout(function(){
+        VB_confirm2('A pe\u00e7a foi salva e a venda dela mudou junto. O repasse combinado pode ter ficado velho.', 'REVER AGORA', 'DEPOIS', function(rever){
+          if(!rever) return;
+          REN_prevPend=vid;
+          showScreen('ren');
+        }, true);
+      }, 1200);
+    }).catch(function(){});
+}
+/* Grava a venda com o custo JA TRADUZIDO. Ver o comentario do chamador. */
+function MER_syncVendaGrava(_r0, payload, desc, _ex){
+  var _cv=Math.round(((Number(payload.custo)||0)+(Number(_ex)||0))*100)/100;
+  var _novoV={custo:_cv, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
+  sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
+    var _vOld=(rq.data&&rq.data[0])||null;
+    function _n2(x){ return Math.round((Number(x)||0)*100)/100; }
+    /* Mesma regra do salvar da venda: so acende quando a mudanca move o alvo do socio.
+       Mexer em modelo, ano, SN, fornecedor ou nota nao acende nada. */
+    var _mexeAlvo = !!_vOld && ( _n2(_vOld.custo)!==_n2(_cv)
+        || _n2(_vOld.valor_socio)!==_n2(payload.valor_socio)
+        || String(_vOld.socio||'')!==String(payload.socio||'') );
+    sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
+      if(!rv.error && rv.data && rv.data.length){
+        var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
+        VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' \u00b7 '+_dv2):''));
+        VB_toast('Venda vinculada atualizada.');
+        if(_mexeAlvo) MER_avisaRepasse(_r0.venda_id);
+      }
+    });
+  });
+}
 function MER_syncVenda(_r0, payload, desc){
   // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
   if(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
-    var _novoV={custo:payload.custo, descricao:desc, socio:payload.socio, valor_socio:payload.valor_socio};
-    sb.from('vendas').select('*').eq('id', _r0.venda_id).then(function(rq){
-      var _vOld=(rq.data&&rq.data[0])||null;
-      sb.from('vendas').update(_novoV).eq('id', _r0.venda_id).select().then(function(rv){
-        if(!rv.error && rv.data && rv.data.length){
-          var _dv2=_vOld?VB_logDiff(_vOld,_novoV):'';
-          VB_log('VENDA','editou', desc, 'Atualizada pelo estoque'+(_dv2?(' \u00b7 '+_dv2):''));
-          VB_toast('Venda vinculada atualizada.');
-        }
-      });
-    });
+    /* CUSTO tem dois sentidos: na peca e a COMPRA, na venda e compra + gastos COBRAR.
+       O caminho venda -> peca ja desconta os gastos antes de gravar (sessao 20); este lado
+       gravava a compra crua e APAGAVA os gastos da venda -- o custo caia, o lucro subia
+       sozinho e o alvo do socio junto. Aqui soma antes de gravar, o espelho do outro lado. */
+    sb.from('mercadoria_custos').select('valor,cobrar').eq('mercadoria_id', _r0.id).then(function(rg){
+      var _ex=0; (((rg&&rg.data)||[])).forEach(function(g){ if(g.cobrar) _ex+=Number(g.valor)||0; });
+      MER_syncVendaGrava(_r0, payload, desc, Math.round(_ex*100)/100);
+    }).catch(function(){ MER_syncVendaGrava(_r0, payload, desc, 0); });
   }
   // sincronia estoque -> venda (TROCA): a peça recebida propaga o SN pra parcela da venda de origem (via venda_troca_id)
   if(_r0 && _r0.venda_troca_id){
@@ -17138,6 +17174,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.281.1</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">Editar uma peça já vendida apagava os gastos COBRAR da venda. O custo da peça é a compra; o da venda é compra + gastos cobráveis — o sync gravava um no outro sem traduzir, então o custo caía, o lucro subia sozinho e o alvo do sócio ia junto. No Sub 40 seriam 250 do polimento; no Daytona, 1.250. O caminho contrário já traduzia desde a v1.278; agora os dois lados falam a mesma língua</div>
+      <div class="cl-item">E quando a edição da peça mexe no custo ou no sócio de uma venda com repasse combinado, o aviso REVER AGORA passa a aparecer também aqui — antes só existia no caminho de salvar a venda. Mexer em modelo, ano, SN ou fornecedor não acende nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.281.0</span><span class="cl-ver-date">12/08/2026</span></div>
