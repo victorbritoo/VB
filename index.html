@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.282.3</title>
+<title>VB - v1.282.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -16385,14 +16385,19 @@ function CTR_paginas(doc){
         var extra=0;
         if(!centrado && li<lines.length-1 && gaps>0){ extra=(lim-L[1])/gaps;  }
         var x=centrado?(M+(maxW-L[1])/2):(M+(li>0?ind:0));
+        /* Traco CONTINUO: palavras sublinhadas seguidas viram um risco so, atravessando os
+           espacos entre elas -- "R$ 31.800,00 (Trinta e Um Mil e Oitocentos Reais)" sai com
+           uma linha, nao com uma por palavra. Fecha quando a palavra seguinte nao e
+           sublinhada e no fim da linha; frase que quebra ganha um traco em cada linha. */
+        var uIni=null, uFim=0;
         L[0].forEach(function(t,k){
           fonte(t[0]===1);
           ctx.fillText(t[1], x, y);
-          /* o traco acompanha a palavra, nao o espaco depois dela -- por isso e desenhado
-             token a token e nao de ponta a ponta da linha. */
-          if(t[3]) ctx.fillRect(x, y+6, t[2], 2);
+          if(t[3]){ if(uIni===null) uIni=x; uFim=x+t[2]; }
+          else if(uIni!==null){ ctx.fillRect(uIni, y+6, uFim-uIni, 2); uIni=null; }
           x+=t[2]+(k<gaps?(SW+extra):0);
         });
+        if(uIni!==null) ctx.fillRect(uIni, y+6, uFim-uIni, 2);
         y+=lh;
       });
       y+=8;
@@ -17297,6 +17302,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.4</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">O sublinhado do contrato virou traço contínuo: palavras sublinhadas seguidas ganham um risco só, passando por baixo dos espaços. O valor com o extenso sai inteiro num traço, e o mesmo vale para os nomes e títulos de várias palavras. Frase que quebra de linha ganha um traço em cada pedaço</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.282.3</span><span class="cl-ver-date">12/08/2026</span></div>
