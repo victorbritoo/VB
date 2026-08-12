@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.279.4</title>
+<title>VB - v1.280.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -14229,15 +14229,15 @@ function VEN_rendBlur(){
     if(d.t!=null && d.t>0){ inp.value=VEN_formatBR(d.t); VEN_rendCalc(); }
     return;
   }
-  if(d && d.t!=null && d.meuC>0 && d.cic){ var atual=VB_termometro((d.t-d.c)*d.pV/100, d.meuC, d.cic); if(atual!=null) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
+  if(d && d.t!=null && d.meuC>0){ var atual=VEN_rendTirVB(d, d.t); if(atual!=null && atual<=100) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
   VEN_rendCalc();
 }
 function VEN_rendAplicar(){
   var d=VEN_rendDados();
   var alvo=parseFloat(((document.getElementById('ven-rend-alvo')||{}).value||'').replace(/\./g,'').replace(',','.'));
-  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)) return;
-  var meuLNec=(alvo/100)*d.meuC*d.cic;
-  var T=d.c + meuLNec/(d.pV/100);
+  if(!d || !(d.meuC>0) || isNaN(alvo) || !(alvo>0)) return;
+  var T=VEN_rendPrecoPorTir(d, alvo);
+  if(T==null){ VB_toast('Este parcelamento nao fecha nesse alvo'); return; }
   var tEl=document.getElementById('ven-total');
   var oldT=VEN_parseBR(tEl.value);
   tEl.value=VEN_formatBR(T);
@@ -14262,7 +14262,7 @@ function VEN_rendToggle(){
     var inp=document.getElementById('ven-rend-alvo');
     if(inp && !inp.value){
       var d=VEN_rendDados();
-      if(d && d.t!=null && d.meuC>0 && d.cic){ var atual=VB_termometro((d.t-d.c)*d.pV/100, d.meuC, d.cic); if(atual!=null) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
+      if(d && d.t!=null && d.meuC>0){ var atual=VEN_rendTirVB(d, d.t); if(atual!=null && atual<=100) inp.value=VEN_formatBR(Math.round(atual*100)/100); }
     }
     box.style.display='block'; VEN_rendCalc();
   } else { box.style.display='none'; var _i=document.getElementById('ven-rend-alvo'); if(_i) _i.value=''; } // fechou, zera: reabrir nasce na realidade
@@ -14282,6 +14282,56 @@ function VEN_rendFluxo(k){
     fl.push({m:Math.max(0,(d2-dv)/86400000/30), v:v*k}); achou=true;
   });
   return achou?fl:null;
+}
+/* ===== SIMULADOR NA REGUA DA TIR (sessao 21) =============================================
+   Ate a v1.279.4 o ramo "tenho capital" resolvia o alvo por divisao (termometro): lucro
+   necessario = taxa x capital x ciclo. O termometro credita o capital INTEIRO pelo prazo
+   INTEIRO, entao pedia preco de MENOS -- a venda saia abaixo do alvo sem avisar.
+   Agora o alvo e TIR, a mesma regua da ficha e do card.
+   FORMA FECHADA, nao busca: com a forma do parcelamento fixa, a entrada do VB e LINEAR no
+   preco (capital dele + fatia dele do lucro), entao basta descontar as parcelas na taxa alvo
+   e resolver a reta. Exato a 1e-14, provado em Node -- nao ha iteracao pra travar a tela.
+   Mesmo assim o resultado e CONFERIDO de volta pela TIR antes de aparecer: parcelamento que
+   nao admite taxa mensal (tudo no dia zero) devolveria numero com cara de resposta. */
+function VEN_rendParcFluxo(){
+  var dv=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value)||new Date();
+  /* Os dias em estoque ENTRAM: o dinheiro saiu na compra, nao na venda. E o mesmo fluxo do
+     VB_tirVendaReg, que e quem vai julgar esta venda depois na ficha e no card -- se o
+     simulador comecasse na data da venda, o VB fecharia em 4% e a ficha diria 3%.
+     O termometro antigo tambem contava esses dias (VEN_cicloMeses), entao nada afrouxa aqui.
+     (O ramo consignado segue sem eles, por decisao do VB registrada na v1.279.x.) */
+  var lead=0;
+  if(VEN_merDataCompra){ var _de=VEN_diasEstoque(); if(_de==null) return null; lead=_de/30; }
+  var parc=[], base=0;
+  (VEN_parcelas||[]).forEach(function(p){
+    var v=VEN_parseBR(p.valor||''); if(!(v>0)) return;
+    var d2=VB_brToDate((p.data||'').trim()); if(!d2) return;
+    parc.push({m:lead+Math.max(0,(d2-dv)/86400000/30), v:v}); base+=v;
+  });
+  return (parc.length && base>0) ? {parc:parc, base:base} : null;
+}
+/* Fluxo do VB para um preco T: o capital dele sai na data da venda, a fatia dele de cada
+   parcela entra na data de cada uma. O fator e RECALCULADO pra cada preco -- quando o preco
+   sobe, o lucro sobe e a fatia muda junto. Mesma conta do VB_tirFatorVB do registro. */
+function VEN_rendTirVB(d, T){
+  var f=VEN_rendParcFluxo(); if(!f || !(T>0) || !(d.meuC>0)) return null;
+  var fator=(d.meuC+(T-d.c)*(d.pV/100))/T;
+  if(!isFinite(fator)||!(fator>0)) return null;
+  var k=T/f.base, fl=[{m:0, v:-d.meuC}];
+  f.parc.forEach(function(x){ fl.push({m:x.m, v:x.v*k*fator}); });
+  return VB_irrFluxo(fl);
+}
+function VEN_rendPrecoPorTir(d, alvo){
+  var f=VEN_rendParcFluxo(); if(!f || !d || !(d.meuC>0)) return null;
+  var pv=d.pV/100; if(!(pv>0)) return null;
+  var i=alvo/100, D=0;
+  f.parc.forEach(function(x){ D+=x.v/Math.pow(1+i, x.m); });
+  if(!(D>0)) return null;
+  var T=(d.meuC*(f.base/D-1)+d.c*pv)/pv;
+  if(!isFinite(T)||!(T>0)) return null;
+  var volta=VEN_rendTirVB(d, T);            /* confere a propria resposta */
+  if(volta==null || Math.abs(volta-alvo)>0.01) return null;
+  return T;
 }
 function VEN_rendCalc(){
   var out=document.getElementById('ven-rend-out'); if(!out) return;
@@ -14306,10 +14356,10 @@ function VEN_rendCalc(){
     out.innerHTML='<b>\u2248 '+r.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.</b> <span style="color:var(--so);">(Sua parte: R$ '+VEN_formatBR(meu)+')</span>';
     return;
   }
-  if(!d || !(d.meuC>0) || !d.cic || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
-  var meuLNec = (alvo/100)*d.meuC*d.cic;
-  var lucroTotNec = meuLNec/(d.pV/100);
-  var totalNec = d.c + lucroTotNec;
+  if(!d || !(d.meuC>0) || isNaN(alvo) || !(alvo>0)){ out.textContent='—'; return; }
+  var totalNec = VEN_rendPrecoPorTir(d, alvo);
+  if(totalNec==null){ out.innerHTML='<span style="color:var(--so);">Este parcelamento nao fecha nesse alvo</span>'; return; }
+  var lucroTotNec = totalNec - d.c;
   out.innerHTML='<span style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
     +'<span style="flex:1;min-width:0;">Venda: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(Lucro: R$ '+VEN_formatBR(lucroTotNec)+')</span></span>'
     +'<span onclick="VEN_rendAplicar()" style="flex:none;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);cursor:pointer;">APLICAR</span>'
@@ -17060,6 +17110,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.280.0</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">O simulador da venda passou a trabalhar na régua da TIR, a mesma da ficha e do card. Antes o alvo era resolvido pela média (lucro ÷ capital ÷ ciclo), que trata todo o dinheiro como se voltasse só no fim. Em venda rápida a diferença é de centavos; em peça que ficou parada ela pesa — num custo de 50 mil com 104 dias de estoque, o alvo de 3,5% pedia 59.636 e entregava 3,27% de verdade. Agora pede 60.354 e entrega os 3,5%</div>
+      <div class="cl-item">Não houve busca numérica: com a forma do parcelamento fixa, a entrada do VB é linear no preço, então o alvo se resolve descontando as parcelas na própria taxa — exato, e sem nada iterando enquanto se digita. O app ainda confere a resposta de volta pela TIR antes de mostrar, e diz que não fecha em vez de inventar número quando o parcelamento não admite taxa mensal</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.279.4</span><span class="cl-ver-date">12/08/2026</span></div>
