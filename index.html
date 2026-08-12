@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.280.0</title>
+<title>VB - v1.281.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4038,7 +4038,7 @@ function HIST_rendRow(tab, r){
   try{
     if(tab==='ant'){
       if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return null;
-      return VB_termometro(HIST_lucroRow('ant', r), Number(r.valor_liquido)||0, (Number(r.prazo_medio)||0)/30);
+      return VB_tirAntReg(r);
     }
     if(tab==='fin'){
       if(r.tem_investidor) return null;
@@ -4314,6 +4314,34 @@ function VB_tirTxt(t){
   if(t>100) return '>100% a.m.';
   return t.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
 }
+/* TIR da antecipacao (sessao 21, etapa 3). O liquido sai na data da operacao e cada titulo
+   entra na data REAL do vencimento.
+   O +4 dias do ANT_prazoDe NAO entra aqui de proposito: ele e regra de COBRANCA -- define
+   quanto o cliente paga -- e segue intacto no preco. Medir o que aconteceu usa o dia em que
+   o dinheiro cai. Por isso a linha do rendimento muda e o valor da operacao nao.
+   Titulo `pg` abate (o VB paga), entao entra com sinal negativo, igual ao calculo do bruto.
+   Operacao atrasada (liquido > bruto) continua sem taxa: nao ha rendimento a medir. */
+function VB_tirAntReg(r){
+  if(!r) return null;
+  var liq=Number(r.valor_liquido)||0, bru=Number(r.valor_bruto)||0;
+  if(!(liq>0) || liq>bru) return null;
+  var dd0=String(r.data_operacao||'').split('T')[0].split('-');
+  if(dd0.length!==3) return null;
+  var d0=new Date(+dd0[0],+dd0[1]-1,+dd0[2]);
+  if(isNaN(d0.getTime())) return null;
+  var cf=[{d:0, v:-liq}], tem=false;
+  (r.titulos||[]).forEach(function(t){
+    var v=VB_dinheiroRaw(t.v||t.valor||'');
+    var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t.d||t.data||'').trim());
+    if(isNaN(v)||!(v>0)||!m) return;
+    var dt=new Date(+m[3],+m[2]-1,+m[1]);
+    var dias=(dt-d0)/86400000; if(!isFinite(dias)) return; if(dias<0) dias=0;
+    var sg=((t.tp||t.tipo||'')==='pg')?-1:1;
+    cf.push({d:dias, v:sg*v}); tem=true;
+  });
+  if(!tem) return null;
+  return VB_tirMensal(cf);
+}
 function VB_termometro(lucro, capital, meses){
   lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
   if(!isFinite(lucro)||!isFinite(capital)||!isFinite(meses)||capital<=0||meses<=0) return null;
@@ -4552,7 +4580,7 @@ function HIST_renderRows(tab, rows){
       if(dataOp && dataOp!=='--') campos.push({l:'Data da operação', v:dataOp});
       if(r.modo) campos.push({l:'Modo', v:(r.modo==='personalizado'?'Personalizada':'Simples')});
       if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
-      var _tmA=(!_atrasado)?VB_termometro(HIST_lucroRow('ant', r), Number(r.valor_liquido)||0, (Number(r.prazo_medio)||0)/30):null;
+      var _tmA=(!_atrasado)?VB_tirAntReg(r):null;
       if(_tmA!=null) campos.push({l:'Rendimento', v:_tmA.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'});
       if(r.tarifa) campos.push({l:'Tarifa', v:HIST_fmtMoeda(r.tarifa)});
       if(r.quantidade_titulos) campos.push({l:'Títulos', v:String(r.quantidade_titulos)});
@@ -17110,6 +17138,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.281.0</span><span class="cl-ver-date">12/08/2026</span></div>
+      <div class="cl-item">O RENDIMENTO da antecipação passou a ser TIR, fechando a migração da régua: a coluna do Histórico ordenava venda e antecipação juntas com uma medindo em TIR e a outra em média. A conta antiga tratava todos os títulos como se caíssem no prazo médio, um dia que não existe; agora usa a data de cada um. Na operação do Leonardo, 4,39% viram 4,23%</div>
+      <div class="cl-item">Os +4 dias do prazo não entram na medição, de propósito: eles são regra de cobrança e continuam inteiros no preço. Nada mudou no que você cobra, no líquido, no contrato ou no valor adiantado — só na linha que mede o que a operação rendeu. Atrasada continua sem taxa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.280.0</span><span class="cl-ver-date">12/08/2026</span></div>
