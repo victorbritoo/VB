@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.285.0</title>
+<title>VB - v1.285.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9603,8 +9603,17 @@ function GLB_ir(tipo, id){
       return;
     }
     if(tipo==='cli'){
-      // consulta por cima da busca: ativo abre o Panorama, reservatório abre a ficha SPC
-      if(r.ativo===false){ CLI_resFichaAbrir(r); } else { CLIP_abrir(r.nome, r.id); }
+      /* Consulta por cima da busca. Os dois abrem FICHA: reservatório a ficha SPC, ativo a ficha
+         de cadastro -- que já traz o botão PANORAMA dentro. A porta é a pessoa; o panorama é o
+         que ela deve. Antes o ativo caía direto no panorama, e cliente sem operação abria tela
+         vazia em vez de telefone e CPF. */
+      if(r.ativo===false){ CLI_resFichaAbrir(r); }
+      else {
+        var _ix=-1;
+        for(var _i=0;_i<CLI_rows.length;_i++){ if(String(CLI_rows[_i].id)===String(r.id)){ _ix=_i; break; } }
+        if(_ix<0){ CLI_rows=CLI_rows.concat([r]); _ix=CLI_rows.length-1; }
+        CLI_ficha(_ix);
+      }
       return;
     }
     if(tipo==='soc'){
@@ -10863,7 +10872,8 @@ function REN_cpTotAberto(){
 }
 function REN_cpFiltra(arr){
   if(!REN_busca) return arr;
-  return arr.filter(function(c){ return (String(c.credor||'')+' '+VB_nomeCurto(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')).toUpperCase().indexOf(REN_busca)>=0; });
+  /* Mesma regra do REN_filtra: so o nome que o card escreve. */
+  return arr.filter(function(c){ return (VB_nomeCurto(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')).toUpperCase().indexOf(REN_busca)>=0; });
 }
 function REN_cpOv(oid){
   var ov=document.getElementById(oid);
@@ -11336,7 +11346,11 @@ function REN_buscaVal(v){
 function REN_limparBusca(){ REN_busca=''; REN_bset=''; REN_render(); var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); }
 function REN_toggleBusca(){ REN_buscaOn=!REN_buscaOn; if(!REN_buscaOn){ REN_busca=''; REN_bset=''; } REN_render(); if(REN_buscaOn){ var i=document.getElementById('ren-busca-inp'); if(i) i.focus(); } }
 function REN_buscaInput(el){ REN_busca=String(el.value||'').toUpperCase(); REN_bset=''; clearTimeout(REN_buscaInput._t); REN_buscaInput._t=setTimeout(function(){ var i=document.getElementById('ren-busca-inp'); var pos=i?i.selectionStart:0; REN_render(); i=document.getElementById('ren-busca-inp'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(e){} } },250); }
-function REN_filtra(arr){ if(!REN_busca) return arr; return arr.filter(function(x){ return (String(x.cliente||'')+' '+VB_nomeCurto(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor)).toUpperCase().indexOf(REN_busca)>=0; }); }
+/* Casa so com o nome que o card mostra (VB_nomeCurto: apelido, ou primeiro + ultimo). O nome
+   completo saiu: casar com um pedaco do meio que a tela nunca escreve devolvia linha sem o termo
+   em lugar nenhum -- buscar FRANC trazia um JORGE MURAD. Quem procura por nome do meio ou CPF
+   tem a busca geral da Home, que continua lendo o cadastro inteiro. */
+function REN_filtra(arr){ if(!REN_busca) return arr; return arr.filter(function(x){ return (VB_nomeCurto(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor)).toUpperCase().indexOf(REN_busca)>=0; }); }
 function REN_ordena(arr){
   var a=arr.slice();
   if(REN_sort==='valor') a.sort(function(x,y){ return y.valor-x.valor; });
@@ -17425,6 +17439,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.1</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Na BUSCA GERAL da Home, tocar num cliente abre a ficha dele, não mais o panorama direto. A ficha já tinha o botão PANORAMA dentro, então a porta existia e estava sendo pulada — e cliente sem operação abria uma tela vazia em vez do telefone e do CPF. Fica igual ao do reservatório SPC, que já abria ficha</div>
+      <div class="cl-item">A busca de ENTRADAS/SAÍDAS e o filtro de contas a pagar passaram a procurar só pelo nome que o card escreve — o apelido, ou primeiro e último nome. Antes procuravam também no nome completo do cadastro: digitar FRANC trazia um JORGE MURAD, porque o pedaço casado ficava no meio do nome, num lugar que a tela nunca mostra. Procurar por nome do meio ou CPF continua na busca geral da Home, que lê o cadastro inteiro</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.0</span><span class="cl-ver-date">13/08/2026</span></div>
