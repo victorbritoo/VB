@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.284.0</title>
+<title>VB - v1.285.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1993,7 +1993,7 @@ function HIST_csv(tab, rows){
         (r.tem_investidor?(r.investidor_nome||'SIM'):''), (lf!=null?HIST_fmtMoeda(lf):''), rendF]);
     });
   } else if(tab==='ven'){
-    head=['Descrição','Cliente','Data venda','1ª parcela','Qtd parcelas','Modo','Total','Custo','Sócio','Valor sócio','Capital VB','Lucro total','Lucro VB','Data compra','Dias estoque','Ciclo (m)','Rendimento médio (% a.m.)','TIR (% a.m.)'];
+    head=['Descrição','Cliente','Data venda','1ª parcela','Qtd parcelas','Modo','Total','Custo','Sócio','Valor sócio','Capital VB','Lucro total','Lucro VB','Data compra','Dias estoque','Ciclo (m)','Rendimento médio (% a.m.)','TIR (% a.m.)','TIR seu dinheiro (% a.m.)'];
     rows.forEach(function(r){
       var c=Number(r.custo)||0, vs=Number(r.valor_socio)||0;
       var temS=(r.socio&&vs>0&&c>0&&vs<=c);
@@ -2006,13 +2006,17 @@ function HIST_csv(tab, rows){
       /* Consignada tambem entra: capital da VB e zero, entao mede o dinheiro empregado (custo
          cheio) contra o fluxo inteiro -- mesma conta do card. */
       var _pg=VB_pagsDaVenda(r);
-      var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r), _pg):((c>0)?VB_tirVendaReg(dc, r, c, 1, _pg):null);
-      var tirTx=(tir==null)?'':((tir>100)?'>100':tir.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
+      function _tirCol(t){ return (t==null)?'':((t>100)?'>100':t.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})); }
+      /* Duas colunas lado a lado: a da venda (custo inteiro no dia da compra) e a do dinheiro do
+         VB (cronograma da compra). A segunda so tem valor quando a compra foi parcelada. */
+      var tir=(cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r), null):((c>0)?VB_tirVendaReg(dc, r, c, 1, null):null);
+      var tirD=(VB_cronoQtd(r)>1)?((cap>0)?VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r), _pg):((c>0)?VB_tirVendaReg(dc, r, c, 1, _pg):null)):null;
+      var tirTx=_tirCol(tir), tirDTx=_tirCol(tirD);
       var diasE='';
       if(dc && r.data_venda){ try{ diasE=Math.max(0, Math.round(MER_diasEntre(String(dc).split('T')[0], String(r.data_venda).split('T')[0]))); }catch(e){ diasE=''; } }
       lin.push([(r.nome||r.descricao||''), (r.cliente||''), HIST_fmtData(r.data_venda), HIST_fmtData(r.data_primeira_parcela), r.quantidade_parcelas||'', r.modo||'', HIST_fmtMoeda(r.valor_total),
         HIST_fmtMoeda(c), (r.socio||''), (temS?HIST_fmtMoeda(vs):''), HIST_fmtMoeda(cap), (lv!=null?HIST_fmtMoeda(lv):''), (meuL!=null?HIST_fmtMoeda(meuL):''),
-        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''), tirTx]);
+        (dc?HIST_fmtData(String(dc).split('T')[0]):''), diasE, (cic?cic.toLocaleString('pt-BR',{maximumFractionDigits:1}):''), (tm!=null?tm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''), tirTx, tirDTx]);
     });
   } else {
     head=['Data','Qtd lançamentos','Total'];
@@ -3265,7 +3269,10 @@ function VB_relatorioPDF(dados, total, returnImages){
   function vRend(r){
     if(r.custo==null) return null; var c=Number(r.custo)||0; if(!(c>0)) return null;
     var m=merMap[r.id];
-    var v=VB_tirVendaReg((m&&m.data_compra)?m.data_compra:null, r, c, 1, VB_pagsDaVenda(r));   /* TIR do negocio: fluxo inteiro */
+    /* Regua da VENDA, sem o cronograma da compra: o relatorio agrega operacoes e precisa de
+       base unica. (Tambem tira uma incoerencia: VB_merPag so carrega ao abrir o Historico, entao
+       o numero daqui mudava conforme a ordem em que as telas foram abertas.) */
+    var v=VB_tirVendaReg((m&&m.data_compra)?m.data_compra:null, r, c, 1, null);   /* TIR do negocio: fluxo inteiro */
     return (v!=null&&isFinite(v))?v:null;
   }
   var tAnt=sum(ant.filter(function(r){ return (Number(r.valor_liquido)||0) <= (Number(r.valor_bruto)||0); }),function(r){return r.valor_bruto;});
@@ -4056,9 +4063,11 @@ function HIST_rendRow(tab, r){
          venda em que a taxa e o unico numero que importa, porque nao ha capital proprio pra
          render. A tela de venda ja tratava isso; o card nunca tratou. Mede o que o dinheiro
          empregado rende no parcelamento, igual la. */
-      var _pg=VB_pagsDaVenda(r);
-      if(!(cap>0)) return VB_tirVendaReg(dc, r, c, 1, _pg);
-      return VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r), _pg);   /* TIR do MEU fluxo: meu capital sai, minha parte entra */
+      /* Ordenacao usa a regua da VENDA (custo inteiro no dia da compra): a lista compara
+         operacao com operacao, e o cronograma da compra e merito de negociacao, nao da venda.
+         O numero do dinheiro do VB vive no card aberto, ao lado deste. */
+      if(!(cap>0)) return VB_tirVendaReg(dc, r, c, 1, null);
+      return VB_tirVendaReg(dc, r, cap, VB_tirFatorVB(r), null);   /* TIR do MEU fluxo: meu capital sai, minha parte entra */
     }
   }catch(e){}
   return null;
@@ -4292,9 +4301,12 @@ function VB_tirMensal(cf){
    tivesse desembolsado tudo de uma vez -- num caso real de 125k pago em 3 vezes, isso mostrava
    9,1% quando o dinheiro dele rendeu 17,2%. O prazo negociado e metade do resultado e estava
    invisivel.
-   O dado ja existe: contas a pagar com origem na mercadoria (o VB ja lanca assim). Aqui vira
-   FRACAO do custo, nao valor absoluto, pra servir aos dois usos da TIR sem traducao: o fluxo do
-   negocio inteiro (saida = custo) e o fluxo do VB com socio (saida = capital dele).
+   O dado ja existe: contas a pagar com origem na mercadoria (o VB ja lanca assim). Guarda em
+   REAIS. A v1.284.0 guardava fracao de `mercadorias.custo` (a compra) e aplicava sobre
+   `vendas.custo` (compra + gastos COBRAR) -- o mesmo `custo` de dois significados de sempre: um
+   gasto cobravel lancado depois viajava pro futuro junto com o pagamento ao dono e inflava a
+   taxa. Agora a conversao acontece no uso, dividindo pelo custo da VENDA, que e a base de quem
+   consome: com saida = custo sai o valor exato; com socio sai a fatia proporcional do VB.
    Data: a de PAGAMENTO quando ja pago (fato) e a de vencimento quando ainda nao (plano).
    O que sobra entre o custo e a soma das parcelas sai na data da compra -- e a entrada. */
 var VB_merPag=null;   /* {venda_id: [{d:'YYYY-MM-DD', f:fracao do custo}]} */
@@ -4322,7 +4334,7 @@ function VB_merPagCarrega(cb){
         /* soma acima do custo nao e cronograma de compra (gasto, acordo, outra coisa):
            melhor ignorar do que distorcer o numero central do negocio. */
         if(soma>tot*1.001) return;
-        m2[daVenda[mid]]=porMer[mid].map(function(x){ return {d:x.d, f:x.v/tot}; });
+        m2[daVenda[mid]]=porMer[mid].map(function(x){ return {d:x.d, v:x.v}; });
       });
       VB_merPag=m2;
       if(cb) cb();
@@ -4331,6 +4343,17 @@ function VB_merPagCarrega(cb){
 }
 function VB_pagsDaVenda(r){
   return (r && VB_merPag && typeof VB_merPag==='object') ? (VB_merPag[String(r.id)]||null) : null;
+}
+/* Quantas vezes a COMPRA foi paga, contando a entrada quando o cronograma nao cobre o custo
+   inteiro. Zero quando nao ha cronograma -- e o teste que decide se o segundo numero existe. */
+function VB_cronoQtd(r){
+  var p=VB_pagsDaVenda(r); if(!p || !p.length) return 0;
+  var c=Number(r.custo)||0; if(!(c>0)) return 0;
+  var s=0; p.forEach(function(x){ s+=(Number(x.v)||0); });
+  var f=s/c; if(!(f>0) || f>1.001) return 0;
+  /* Sobra pequena nao e entrada: e gasto COBRAR somado ao custo da venda depois da compra.
+     Chamar isso de mais uma vez faria o rotulo mentir (compra em 3x virava 4x). */
+  return p.length + ((f<0.98)?1:0);
 }
 function VB_tirVendaReg(dcIso, r, saida, fator, pags){
   if(!(saida>0)) return null;
@@ -4343,18 +4366,21 @@ function VB_tirVendaReg(dcIso, r, saida, fator, pags){
      fluxo passa a alternar sinal (entra do cliente, sai pro dono) -- a TIR continua sendo a
      taxa que zera o valor presente, mas deixa de ser garantidamente unica. Na pratica dos
      numeros do VB isso nao aparece; se um dia aparecer, o sintoma e taxa absurda. */
-  var cf=[], tem=false, _fr=0;
-  if(pags && pags.length && dcIso){
+  var cf=[], tem=false, _fr=0, _cr=[], _cv=Number(r.custo)||0;
+  if(pags && pags.length && dcIso && _cv>0){
     var _p0=String(dcIso).split('T')[0].split('-');
     var _dc0=(_p0.length===3)?new Date(+_p0[0],+_p0[1]-1,+_p0[2]):null;
     if(_dc0 && !isNaN(_dc0.getTime())){
       pags.forEach(function(pg){
         var _pp=String(pg.d||'').split('-'); if(_pp.length!==3) return;
         var _dp=new Date(+_pp[0],+_pp[1]-1,+_pp[2]); if(isNaN(_dp.getTime())) return;
-        var _f=Number(pg.f)||0; if(!(_f>0)) return;
+        var _f=(_cv>0)?((Number(pg.v)||0)/_cv):0; if(!(_f>0)) return;
         var _dd=(_dp-_dc0)/86400000; if(!isFinite(_dd)) return; if(_dd<0) _dd=0;
-        cf.push({d:_dd, v:-saida*_f}); _fr+=_f;
+        _cr.push({d:_dd, v:-saida*_f}); _fr+=_f;
       });
+      /* soma acima do custo da venda: cronograma incoerente, melhor sair inteiro no dia zero
+         do que mostrar um numero distorcido. */
+      if(_fr<=1.001) cf=cf.concat(_cr); else _fr=0;
     }
   }
   if(_fr<0.999) cf.push({d:0, v:-saida*(1-_fr)});
@@ -4708,7 +4734,7 @@ function HIST_renderRows(tab, rows){
         var _dc=((HIST_merCompra&&typeof HIST_merCompra==='object')?HIST_merCompra[String(r.id)]:null)||(r.data_compra||null);
         var _cic=HIST_cicloVenda(_dc, r); if(!_cic) return;
         var _pgF=VB_pagsDaVenda(r);
-        var _tm=_consig?VB_tirVendaReg(_dc, r, _c, 1, _pgF):VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r), _pgF);
+        var _tm=_consig?VB_tirVendaReg(_dc, r, _c, 1, null):VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r), null);
         if(_tm==null) return;
         var _temTroca=(r.parcelas||[]).some(function(p){ return p && p.t; });
         if(_cic<0.5 && !_consig){
@@ -4716,6 +4742,15 @@ function HIST_renderRows(tab, rows){
           campos.push({l:'Margem', v:(_mgC!=null?_mgC.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'% \u00b7 \u00e0 vista'+(_temTroca?' \u21c4':''), w:1});
         } else {
         campos.push({l:'Rendimento', v:VB_tirTxt(_tm)+' \u00b7 '+(_consig?'capital do consignante':('prazo m\u00e9dio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'))+(_dc?'':' · venda direta')+(_temTroca?' \u21c4':'')});
+        /* Segundo numero: o mesmo negocio medido pelo dinheiro que o VB realmente adiantou,
+           quando a compra foi paga parcelada. Mede coisa diferente do de cima -- por isso
+           rotulo proprio, nao um numero solto na mesma linha. So aparece quando existe
+           cronograma; venda comum segue com uma linha so, igual a antes. */
+        var _qx=VB_cronoQtd(r);
+        if(_qx>1){
+          var _td=_consig?VB_tirVendaReg(_dc, r, _c, 1, _pgF):VB_tirVendaReg(_dc, r, _cap, VB_tirFatorVB(r), _pgF);
+          if(_td!=null && isFinite(_td)) campos.push({l:'Seu dinheiro', v:VB_tirTxt(_td)+' \u00b7 compra em '+_qx+'x'});
+        }
         }
       })();
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
@@ -17390,6 +17425,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.0</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Os dois rendimentos, em vez de um. A v1.284.0 trocou a régua em todos os lugares; o certo é ter os dois números, porque eles medem coisas diferentes. RENDIMENTO volta a ser o da venda — custo inteiro no dia da compra — e é por ele que a lista ordena e o Relatório soma, para comparar operação com operação. SEU DINHEIRO é uma linha nova no card aberto, só quando a compra foi paga parcelada: mede o que o dinheiro realmente adiantado rendeu, com o rótulo dizendo em quantas vezes a compra foi paga. A diferença entre os dois é o mérito de ter negociado o prazo com o dono, que nunca teve número. O CSV exporta as duas colunas lado a lado</div>
+      <div class="cl-item">Correção na conta do cronograma da compra: as parcelas eram guardadas como porcentagem do custo da PEÇA e aplicadas sobre o custo da VENDA, que inclui os gastos marcados COBRAR. Um gasto lançado depois da compra viajava para o futuro junto com o pagamento ao dono e inflava a taxa. Agora as parcelas são guardadas em reais e convertidas na hora do uso, sobre a base certa. Cronograma que some mais que o custo da venda é ignorado, e o custo sai inteiro no dia da compra</div>
+      <div class="cl-item">O Relatório deixou de depender da ordem em que as telas foram abertas: o cronograma da compra só era carregado ao entrar no Histórico, então o rendimento do Relatório podia sair diferente na mesma sessão. Com a régua da venda, o número é sempre o mesmo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.284.0</span><span class="cl-ver-date">13/08/2026</span></div>
