@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.285.3</title>
+<title>VB - v1.285.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10035,7 +10035,10 @@ function CLIP_abrir(nome, cliId, voltarK){
   var ov=document.getElementById('clip-overlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='clip-overlay';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100013;display:none;align-items:flex-end;justify-content:center;';
+    /* 100035: o panorama e sempre a ultima folha da pilha -- ele e aberto POR outras (ficha do
+       cliente 100030, ficha de parcela 100014) e nada abre a partir dele. Em 100013 nascia atras
+       de quem o chamou. */
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100035;display:none;align-items:flex-end;justify-content:center;';
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     document.body.appendChild(ov);
   }
@@ -10065,7 +10068,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     // histórico + lucro VB gerado
     /* Lucro separado por vertical. Somar valor de venda com valor de face de titulo daria um
        numero grande e sem significado; o lucro, sim, e dinheiro seu nos dois casos. */
-    var antBruto=0, antLuc=0, venTot=0, venLuc=0;
+    var antBruto=0, antLuc=0, venTot=0, venLuc=0, venLucT=0;   /* venLuc = parte do VB; venLucT = lucro cheio da venda */
     var antL=[], venL=[];
     antOk.forEach(function(r){ /* antAtr ja aparece sozinho no bloco EM COBRANCA */
       var b2=Number(r.valor_bruto)||0; antBruto+=b2;
@@ -10081,13 +10084,16 @@ function CLIP_abrir(nome, cliId, voltarK){
         var consig=VB_consigVen(v.socio, vs, c, v.lucro_vb_pct);
         var temS=(v.socio && vs>0 && !consig);
         var pp=temS?((v.lucro_vb_pct!=null)?Number(v.lucro_vb_pct):50):100;
-        meu=l*(pp/100); venLuc+=meu;
+        meu=l*(pp/100); venLuc+=meu; venLucT+=l;
       }
       var _dc=String(v.data_compra||'').slice(0,10), _dv=String(v.data_venda||'').slice(0,10), _gir=null;
       if(_dc && _dv){ var _g=Math.round((new Date(_dv+'T00:00:00')-new Date(_dc+'T00:00:00'))/86400000); if(isFinite(_g)&&_g>=0) _gir=_g; }
-      venL.push({rot:REN_rotCurto(v.descricao||v.nome||'VENDA'), data:_dv||String(v.created_at||'').slice(0,10), total:t, luc:meu, dias:_gir});
+      venL.push({rot:REN_rotCurto(v.descricao||v.nome||'VENDA'), data:_dv||String(v.created_at||'').slice(0,10), total:t, luc:meu, lucT:((l!=null)?l:null), dias:_gir});
     });
-    var lucVB=antLuc+venLuc;
+    var lucVB=antLuc+venLuc, lucTot=antLuc+venLucT;
+    /* Diferem so quando ha venda com socio (12 das 17 vendas hoje). Nesses casos o painel
+       mostrava a parte do VB com o rotulo LUCRO TOTAL -- o numero certo com o nome errado. */
+    var _temSoc=(Math.abs(lucTot-lucVB)>=0.005);
     /* Pontualidade: so parcelas com baixa, comparando o recebimento com o vencimento. */
     var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; });
     var pgN=0, pgDia=0, pgAtr=0, pgDias=0;
@@ -10130,18 +10136,22 @@ function CLIP_abrir(nome, cliId, voltarK){
     /* Sem percentual: nao existe denominador honesto para as tres formas. Em peca propria a base
        e o seu custo, em sociedade e a sua parte dele, em consignacao e zero. O giro em dias, sim,
        vale igual nos tres e diz se o dinheiro foi rapido. */
-    function lnLuc(esq, dir, luc, dias){
+    function lnLuc(esq, dir, luc, dias, lucT){
+      /* Com socio, LUCRO sozinho e ambiguo: o valor mostrado sempre foi a parte do VB. */
+      var _dif=(lucT!=null && luc!=null && Math.abs(lucT-luc)>=0.005);
       return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">'
         +'<span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span>'
         +'<span style="color:var(--tx);font-weight:600;white-space:nowrap;">'+dir+'</span></div>'
-        +(luc!=null?('<div class="vb-det" style="text-align:right;">LUCRO: '+HIST_fmtMoeda(luc)
+        +(luc!=null?('<div class="vb-det" style="text-align:right;">'+(_dif?'LUCRO VB':'LUCRO')+': '+HIST_fmtMoeda(luc)
+            +(_dif?(' \u00b7 TOTAL: '+HIST_fmtMoeda(lucT)):'')
             +((dias!=null&&dias>=0)?(' \u00b7 '+dias+' DIA'+(dias===1?'':'S')):'')+'</div>'):'');
     }
     // RESULTADO
     /* a quebra so diz algo quando existem as duas verticais; com uma so ela repete o total */
     var innR='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">'
-      +'<span class="vb-tit" style="color:var(--so);">LUCRO TOTAL</span>'
+      +'<span class="vb-tit" style="color:var(--so);">'+(_temSoc?'LUCRO VB':'LUCRO TOTAL')+'</span>'
       +'<span style="font-size:16px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(lucVB)+'</span></div>';
+    if(_temSoc) innR+=ln('Lucro total', HIST_fmtMoeda(lucTot));
     if(venL.length && antL.length){
       innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
       innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
@@ -10156,8 +10166,11 @@ function CLIP_abrir(nome, cliId, voltarK){
     if(venL.length){
       var innV='';
       venL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
-      venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc, v2.dias); });
-      innV+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Vendido</b>', HIST_fmtMoeda(venTot))+ln('<b>Lucro</b>', HIST_fmtMoeda(venLuc));
+      venL.forEach(function(v2){ innV+=lnLuc((v2.data?fdt(v2.data)+' \u00b7 ':'')+CLIP_esc(v2.rot), HIST_fmtMoeda(v2.total), v2.luc, v2.dias, v2.lucT); });
+      var _difV=(Math.abs(venLucT-venLuc)>=0.005);
+      innV+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Vendido</b>', HIST_fmtMoeda(venTot))
+        +ln('<b>'+(_difV?'Lucro VB':'Lucro')+'</b>', HIST_fmtMoeda(venLuc))
+        +(_difV?ln('Lucro total', HIST_fmtMoeda(venLucT)):'');
       hh+=bl('REL\u00d3GIOS \u00b7 '+venL.length, innV, HIST_fmtMoeda(venTot), venL.length);
     }
     // ANTECIPAÇÕES
@@ -17453,6 +17466,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.5</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">O panorama do cliente chamava de LUCRO TOTAL um número que sempre foi só a sua parte. Na venda do AP Vampire o lucro foi de 35.500 e o painel mostrava 17.750 como total — número certo, nome errado, em doze das dezessete vendas. Agora, quando há sócio, o rótulo é LUCRO VB e o lucro cheio aparece na linha abaixo; sem sócio nada muda, os dois são a mesma coisa. Mesma correção no rodapé do bloco RELÓGIOS e na linha de cada relógio, que passa a mostrar LUCRO VB e TOTAL lado a lado</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.4</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">O panorama do cliente nascia atrás de quem o abriu — pela ficha do cliente e também pela ficha de parcela, onde o problema já existia antes. Ele é sempre a última folha da pilha e passou a abrir por cima</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.3</span><span class="cl-ver-date">13/08/2026</span></div>
