@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.6</title>
+<title>VB - v1.286.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13950,8 +13950,12 @@ function MER_syncVendaGrava(_r0, payload, desc, _ex){
   });
 }
 function MER_syncVenda(_r0, payload, desc){
-  // sincronia estoque -> venda: item vendido com venda vinculada propaga custo/descrição/sócio (com diff no log)
-  if(_r0 && (_r0.status||'')==='vendida' && _r0.venda_id){
+  /* sincronia estoque -> venda: propaga custo/descricao/socio (com diff no log).
+     Basta ter venda_id -- nao exige status 'vendida'. A peca com SIMULACAO vinculada segue em
+     estoque, e era justamente ela que ficava de fora: converter uma consignada em compra propria
+     limpava o socio na peca e a simulacao continuava com o socio e o repasse velhos, virando
+     venda consignada ao ser efetivada. */
+  if(_r0 && _r0.venda_id){
     /* CUSTO tem dois sentidos: na peca e a COMPRA, na venda e compra + gastos COBRAR.
        O caminho venda -> peca ja desconta os gastos antes de gravar (sessao 20); este lado
        gravava a compra crua e APAGAVA os gastos da venda -- o custo caia, o lucro subia
@@ -17567,6 +17571,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.7</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Correção: mexer numa peça que tem SIMULAÇÃO vinculada não atualizava a simulação. A sincronia da peça para a venda só rodava com a peça marcada como vendida, e peça com simulação continua em estoque. Quem pagava era justamente a conversão de consignada em compra própria: você limpava o sócio na peça, a simulação guardava o sócio e o repasse antigos, e ao efetivar nascia uma venda consignada com repasse que não existe mais. Agora basta haver venda vinculada, simulação ou não</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.6</span><span class="cl-ver-date">13/08/2026</span></div>
