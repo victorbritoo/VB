@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.12</title>
+<title>VB - v1.286.13</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11266,11 +11266,28 @@ function REN_proCalc(sugerir){
   var dias=Math.round((new Date(dICO+'T00:00:00')-new Date(x.venc+'T00:00:00'))/86400000);
   var falta=REN_falta(x);
   if(dias>0){
+    /* Sempre sobre o que FALTA, nunca sobre o campo: calcular em cima do valor ja corrigido
+       aplicaria juros sobre juros a cada toque. Assim tocar duas vezes da o mesmo numero. */
     var sug=Math.round(falta*(1+0.002*dias)*100)/100;
-    if(dica) dica.textContent='+'+dias+' DIA'+(dias===1?'':'S')+' \u00b7 0,2%/DIA \u2192 '+HIST_fmtMoeda(sug);
-    if(sugerir){ var ev=document.getElementById('renpr-val'); if(ev) ev.value=HIST_fmtMoeda(sug).replace('R$ ',''); }
-  } else if(dica) dica.textContent='';
+    var ev0=document.getElementById('renpr-val');
+    var atual=REN_num((ev0&&ev0.value)||'');
+    var aplicado=(Math.abs(Number(atual)-sug)<0.005);
+    if(dica){
+      /* O saldo nao muda sozinho ao mexer na data: quem aplica a correcao e o VB, tocando aqui.
+         O valor de cima e o registro do que a parcela e, e nunca muda. */
+      dica.innerHTML='<button type="button" onclick="REN_proAplica('+sug+')" style="border:0.5px solid '+(aplicado?'transparent':'var(--ln3)')+';border-radius:9px;background:'+(aplicado?'transparent':'var(--sf2)')+';color:'+(aplicado?'var(--so)':'var(--tx)')+';font-size:10px;font-weight:600;letter-spacing:0.5px;padding:'+(aplicado?'0':'5px 12px')+';cursor:'+(aplicado?'default':'pointer')+';font-family:-apple-system,sans-serif;">'
+        +(aplicado?('\u2713 JUROS DE '+dias+' DIA'+(dias===1?'':'S')+' APLICADOS')
+                  :('+'+dias+' DIA'+(dias===1?'':'S')+' \u00b7 0,2%/DIA \u2192 '+HIST_fmtMoeda(sug)))
+        +'</button>';
+    }
+  } else if(dica) dica.innerHTML='';
   REN_proPinta();
+}
+/* Escreve o valor corrigido no NOVO SALDO. Unico caminho: o campo nunca se preenche sozinho. */
+function REN_proAplica(v){
+  var ev=document.getElementById('renpr-val'); if(!ev) return;
+  ev.value=HIST_fmtMoeda(v).replace('R$ ','');
+  REN_proCalc(0);
 }
 function REN_proPode(){
   /* regra unica do SALVAR, usada pelo botao e pelo proprio salvar.
@@ -17580,6 +17597,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.13</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Na prorrogação, mudar a data não mexe mais no NOVO SALDO sozinho: ele continua com o valor que falta, e a linha de correção embaixo virou botão. Toca e o saldo passa a ser o corrigido; depois de aplicado ela diz JUROS DE 12 DIAS APLICADOS. A conta parte sempre do que falta e não do que está no campo, então tocar duas vezes dá o mesmo número, sem juros sobre juros</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.12</span><span class="cl-ver-date">13/08/2026</span></div>
