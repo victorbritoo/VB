@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.14</title>
+<title>VB - v1.286.15</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1788,6 +1788,16 @@ function HIST_abrevNome(n){
    Lendo com new Date(), 21:45 saia 18:45 e madrugada voltava um dia. Campo antigo (UTC real) cai no fallback. */
 function VB_leCarimbo(iso){
   var s=String(iso||''); if(!s) return null;
+  var p2=function(n){ return ('0'+n).slice(-2); };
+  /* Carimbo com fuso explicito (+00:00) vem do banco em UTC e precisa virar hora daqui -- era
+     por isso que o contrato aparecia 22:22 em vez de 19:22. O carimbo proprio do app (VB_carimbo)
+     termina em 'Z' mas ja guarda hora local, entao esse continua sendo lido ao pe da letra.
+     A distincao e o formato do sufixo, nao o significado: nao mexer sem olhar VB_carimbo. */
+  if(/[+-]\d{2}:?\d{2}$/.test(s)){
+    var _s=s.replace(/(\.\d{3})\d+/, '$1');   /* Safari nao aceita fracao de 6 digitos */
+    var _d=new Date(_s);
+    if(!isNaN(_d.getTime())) return {dt:p2(_d.getDate())+'/'+p2(_d.getMonth()+1)+'/'+_d.getFullYear(), hr:p2(_d.getHours())+':'+p2(_d.getMinutes())};
+  }
   var m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
   if(m) return {dt:m[3]+'/'+m[2]+'/'+m[1], hr:(m[4]?(m[4]+':'+m[5]):'')};
   var d=new Date(s); if(isNaN(d.getTime())) return null;
@@ -17597,6 +17607,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.15</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Correção de hora: carimbo gravado pelo banco vinha em hora de Londres e era mostrado como está, três horas à frente — o contrato do Hublot Black Magic aparecia 22:22 em vez de 19:22. Vale para a geração e a assinatura do contrato, os dois únicos carimbos que o banco preenche sozinho. Os demais já eram gravados em hora daqui e não mudam</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.14</span><span class="cl-ver-date">13/08/2026</span></div>
