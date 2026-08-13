@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.10</title>
+<title>VB - v1.286.11</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4766,8 +4766,16 @@ function HIST_renderRows(tab, rows){
           if(vals.length){
             var todasIguais=vals.every(function(x){return Math.abs(x-vals[0])<0.005;});
             var restoIgual=vals.length>2 && vals.slice(1).every(function(x){return Math.abs(x-vals[1])<0.005;}) && Math.abs(vals[0]-vals[1])>=0.005;
-            if(todasIguais){ if(_qtdP) campos.push({l:'Parcelas', v:_qtdP}); campos.push({l:'Valor parcela', v:HIST_fmtMoeda(vals[0])}); }
-            else if(restoIgual){ campos.push({l:'Parcelas', v:(_qtdP?_qtdP+' \u00b7 ':'')+HIST_fmtMoeda(vals[0])+' + '+(vals.length-1)+'\u00d7 '+HIST_fmtMoeda(vals[1]), w:1}); }
+            /* Parcela paga em relogio: o valor fica (e ele que fecha os totais da venda) e o
+               modelo entra colado, apos a setinha de troca. Sem isso a linha dizia so um numero
+               e nao dava para saber qual peca quitou qual parcela numa venda com duas trocas. */
+            function _trc(ix){
+              var p=arr[ix]; var t=p&&(p.t||p.troca); if(!t) return '';
+              var m=String(t.m||t.modelo||'').trim().toUpperCase();
+              return ' \u21c4'+(m?(' '+VB_nomeCurto(m)):'');
+            }
+            if(todasIguais){ if(_qtdP) campos.push({l:'Parcelas', v:_qtdP}); campos.push({l:'Valor parcela', v:HIST_fmtMoeda(vals[0])+_trc(0)}); }
+            else if(restoIgual){ campos.push({l:'Parcelas', v:(_qtdP?_qtdP+' \u00b7 ':'')+HIST_fmtMoeda(vals[0])+_trc(0)+' + '+(vals.length-1)+'\u00d7 '+HIST_fmtMoeda(vals[1]), w:1}); }
             else { var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals); campos.push({l:'Parcelas', v:(_qtdP?_qtdP+' \u00b7 ':'')+'Variadas ('+HIST_fmtMoeda(mn)+' a '+HIST_fmtMoeda(mx)+')', w:1}); }
             return;
           }
@@ -17574,6 +17582,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.11</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">A parcela paga com relógio passou a dizer qual relógio: a linha PARCELAS do card mostra o valor seguido de ⇄ e o modelo. O valor continua ali porque é ele que fecha o total da venda; antes só havia um número e não dava para saber qual peça quitou qual parcela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.10</span><span class="cl-ver-date">13/08/2026</span></div>
