@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.285.5</title>
+<title>VB - v1.286.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5293,7 +5293,9 @@ function showScreen(name){
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
   if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
   if(name==='ven'){ VB_cliAttach('ven-cliente'); VB_cliCarregar(function(){}); }
-  if(name==='mer'){ VB_cliAttach('mer-socio'); VB_cliCarregar(function(){}); }
+  /* fornecedor tambem sai da lista de clientes: no negocio do VB quem vende relogio e quem
+     compra relogio sao a mesma gente (o Emanuel e os dois). Nome novo vira cliente a completar. */
+  if(name==='mer'){ VB_cliAttach('mer-socio'); VB_cliAttach('mer-fornecedor'); VB_cliCarregar(function(){}); }
   if(name==='fin'){ VB_cliAttach('inv-nome'); VB_cliCarregar(function(){}); }
   if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false; HIST_expAbertos={};
     HIST_searchOpen=false; HIST_searchGlobal=false; HIST_searchTerm='';
@@ -13283,7 +13285,8 @@ function MER_abrir(id){
 
   /* o fornecedor NEM SEMPRE e um nome: em troca ele e uma frase (TROCA \u2014 modelo \u00b7 nome).
      Encurtar nome ali pegava a primeira e a ultima palavra e virava "TROCA FILHO". */
-  hh+=lin('De Quem Comprei', VB_nomeSePuro(r.fornecedor||''))+lin('Forma de Pagamento', r.pagamento||'');
+  hh+=lin('De Quem Comprei', VB_nomeSePuro(r.fornecedor||''));
+  if(r.pagamento) hh+='<div id="mer-view-pgtoline">'+lin('Forma de Pagamento', r.pagamento)+'</div>';
   /* a FORMA diz como; as PARCELAS dizem quanto e quando. Duas perguntas, duas linhas. */
   hh+='<div id="mer-view-parcinfo"></div>';
   hh+=lin('Sócio', VB_nomeCurto(r.socio||''));
@@ -13358,6 +13361,9 @@ function MER_abrir(id){
         else txt+=' \u00b7 pr\u00f3xima '+(MER_fmtData(ab[0].venc)||'')+' \u00b7 R$ '+MER_fmtBR(Number(ab[0].valor)||0);
       }
       var alvo=document.getElementById('mer-view-parcinfo'); if(alvo) alvo.innerHTML=lin('Parcelas', txt);
+      /* Com parcelas lancadas, a frase escrita a mao some: o mesmo pagamento em dois lugares
+         acaba discordando, e quem manda e a lista, que vira conta a pagar. */
+      var _fp=document.getElementById('mer-view-pgtoline'); if(_fp) _fp.style.display='none';
     });
   })();
   if(r.status==='vendida'){
@@ -13449,6 +13455,20 @@ function MER_abrir(id){
    qualquer outra conta. Peca consignada nao entra: o repasse ao consignante ja vive em
    A REPASSAR, e lancar aqui contaria a mesma divida duas vezes. */
 var MER_cpId=null, MER_cpLinhas=[], MER_cpOrig='';
+/* Le as parcelas ja lancadas e escreve o estado no proprio botao: sem parcelas convida a
+   lancar, com parcelas mostra em quantas vezes e quanto, e abre a folha pra editar. */
+function MER_ePintaParc(id){
+  var alvo=document.getElementById('mer-e-parcbtn'); if(!alvo) return;
+  function pinta(txt){
+    alvo.innerHTML='<button type="button" onclick="MER_cpId=\''+String(id)+'\';MER_cpSheet()" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+txt+'</button>';
+  }
+  pinta('+ PARCELAS DA COMPRA');
+  sb.from('contas_pagar').select('valor').eq('origem_tab','mercadorias').eq('origem_id', String(id)).then(function(res){
+    var arr=(res.data||[]); if(!arr.length) return;
+    var s=0; arr.forEach(function(c){ s+=(Number(c.valor)||0); });
+    pinta('COMPRA EM '+arr.length+'X \u00b7 '+VB_kFmt(s));
+  }).catch(function(){});
+}
 function MER_cpConsig(r){
   try{ return !!VB_consigVen(r.socio, r.valor_socio, r.custo, null); }catch(e){ return false; }
 }
@@ -13937,8 +13957,16 @@ function MER_viewEditar(id){
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+='<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:5px;align-items:center;"><span style="color:var(--mu);white-space:nowrap;">Em Estoque:</span><span style="font-weight:700;color:var(--so);padding:4px 0;">'+MER_dias(r.data_compra)+'d</span></div>';
   hh+=MER_viewCampoIn('De Quem Comprei','mer-e-fornecedor',r.fornecedor||'');
   hh+=MER_viewCampoIn('Forma de Pagamento','mer-e-pagamento',r.pagamento||'');
+  /* Botao, nao campos: a folha de parcelas cria conta a pagar de verdade. Se os campos vivessem
+     aqui, salvar a peca passaria a criar divida e cancelar teria que desfazer divida. Assim o
+     formulario so salva a peca, como sempre, e a folha continua dona das parcelas.
+     So na edicao -- no cadastro a peca ainda nao existe e nao ha a que amarrar a parcela. */
+  if(r.status!=='vendida' && !MER_cpConsig(r)){
+    hh+='<div id="mer-e-parcbtn" style="margin-top:8px;"></div>';
+    setTimeout(function(){ try{ MER_ePintaParc(String(r.id)); }catch(e){} },40);
+  }
   hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','oninput="MER_viewTocou()"');
-  setTimeout(function(){ try{ VB_cliAttach('mer-e-socio'); }catch(e){} },60);
+  setTimeout(function(){ try{ VB_cliAttach('mer-e-socio'); VB_cliAttach('mer-e-fornecedor'); }catch(e){} },60);
   hh+=MER_viewCampoIn('Parte do S\u00f3cio','mer-e-valorSocio', (r.valor_socio!=null&&Number(r.valor_socio)>0)?MER_fmtBR(r.valor_socio):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this)"');
   hh+='</div>';
   if(ehBaixa){
@@ -13987,6 +14015,7 @@ function MER_viewSalvar(){
   var b=document.getElementById('mer-view-editar');
   if(b){ b.disabled=true; b.textContent='SALVANDO...'; }
   try{ if(payload.socio) VB_cliGarantir(payload.socio); }catch(e){}
+  try{ if(payload.fornecedor) VB_cliGarantir(payload.fornecedor); }catch(e){}
   sb.from('mercadorias').update(payload).eq('id', r.id).select().then(function(res){
     if(b){ b.disabled=false; b.textContent='SALVAR ALTERA\u00c7\u00d5ES'; }
     if(res.error){ VB_erro(res.error.message||res.error.code,'N\u00e3o salvou. Tente de novo.'); return; }
@@ -14332,6 +14361,7 @@ function MER_add(btn){
      baixa. Antes daqui saia sempre null e apagava a nota gravada. */
   if(btn){ btn.disabled=true; btn.textContent='SALVANDO...'; }
   try{ if(payload.socio) VB_cliGarantir(payload.socio); }catch(e){}
+  try{ if(payload.fornecedor) VB_cliGarantir(payload.fornecedor); }catch(e){}
   var q = MER_editId
     ? sb.from('mercadorias').update(payload).eq('id', MER_editId).select()
     : sb.from('mercadorias').insert(Object.assign({status:'estoque'}, payload)).select();
@@ -17466,6 +17496,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.1</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">PARCELAS DA COMPRA agora também dentro da edição da peça, logo abaixo da forma de pagamento. O botão diz o estado: convida a lançar quando não há nada, e mostra COMPRA EM 6X com o total quando há. Não são campos novos no formulário — é o mesmo botão de sempre, abrindo a mesma folha, para que salvar a peça continue salvando só a peça e nunca criando ou apagando conta a pagar. No cadastro de peça nova não entra: a peça ainda não existe e não há a que amarrar a parcela</div><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">DE QUEM COMPREI passou a sugerir da lista de clientes enquanto você digita, no cadastro da peça e na edição — igual ao campo SÓCIO. Nome que ainda não existe vira cliente com ficha vazia, pronto para completar depois. Quem te vende relógio e quem te compra relógio passam a viver na mesma lista, que é como acontece na prática</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.5</span><span class="cl-ver-date">13/08/2026</span></div>
