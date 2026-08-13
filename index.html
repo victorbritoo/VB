@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.1</title>
+<title>VB - v1.286.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13455,20 +13455,40 @@ function MER_abrir(id){
    qualquer outra conta. Peca consignada nao entra: o repasse ao consignante ja vive em
    A REPASSAR, e lancar aqui contaria a mesma divida duas vezes. */
 var MER_cpId=null, MER_cpLinhas=[], MER_cpOrig='';
-/* Le as parcelas ja lancadas e escreve o estado no proprio botao: sem parcelas convida a
-   lancar, com parcelas mostra em quantas vezes e quanto, e abre a folha pra editar. */
+/* Le a TELA, nao o registro gravado: enquanto o VB converte uma consignada em compra, o banco
+   ainda diz consignada e a decisao certa esta nos campos abertos. Some enquanto houver socio
+   (consignada tem repasse, nao conta a pagar) e acende no instante em que o socio e apagado. */
 function MER_ePintaParc(id){
   var alvo=document.getElementById('mer-e-parcbtn'); if(!alvo) return;
+  var _soc=MER_eVal('mer-e-socio').trim();
+  var _vs=VEN_parseBR(MER_eVal('mer-e-valorSocio')); if(isNaN(_vs)) _vs=0;
+  var _cst=VEN_parseBR(MER_eVal('mer-e-custo')); if(isNaN(_cst)) _cst=0;
+  var _consig=false;
+  try{ _consig=!!VB_consigVen(_soc||null, _vs>0?_vs:null, _cst, null); }catch(e){}
+  if(_soc && _consig){ alvo.innerHTML=''; return; }
+  /* Um toque so: se ha mudanca pendente, grava a peca e abre a folha em seguida. O rotulo diz
+     que vai salvar -- sem isso a folha criaria conta a pagar numa peca ainda gravada como
+     consignada, e um CANCELAR depois deixaria a divida contada duas vezes. */
+  var _sujo=false; try{ _sujo=MER_viewDirty(); }catch(e){}
   function pinta(txt){
-    alvo.innerHTML='<button type="button" onclick="MER_cpId=\''+String(id)+'\';MER_cpSheet()" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+txt+'</button>';
+    alvo.innerHTML='<button type="button" onclick="MER_eAbreParc(\''+String(id)+'\')" style="width:100%;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(_sujo?'SALVAR E ':'')+txt+'</button>';
   }
-  pinta('+ PARCELAS DA COMPRA');
+  pinta(_sujo?'LAN\u00c7AR PARCELAS':'+ PARCELAS DA COMPRA');
   sb.from('contas_pagar').select('valor').eq('origem_tab','mercadorias').eq('origem_id', String(id)).then(function(res){
     var arr=(res.data||[]); if(!arr.length) return;
     var s=0; arr.forEach(function(c){ s+=(Number(c.valor)||0); });
     pinta('COMPRA EM '+arr.length+'X \u00b7 '+VB_kFmt(s));
   }).catch(function(){});
 }
+/* Salva a peca (se houver mudanca) e so entao abre a folha de parcelas. MER_viewSalvar redesenha
+   a ficha ao terminar, entao a folha e aberta depois, por cima dela. */
+function MER_eAbreParc(id){
+  var _sujo=false; try{ _sujo=MER_viewDirty(); }catch(e){}
+  if(!_sujo){ MER_cpId=String(id); MER_cpSheet(); return; }
+  MER_cpPend=String(id);
+  MER_viewSalvar();
+}
+var MER_cpPend=null;
 function MER_cpConsig(r){
   try{ return !!VB_consigVen(r.socio, r.valor_socio, r.custo, null); }catch(e){ return false; }
 }
@@ -13961,13 +13981,15 @@ function MER_viewEditar(id){
      aqui, salvar a peca passaria a criar divida e cancelar teria que desfazer divida. Assim o
      formulario so salva a peca, como sempre, e a folha continua dona das parcelas.
      So na edicao -- no cadastro a peca ainda nao existe e nao ha a que amarrar a parcela. */
-  if(r.status!=='vendida' && !MER_cpConsig(r)){
+  if(r.status!=='vendida'){
     hh+='<div id="mer-e-parcbtn" style="margin-top:8px;"></div>';
     setTimeout(function(){ try{ MER_ePintaParc(String(r.id)); }catch(e){} },40);
   }
-  hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','oninput="MER_viewTocou()"');
+  /* o botao de parcelas reage ao campo: limpou o socio, deixa de ser consignacao e ele acende
+     na hora -- sem ter que salvar, sair e reabrir a edicao */
+  hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','oninput="MER_viewTocou();MER_ePintaParc(\''+String(r.id)+'\')"');
   setTimeout(function(){ try{ VB_cliAttach('mer-e-socio'); VB_cliAttach('mer-e-fornecedor'); }catch(e){} },60);
-  hh+=MER_viewCampoIn('Parte do S\u00f3cio','mer-e-valorSocio', (r.valor_socio!=null&&Number(r.valor_socio)>0)?MER_fmtBR(r.valor_socio):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this)"');
+  hh+=MER_viewCampoIn('Parte do S\u00f3cio','mer-e-valorSocio', (r.valor_socio!=null&&Number(r.valor_socio)>0)?MER_fmtBR(r.valor_socio):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this);MER_ePintaParc(\''+String(r.id)+'\')"');
   hh+='</div>';
   if(ehBaixa){
     hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
@@ -14027,7 +14049,8 @@ function MER_viewSalvar(){
     VB_toast('Altera\u00e7\u00f5es salvas.');
     MER_load();
     MER_abrir(r.id);
-  }).catch(function(){ VB_toast('Sem conex\u00e3o \u2014 nada gravado.'); });
+    if(MER_cpPend && String(MER_cpPend)===String(r.id)){ MER_cpPend=null; MER_cpId=String(r.id); setTimeout(function(){ MER_cpSheet(); },120); }
+  }).catch(function(){ MER_cpPend=null; VB_toast('Sem conex\u00e3o \u2014 nada gravado.'); });
 }
 function MER_venderItem(id){
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); });
@@ -17498,7 +17521,8 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.1</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.2</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Converter uma peça consignada em compra própria virou um caminho só. O botão de parcelas dentro da edição passou a olhar os campos abertos em vez do que está gravado: apagou o sócio, ele acende na hora, sem salvar, sair e reabrir. E quando há alteração pendente ele diz SALVAR E LANÇAR PARCELAS — grava a peça e abre a folha em seguida, num toque. O rótulo avisa de propósito: abrir a folha antes de salvar criaria conta a pagar numa peça ainda gravada como consignada, e um cancelar depois deixaria a mesma dívida contada duas vezes</div><span class="cl-ver-date">13/08/2026</span></div>
       <div class="cl-item">PARCELAS DA COMPRA agora também dentro da edição da peça, logo abaixo da forma de pagamento. O botão diz o estado: convida a lançar quando não há nada, e mostra COMPRA EM 6X com o total quando há. Não são campos novos no formulário — é o mesmo botão de sempre, abrindo a mesma folha, para que salvar a peça continue salvando só a peça e nunca criando ou apagando conta a pagar. No cadastro de peça nova não entra: a peça ainda não existe e não há a que amarrar a parcela</div><span class="cl-ver-date">13/08/2026</span></div>
       <div class="cl-item">DE QUEM COMPREI passou a sugerir da lista de clientes enquanto você digita, no cadastro da peça e na edição — igual ao campo SÓCIO. Nome que ainda não existe vira cliente com ficha vazia, pronto para completar depois. Quem te vende relógio e quem te compra relógio passam a viver na mesma lista, que é como acontece na prática</div>
     </div>
