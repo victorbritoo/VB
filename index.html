@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.9</title>
+<title>VB - v1.286.10</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -4792,9 +4792,10 @@ function HIST_renderRows(tab, rows){
         }
       }
       var _cs=(HIST_conStatus&&typeof HIST_conStatus==='object')?HIST_conStatus[String(r.id)]:null;
-      /* data E hora nos dois: sem a hora, dois contratos do mesmo dia nao se distinguem, e o
-         assinado ja carregava so o dia. Mesmo formato da ficha do contrato (CON_dtHora). */
-      if(_cs) campos.push({l:'Contrato', v:(_cs.ass?('Assinado · '+(CON_dtHora(_cs.ass)||HIST_fmtData(String(_cs.ass).slice(0,10)))):('Gerado'+(_cs.ger?(' \u00b7 '+CON_dtHora(_cs.ger)):'')))});
+      /* data E hora nos dois, sem o ano: no card ele quebrava a linha e nao acrescenta nada --
+         a venda ja tem a data cheia logo acima. A ficha do contrato segue com o formato completo. */
+      function _conDH(iso){ var s=CON_dtHora(iso)||''; return s.replace(/^(\d{2}\/\d{2})\/\d{4}\s*/, '$1 \u00b7 '); }
+      if(_cs) campos.push({l:'Contrato', v:(_cs.ass?('Assinado · '+(_conDH(_cs.ass)||HIST_fmtData(String(_cs.ass).slice(0,10)))):('Gerado'+(_cs.ger?(' \u00b7 '+_conDH(_cs.ger)):'')))});
       if(r.identificacao) campos.push({l:'Identificação', v:r.identificacao});
       if(r.notas) campos.push({l:'Notas', v:r.notas, w:1});
 
@@ -17573,6 +17574,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.10</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">A data do contrato no card perdeu o ano e ficou em 13/08 · 15:42, que cabe numa linha só. O ano não acrescenta nada ali, já que a data da venda aparece inteira logo acima. A ficha do contrato continua com o formato completo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.9</span><span class="cl-ver-date">13/08/2026</span></div>
