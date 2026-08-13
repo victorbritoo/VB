@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.285.1</title>
+<title>VB - v1.285.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9507,7 +9507,9 @@ function GLB_badge(letra){
 }
 function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no título, nome em cinza
   try{
-    if(tipo==='cli'){ return r.cidade?{b:'', n:String(r.cidade)}:null; }
+    /* caixa alta na exibicao: o cadastro tem 'Fortaleza' e 'FORTALEZA' gravados, e a diferenca
+       aparecia na lista como se fosse outra coisa */
+    if(tipo==='cli'){ return r.cidade?{b:'', n:String(r.cidade).toUpperCase()}:null; }
     if(tipo==='mer'){
       if(r.socio){
         var _cons=(typeof VB_consigVen==='function' && VB_consigVen(r.socio, r.valor_socio, r.custo, null));
@@ -9545,7 +9547,11 @@ function GLB_buscar(){
     sb.from('pagamentos').select('*').or(_o(['nome'])).limit(8),
     sb.from('mercadorias').select('*').or(_o(['descricao','fornecedor','socio','sn'])).limit(8),
     sb.from('socios').select('*').or(_o(['nome'])).limit(8),
-    sb.from('clientes').select('*').or(_o(['nome','cpf'])+',apelido.ilike.'+q).limit(8)
+    /* Duas consultas e nao uma: com um limite unico o reservatorio SPC ocupava as 8 vagas e o
+       cliente de verdade nao aparecia (buscar FRANC trazia sete FRANCISCO do SPC e escondia o
+       JORGE FRANCISCO MURAD, que e cliente ativo). Cada lado tem a sua cota. */
+    sb.from('clientes').select('*').or(_o(['nome','cpf'])+',apelido.ilike.'+q).neq('ativo',false).limit(8),
+    sb.from('clientes').select('*').or(_o(['nome','cpf'])+',apelido.ilike.'+q).eq('ativo',false).limit(8)
   ]).then(function(rs){
     var termoAtual=(document.getElementById('glb-termo').value||'').trim();
     if(termoAtual!==termo) return; // resposta velha
@@ -9557,7 +9563,7 @@ function GLB_buscar(){
       ['PAGAMENTO','pag', rs[3].data||[], function(r){return r.nome||'—';}],
       ['ESTOQUE','mer', rs[4].data||[], function(r){return r.descricao||'—';}],
       ['SÓCIO','soc', rs[5].data||[], function(r){return r.nome||'—';}],
-      ['CLIENTE','cli', rs[6].data||[], function(r){return r.nome||'—';}]
+      ['CLIENTE','cli', (rs[6].data||[]).concat(rs[7].data||[]), function(r){return r.nome||'—';}]
     ];
     var itens=[];
     grupos.forEach(function(g){
@@ -9572,6 +9578,8 @@ function GLB_buscar(){
     });
     itens.sort(function(a,b){
       if(a.score!==b.score) return a.score-b.score;
+      /* mesma qualidade de casamento: pessoa do cadastro antes do reservatorio SPC */
+      var _sa=(a.rot==='SPC')?1:0, _sb=(b.rot==='SPC')?1:0; if(_sa!==_sb) return _sa-_sb;
       if(a.dop!==b.dop) return a.dop<b.dop?1:-1;
       return a.ts<b.ts?1:a.ts>b.ts?-1:0;
     });
@@ -16241,7 +16249,8 @@ function CLI_fichaMergeReserva(resId){
 function CLI_fichaFechar(ov){
   if(CLI_fichaEdit && CLI_fichaDirty()){
     var c=document.createElement('div');
-    c.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10070;display:flex;align-items:center;justify-content:center;';
+    /* acima da propria ficha (100030), senao o aviso nasce atras dela */
+    c.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100040;display:flex;align-items:center;justify-content:center;';
     c.innerHTML='<div style="background:var(--sf);border-radius:16px;padding:20px 18px;max-width:300px;width:86%;font-family:-apple-system,sans-serif;text-align:center;">'
       +'<div style="font-size:13px;color:var(--tx);font-weight:600;margin-bottom:14px;">Descartar as alterações?</div>'
       +'<button id="clif-desc" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">DESCARTAR</button>'
@@ -16263,7 +16272,9 @@ function CLI_fichaRender(){
   var old=document.getElementById('vb-clif-sheet'); if(old) old.remove();
   var ov=document.createElement('div');
   ov.id='vb-clif-sheet';
-  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
+  /* 100030 e nao 10060: a busca geral da Home vive em 100004, e a ficha aberta por ela nascia
+     atras da busca. Fica acima da ficha do reservatorio (100022) pelo mesmo motivo. */
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100030;display:flex;align-items:flex-end;justify-content:center;';
   /* altura fixa nos dois: sem isso o seletor nativo fica mais baixo que o campo de texto na mesma linha */
   var IN='width:100%;box-sizing:border-box;height:33px;padding:0 8px;border:0.5px solid var(--lnk);border-radius:999px;background:var(--sf2);color:var(--tx);font-size:12px;margin-top:3px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
   function campo(k,lbl,full){
@@ -17439,6 +17450,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.2</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">A ficha do cliente aberta pela busca geral nascia atrás da busca. Agora abre por cima, como a peça e o sócio já faziam</div>
+      <div class="cl-item">A busca geral escondia cliente de verdade atrás do reservatório SPC: as duas coisas dividiam o mesmo limite de oito resultados, então procurar FRANC devolvia sete FRANCISCO do SPC e o JORGE FRANCISCO MURAD, que é cliente ativo, ficava de fora. Cada lado passou a ter a sua cota, e em caso de empate a pessoa do cadastro vem antes do reservatório</div>
+      <div class="cl-item">A cidade ao lado do nome sai em caixa alta. O cadastro tem cidade gravada dos dois jeitos e a diferença aparecia na lista como se fosse outra informação</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.285.1</span><span class="cl-ver-date">13/08/2026</span></div>
