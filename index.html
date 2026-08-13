@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.3</title>
+<title>VB - v1.286.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13522,6 +13522,26 @@ function MER_cpFechar(){
   MER_cpId=null; MER_cpLinhas=[]; MER_cpOrig='';
 }
 function MER_cpSujo(){ return JSON.stringify(MER_cpLinhas)!==MER_cpOrig; }
+/* A linha em funcao propria: assim REPETIR ULTIMA acrescenta so o pedaco novo no fim da grade,
+   em vez de reescrever a folha inteira -- era isso que fazia a tela piscar e pular. */
+function MER_cpLinhaHTML(l, i){
+  var IN='width:100%;box-sizing:border-box;padding:6px 6px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;text-align:center;font-family:-apple-system,sans-serif;';
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:1px;text-align:center;';
+  var vBR=l.valor?Number(l.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+  var dBR=l.venc?l.venc.split('-').reverse().join('/'):'';
+  if(l.pago){
+    return '<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;">R$ '+vBR+'</div></div>'
+      +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;">'+dBR+'</div></div>'
+      +'<div style="text-align:center;font-size:9px;color:var(--so);font-weight:700;padding-bottom:8px;">PAGA</div>'
+      +(l.nota?('<div style="grid-column:1/-1;margin:-1px 0 3px;padding:0 10px;font-size:10px;color:var(--so);font-weight:600;opacity:0.7;">'+CLIP_esc(l.nota)+'</div>'):'');
+  }
+  return '<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="display:flex;align-items:center;gap:4px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:6px 6px;"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input data-selall inputmode="decimal" value="'+vBR+'" oninput="MER_cpCampo('+i+',\'valor\',this)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:13px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
+    +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><input data-selall inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="'+dBR+'" onblur="autoCompleteDate(this);MER_cpCampo('+i+',\'venc\',this)" oninput="MER_cpCampo('+i+',\'venc\',this)" style="'+IN+'"></div>'
+    /* dois toques: o x fica colado no campo de data e um esbarrao apagava a parcela */
+    +'<button data-arm="0" onclick="MER_cpRemove('+i+',this)" style="height:30px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:14px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>'
+    /* a obs e lembrete da parcela (ex.: METADE ROMULO). E a mesma nota que aparece em SAIDAS. */
+    +'<div style="grid-column:1/-1;margin:-1px 0 2px;"><input placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:5px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
+}
 function MER_cpRender(r){
   var ov=document.getElementById('mer-cp-ov'); if(!ov) return;
   var custo=Number(r.custo)||0;
@@ -13532,24 +13552,8 @@ function MER_cpRender(r){
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PARCELAS DA COMPRA</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(String(r.descricao||'\u2014'))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1fr 1fr 30px;gap:4px;align-items:end;">';
-  MER_cpLinhas.forEach(function(l, i){
-    var vBR=l.valor?Number(l.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
-    var dBR=l.venc?l.venc.split('-').reverse().join('/'):'';
-    if(l.pago){
-      hh+='<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;padding:10px 6px;">R$ '+vBR+'</div></div>'
-        +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><div style="'+IN+'opacity:0.6;padding:10px 6px;">'+dBR+'</div></div>'
-        +'<div style="text-align:center;font-size:9px;color:var(--so);font-weight:700;padding-bottom:11px;">PAGA</div>'
-        +(l.nota?('<div style="grid-column:1/-1;margin:-2px 0 6px;padding:0 10px;font-size:10px;color:var(--so);font-weight:600;opacity:0.7;">'+CLIP_esc(l.nota)+'</div>'):'');
-      return;
-    }
-    hh+='<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div style="display:flex;align-items:center;gap:4px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:7px 6px;"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input data-selall inputmode="decimal" value="'+vBR+'" oninput="MER_cpCampo('+i+',\'valor\',this)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
-      +'<div><div style="'+RT+'">'+(i===0?'VENCIMENTO':'&nbsp;')+'</div><input data-selall inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="'+dBR+'" onblur="autoCompleteDate(this);MER_cpCampo('+i+',\'venc\',this)" oninput="MER_cpCampo('+i+',\'venc\',this)" style="'+IN+'"></div>'
-      /* dois toques: o x fica colado no campo de data e um esbarrao apagava a parcela */
-      +'<button data-arm="0" onclick="MER_cpRemove('+i+',this)" style="height:34px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:15px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>'
-      /* a obs e lembrete da parcela (ex.: METADE ROMULO). E a mesma nota que aparece em SAIDAS. */
-      +'<div style="grid-column:1/-1;margin:-1px 0 3px;"><input placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
-  });
+  hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:3px;align-items:end;">';
+  MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
   hh+='<button onclick="MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
   /* CUSTO x LANCADO x FALTA e a pergunta que a folha responde: ja cobri tudo o que devo? */
@@ -13604,6 +13608,8 @@ function MER_cpAdd(){
     if(ult.venc){ try{ var pp=String(ult.venc).split('-'); var d=VB_mesData(new Date(+pp[0],+pp[1]-1,+pp[2]),1,+pp[2]); nv.venc=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }catch(e){} }
   }
   MER_cpLinhas.push(nv);
+  var g=document.getElementById('mer-cp-grid');
+  if(g){ g.insertAdjacentHTML('beforeend', MER_cpLinhaHTML(nv, MER_cpLinhas.length-1)); MER_cpPinta(); MER_cpTotais(); return; }
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpRemove(i, btn){
@@ -17541,10 +17547,32 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.5</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Correção: o HISTÓRICO DE MELHORIAS estava vazando para a tela inicial, aparecendo embaixo dos botões. As versões de hoje foram gravadas com um fechamento de bloco sobrando, o que encerrava a folha antes da hora e jogava o resto do texto na página. As cinco versões voltaram a ser blocos separados</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.4</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">REPETIR ÚLTIMA parou de piscar e de pular: a folha era reescrita inteira a cada parcela, e agora só a linha nova é acrescentada no fim. As parcelas também ficaram mais juntas, na altura de campo dos outros cards do app</div>
+    </div>
+
+    <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.3</span><span class="cl-ver-date">13/08/2026</span></div>
-      <div class="cl-item">Folha das parcelas da compra em quatro pontos: + PARCELA virou + REPETIR ÚLTIMA e já vem com o mesmo valor no mês seguinte, em vez de abrir linha vazia e fazer a folha saltar; o × de apagar pede dois toques e fica vermelho no primeiro, porque está colado no campo de data; as linhas ficaram mais juntas, cabendo mais parcela na tela sem rolar; e salvar passou a atualizar a ficha do relógio na hora — antes o número de parcelas só mudava se você fechasse a peça e abrisse de novo</div><span class="cl-ver-date">13/08/2026</span></div>
-      <div class="cl-item">Converter uma peça consignada em compra própria virou um caminho só. O botão de parcelas dentro da edição passou a olhar os campos abertos em vez do que está gravado: apagou o sócio, ele acende na hora, sem salvar, sair e reabrir. E quando há alteração pendente ele diz SALVAR E LANÇAR PARCELAS — grava a peça e abre a folha em seguida, num toque. O rótulo avisa de propósito: abrir a folha antes de salvar criaria conta a pagar numa peça ainda gravada como consignada, e um cancelar depois deixaria a mesma dívida contada duas vezes</div><span class="cl-ver-date">13/08/2026</span></div>
-      <div class="cl-item">PARCELAS DA COMPRA agora também dentro da edição da peça, logo abaixo da forma de pagamento. O botão diz o estado: convida a lançar quando não há nada, e mostra COMPRA EM 6X com o total quando há. Não são campos novos no formulário — é o mesmo botão de sempre, abrindo a mesma folha, para que salvar a peça continue salvando só a peça e nunca criando ou apagando conta a pagar. No cadastro de peça nova não entra: a peça ainda não existe e não há a que amarrar a parcela</div><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Folha das parcelas da compra em quatro pontos: + PARCELA virou + REPETIR ÚLTIMA e já vem com o mesmo valor no mês seguinte, em vez de abrir linha vazia e fazer a folha saltar; o × de apagar pede dois toques e fica vermelho no primeiro, porque está colado no campo de data; as linhas ficaram mais juntas, cabendo mais parcela na tela sem rolar; e salvar passou a atualizar a ficha do relógio na hora — antes o número de parcelas só mudava se você fechasse a peça e abrisse de novo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.2</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Converter uma peça consignada em compra própria virou um caminho só. O botão de parcelas dentro da edição passou a olhar os campos abertos em vez do que está gravado: apagou o sócio, ele acende na hora, sem salvar, sair e reabrir. E quando há alteração pendente ele diz SALVAR E LANÇAR PARCELAS — grava a peça e abre a folha em seguida, num toque. O rótulo avisa de propósito: abrir a folha antes de salvar criaria conta a pagar numa peça ainda gravada como consignada, e um cancelar depois deixaria a mesma dívida contada duas vezes</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.1</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">PARCELAS DA COMPRA agora também dentro da edição da peça, logo abaixo da forma de pagamento. O botão diz o estado: convida a lançar quando não há nada, e mostra COMPRA EM 6X com o total quando há. Não são campos novos no formulário — é o mesmo botão de sempre, abrindo a mesma folha, para que salvar a peça continue salvando só a peça e nunca criando ou apagando conta a pagar. No cadastro de peça nova não entra: a peça ainda não existe e não há a que amarrar a parcela</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.0</span><span class="cl-ver-date">13/08/2026</span></div>
       <div class="cl-item">DE QUEM COMPREI passou a sugerir da lista de clientes enquanto você digita, no cadastro da peça e na edição — igual ao campo SÓCIO. Nome que ainda não existe vira cliente com ficha vazia, pronto para completar depois. Quem te vende relógio e quem te compra relógio passam a viver na mesma lista, que é como acontece na prática</div>
     </div>
 
