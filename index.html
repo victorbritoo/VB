@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.5</title>
+<title>VB - v1.286.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13501,7 +13501,7 @@ function MER_cpSheet(){
     ov=document.createElement('div'); ov.id='mer-cp-ov';
     ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100025;align-items:flex-end;justify-content:center;';
     document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov) MER_cpFechar(); });
+    ov.addEventListener('click', function(e){ if(e.target===ov) MER_cpVoltar(); });
   }
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--mu);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
@@ -13520,6 +13520,20 @@ function MER_cpSheet(){
 function MER_cpFechar(){
   var o=document.getElementById('mer-cp-ov'); if(o) o.style.display='none';
   MER_cpId=null; MER_cpLinhas=[]; MER_cpOrig='';
+}
+/* Saida com alteracao pendente: parcela e conta a pagar, sair calado descarta divida sem avisar.
+   Mesmo aviso do resto do app -- DESCARTAR ou CONTINUAR EDITANDO. */
+function MER_cpVoltar(){
+  if(!MER_cpSujo()){ MER_cpFechar(); return; }
+  var c=document.createElement('div');
+  c.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100045;display:flex;align-items:center;justify-content:center;';
+  c.innerHTML='<div style="background:var(--sf);border-radius:16px;padding:20px 18px;max-width:300px;width:86%;font-family:-apple-system,sans-serif;text-align:center;">'
+    +'<div style="font-size:13px;color:var(--tx);font-weight:600;margin-bottom:14px;">Descartar as parcelas?</div>'
+    +'<button id="mercp-desc" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:8px;font-family:-apple-system,sans-serif;">DESCARTAR</button>'
+    +'<button id="mercp-cont" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">CONTINUAR EDITANDO</button></div>';
+  document.body.appendChild(c);
+  c.querySelector('#mercp-desc').addEventListener('click',function(){ c.remove(); MER_cpFechar(); });
+  c.querySelector('#mercp-cont').addEventListener('click',function(){ c.remove(); });
 }
 function MER_cpSujo(){ return JSON.stringify(MER_cpLinhas)!==MER_cpOrig; }
 /* A linha em funcao propria: assim REPETIR ULTIMA acrescenta so o pedaco novo no fim da grade,
@@ -13540,7 +13554,7 @@ function MER_cpLinhaHTML(l, i){
     /* dois toques: o x fica colado no campo de data e um esbarrao apagava a parcela */
     +'<button data-arm="0" onclick="MER_cpRemove('+i+',this)" style="height:30px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:14px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>'
     /* a obs e lembrete da parcela (ex.: METADE ROMULO). E a mesma nota que aparece em SAIDAS. */
-    +'<div style="grid-column:1/-1;margin:-1px 0 2px;"><input placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:5px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
+    +'<div style="grid-column:1/-1;margin:-2px 0 0;"><input placeholder="OBS" value="'+CLIP_esc(l.nota||'').replace(/"/g,'&quot;')+'" oninput="MER_cpCampo('+i+',\'nota\',this)" style="width:100%;box-sizing:border-box;padding:5px 10px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so);font-size:11px;font-family:-apple-system,sans-serif;text-transform:uppercase;outline:none;"></div>';
 }
 function MER_cpRender(r){
   var ov=document.getElementById('mer-cp-ov'); if(!ov) return;
@@ -13552,7 +13566,7 @@ function MER_cpRender(r){
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PARCELAS DA COMPRA</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(String(r.descricao||'\u2014'))+'</div>';
-  hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:3px;align-items:end;">';
+  hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
   hh+='<button onclick="MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
@@ -13565,7 +13579,7 @@ function MER_cpRender(r){
     +'<div style="'+_L+'"><span id="mer-cp-rotf" style="'+_R+'">'+(falta<-0.005?'PASSOU':'FALTA')+'</span><span id="mer-cp-falta" style="font-size:12px;font-weight:700;color:'+((Math.abs(falta)>0.005)?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(Math.abs(falta))+'</span></div>'
     +'</div>';
   hh+='<button id="mer-cp-salvar" onclick="MER_cpSalvar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR PARCELAS</button>'
-    +'<button onclick="MER_cpFechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
+    +'<button onclick="MER_cpVoltar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.innerHTML=hh;
   MER_cpPinta();
@@ -13621,6 +13635,14 @@ function MER_cpRemove(i, btn){
   }
   MER_cpLinhas.splice(i,1);
   if(!MER_cpLinhas.length) MER_cpLinhas=[{id:null, valor:0, venc:'', nota:'', pago:false}];
+  /* reescreve so a grade, nao a folha: redesenhar tudo fazia o card subir e piscar. Os indices
+     das linhas seguintes mudam, entao a grade inteira precisa ser remontada -- mas o cabecalho,
+     os totais e os botoes ficam onde estao. */
+  var g=document.getElementById('mer-cp-grid');
+  if(g){
+    var _h=''; MER_cpLinhas.forEach(function(l2,i2){ _h+=MER_cpLinhaHTML(l2,i2); });
+    g.innerHTML=_h; MER_cpPinta(); MER_cpTotais(); return;
+  }
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpSalvar(){
@@ -17545,6 +17567,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.6</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Sair das parcelas da compra com alteração pendente passou a perguntar antes de descartar, pelo VOLTAR e pelo toque fora — vale para parcela mexida, acrescentada ou apagada. Parcela é conta a pagar; sair calado jogava dívida fora sem avisar</div>
+      <div class="cl-item">Apagar parcela parou de fazer a folha piscar e subir: só a lista de parcelas é reescrita, o cabeçalho e os totais ficam parados. As linhas também ficaram mais próximas umas das outras</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.5</span><span class="cl-ver-date">13/08/2026</span></div>
