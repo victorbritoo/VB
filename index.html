@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.15</title>
+<title>VB - v1.286.16</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11908,7 +11908,11 @@ function REN_ficha(k, exp){
   if(exp) pos+='<div onclick="REN_ficha(\''+k+'\')" style="font-size:11px;color:var(--mu2);margin-top:5px;cursor:pointer;text-decoration:underline;">recolher</div>';
   tl=pre+tl+pos;
   var hh='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
-  hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+REN_termo(x.tab,false,true)+'</div>';
+  /* O titulo segue o que a folha e NAQUELE momento: parcela baixada com repasse deixou de ser
+     uma cobranca e virou uma conta com o socio. Parcela sem socio nunca vira REPASSE. */
+  var _ehRep=false;
+  try{ _ehRep=!!(b && oi && (REN_repDe(x,b)>0 || b.repassado_em)); }catch(e){}
+  hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+(_ehRep?'REPASSE':REN_termo(x.tab,false,true))+'</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
   /* prorrogada: a data velha e a nova na MESMA linha, com a seta -- a gramatica que o card
@@ -11921,7 +11925,10 @@ function REN_ficha(k, exp){
     if(x.valorOrig!=null && Math.abs(x.valorOrig-x.valor)>0.005) _era+=' \u00b7 '+HIST_fmtMoeda(x.valorOrig);
     _venc+='<div style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:600;margin-top:1px;">ERA '+_era+'</div>';
   }
-  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 0.9fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco('STATUS',status,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+'</div>';
+  /* PARCELA subiu pra antes do STATUS: valor, quando vence e qual das quantas sao o mesmo
+     assunto, e o estado fecha a linha. A coluna da parcela e a mais estreita porque '02 DE 10'
+     tem tamanho fixo, e a folga foi toda pro STATUS, que era quem saia com reticencias. */
+  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 0.8fr 1fr;gap:2px 8px;">'+bloco('VALOR',HIST_fmtMoeda(x.valor),red)+bloco('VENCIMENTO',_venc,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+bloco('STATUS',status,red)+'</div>';
   /* VALOR HOJE: so existe quando ha atraso correndo e sobra a receber. Toque copia so o numero,
      que e o que vai colado na conversa com o cliente. */
   (function(){
@@ -17607,6 +17614,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.16</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">A ficha da parcela passa a se chamar REPASSE quando é isso que ela é: parcela já baixada, com sócio e repasse em jogo. Parcela sem sócio continua PARCELA</div>
+      <div class="cl-item">A linha de cima da ficha ficou VALOR · VENCIMENTO · PARCELA · STATUS. Valor, vencimento e qual das quantas são o mesmo assunto e ficaram juntos; o estado fecha a linha e herdou a folga da coluna da parcela, que tem largura fixa e sobrava espaço</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.15</span><span class="cl-ver-date">13/08/2026</span></div>
