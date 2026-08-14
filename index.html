@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.16</title>
+<title>VB - v1.286.18</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11179,6 +11179,40 @@ function REN_notaDe(x){ return (REN_cache&&REN_cache.notas&&REN_cache.notas[REN_
    em N cards da lista viraria ruido. Mora so na ficha, rotulada, ao lado da nota do titulo --
    que continua sendo a que aparece na lista, porque essa sim e daquela parcela. */
 function REN_notaLote(x){ return (x && x.tab==='cr' && x.cr && x.cr.nota) ? String(x.cr.nota) : ''; }
+/* Nota do RECEBIMENTO, na parcela ja baixada. Mesma folha da nota da parcela, outro destino:
+   grava em parcela_baixas.nota, que e o texto que a ficha ja mostra ao lado do RECEBIDO. */
+function REN_notaBxSheet(k){
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  var b=REN_cache.bx[k]; if(!b) return;
+  var ov=document.getElementById('ren-nota-ov');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ren-nota-ov';
+    ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100025;align-items:flex-end;justify-content:center;';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
+  }
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">NOTA DO RECEBIMENTO</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 '+REN_termo(x.tab)+' '+REN_nm(x)+'</div>'
+    +'<input id="rennb-txt" placeholder="PIX \u00b7 ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'
+    +'<button onclick="REN_notaBxSalvar(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:10px;font-family:-apple-system,sans-serif;">SALVAR NOTA</button>'
+    +'<button onclick="document.getElementById(\'ren-nota-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
+    +'</div>';
+  ov.style.display='flex';
+}
+function REN_notaBxSalvar(k){
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  var b=REN_cache.bx[k]; if(!b) return;
+  var nt=((document.getElementById('rennb-txt')||{}).value||'').trim().toUpperCase();
+  sb.from('parcela_baixas').update({nota:(nt||null)}).eq('id', b.id).then(function(res){
+    if(res.error){ VB_erro(res.error.message); return; }
+    try{ VB_log('RECEB\u00cdVEIS','nota do recebimento', x.cliente, nt||'(limpa)'); }catch(e){}
+    VB_toast('Nota salva.');
+    document.getElementById('ren-nota-ov').style.display='none';
+    REN_fichaVoltar=k; REN_abrir();
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
 function REN_notaSheet(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var ov=document.getElementById('ren-nota-ov');
@@ -11975,6 +12009,14 @@ function REN_ficha(k, exp){
   /* SOCIO | VB dividem a linha; o REPASSE desce, porque agora sao tres blocos e tres nao cabem */
   if(_bSoc && _bVb) hh+='<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:2px 10px;">'+_bSoc+_bVb+'</div>';
   else hh+=(_bSoc||'');
+  /* Por que o socio de 50% no lucro leva menos de 50% da parcela: os custos COBRAR sairam so do
+     bolso do VB, entao o lucro caiu -- e metade dessa queda e do socio. Sem esta linha o numero
+     parecia erro de conta (a Daytona do Vicente mostrava 47,5% sem dizer nada).
+     Linha propria e nao dentro do bloco do SOCIO: la ela desalinharia a coluna do VB ao lado. */
+  if(oi && !oi.consig){
+    var _exC=REN_prevExtraVB(x.tab, x.opId);
+    if(_exC>0) hh+='<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin:-2px 0 4px;">CUSTOS DE '+HIST_fmtMoeda(_exC)+' NO REL\u00d3GIO</div>';
+  }
   /* Por que ESTA parcela foge do rateio. So aparece na que difere -- nas outras seria ruido.
      E medido na hora contra o rateio de agora, entao nao envelhece quando a venda muda. */
   if(oi && !REN_cache.bx[REN_key(x)] && REN_repPrev(x)!=null){
@@ -12058,12 +12100,17 @@ function REN_ficha(k, exp){
   if(!b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_proSheet(\''+k+'\');" style="'+BTN_S+'">'+(x.prorrogada?'EDITAR PRORROGA\u00c7\u00c3O':'PRORROGAR')+'</button>';
   /* DAR BAIXA e o que voce faz em quase toda abertura e continua largo e sozinho. Estas tres
      sao raras: lado a lado, a folha encurta duas linhas sem achatar a acao principal. */
-  hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">'
-    +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_notaSheet(\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(REN_notaDe(x)?'EDITAR NOTA':'NOTA')+'</button>'
+  /* parcela baixada e leitura: os tres botoes encolhem e se juntam, porque a acao ja aconteceu */
+  hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:'+(b?'4px':'6px')+';margin-top:'+(b?'4px':'6px')+';">'
+    /* a folha de nota nao fecha mais a ficha: ela abre POR CIMA (100025 sobre 100014), entao
+       tocar fora volta pra ficha e nao pra lista. Na parcela baixada o botao passa a mexer na
+       nota do RECEBIMENTO -- a que esta escrita na tela -- em vez da nota da parcela, que so
+       serve enquanto ela esta em aberto. */
+    +'<button onclick="'+(b?('REN_notaBxSheet(\''+k+'\')'):('REN_notaSheet(\''+k+'\')'))+'" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(b?((b.nota?'EDITAR ':'')+'NOTA'):(REN_notaDe(x)?'EDITAR NOTA':'NOTA'))+'</button>'
     +((x.tab==='cr')
       ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+((x.cr&&x.cr.id)||x.opId)+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
-      : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
-    +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
+      : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
+    +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
     +'</div>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
@@ -17614,6 +17661,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.18</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Na parcela já recebida, o botão NOTA passou a editar a nota do recebimento — a que está escrita na própria ficha. Antes ele abria a nota da parcela, que é outro campo e só serve enquanto ela está em aberto; para corrigir um PIX 20K E 20K era preciso passar por EDITAR RECEBIMENTO, uma folha inteira de valor e data</div>
+      <div class="cl-item">Correção: a folha de nota fechava a ficha ao abrir, e um toque fora dela devolvia direto para a lista em vez de voltar para a parcela. Agora ela abre por cima e a ficha continua atrás</div>
+      <div class="cl-item">Na parcela recebida, os botões NOTA · OPERAÇÃO · PANORAMA ficaram menores e mais juntos: ali a ação já aconteceu e a folha é de leitura</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.17</span><span class="cl-ver-date">13/08/2026</span></div>
+      <div class="cl-item">Quando o sócio de metade do lucro aparece levando menos de metade da parcela, a ficha agora diz por quê: CUSTOS DE R$ 1.250,00 NO RELÓGIO. Os gastos marcados COBRAR saem só do seu bolso, derrubam o lucro, e metade dessa queda é do sócio — na Daytona do Vicente isso vira 47,5% e antes não havia nenhuma palavra explicando</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.16</span><span class="cl-ver-date">13/08/2026</span></div>
