@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.287.1</title>
+<title>VB - v1.287.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3917,6 +3917,8 @@ function HIST_mesFechado(bk, count, term){
 function HIST_mesToggle(bk){
   var ab=!HIST_mesFechado(bk, 999, null);   /* 999: se esta fechado por regra, abrir */
   HIST_mesTgl[bk]=!ab;
+  /* redesenha com o que ja esta em memoria; so vai ao banco se por algum motivo nao houver */
+  if(HIST_ultRender){ HIST_renderRows(HIST_ultRender.tab, HIST_ultRender.rows); return; }
   try{ HIST_fetch(HIST_searchTerm||''); }catch(e){ try{ HIST_fetch(''); }catch(e2){} }
 }
 // Rótulo de seção pela data de NEGÓCIO da operação
@@ -4656,7 +4658,11 @@ function HIST_reload(tab){
   HIST_fetch(HIST_searchTerm);
 }
 
+/* Ultima lista desenhada, para redesenhar sem ir ao banco. Abrir ou fechar um mes nao muda
+   dado nenhum -- reconsultar sO fazia a tela piscar o 'Carregando...' a cada toque. */
+var HIST_ultRender=null;
 function HIST_renderRows(tab, rows){
+  HIST_ultRender={tab:tab, rows:rows};
   var listaEl=document.getElementById('hist-lista');
   var html='';
   var grouping=(HIST_sortCol==='data'), lastBucket=null, _fechado=false;
@@ -17700,6 +17706,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.2</span><span class="cl-ver-date">14/08/2026</span></div>
+      <div class="cl-item">Abrir e fechar mês parou de piscar: cada toque recarregava a lista inteira do banco, com o Carregando no meio. Abrir um mês não muda dado nenhum, então agora só redesenha o que já está na tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.1</span><span class="cl-ver-date">14/08/2026</span></div>
