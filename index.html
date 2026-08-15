@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.287.2</title>
+<title>VB - v1.287.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3914,9 +3914,11 @@ function HIST_mesFechado(bk, count, term){
   if(bk===HIST_mesLabelAtual() || bk==='A iniciar' || bk==='Sem data') return false;
   return (count||0)>6;
 }
-function HIST_mesToggle(bk){
-  var ab=!HIST_mesFechado(bk, 999, null);   /* 999: se esta fechado por regra, abrir */
-  HIST_mesTgl[bk]=!ab;
+/* Recebe o estado REAL de quem desenhou o cabecalho. Recalcular aqui com uma contagem inventada
+   errava justamente o mes pequeno: ele estava aberto, o toque mandava abrir de novo e nada
+   acontecia -- so o segundo toque fechava. */
+function HIST_mesToggle(bk, fechadoAgora){
+  HIST_mesTgl[bk]=!!fechadoAgora;
   /* redesenha com o que ja esta em memoria; so vai ao banco se por algum motivo nao houver */
   if(HIST_ultRender){ HIST_renderRows(HIST_ultRender.tab, HIST_ultRender.rows); return; }
   try{ HIST_fetch(HIST_searchTerm||''); }catch(e){ try{ HIST_fetch(''); }catch(e2){} }
@@ -3949,7 +3951,7 @@ function HIST_sectionHeader(label, first, count, met, fech, clic){
   /* Mes recolhivel: o cabecalho inteiro vira alvo de toque e ganha a setinha. Quem nao passa
      'clic' (Recebimentos, Vendidos) recebe exatamente o cabecalho de antes. */
   var _seta = clic ? ('<span style="font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transform:rotate('+(fech?'0':'90')+'deg);">\u203a</span>') : '';
-  var _atr = clic ? (' onclick="HIST_mesToggle(\''+_chave.replace(/'/g,"\\'")+'\')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
+  var _atr = clic ? (' onclick="HIST_mesToggle(\''+_chave.replace(/'/g,"\\'")+'\','+(fech?'true':'false')+')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
   return '<div'+_atr+'display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+_seta+HIST_esc(label)+'</span>'+dir+'</div>';
 }
 function HIST_setCount(text){
@@ -17706,6 +17708,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.3</span><span class="cl-ver-date">14/08/2026</span></div>
+      <div class="cl-item">Correção: fechar na mão um mês que já nascia aberto exigia dois toques — o primeiro mandava abrir o que já estava aberto. Agora o toque olha o estado real do cabeçalho em vez de recalcular</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.2</span><span class="cl-ver-date">14/08/2026</span></div>
