@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.286.18</title>
+<title>VB - v1.287.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3898,6 +3898,27 @@ function HIST_filterRows(tab, rows){
     return true;
   });
 }
+/* Meses recolhidos no Historico. Guarda so o que o VB ABRIU ou FECHOU na mao; o resto segue a
+   regra. Zera ao trocar de aba, senao um mes aberto em Vendas volta aberto na Antecipacao. */
+var HIST_mesTgl={};
+function HIST_mesLabelAtual(){
+  var d=new Date(), m=['Janeiro','Fevereiro','Mar\u00e7o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return m[d.getMonth()]+' '+d.getFullYear();
+}
+/* Recolhe so o que atrapalha: mes que nao e o corrente E tem mais de 6 registros. Com busca ou
+   filtro de mes ligado nada recolhe -- mes fechado com resultado dentro parece "nao achei". */
+function HIST_mesFechado(bk, count, term){
+  if(term) return false;
+  if(HIST_filter && HIST_filter.meses && HIST_filter.meses.length) return false;
+  if(Object.prototype.hasOwnProperty.call(HIST_mesTgl, bk)) return !HIST_mesTgl[bk];
+  if(bk===HIST_mesLabelAtual() || bk==='A iniciar' || bk==='Sem data') return false;
+  return (count||0)>6;
+}
+function HIST_mesToggle(bk){
+  var ab=!HIST_mesFechado(bk, 999, null);   /* 999: se esta fechado por regra, abrir */
+  HIST_mesTgl[bk]=!ab;
+  try{ HIST_fetch(HIST_searchTerm||''); }catch(e){ try{ HIST_fetch(''); }catch(e2){} }
+}
 // Rótulo de seção pela data de NEGÓCIO da operação
 function HIST_bucketLabel(iso){
   if(!iso) return 'Sem data';
@@ -3908,7 +3929,7 @@ function HIST_bucketLabel(iso){
   var m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   return m[d.getMonth()]+' '+d.getFullYear();
 }
-function HIST_sectionHeader(label, first, count, met){
+function HIST_sectionHeader(label, first, count, met, fech, clic){
   // Régua canônica dos cabeçalhos de mês (Histórico = Recebimentos = Vendidos)
   var dir='';
   if(met){
@@ -3919,7 +3940,11 @@ function HIST_sectionHeader(label, first, count, met){
   } else {
     dir=count ? '<span style="font-size:10px;font-weight:600;color:var(--so);">'+count+' '+(count===1?'Opera\u00e7\u00e3o':'Opera\u00e7\u00f5es')+'</span>' : '';
   }
-  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+HIST_esc(label)+'</span>'+dir+'</div>';
+  /* Mes recolhivel: o cabecalho inteiro vira alvo de toque e ganha a setinha. Quem nao passa
+     'clic' (Recebimentos, Vendidos) recebe exatamente o cabecalho de antes. */
+  var _seta = clic ? ('<span style="font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transform:rotate('+(fech?'0':'90')+'deg);">\u203a</span>') : '';
+  var _atr = clic ? (' onclick="HIST_mesToggle(\''+String(label).replace(/'/g,"\\'")+'\')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
+  return '<div'+_atr+'display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+_seta+HIST_esc(label)+'</span>'+dir+'</div>';
 }
 function HIST_setCount(text){
   var inline=document.getElementById('hist-count-inline');
@@ -4094,7 +4119,7 @@ function HIST_setAntSub(s){
 }
 function HIST_loadTab(tab){
   var keep=HIST_searchTerm||'';
-  if(tab!==HIST_tabAtual) HIST_expAbertos={}; // trocou de aba: recolhe a memória de expansão da anterior
+  if(tab!==HIST_tabAtual){ HIST_expAbertos={}; HIST_mesTgl={}; } // trocou de aba: recolhe a memória de expansão e a de meses abertos da anterior
   HIST_tabAtual=tab;
   try{localStorage.setItem('vb_hist_tab',tab);}catch(e){}
   HIST_setTabStyle(tab);
@@ -4630,7 +4655,7 @@ function HIST_reload(tab){
 function HIST_renderRows(tab, rows){
   var listaEl=document.getElementById('hist-lista');
   var html='';
-  var grouping=(HIST_sortCol==='data'), lastBucket=null;
+  var grouping=(HIST_sortCol==='data'), lastBucket=null, _fechado=false;
   var bucketCount={}, bucketMet={}, mixed=rows.some(function(r){ return (r._tab||tab)!==(rows[0]._tab||tab); });
   if(grouping){ rows.forEach(function(r){ var rt=r._tab||tab, bk=HIST_bucketLabel(HIST_dataNeg(rt, r));
     if((rt==='ant'||rt==='ven'||rt==='fin') && VB_ehSimulacao(r)){ if(bucketCount[bk]==null) bucketCount[bk]=0; return; } // simulação: aparece na lista, não soma
@@ -4651,7 +4676,17 @@ function HIST_renderRows(tab, rows){
   }); }
   rows.forEach(function(r,idx){
     var rtab=r._tab||tab;
-    if(grouping){ var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r)); if(bk!==lastBucket){ html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk], mixed?null:bucketMet[bk]); lastBucket=bk; } }
+    if(grouping){
+      var bk=HIST_bucketLabel(HIST_dataNeg(r._tab||tab, r));
+      if(bk!==lastBucket){
+        _fechado=HIST_mesFechado(bk, bucketCount[bk], HIST_searchTerm);
+        html+=HIST_sectionHeader(bk, lastBucket===null, bucketCount[bk], mixed?null:bucketMet[bk], _fechado, true);
+        lastBucket=bk;
+      }
+      /* mes recolhido: o cabecalho fica (com o total do mes, que e o que interessa de relance)
+         e as linhas nao sao montadas. O toque no cabecalho abre. */
+      if(_fechado) return;
+    }
     var titulo, valor, dataStr=(HIST_fmtData(HIST_dataNeg(rtab,r))||'--'), horaStr='', resumoExtra='', campos=[], rowBadge='', linha2='', dataOp=HIST_fmtData(HIST_dataOp(rtab,r));
     var _hCar=HIST_fmtHora(r.created_at);
     var carimboStr=HIST_fmtDataLocal(r.created_at)+(_hCar?(' '+_hCar):'');
@@ -17661,6 +17696,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.0</span><span class="cl-ver-date">14/08/2026</span></div>
+      <div class="cl-item">Meses anteriores nascem recolhidos no Histórico, em todas as abas. O cabeçalho continua mostrando o total e o lucro do mês, que é o que interessa de relance, e um toque abre. Só recolhe o que atrapalha: mês que não é o corrente E tem mais de 6 operações — com pouca coisa a lista já cabia na tela, e esconder ali seria pior. Buscar ou filtrar por mês abre tudo, senão um resultado dentro de mês fechado pareceria não encontrado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.286.18</span><span class="cl-ver-date">13/08/2026</span></div>
