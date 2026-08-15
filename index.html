@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.287.0</title>
+<title>VB - v1.287.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3931,6 +3931,10 @@ function HIST_bucketLabel(iso){
 }
 function HIST_sectionHeader(label, first, count, met, fech, clic){
   // Régua canônica dos cabeçalhos de mês (Histórico = Recebimentos = Vendidos)
+  /* Guardar o rotulo CRU antes de qualquer coisa: logo abaixo ele vira 'Julho 2026 · 10' e essa
+     versao com a contagem nao serve de chave -- quem pergunta se o mes esta fechado usa 'Julho
+     2026'. Foi exatamente o bug da v1.287.0: o toque gravava numa chave que ninguem lia. */
+  var _chave=String(label);
   var dir='';
   if(met){
     dir='<span style="white-space:nowrap;">'+(met.vlbl?'<span style="font-size:10px;font-weight:600;color:var(--so);">'+met.vlbl+'</span>':'')+'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(met.v)+'</span>'
@@ -3943,7 +3947,7 @@ function HIST_sectionHeader(label, first, count, met, fech, clic){
   /* Mes recolhivel: o cabecalho inteiro vira alvo de toque e ganha a setinha. Quem nao passa
      'clic' (Recebimentos, Vendidos) recebe exatamente o cabecalho de antes. */
   var _seta = clic ? ('<span style="font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transform:rotate('+(fech?'0':'90')+'deg);">\u203a</span>') : '';
-  var _atr = clic ? (' onclick="HIST_mesToggle(\''+String(label).replace(/'/g,"\\'")+'\')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
+  var _atr = clic ? (' onclick="HIST_mesToggle(\''+_chave.replace(/'/g,"\\'")+'\')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
   return '<div'+_atr+'display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+_seta+HIST_esc(label)+'</span>'+dir+'</div>';
 }
 function HIST_setCount(text){
@@ -17696,6 +17700,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.1</span><span class="cl-ver-date">14/08/2026</span></div>
+      <div class="cl-item">Correção: tocar no cabeçalho do mês recarregava a lista e não abria nada. O cabeçalho acrescenta a contagem ao nome antes de montar o toque, então ele gravava em "Julho 2026 · 10" enquanto a lista perguntava por "Julho 2026"</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.0</span><span class="cl-ver-date">14/08/2026</span></div>
