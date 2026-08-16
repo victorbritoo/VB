@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.287.4</title>
+<title>VB - v1.287.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13860,8 +13860,11 @@ function MER_gastoSheet(pecaId, gastoId){
   var g=null; MER_gastosDe(pecaId).forEach(function(y){ if(String(y.id)===String(gastoId)) g=y; });
   /* palpite inicial: consignada nasce NAO COBRAR, porque ali o VB ganha sem investir e
      costuma bancar. Nas outras nasce COBRAR. Ele troca em qualquer uma. */
-  var consigP = r ? VB_consigVen(r.socio, r.valor_socio, r.custo, null) : false;
-  var cob = g ? !!g.cobrar : !consigP;
+  /* Todo gasto novo nasce em COBRAR, inclusive em consignada. Antes a consignada nascia em NAO
+     COBRAR porque o VB costuma bancar esses custos -- mas o costume nao e regra, e o app decidindo
+     sozinho fazia o gasto sair do custo sem ninguem perceber. Nao cobrar passou a ser sempre um
+     toque dele. Gasto ja gravado abre como esta. */
+  var cob = g ? !!g.cobrar : true;
   var ov=REN_cpOv('mer-gasto-ov');
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
@@ -17721,6 +17724,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.5</span><span class="cl-ver-date">16/08/2026</span></div>
+      <div class="cl-item">Todo custo novo nasce em COBRAR, inclusive em peça consignada. Antes a consignada já nascia marcada como NÃO COBRAR, e o gasto ficava fora do custo sem ninguém decidir. Não cobrar passou a ser sempre uma escolha sua. Custos já lançados continuam como estão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.287.4</span><span class="cl-ver-date">15/08/2026</span></div>
