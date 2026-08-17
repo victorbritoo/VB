@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.2</title>
+<title>VB - v1.288.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1185,6 +1185,7 @@ body{ text-transform:uppercase; }
         <span style="font-size:9px;color:var(--so);font-weight:500;">dias</span>
       </div>
       <div id="ant-pisoPz" style="display:none;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:1px;"></div>
+      <div id="ant-pisoBt" onclick="ANT_pisoToggle()" style="display:none;margin:3px auto 0;padding:2px 8px;border:0.5px solid var(--ln3);border-radius:9px;font-size:8px;letter-spacing:1px;font-weight:700;cursor:pointer;width:fit-content;"></div>
     </div>
   </div>
 
@@ -5378,7 +5379,7 @@ function showScreen(name){
     if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
-  if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
+  if(name==='ant'){ ANT_pisoLigado=true; VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
   if(name==='ven'){ VB_cliAttach('ven-cliente'); VB_cliCarregar(function(){}); }
   /* fornecedor tambem sai da lista de clientes: no negocio do VB quem vende relogio e quem
      compra relogio sao a mesma gente (o Emanuel e os dois). Nome novo vira cliente a completar. */
@@ -7339,6 +7340,7 @@ function ANT_maskDate(el,cb){
 var ANT_PISO_DIAS = 30;
 /* Recebe [{prazo,valor}] so dos titulos que contam. Devolve o fator (1 = piso nao agiu). */
 function ANT_pisoFator(pesos){
+  if(!ANT_pisoLigado) return 1;
   if(!pesos || !pesos.length) return 1;
   var somaV=0, somaPV=0;
   for(var i=0;i<pesos.length;i++){
@@ -7371,15 +7373,34 @@ function ANT_calcPrazos(){
 }
 /* Marcados pelo ultimo calculo; so servem pra tela decidir se mostra as duas linhas. */
 var ANT_pisoAgiu=false, ANT_pisoUltFator=1, ANT_pisoJurosSem=0;
+/* Piso LIGADO por padrao. Desligar e excecao consciente: volta a ligar sozinho ao entrar na
+   tela e no LIMPAR, pra operacao curta nunca sair por esquecimento. */
+var ANT_pisoLigado=true;
+function ANT_pisoToggle(){
+  ANT_pisoLigado=!ANT_pisoLigado;
+  if(ANT_modoPersonalizado) ANT_recalcPersonalizado(); else ANT_recalc();
+}
 /* Prazo medio SEM o piso -- e o numero que o VB quer ver pra negociar. */
 /* Pinta as duas linhas do piso. So aparecem quando ele agiu -- linha morta o tempo todo vira
    paisagem e para de ser lida. */
 function ANT_pisoPinta(pmCobrado){
-  var ep=document.getElementById('ant-pisoPz'), ej=document.getElementById('ant-pisoJur');
-  if(!ep||!ej) return;
-  if(!ANT_pisoAgiu){ ep.style.display='none'; ej.style.display='none'; return; }
+  var ep=document.getElementById('ant-pisoPz'), ej=document.getElementById('ant-pisoJur'), eb=document.getElementById('ant-pisoBt');
+  if(!ep||!ej||!eb) return;
+  var off=function(){ ep.style.display='none'; ej.style.display='none'; eb.style.display='none'; };
+  /* A pastilha aparece quando o piso E RELEVANTE -- ou seja, quando o prazo real esta abaixo
+     de 30 --, ligado ou desligado. Se ela sumisse ao desligar, o VB perderia o caminho de volta. */
   var real=ANT_modoPersonalizado?ANT_prazoMedioRealPers():ANT_prazoMedioReal();
-  if(isNaN(real)){ ep.style.display='none'; ej.style.display='none'; return; }
+  if(isNaN(real) || !(real>0) || real>=ANT_PISO_DIAS){ off(); return; }
+  eb.style.display='';
+  if(!ANT_pisoLigado){
+    /* desligado: o numero grande JA e o real, entao as duas linhas seriam repeticao */
+    ep.style.display='none'; ej.style.display='none';
+    eb.textContent='SEM PISO';
+    eb.style.color='var(--red)'; eb.style.borderColor='var(--red)';
+    return;
+  }
+  eb.textContent='PISO '+ANT_PISO_DIAS;
+  eb.style.color='var(--so)'; eb.style.borderColor='var(--ln3)';
   /* o piso ja e o numero grande logo acima -- repeti-lo aqui era redundancia */
   var _dec=(Math.abs(real-Math.round(real))<0.005)?0:2;
   ep.textContent='REAL '+real.toLocaleString('pt-BR',{minimumFractionDigits:_dec,maximumFractionDigits:_dec})+' DIAS';
@@ -7608,9 +7629,10 @@ function ANT_limpar(){
   document.getElementById('ant-prazoMedio').textContent='---';
   document.getElementById('ant-totJuros').textContent='---';
   document.getElementById('ant-totDesc').textContent='---';
-  ANT_pisoAgiu=false; ANT_pisoUltFator=1; ANT_pisoJurosSem=0;
+  ANT_pisoAgiu=false; ANT_pisoUltFator=1; ANT_pisoJurosSem=0; ANT_pisoLigado=true;
   var _pz=document.getElementById('ant-pisoPz'); if(_pz) _pz.style.display='none';
   var _pj=document.getElementById('ant-pisoJur'); if(_pj) _pj.style.display='none';
+  var _pb=document.getElementById('ant-pisoBt'); if(_pb) _pb.style.display='none';
   ANT_titulos=[]; ANT_tituloCounter=0; ANT_simplesStash=null;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
   ANT_simFlag=false; ANT_paintSimChip();
@@ -17832,6 +17854,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.3</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">O piso de 30 dias ganhou botão. Ele nasce ligado, mas quando você precisa fechar uma operação mais curta é só tocar na pastilha embaixo do prazo médio: o prazo cai para o real e o juro acompanha na hora. Desligado, a pastilha fica vermelha escrito SEM PISO, para você ver num relance que aquela operação está fora da sua régua. E ele volta a ligar sozinho toda vez que você entra na tela ou toca LIMPAR — assim uma operação curta nunca sai por esquecimento, só por decisão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.2</span><span class="cl-ver-date">17/08/2026</span></div>
