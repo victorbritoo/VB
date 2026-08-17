@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.6</title>
+<title>VB - v1.288.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -593,6 +593,11 @@ body{ text-transform:uppercase; }
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
+    <div id="home-pagar" onclick="HOME_irPagar()" style="display:none;width:100%;padding:14px 18px;border:none;border-radius:14px;background:var(--acc);cursor:pointer;margin-bottom:14px;font-family:-apple-system,sans-serif;text-align:center;">
+      <div id="home-pagar-rot" style="font-size:10px;letter-spacing:2px;font-weight:600;color:var(--acc-tx);opacity:0.65;"></div>
+      <div id="home-pagar-val" style="font-size:26px;font-weight:700;color:var(--acc-tx);letter-spacing:-0.5px;margin-top:2px;"></div>
+      <div id="home-pagar-cred" style="font-size:11px;letter-spacing:1px;font-weight:600;color:var(--acc-tx);opacity:0.65;margin-top:2px;"></div>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;">
       <span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;font-family:-apple-system,sans-serif;">OPERAÇÕES</span>
       <span onclick="GLB_abrir()" style="cursor:pointer;color:var(--so);display:inline-flex;padding:2px 2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg></span>
@@ -624,7 +629,6 @@ body{ text-transform:uppercase; }
     </button>
 <!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
          <button onclick="PIN_request('rec')">Recebimentos</button> -->
-    <div id="home-pagar" onclick="HOME_irPagar()" style="display:none;text-align:center;margin-top:14px;font-size:11px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
   </div>
 </div>
@@ -2383,7 +2387,7 @@ function HOME_pagarCarrega(){
   var el=document.getElementById('home-pagar'); if(!el) return;
   try{
     var hoje=REN_hojeISO();   /* dia LOCAL: depois das 21h o UTC ja acha que e amanha */
-    sb.from('contas_pagar').select('valor,venc,pago_em').is('pago_em', null).lte('venc', hoje).limit(2000)
+    sb.from('contas_pagar').select('valor,venc,pago_em,credor').is('pago_em', null).lte('venc', hoje).limit(2000)
       .then(function(r){
         var rows=(r&&r.data)||[];
         if(!rows.length){ el.style.display='none'; return; }
@@ -2392,8 +2396,22 @@ function HOME_pagarCarrega(){
           tot+=Number(c.valor)||0;
           if(String(c.venc||'')<hoje) atras++;
         });
-        el.textContent='A PAGAR '+(atras?'\u00b7 '+atras+(atras>1?' ATRASADAS':' ATRASADA'):'HOJE')+' \u00b7 '+HIST_fmtMoeda(tot)+' \u00b7 '+rows.length+(rows.length>1?' CONTAS':' CONTA');
-        el.style.color=atras?'var(--red)':'var(--tx)';
+        var rot=document.getElementById('home-pagar-rot'), val=document.getElementById('home-pagar-val'), cred=document.getElementById('home-pagar-cred');
+        if(rot) rot.textContent = atras ? ('A PAGAR \u00b7 '+atras+(atras>1?' ATRASADAS':' ATRASADA')) : 'A PAGAR HOJE';
+        if(rot) rot.style.color = atras ? 'var(--red2)' : 'var(--acc-tx)';
+        if(rot) rot.style.opacity = atras ? '1' : '0.65';
+        if(val) val.textContent = HIST_fmtMoeda(tot);
+        /* uma conta = o nome de quem cobra (nome + ultimo sobrenome, regua das fotos);
+           mais de uma = quantas sao -- meia lista de nomes seria meia verdade */
+        if(cred){
+          if(rows.length===1){
+            var nm=String(rows[0].credor||'').trim();
+            try{ if(nm && typeof VB_nomePUS==='function') nm=VB_nomePUS(nm); }catch(e){}
+            cred.textContent = nm || '1 CONTA';
+          } else {
+            cred.textContent = rows.length+' CONTAS';
+          }
+        }
         el.style.display='';
       }).catch(function(){ el.style.display='none'; });
   }catch(e){ el.style.display='none'; }
@@ -3705,8 +3723,16 @@ function HIST_imgAnt(r){
   // sempre usa os títulos salvos (valor+data) -> planilha de títulos
   ANT_modoPersonalizado=true; ANT_titulos=[]; ANT_tituloCounter=0;
   (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||''),tipo:(it.tp||'deb')}); });
+  /* a foto regenerada sai com a regua com que a operacao foi SALVA, nao com a chave que por
+     acaso estiver na tela (mesma inferencia do reabrir: prazo_medio gravado diz a regua) */
+  var _plS=ANT_pisoLigado; ANT_pisoLigado=true;
+  var _pmR=Number(r.prazo_medio);
+  if(isFinite(_pmR)&&_pmR>0){
+    var _oR=ANT_pmCom(false,true), _nR=ANT_pmCom(true,true);
+    if(isFinite(_oR)&&isFinite(_nR)&&Math.abs(_nR-_oR)>0.01&&Math.abs(_oR-_pmR)<0.01) ANT_pisoLigado=false;
+  }
   var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
-  VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; }
+  VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; ANT_pisoLigado=_plS; }
   var _vbimg=document.getElementById('ant-tabelaImagem'); _vbimg=(_vbimg&&_vbimg.src&&_vbimg.src.indexOf('data:')===0)?_vbimg.src:null;
   ANT_modoPersonalizado=snap.mp; ANT_titulos=snap.arr; ANT_tituloCounter=snap.cnt;
   _histSetVal('ant-taxa',snap.tx); _histSetVal('ant-tarifa',snap.tf); _histSetVal('ant-tabelaCliente',snap.cl); _histSetVal('ant-valorBruto',snap.vb); _histSetVal('ant-qtd',snap.q); _histSetVal('ant-tabelaData',snap.dt); _histSetVal('ant-dataOperacao',snap.dop);
@@ -5395,7 +5421,10 @@ function showScreen(name){
     if(el) el.style.display=s===name?'block':'none';
   });
   if(name==='fin'){ if(typeof FIN_setModo==='function') FIN_setModo('sim'); }
-  if(name==='ant'){ ANT_pisoLigado=true; VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
+  /* a chave da regua segue a OPERACAO da tela (religa no LIMPAR e no reabrir, via inferencia);
+     religar aqui, depois do recalculo do carregar, deixava a tela em 22 e a chave em 30 --
+     e a foto saia mista (bruto de 22 com prazo de 30) */
+  if(name==='ant'){ VB_cliAttach('ant-tabelaCliente'); VB_cliCarregar(function(){}); }
   if(name==='ven'){ VB_cliAttach('ven-cliente'); VB_cliCarregar(function(){}); }
   /* fornecedor tambem sai da lista de clientes: no negocio do VB quem vende relogio e quem
      compra relogio sao a mesma gente (o Emanuel e os dois). Nome novo vira cliente a completar. */
@@ -17926,6 +17955,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.8</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">A foto parou de sair com a régua errada. Ao reabrir a operação de 22 dias, a tela vinha certa mas uma regra antiga religava a régua por trás dela — e o GERAR TABELA saía misto: o bruto dos 22 dias com o prazo de 30. A chave da régua agora segue a operação que está na tela: religa no LIMPAR e no reabrir (onde o prazo salvo decide), nunca escondida. O olhinho do card no Histórico ganhou a mesma inteligência: a foto regenerada sai com a régua com que a operação foi salva, não com a que por acaso estiver na tela</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.7</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">O A PAGAR saiu do rodapé e virou um card preto no topo da Home, antes dos botões — no dia dos R$ 55.000 vencendo, a linha cinza lá embaixo passou despercebida. Rótulo pequeno, valor grande, e embaixo o nome de quem cobra quando é uma conta só (nome + último sobrenome, mesma régua das fotos) ou a quantidade quando são várias. O rótulo só fica vermelho quando há conta atrasada; tudo no prazo fica na cor normal, senão o vermelho vira paisagem. Sem nada vencendo, o card não existe. Tocar leva para Entradas/Saídas, como antes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.6</span><span class="cl-ver-date">17/08/2026</span></div>
