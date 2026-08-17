@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.1</title>
+<title>VB - v1.288.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1189,10 +1189,10 @@ body{ text-transform:uppercase; }
   </div>
 
   <div class="mg">
-    <div class="mc"><div class="ml">TOTAL JUROS</div><div class="mv" id="ant-totJuros">---</div></div>
+    <div class="mc"><div class="ml">TOTAL JUROS</div><div class="mv" id="ant-totJuros">---</div>
+      <div id="ant-pisoJur" style="display:none;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:1px;"></div></div>
     <div class="mc"><div class="ml">JUROS + TARIFA</div><div class="mv" id="ant-totDesc">---</div></div>
   </div>
-  <div id="ant-pisoJur" style="display:none;text-align:center;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin:-4px 0 8px;"></div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
     <button onclick="ANT_limpar()" style="padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:12px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;">LIMPAR</button>
@@ -7380,10 +7380,12 @@ function ANT_pisoPinta(pmCobrado){
   if(!ANT_pisoAgiu){ ep.style.display='none'; ej.style.display='none'; return; }
   var real=ANT_modoPersonalizado?ANT_prazoMedioRealPers():ANT_prazoMedioReal();
   if(isNaN(real)){ ep.style.display='none'; ej.style.display='none'; return; }
-  ep.textContent='REAL '+real.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u00b7 PISO '+ANT_PISO_DIAS;
+  /* o piso ja e o numero grande logo acima -- repeti-lo aqui era redundancia */
+  var _dec=(Math.abs(real-Math.round(real))<0.005)?0:2;
+  ep.textContent='REAL '+real.toLocaleString('pt-BR',{minimumFractionDigits:_dec,maximumFractionDigits:_dec})+' DIAS';
   ep.style.display='';
   if(ANT_pisoJurosSem>0){
-    ej.textContent='SEM PISO: R$ '+ANT_formatBR(ANT_pisoJurosSem);
+    ej.textContent='SEM PISO R$ '+ANT_formatBR(ANT_pisoJurosSem);
     ej.style.display='';
   } else ej.style.display='none';
 }
@@ -17830,6 +17832,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.2</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">Acabamento do piso: o SEM PISO passou a morar dentro do card do total de juros, embaixo do número, do mesmo jeito que o prazo real mora embaixo do prazo médio — um padrão só. E a linha do prazo deixou de repetir PISO 30, que já era o número grande logo acima: agora diz só REAL 26 DIAS</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.1</span><span class="cl-ver-date">17/08/2026</span></div>
