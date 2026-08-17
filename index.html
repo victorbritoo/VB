@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.0</title>
+<title>VB - v1.288.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1184,6 +1184,7 @@ body{ text-transform:uppercase; }
         <span id="ant-prazoMedio" class="mv">---</span>
         <span style="font-size:9px;color:var(--so);font-weight:500;">dias</span>
       </div>
+      <div id="ant-pisoPz" style="display:none;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:1px;"></div>
     </div>
   </div>
 
@@ -1191,6 +1192,7 @@ body{ text-transform:uppercase; }
     <div class="mc"><div class="ml">TOTAL JUROS</div><div class="mv" id="ant-totJuros">---</div></div>
     <div class="mc"><div class="ml">JUROS + TARIFA</div><div class="mv" id="ant-totDesc">---</div></div>
   </div>
+  <div id="ant-pisoJur" style="display:none;text-align:center;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin:-4px 0 8px;"></div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
     <button onclick="ANT_limpar()" style="padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:12px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;">LIMPAR</button>
@@ -7325,6 +7327,31 @@ function ANT_maskDate(el,cb){
   });
 }
 
+/* ===== PISO DE 30 DIAS (v1.288.1) =====
+   O VB nao faz operacao abaixo de 30 dias. Antes ele empurrava a DATA do titulo ate o prazo
+   dar 30 -- e a tabela saia com o vencimento errado, que e o que o cliente le e o que o
+   recebimento usa. Agora a data fica real e quem sobe e o prazo COBRADO.
+   Age sobre a MEDIA PONDERADA, nao sobre cada titulo: titulo curto no meio de muitos ja era
+   deixado passar, e nesse caso a media sobe sozinha.
+   NAO age quando ha prazo negativo (titulo vencido): multiplicar negativo inverte o sinal.
+   Titulo PG nao entra na media -- ele tem regra propria (dias exatos, sem +4).
+   O piso e CONTA, nao estado: reabrir a operacao amanha da o mesmo numero, sem coluna nova. */
+var ANT_PISO_DIAS = 30;
+/* Recebe [{prazo,valor}] so dos titulos que contam. Devolve o fator (1 = piso nao agiu). */
+function ANT_pisoFator(pesos){
+  if(!pesos || !pesos.length) return 1;
+  var somaV=0, somaPV=0;
+  for(var i=0;i<pesos.length;i++){
+    var pr=Number(pesos[i].prazo), vl=Number(pesos[i].valor);
+    if(!isFinite(pr) || !isFinite(vl) || vl<=0) return 1;
+    if(pr<=0) return 1;   /* vencido: fora do piso */
+    somaV+=vl; somaPV+=pr*vl;
+  }
+  if(!(somaV>0)) return 1;
+  var med=somaPV/somaV;
+  if(!(med>0) || med>=ANT_PISO_DIAS) return 1;
+  return ANT_PISO_DIAS/med;
+}
 function ANT_calcPrazos(){
   var n=parseInt(document.getElementById('ant-qtd').value||'0');
   var ds=document.getElementById('ant-tabelaData').value;
@@ -7336,7 +7363,49 @@ function ANT_calcPrazos(){
     var v=VB_mesData(base,i);
     prazos.push(ANT_prazoDe(hoje,v));
   }
+  /* modo padrao: todas as parcelas valem o mesmo, entao peso 1 em todas */
+  var _f=ANT_pisoFator(prazos.map(function(x){return {prazo:x, valor:1};}));
+  ANT_pisoAgiu = (_f!==1); ANT_pisoUltFator=_f;
+  if(_f!==1) prazos=prazos.map(function(x){ return x*_f; });
   return prazos;
+}
+/* Marcados pelo ultimo calculo; so servem pra tela decidir se mostra as duas linhas. */
+var ANT_pisoAgiu=false, ANT_pisoUltFator=1, ANT_pisoJurosSem=0;
+/* Prazo medio SEM o piso -- e o numero que o VB quer ver pra negociar. */
+/* Pinta as duas linhas do piso. So aparecem quando ele agiu -- linha morta o tempo todo vira
+   paisagem e para de ser lida. */
+function ANT_pisoPinta(pmCobrado){
+  var ep=document.getElementById('ant-pisoPz'), ej=document.getElementById('ant-pisoJur');
+  if(!ep||!ej) return;
+  if(!ANT_pisoAgiu){ ep.style.display='none'; ej.style.display='none'; return; }
+  var real=ANT_modoPersonalizado?ANT_prazoMedioRealPers():ANT_prazoMedioReal();
+  if(isNaN(real)){ ep.style.display='none'; ej.style.display='none'; return; }
+  ep.textContent='REAL '+real.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u00b7 PISO '+ANT_PISO_DIAS;
+  ep.style.display='';
+  if(ANT_pisoJurosSem>0){
+    ej.textContent='SEM PISO: R$ '+ANT_formatBR(ANT_pisoJurosSem);
+    ej.style.display='';
+  } else ej.style.display='none';
+}
+/* Prazo medio real do modo personalizado (ponderado, sem piso, PG fora). */
+function ANT_prazoMedioRealPers(){
+  var hoje=ANT_getHoje(), sv=0, spv=0;
+  ANT_titulos.forEach(function(t){
+    var v=ANT_parseBR(t.valor||'0');
+    if(isNaN(v)||v<=0||!t.data||t.tipo==='pg') return;
+    var vc=ANT_parseDate(t.data); if(!vc) return;
+    sv+=v; spv+=ANT_prazoDe(hoje,vc)*v;
+  });
+  return sv>0?(spv/sv):NaN;
+}
+function ANT_prazoMedioReal(){
+  var n=parseInt(document.getElementById('ant-qtd').value||'0');
+  var ds=document.getElementById('ant-tabelaData').value;
+  if(!n||!ds)return NaN;
+  var base=ANT_parseDate(ds); if(!base)return NaN;
+  var hoje=ANT_getHoje(), s=0;
+  for(var i=0;i<n;i++) s+=ANT_prazoDe(hoje, VB_mesData(base,i));
+  return s/n;
 }
 
 function ANT_getPrazoMedio(){
@@ -7515,11 +7584,14 @@ function ANT_recalc(){
     var vpt = parcelaDigitada ? ANT_parseBR(document.getElementById('ant-valorParcela').value) : ANT_ceilStep(VB/n, ANT_degrau);
     var tj=0;
     for(var i=0;i<n;i++) tj+=vpt*taxa*(prazos[i]/30);
+    /* juro e linear no prazo e o fator e o mesmo em todos: dividir devolve o valor sem piso */
+    ANT_pisoJurosSem = (ANT_pisoUltFator!==1) ? (tj/ANT_pisoUltFator) : tj;
     var tl=VB-tj-tar;
     document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(tj);
     document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(tj+tar);
     if(!hasLiq) document.getElementById('ant-valorLiquido').value=ANT_formatBR(tl>0?tl:0);
   }
+  ANT_pisoPinta();
   ANT_autoFitLiquido();
 }
 
@@ -7534,6 +7606,9 @@ function ANT_limpar(){
   document.getElementById('ant-prazoMedio').textContent='---';
   document.getElementById('ant-totJuros').textContent='---';
   document.getElementById('ant-totDesc').textContent='---';
+  ANT_pisoAgiu=false; ANT_pisoUltFator=1; ANT_pisoJurosSem=0;
+  var _pz=document.getElementById('ant-pisoPz'); if(_pz) _pz.style.display='none';
+  var _pj=document.getElementById('ant-pisoJur'); if(_pj) _pj.style.display='none';
   ANT_titulos=[]; ANT_tituloCounter=0; ANT_simplesStash=null;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
   ANT_simFlag=false; ANT_paintSimChip();
@@ -7903,7 +7978,7 @@ function ANT_gerarTabela(){
     ctx.fillText(rows[i].nro,             cC[1], cy);
     ctx.fillText('R$ '+ANT_formatBR(rows[i].vb),    cC[2], cy);
     ctx.fillText(rows[i].venc,            cC[3], cy);
-    ctx.fillText(rows[i].prazo,           cC[4], cy);
+    ctx.fillText(Math.round(rows[i].prazo), cC[4], cy);   /* com piso o prazo deixa de ser inteiro */
     ctx.fillText('R$ '+ANT_formatBR(rows[i].juros), cC[5], cy);
     ctx.fillText('R$ '+ANT_formatBR(rows[i].vliq),  cC[6], cy);
     y+=lineH;
@@ -8523,6 +8598,19 @@ function ANT_recalcPersonalizado(){
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
   var hoje=ANT_getHoje();
   var totalVB=0,totalJuros=0,prazos=[];
+  /* Duas passadas: a media ponderada so existe depois de conhecer todos os titulos, entao o
+     fator do piso nao pode sair no meio do loop que ja soma juros. */
+  var _pesos=[];
+  ANT_titulos.forEach(function(t){
+    var v=ANT_parseBR(t.valor||'0');
+    if(isNaN(v)||v<=0) return;
+    if((t.tipo==='pg') || !t.data) return;
+    var vc=ANT_parseDate(t.data); if(!vc) return;
+    _pesos.push({prazo:ANT_prazoDe(hoje,vc), valor:v});
+  });
+  var _fP=ANT_pisoFator(_pesos);
+  ANT_pisoAgiu=(_fP!==1);
+  var _jurosSem=0;
   ANT_titulos.forEach(function(t){
     var v=ANT_parseBR(t.valor||'0');
     if(isNaN(v)||v<=0) return;
@@ -8532,10 +8620,13 @@ function ANT_recalcPersonalizado(){
       var venc=ANT_parseDate(t.data);
       if(!venc) return;
       var pr=(s<0)?ANT_diasEntre(hoje,venc):ANT_prazoDe(hoje,venc); // PG: dias exatos, sem +4
+      _jurosSem+=s*v*taxa*(pr/30);
+      if(s>0) pr=pr*_fP;   /* PG fica de fora do piso */
       totalJuros+=s*v*taxa*(pr/30);
       if(s>0) prazos.push({prazo:pr,valor:v});
     }
   });
+  ANT_pisoJurosSem=_jurosSem;
   var n=ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0 && t.tipo!=='pg';}).length;
   var totalLiq=totalVB-totalJuros-tar;
   if(prazos.length>0){
@@ -8549,6 +8640,7 @@ function ANT_recalcPersonalizado(){
   var ld=document.getElementById('ant-valorLiqDisp'); if(ld) ld.textContent=totalLiq>0?ANT_formatBR(totalLiq):'---';
   if(totalJuros>0){ document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(totalJuros); document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(totalJuros+tar); }
   document.getElementById('ant-valorLiquido').value=totalLiq>0?ANT_formatBR(totalLiq):'';
+  ANT_pisoPinta();
   ANT_autoFitLiquido();
 }
 
@@ -8556,12 +8648,20 @@ function ANT_getTitulosPersonalizados(){
   var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
   var hoje=ANT_getHoje(); var rows=[],tj=0,tl=0;
+  var _pesos2=[];
+  ANT_titulos.forEach(function(t){
+    var v=ANT_parseBR(t.valor||'0');
+    if(isNaN(v)||v<=0||!t.data||t.tipo==='pg') return;
+    var vc=ANT_parseDate(t.data); if(!vc) return;
+    _pesos2.push({prazo:ANT_prazoDe(hoje,vc), valor:v});
+  });
+  var _fT=ANT_pisoFator(_pesos2);
   ANT_titulos.forEach(function(t,idx){
     var v=ANT_parseBR(t.valor||'0');
     if(isNaN(v)||v<=0||!t.data) return;
     var venc=ANT_parseDate(t.data); if(!venc) return;
     var s=(t.tipo==='pg')?-1:1;
-    var pr=(s<0)?ANT_diasEntre(hoje,venc):ANT_prazoDe(hoje,venc); var j=s*v*taxa*(pr/30),vl=s*v-j; tj+=j; tl+=vl; // PG: sem +4
+    var pr=(s<0)?ANT_diasEntre(hoje,venc):(ANT_prazoDe(hoje,venc)*_fT); var j=s*v*taxa*(pr/30),vl=s*v-j; tj+=j; tl+=vl; // PG: sem +4 e sem piso
     var vd=String(venc.getDate()).padStart(2,'0'),vm2=String(venc.getMonth()+1).padStart(2,'0'),va=venc.getFullYear();
     rows.push({nro:(s<0?'PG':String(idx+1).padStart(2,'0')),vb:s*v,venc:vd+'/'+vm2+'/'+va,prazo:pr,juros:j,vliq:vl});
   });
@@ -17730,6 +17830,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.1</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">A antecipação passou a ter piso de 30 dias. Antes, quando o título vencia em menos de um mês, você empurrava a data até o prazo dar 30 — e a tabela saía com o vencimento errado, que é justamente o que o cliente lê e o que o recebimento usa. Agora a data fica real e quem sobe é o prazo cobrado. Vale sobre a média ponderada, não sobre cada título: título curto no meio de muitos continua passando, porque nesse caso a média já sobe sozinha. Título PG e operação com título vencido ficam de fora. Na sua tela aparecem os dois números — REAL 23,00 · PISO 30 embaixo do prazo, e SEM PISO: R$ X embaixo do total de juros — para você ver o tamanho da diferença antes de negociar. Na foto que vai para o cliente sai só o prazo cobrado, com as datas reais</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.0</span><span class="cl-ver-date">17/08/2026</span></div>
