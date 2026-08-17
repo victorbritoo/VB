@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.5</title>
+<title>VB - v1.288.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1671,6 +1671,11 @@ function HIST_carregarAnt(r){
     ANT_titulos=[]; ANT_tituloCounter=0;
     (r.titulos||[]).forEach(function(it){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:(it.v||''),data:(it.d||''),tipo:(it.tp||'deb')}); });
     if(ANT_titulos.length===0){ ANT_tituloCounter++; ANT_titulos.push({id:ANT_tituloCounter,valor:'',data:'',tipo:'deb'}); }
+    var _pmSP=Number(r.prazo_medio);
+    if(isFinite(_pmSP)&&_pmSP>0){
+      var _offP=ANT_pmCom(false,true), _onP=ANT_pmCom(true,true);
+      if(isFinite(_offP)&&isFinite(_onP)&&Math.abs(_onP-_offP)>0.01&&Math.abs(_offP-_pmSP)<0.01) ANT_pisoLigado=false;
+    }
     if(!ANT_modoPersonalizado){ ANT_toggleModo(); } else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   } else {
     // Modo simples: preenche bruto e qtd, depois recalc (taxa e tarifa já preenchidas acima)
@@ -1685,6 +1690,14 @@ function HIST_carregarAnt(r){
     ANT_userFields.clear();
     ANT_userFields.add('bruto');
     if(ANT_modoPersonalizado) ANT_toggleModo();
+    /* a operacao foi salva com qual regua? o prazo_medio gravado responde: se bate com o
+       calendario puro e nao com a regua, ela nasceu desligada -- e reabre desligada, senao
+       o recalculo mudaria numeros ja salvos (o liquido descia sozinho ao reabrir) */
+    var _pmS=Number(r.prazo_medio);
+    if(isFinite(_pmS)&&_pmS>0){
+      var _off=ANT_pmCom(false,false), _on=ANT_pmCom(true,false);
+      if(isFinite(_off)&&isFinite(_on)&&Math.abs(_on-_off)>0.01&&Math.abs(_off-_pmS)<0.01) ANT_pisoLigado=false;
+    }
     ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
@@ -7394,6 +7407,8 @@ function ANT_pisoToggle(){
     ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela');
   }
   ANT_recalc();
+  /* o toggle muda numeros salvos como qualquer digitacao: o botao de salvar/atualizar acende */
+  try{ VB_dirtyPaintTela('ant'); }catch(e){}
 }
 /* Prazo medio SEM o piso -- e o numero que o VB quer ver pra negociar. */
 /* Pinta as duas linhas do piso. So aparecem quando ele agiu -- linha morta o tempo todo vira
@@ -7435,6 +7450,29 @@ function ANT_prazoMedioRealPers(){
     sv+=v; spv+=ANT_diasEntre(hoje,vc)*v;   /* calendario puro: o numero do desligado */
   });
   return sv>0?(spv/sv):NaN;
+}
+/* Prazo medio calculado sob uma regua (ligada/desligada), sem depender do estado da tela.
+   Serve pra INFERIR, ao reabrir do Historico, com qual regua a operacao foi salva: o
+   prazo_medio gravado bate com um dos dois candidatos. */
+function ANT_pmCom(lig, pers){
+  var _s=ANT_pisoLigado; ANT_pisoLigado=lig; var pm=NaN;
+  try{
+    if(pers){
+      var hoje=ANT_getHoje(), pesos=[];
+      ANT_titulos.forEach(function(t){
+        var v=ANT_parseBR(t.valor||'0');
+        if(isNaN(v)||v<=0||!t.data||t.tipo==='pg') return;
+        var vc=ANT_parseDate(t.data); if(!vc) return;
+        pesos.push({prazo:(lig?ANT_prazoDe(hoje,vc):ANT_diasEntre(hoje,vc)), valor:v});
+      });
+      var f=ANT_pisoFator(pesos), sv=0, sp=0;
+      pesos.forEach(function(x){ sv+=x.valor; sp+=x.prazo*f*x.valor; });
+      pm=sv>0?sp/sv:NaN;
+    } else {
+      pm=ANT_getPrazoMedio();
+    }
+  } finally { ANT_pisoLigado=_s; }
+  return pm;
 }
 function ANT_prazoMedioReal(){
   var n=parseInt(document.getElementById('ant-qtd').value||'0');
@@ -17888,6 +17926,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.6</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">Dois consertos no toggle da régua. Tocar na pastilha agora acende o botão de salvar/atualizar na hora — antes a tela mudava mas o botão ficava apagado, e o aviso só aparecia na saída. E reabrir uma operação do Histórico deixou de mudar os números salvos: o app olha o prazo médio gravado e descobre com qual régua a operação foi feita — salva com 22 dias de calendário, reabre desligada mostrando exatamente os 22 dias e o líquido que você salvou; salva com a régua, reabre ligada. Antes o reabrir religava tudo à força e o líquido descia sozinho na tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.5</span><span class="cl-ver-date">17/08/2026</span></div>
