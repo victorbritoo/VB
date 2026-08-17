@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.3</title>
+<title>VB - v1.288.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1655,6 +1655,9 @@ function HIST_carregarFin(r){
 function HIST_carregarAnt(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   ANT_simplesStash=null;
+  /* piso volta ligado e o bruto restaurado NAO conta como digitado a mao: redigitar o liquido
+     numa operacao reaberta refaz bruto/valor por titulo, nunca a taxa */
+  ANT_pisoLigado=true; ANT_brutoTyped=false;
   ANT_currentOperationId = r.id;
   ANT_simFlag=!!r.simulacao; ANT_paintSimChip();
   VB_carimboTS = r.created_at||null;
@@ -7378,7 +7381,17 @@ var ANT_pisoAgiu=false, ANT_pisoUltFator=1, ANT_pisoJurosSem=0;
 var ANT_pisoLigado=true;
 function ANT_pisoToggle(){
   ANT_pisoLigado=!ANT_pisoLigado;
-  if(ANT_modoPersonalizado) ANT_recalcPersonalizado(); else ANT_recalc();
+  if(ANT_modoPersonalizado){ ANT_recalcPersonalizado(); return; }
+  /* Ligar/desligar o piso muda o PRAZO, nao o negocio: o liquido e o dinheiro que sai da mao
+     e ja esta combinado com o cliente. Entao, se ha liquido na tela, ele fica travado e quem
+     se refaz e o bruto (e o valor por titulo). A taxa nunca se mexe aqui. */
+  var _lqT=ANT_parseBR(document.getElementById('ant-valorLiquido').value);
+  if(_lqT>0){
+    ANT_liqSolveTaxa=false;
+    ANT_userFields.add('liquido');
+    ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela');
+  }
+  ANT_recalc();
 }
 /* Prazo medio SEM o piso -- e o numero que o VB quer ver pra negociar. */
 /* Pinta as duas linhas do piso. So aparecem quando ele agiu -- linha morta o tempo todo vira
@@ -7490,8 +7503,14 @@ function ANT_autoFitLiquido(){
 var ANT_userFields = new Set();
 // Direção do triângulo bruto/líquido/taxa: true = líquido digitado por último com bruto do usuário fixo → a taxa é o campo calculado
 var ANT_liqSolveTaxa=false;
+/* O modo taxa-resultado (bruto fixo + liquido digitado -> taxa calculada) so vale quando o BRUTO
+   FOI DIGITADO PELA MAO nesta visita a tela. Operacao reaberta do Historico tambem marca 'bruto'
+   como campo do usuario (para os recalculos), mas ai redigitar o liquido significa "refaz o bruto
+   e o valor por titulo", nao "mexe na minha taxa". Sem esta flag, reabrir + redigitar o liquido
+   reescrevia a taxa em silencio (3,00 virou 3,46 na tela do VB). */
+var ANT_brutoTyped=false;
 
-ANT_maskVal(document.getElementById('ant-valorBruto'),   function(){ ANT_liqSolveTaxa=false; ANT_userFields.add('bruto');   ANT_userFields.delete('liquido'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-valorBruto'),   function(){ ANT_liqSolveTaxa=false; if(ANT_parseBR(document.getElementById('ant-valorBruto').value)>0){ ANT_brutoTyped=true; ANT_userFields.add('bruto'); ANT_userFields.delete('liquido'); } else { ANT_userFields.delete('bruto'); } ANT_recalc(); });
 document.getElementById('ant-valorBruto').addEventListener('blur', function(){
   if(ANT_modoPersonalizado) return;
   var VBb=ANT_parseBR(this.value);
@@ -7503,9 +7522,14 @@ document.getElementById('ant-valorBruto').addEventListener('blur', function(){
     ANT_recalc();
   }
 });
-ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_liqSolveTaxa=false; ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); ANT_recalc(); });
+ANT_maskVal(document.getElementById('ant-valorParcela'),  function(){ ANT_liqSolveTaxa=false; if(ANT_parseBR(document.getElementById('ant-valorParcela').value)>0){ ANT_brutoTyped=true; ANT_userFields.add('parcela'); ANT_userFields.delete('liquido'); } else { ANT_userFields.delete('parcela'); } ANT_recalc(); });
 ANT_maskVal(document.getElementById('ant-valorLiquido'),  function(){
-  var _temAncora = ANT_userFields.has('bruto') || ANT_userFields.has('parcela');
+  var _vlq=ANT_parseBR(document.getElementById('ant-valorLiquido').value);
+  if(!(_vlq>0)){ ANT_liqSolveTaxa=false; ANT_userFields.delete('liquido'); ANT_recalc(); return; }
+  /* ancora de verdade = digitada pela mao NESTA visita E com valor na tela agora */
+  var _temAncora = ANT_brutoTyped && (
+       (ANT_userFields.has('bruto')   && ANT_parseBR(document.getElementById('ant-valorBruto').value)>0)
+    || (ANT_userFields.has('parcela') && ANT_parseBR(document.getElementById('ant-valorParcela').value)>0));
   if(_temAncora){ ANT_liqSolveTaxa=true; ANT_userFields.add('liquido'); }
   else { ANT_liqSolveTaxa=false; ANT_userFields.add('liquido'); ANT_userFields.delete('bruto'); ANT_userFields.delete('parcela'); }
   ANT_recalc();
@@ -7520,7 +7544,7 @@ document.getElementById('ant-taxa').addEventListener('input',function(){
   var raw=this.value.replace(/\D/g,'');
   if(!raw){this.value=''; ANT_modoPersonalizado?ANT_recalcPersonalizado():ANT_recalc(); return;}
   this.value=ANT_formatBR(parseInt(raw)/100);
-  if(ANT_modoPersonalizado){ ANT_recalcPersonalizado(); } else { if(ANT_liqSolveTaxa){ ANT_liqSolveTaxa=false; ANT_userFields.delete('liquido'); } ANT_userFields.add('taxa'); ANT_recalc(); }
+  if(ANT_modoPersonalizado){ ANT_recalcPersonalizado(); } else { if(ANT_liqSolveTaxa){ ANT_liqSolveTaxa=false; var _tAnc=ANT_parseBR(document.getElementById('ant-valorBruto').value)>0 || ANT_parseBR(document.getElementById('ant-valorParcela').value)>0; if(_tAnc){ ANT_userFields.delete('liquido'); } } ANT_userFields.add('taxa'); ANT_recalc(); }
 });
 document.getElementById('ant-tabelaData').addEventListener('change', function(){ ANT_recalc(); });
 
@@ -7613,6 +7637,12 @@ function ANT_recalc(){
     document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(tj);
     document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(tj+tar);
     if(!hasLiq) document.getElementById('ant-valorLiquido').value=ANT_formatBR(tl>0?tl:0);
+  } else {
+    /* Conta incompleta (taxa apagada, bruto zerado...): os totais saem da tela em vez de ficar
+       parados com o valor da conta anterior -- numero que nao nasce dos campos atuais e mentira. */
+    document.getElementById('ant-totJuros').textContent='---';
+    document.getElementById('ant-totDesc').textContent='---';
+    ANT_pisoJurosSem=0;
   }
   ANT_pisoPinta();
   ANT_autoFitLiquido();
@@ -7621,7 +7651,7 @@ function ANT_recalc(){
 function ANT_limpar(){
   ANT_snapshot = null;
   if(ANT_modoPersonalizado){ ANT_toggleModo(); }
-  ANT_userFields.clear(); ANT_liqSolveTaxa=false;
+  ANT_userFields.clear(); ANT_liqSolveTaxa=false; ANT_brutoTyped=false;
   ANT_degrau='centavo'; ANT_applyDegrauUI();
   ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -17854,6 +17884,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.4</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">Quatro travas da calculadora de antecipação, todas descobertas na operação de hoje. Ligar ou desligar o piso agora trava o valor líquido — ele é o dinheiro que sai da sua mão e já está combinado — e quem se refaz é o bruto e o valor por título; antes o líquido subia sozinho. Redigitar o líquido numa operação reaberta do Histórico refaz o bruto e o valor por título sem tocar na taxa; antes o app reescrevia a taxa em silêncio (o 3,00 virou 3,46). Apagar a taxa agora apaga também os juros da tela, em vez de deixar o número da conta anterior parado ali mentindo. E apagar um campo não trava mais a tela num estado morto: o app recompleta na hora a partir do que sobrou, e como tocar num campo seleciona tudo, é só digitar por cima. O modo em que você digita o bruto na mão e o líquido combinado para descobrir a taxa continua funcionando igual</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.3</span><span class="cl-ver-date">17/08/2026</span></div>
