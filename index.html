@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.288.9</title>
+<title>VB - v1.289.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11343,14 +11343,29 @@ function REN_cpLista(){
 var REN_cpForm=null, REN_cpEditId='';
 function REN_cpEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
-  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota')].join('\u241f');
+  var pp=[];
+  (REN_cpParc||[]).forEach(function(_,i){ pp.push(g('rencp-pv-'+i)+'@'+g('rencp-pd-'+i)); });
+  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),pp.join(';')].join('\u241f');
 }
 function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
-  var v=REN_num((document.getElementById('rencp-valor')||{}).value||'');
-  var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value||'');
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim();
-  var ok=(!!cr && Number(v)>0 && !!d) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
+  var vale;
+  if(REN_cpEditId){
+    var v=REN_num((document.getElementById('rencp-valor')||{}).value||'');
+    var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value||'');
+    vale=(Number(v)>0 && !!d);
+  } else {
+    /* conta nova: so libera com TODAS as parcelas preenchidas -- salvar meia lista deixaria
+       parcela faltando sem ninguem perceber */
+    vale=(REN_cpParc&&REN_cpParc.length>0);
+    (REN_cpParc||[]).forEach(function(_,i){
+      var ev=document.getElementById('rencp-pv-'+i), ed=document.getElementById('rencp-pd-'+i);
+      var vv=REN_num(ev?ev.value:''), dd=REN_brToISO(ed?ed.value:'');
+      if(!(vv>0) || !dd) vale=false;
+    });
+  }
+  var ok=(!!cr && vale) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -11380,10 +11395,11 @@ function REN_cpSheet(id){
     +'<input id="rencp-credor" oninput="REN_cpDirty()" placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencp-desc" oninput="REN_cpDirty()" placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
-    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
+    +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
     +'<div><div style="'+RT+'">VALOR</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
-    +'</div>'
+    +'</div>'):'')
+    +(c?'':'<div id="rencp-parc"></div>')
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
@@ -11392,29 +11408,95 @@ function REN_cpSheet(id){
     +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
-  VB_folhaAbre('cp','rencp-salvar',['rencp-credor','rencp-desc','rencp-valor','rencp-venc','rencp-nota'], !!c);
-  REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
+  VB_folhaAbre('cp','rencp-salvar',['rencp-credor','rencp-desc','rencp-valor','rencp-venc','rencp-parc','rencp-nota'], !!c);
   REN_cpEditId = c ? String(c.id) : '';
+  if(!c){ REN_cpParc=[{valor:'',data:''}]; REN_cpPinta(); }
+  else { REN_cpParc=[]; }
+  REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
   REN_cpDirty();
   try{ VB_cliAttach('rencp-credor'); }catch(e){}
+}
+/* Uma linha por vencimento -- mesmo padrao da NOVA ENTRADA, que ja resolvia isto na aba ao lado.
+   Compra parcelada e o formato padrao do negocio ("50K + 2X DE 50K", "70K + 75K 31/08"): as
+   parcelas nem sempre sao iguais, entao cada linha tem valor e data proprios. REPETIR ULTIMA
+   copia o valor e soma um mes com VB_mesData (31/01 + 1 = 28/02, nunca 03/03).
+   Na EDICAO nao aparece: la a folha edita UMA conta, que e o que aquela linha e.
+   contas_pagar nao tem lote/ordem (contas_receber tem) -- as linhas entram soltas, como as
+   tres do Emanuel ja estao hoje. Sem SQL. */
+var REN_cpParc=[];
+function REN_cpParcLe(){
+  (REN_cpParc||[]).forEach(function(pp, i){
+    var ev=document.getElementById('rencp-pv-'+i), ed=document.getElementById('rencp-pd-'+i);
+    if(ev) pp.valor=String(ev.value||'');
+    if(ed) pp.data=String(ed.value||'');
+  });
+}
+function REN_cpParcHTML(){
+  var IN='width:100%;box-sizing:border-box;padding:8px 6px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;color:var(--tx);font-size:13px;font-weight:600;text-align:center;outline:none;font-family:-apple-system,sans-serif;';
+  var s='<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:10px;margin-top:8px;">'
+    +'<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 22px;gap:6px;align-items:center;font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;text-align:center;margin-bottom:2px;"><span></span><span>VALOR</span><span>VENCIMENTO</span><span></span></div>';
+  (REN_cpParc||[]).forEach(function(pp,i){
+    s+='<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 22px;gap:6px;align-items:center;">'
+      +'<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;">'+String(i+1).padStart(2,'0')+'</span>'
+      +'<input data-selall id="rencp-pv-'+i+'" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+String(pp.valor||'')+'" placeholder="0,00" style="'+IN+'">'
+      +'<input data-selall id="rencp-pd-'+i+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+String(pp.data||'')+'" style="'+IN+'">'
+      +((REN_cpParc.length>1)?('<span onclick="REN_cpDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">\u00d7</span>'):'<span></span>')
+      +'</div>';
+  });
+  s+='<div onclick="REN_cpAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
+  return s+'</div>';
+}
+function REN_cpPinta(){
+  var box=document.getElementById('rencp-parc'); if(!box) return;
+  box.innerHTML=REN_cpParcHTML();
+  REN_cpDirty();
+}
+function REN_cpAddParc(){
+  REN_cpParcLe();
+  var last=REN_cpParc[REN_cpParc.length-1]||{valor:'',data:''};
+  var d=VB_brToDate(String(last.data||'').trim());
+  var nova='';
+  if(d){ var d2=VB_mesData(d,1,null); nova=('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear(); }
+  REN_cpParc.push({valor:String(last.valor||''), data:nova});
+  REN_cpPinta();
+}
+function REN_cpDelParc(i){
+  REN_cpParcLe();
+  if(REN_cpParc.length<=1) return;
+  REN_cpParc.splice(i,1);
+  REN_cpPinta();
 }
 function REN_cpSalvar(id){
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
-  var v=REN_num((document.getElementById('rencp-valor')||{}).value);
-  var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
   var nt=((document.getElementById('rencp-nota')||{}).value||'').trim().toUpperCase();
   if(!cr){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
-  if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+  var v, d, linhas=null;
+  if(id){
+    v=REN_num((document.getElementById('rencp-valor')||{}).value);
+    d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
+    if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+    if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+  } else {
+    REN_cpParcLe();
+    linhas=[]; var ruim=false;
+    (REN_cpParc||[]).forEach(function(pp){
+      var vv=REN_num(pp.valor), dd=REN_brToISO(pp.data);
+      if(!(vv>0) || !dd){ ruim=true; return; }
+      linhas.push({credor:(cr||null), descricao:(ds||null), valor:vv, venc:dd, nota:(nt||null)});
+    });
+    if(ruim || !linhas.length){ VB_toast('Preencha valor e vencimento de todas as parcelas.'); return; }
+    v=linhas[0].valor; d=linhas[0].venc;
+  }
   if(!VB_gravando('REN_cpSalvar')) return;
-  var reg={credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
-  var q=id?sb.from('contas_pagar').update(reg).eq('id',id):sb.from('contas_pagar').insert(reg);
+  var nT = linhas ? linhas.length : 1;
+  var reg = linhas ? linhas : {credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
+  var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
-    try{ VB_log('CONTAS A PAGAR', id?'editou conta':'nova conta', cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
+    try{ VB_log('CONTAS A PAGAR', id?'editou conta':('nova conta'+(nT>1?(' \u00b7 '+nT+' parcelas'):'')), cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
-    VB_toast(id?'Conta salva.':'Conta lan\u00e7ada.');
+    VB_toast(id?'Conta salva.':(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.'));
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
@@ -17975,6 +18057,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.0</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">NOVA CONTA passou a lançar a compra parcelada de uma vez, com a mesma lista que a NOVA ENTRADA já tinha na aba ao lado: uma linha por parcela, numerada, com valor e vencimento próprios, e o + REPETIR ÚLTIMA que copia o valor e soma um mês. Compra parcelada é o formato padrão do negócio — as fichas dizem 50K + 2X DE 50K, 40K + 40K 30D — e isso custava uma ida ao formulário por parcela. Como cada linha tem valor e data próprios, serve tanto para parcelas iguais quanto para as desiguais. Só vale para conta nova: editar continua mexendo numa linha só. Vencimento no fim do mês não escorrega — 31/01 + 1 vira 28/02, nunca 03/03</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.288.9</span><span class="cl-ver-date">17/08/2026</span></div>
