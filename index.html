@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.289.1</title>
+<title>VB - v1.289.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11158,7 +11158,12 @@ function REN_crSheet(id){
       :('<button onclick="REN_crFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
-  VB_folhaAbre('cr','rencr-salvar',['rencr-dev','rencr-desc','rencr-valor','rencr-venc','rencr-parc','rencr-nota'], !!c);
+  /* Esta folha NAO entra no VB_folhaCfg: ela tem pintor proprio (REN_crDirty), que valida os
+     campos alem de comparar com o original. O VB_folhaPinta roda num setTimeout depois de todo
+     input do documento e repintava o botao por cima -- em lancamento novo ele considera tudo
+     sujo, entao acendia o SALVAR com a lista vazia e o botao piscava a cada tecla.
+     A folha de gasto da peca continua no sistema: la ele e o unico pintor. */
+  delete VB_folhaCfg['cr'];
   REN_crEditId = c ? String(c.id) : '';
   if(!c){ REN_crParc=[{valor:'',data:''}]; REN_crPinta(); }
   else { REN_crParc=[]; }
@@ -11350,22 +11355,19 @@ function REN_cpEstado(){
 function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim();
-  var vale;
+  var okP=true;
   if(REN_cpEditId){
     var v=REN_num((document.getElementById('rencp-valor')||{}).value||'');
     var d=REN_brToISO((document.getElementById('rencp-venc')||{}).value||'');
-    vale=(Number(v)>0 && !!d);
+    okP=(Number(v)>0 && !!d);
   } else {
-    /* conta nova: so libera com TODAS as parcelas preenchidas -- salvar meia lista deixaria
-       parcela faltando sem ninguem perceber */
-    vale=(REN_cpParc&&REN_cpParc.length>0);
+    okP=(REN_cpParc||[]).length>0;
     (REN_cpParc||[]).forEach(function(_,i){
       var ev=document.getElementById('rencp-pv-'+i), ed=document.getElementById('rencp-pd-'+i);
-      var vv=REN_num(ev?ev.value:''), dd=REN_brToISO(ed?ed.value:'');
-      if(!(vv>0) || !dd) vale=false;
+      if(!(REN_num(ev?ev.value:'')>0) || !REN_brToISO(ed?ed.value:'')) okP=false;
     });
   }
-  var ok=(!!cr && vale) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
+  var ok=(!!cr && okP) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -11408,7 +11410,7 @@ function REN_cpSheet(id){
     +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   ov.style.display='flex';
-  VB_folhaAbre('cp','rencp-salvar',['rencp-credor','rencp-desc','rencp-valor','rencp-venc','rencp-parc','rencp-nota'], !!c);
+  delete VB_folhaCfg['cp'];   /* pintor proprio: REN_cpDirty. Ver a nota em REN_crAbrir */
   REN_cpEditId = c ? String(c.id) : '';
   if(!c){ REN_cpParc=[{valor:'',data:''}]; REN_cpPinta(); }
   else { REN_cpParc=[]; }
@@ -18059,7 +18061,12 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
-      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.0</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.2</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">O SALVAR parou de piscar enquanto você digita, na NOVA CONTA e também na NOVA ENTRADA, que tinha o mesmo defeito sem ninguém ter reparado. Havia dois pintores no mesmo botão: o da folha, que valida os campos, e um genérico que rodava logo depois de cada tecla e repintava por cima — em lançamento novo ele achava que estava tudo pronto e acendia o botão com a lista ainda vazia. As duas folhas saíram do pintor genérico, que continua servindo à folha de gasto da peça, onde é o único. As duas telas agora usam exatamente o mesmo código: SALVAR só acende com quem pagar preenchido e todas as parcelas com valor e vencimento</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.1</span><span class="cl-ver-date">17/08/2026</span></div>
       <div class="cl-item">NOVA CONTA passou a lançar a compra parcelada de uma vez, com a mesma lista que a NOVA ENTRADA já tinha na aba ao lado: uma linha por parcela, numerada, com valor e vencimento próprios, e o + REPETIR ÚLTIMA que copia o valor e soma um mês. Compra parcelada é o formato padrão do negócio — as fichas dizem 50K + 2X DE 50K, 40K + 40K 30D — e isso custava uma ida ao formulário por parcela. Como cada linha tem valor e data próprios, serve tanto para parcelas iguais quanto para as desiguais. Só vale para conta nova: editar continua mexendo numa linha só. Vencimento no fim do mês não escorrega — 31/01 + 1 vira 28/02, nunca 03/03</div>
     </div>
 
