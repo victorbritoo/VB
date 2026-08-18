@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.289.2</title>
+<title>VB - v1.289.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11065,7 +11065,7 @@ function REN_crParcHTML(){
       +((REN_crParc.length>1)?('<span onclick="REN_crDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">\u00d7</span>'):'<span></span>')
       +'</div>';
   });
-  s+='<div onclick="REN_crAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
+  s+='<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
   return s+'</div>';
 }
 function REN_crPinta(){
@@ -11081,6 +11081,12 @@ function REN_crAddParc(){
   if(d){ var d2=VB_mesData(d,1,null); nova=('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear(); }
   REN_crParc.push({valor:String(last.valor||''), data:nova});
   REN_crPinta();
+  /* o valor ja veio copiado; o que falta e a DATA -- o foco vai pra ela com o teclado ainda aberto */
+  try{
+    var _i=REN_crParc.length-1;
+    var _c=document.getElementById('rencr-pd-'+_i);
+    if(_c){ _c.focus(); var _n=_c.value.length; _c.setSelectionRange(_n,_n); }
+  }catch(e){}
 }
 function REN_crDelParc(i){
   REN_crParcLe();
@@ -11445,7 +11451,7 @@ function REN_cpParcHTML(){
       +((REN_cpParc.length>1)?('<span onclick="REN_cpDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">\u00d7</span>'):'<span></span>')
       +'</div>';
   });
-  s+='<div onclick="REN_cpAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
+  s+='<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
   return s+'</div>';
 }
 function REN_cpPinta(){
@@ -11461,6 +11467,12 @@ function REN_cpAddParc(){
   if(d){ var d2=VB_mesData(d,1,null); nova=('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear(); }
   REN_cpParc.push({valor:String(last.valor||''), data:nova});
   REN_cpPinta();
+  /* o valor ja veio copiado; o que falta e a DATA -- o foco vai pra ela com o teclado ainda aberto */
+  try{
+    var _i=REN_cpParc.length-1;
+    var _c=document.getElementById('rencp-pd-'+_i);
+    if(_c){ _c.focus(); var _n=_c.value.length; _c.setSelectionRange(_n,_n); }
+  }catch(e){}
 }
 function REN_cpDelParc(i){
   REN_cpParcLe();
@@ -14054,7 +14066,7 @@ function MER_cpRender(r){
   hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
-  hh+='<button onclick="MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
+  hh+='<button data-fast="1" onpointerdown="event.preventDefault();MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
   /* CUSTO x LANCADO x FALTA e a pergunta que a folha responde: ja cobri tudo o que devo? */
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
@@ -14108,7 +14120,17 @@ function MER_cpAdd(){
   }
   MER_cpLinhas.push(nv);
   var g=document.getElementById('mer-cp-grid');
-  if(g){ g.insertAdjacentHTML('beforeend', MER_cpLinhaHTML(nv, MER_cpLinhas.length-1)); MER_cpPinta(); MER_cpTotais(); return; }
+  if(g){
+    g.insertAdjacentHTML('beforeend', MER_cpLinhaHTML(nv, MER_cpLinhas.length-1)); MER_cpPinta(); MER_cpTotais();
+    /* o valor ja veio repetido; falta conferir a DATA -- foco nela com o teclado ainda aberto.
+       Os campos da linha nao tem id, entao pega o ultimo campo de data da grade. */
+    try{
+      var _ds=g.querySelectorAll('input[inputmode="numeric"]');
+      var _d=_ds[_ds.length-1];
+      if(_d){ _d.focus(); var _n=_d.value.length; _d.setSelectionRange(_n,_n); }
+    }catch(e){}
+    return;
+  }
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
 }
 function MER_cpRemove(i, btn){
@@ -18059,6 +18081,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.4</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">O + REPETIR ÚLTIMA do cronograma da compra, na ficha da peça, ganhou o mesmo tratamento: funciona de primeira com o teclado aberto e já deixa o cursor no vencimento da linha nova. Foi o último caso encontrado numa varredura de todos os botões que ficam junto de campo de digitação — os de adicionar linha da Antecipação e dos Pagamentos já estavam protegidos, e os demais botões do app são cobertos por uma regra geral que fecha o teclado e aciona o botão no mesmo toque, o que é o certo para quem termina uma tarefa e o errado só para quem continua digitando</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.3</span><span class="cl-ver-date">17/08/2026</span></div>
+      <div class="cl-item">O + REPETIR ÚLTIMA passou a funcionar de primeira com o teclado aberto, na NOVA CONTA e na NOVA ENTRADA. Antes o toque caía fora do campo, o iPhone fechava o teclado e comia o clique — você tocava uma vez para baixar o teclado e outra para repetir. Agora ele dispara no toque, antes disso acontecer, e o foco já vai para o vencimento da linha nova, que é o único campo que falta conferir (o valor vem copiado). Mesma correção que os botões CONFIRMAR e ATUALIZAR receberam na v1.178.1</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.2</span><span class="cl-ver-date">17/08/2026</span></div>
