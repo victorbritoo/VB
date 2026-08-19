@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.290.0</title>
+<title>VB - v1.290.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1656,7 +1656,10 @@ function HIST_carregarFin(r){
   VB_telaAnterior = 'hist';
   showScreen('fin');
 }
-function HIST_carregarAnt(r){
+/* semHoje=true: carrega a operacao SEM trocar a data por hoje. Usado por quem so quer a foto
+   (o olhinho gera a imagem carregando a operacao de verdade na tela), porque ali a foto tem que
+   sair como foi salva -- no Pedro Belem a foto cobrava 38.487,50 contra os 37.653,40 do card. */
+function HIST_carregarAnt(r, semHoje){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   ANT_simplesStash=null;
   /* piso volta ligado e o bruto restaurado NAO conta como digitado a mao: redigitar o liquido
@@ -1718,7 +1721,7 @@ function HIST_carregarAnt(r){
      gravar a data nova nem querendo. */
   if(r.modo==='personalizado'){ try{ ANT_recalcPersonalizado(); }catch(e){} }
   ANT_snapshot = ANT_assinatura();
-  var _atrasada = (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0);
+  var _atrasada = !semHoje && (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0);
   if(_atrasada){
     try{
       /* NAO usar ANT_getHoje: ela le o proprio campo, que ja esta preenchido com a data salva --
@@ -3711,7 +3714,7 @@ function HIST_clickShare(el, event){
   if(_ap){ VB_shareNomeOverride=_ap; VB_shareApelido=true; }
   else { VB_shareNomeOverride=null; VB_shareApelido=false; }
   try{
-    if(tab==='ant'){ HIST_carregarAnt(r); ANT_gerarTabela(); }
+    if(tab==='ant'){ HIST_carregarAnt(r, true); ANT_gerarTabela(); }   /* foto: data salva, nao hoje */
     else if(tab==='fin'){ HIST_carregarFin(r); FIN_compartilharTabela(); }
     else if(tab==='ven'){ HIST_carregarVen(r); VEN_gerarTabela(); }
     else { HIST_carregarPag(r); PAG_compartilhar(); }
@@ -8810,7 +8813,17 @@ function ANT_recalcPersonalizado(){
   document.getElementById('ant-qtd').value=n>0?n:'';
   var bd=document.getElementById('ant-valorBrutoDisp'); if(bd) bd.textContent=totalVB>0?ANT_formatBR(totalVB):'---';
   var ld=document.getElementById('ant-valorLiqDisp'); if(ld) ld.textContent=totalLiq>0?ANT_formatBR(totalLiq):'---';
-  if(totalJuros>0){ document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(totalJuros); document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(totalJuros+tar); }
+  /* Em cobranca de atraso os juros sao NEGATIVOS (o liquido a cobrar passa do bruto). Com a
+     guarda `>0` a linha nao era escrita e sobrava o total da operacao aberta antes -- a tela do
+     Felipe mostrava os R$ 7.158,69 do Emanuel. Escreve sempre que houver conta; so tela vazia
+     volta a `---`. */
+  if(totalVB>0 && taxa>0){
+    document.getElementById('ant-totJuros').textContent='R$ '+ANT_formatBR(totalJuros);
+    document.getElementById('ant-totDesc').textContent='R$ '+ANT_formatBR(totalJuros+tar);
+  } else {
+    document.getElementById('ant-totJuros').textContent='---';
+    document.getElementById('ant-totDesc').textContent='---';
+  }
   document.getElementById('ant-valorLiquido').value=totalLiq>0?ANT_formatBR(totalLiq):'';
   ANT_pisoPinta();
   ANT_autoFitLiquido();
@@ -18108,6 +18121,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.1</span><span class="cl-ver-date">19/08/2026</span></div>
+      <div class="cl-item">Dois consertos na cobrança de atraso. A foto do olhinho voltou a sair com a data salva: o olhinho gera a imagem carregando a operação de verdade na tela, então ele estava pegando a data de hoje junto — a foto do Pedro Belem cobrava R$ 38.487,50 contra os R$ 37.653,40 do card. Agora só abrir para trabalhar traz a data de hoje; a foto sai como foi salva. E o TOTAL JUROS da tela parou de mostrar número de outra operação: em cobrança de atraso os juros são negativos, e a linha só era escrita quando davam positivo — então sobrava o total da operação aberta antes, como os R$ 7.158,69 do Emanuel aparecendo na tela do Felipe</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.0</span><span class="cl-ver-date">19/08/2026</span></div>
