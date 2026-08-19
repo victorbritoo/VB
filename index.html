@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.289.5</title>
+<title>VB - v1.290.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1705,11 +1705,34 @@ function HIST_carregarAnt(r){
     ANT_recalc();
   }
   ANT_updateConfirmarBtnLabel();
-  /* A DATA OP nao e mais trocada por hoje ao abrir do Historico: e a data do negocio, e reescreve-la
-     marcava a tela como alterada sem voce ter mexido em nada - e, se salvasse, mudava a data gravada.
-     A assinatura sai depois de TUDO, incluindo o recalculo, senao a tela nasce suja. */
+  /* DATA OP EM ATRASADA VOLTA A VIR COMO HOJE (v1.290.0).
+     Historia deste trecho: foi pedido em 28/07 e implementado; em 30/07 outra sessao achou que era
+     residuo e removeu, oferecendo desfazer -- a pergunta ficou sem resposta ate a sessao 24.
+     Regra: SO em antecipacao atrasada, e atrasada e liquido > bruto, a mesma regua que o Historico
+     ja usa em tres lugares (nao "personalizada": nem toda personalizada e cobranca de atraso).
+     Numa cobranca de atraso a DATA OP e o dia em que se esta cobrando, e os juros correm ate ela.
+     NAO grava nada: so preenche o campo. O banco so muda se o VB tocar ATUALIZAR.
+     A assinatura sai ANTES da troca de proposito: assim a tela nasce com alteracao pendente, o
+     ATUALIZAR acende (ele fica travado em edicao sem alteracao) e sair pergunta SALVAR/DESCARTAR.
+     Tirar a assinatura depois evitaria a pergunta, mas trancaria o botao e o VB nao conseguiria
+     gravar a data nova nem querendo. */
   if(r.modo==='personalizado'){ try{ ANT_recalcPersonalizado(); }catch(e){} }
-  ANT_snapshot = ANT_assinatura(); VB_dirtyPaintTela('ant');
+  ANT_snapshot = ANT_assinatura();
+  var _atrasada = (Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0);
+  if(_atrasada){
+    try{
+      /* NAO usar ANT_getHoje: ela le o proprio campo, que ja esta preenchido com a data salva --
+         devolveria 17/08 e a troca nao faria nada. Aqui o dia tem que ser o do aparelho. */
+      var _hj=new Date(); _hj=new Date(_hj.getFullYear(),_hj.getMonth(),_hj.getDate());
+      var _hjBR=('0'+_hj.getDate()).slice(-2)+'/'+('0'+(_hj.getMonth()+1)).slice(-2)+'/'+_hj.getFullYear();
+      var _cd=document.getElementById('ant-dataOperacao');
+      if(_cd && _cd.value!==_hjBR){
+        _cd.value=_hjBR;
+        if(ANT_modoPersonalizado) ANT_recalcPersonalizado(); else ANT_recalc();
+      }
+    }catch(e){}
+  }
+  VB_dirtyPaintTela('ant');
   VB_telaAnterior = 'hist';
   showScreen('ant');
 }
@@ -18085,6 +18108,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.0</span><span class="cl-ver-date">19/08/2026</span></div>
+      <div class="cl-item">Abrir uma antecipação ATRASADA do Histórico traz a DATA OP. já no dia de hoje, e os juros aparecem recalculados até hoje. Numa cobrança de atraso essa data é o dia em que você está cobrando, e é até ela que os juros correm — ficar reabrindo com a data antiga mostrava um valor a cobrar menor do que o real. Vale só nas atrasadas, pela mesma régua que o Histórico já usa para marcá-las; operação normal continua abrindo com a data do negócio, que não se mexe. Nada é gravado ao abrir: a data no banco só muda se você tocar ATUALIZAR. Por isso a tela nasce com alteração pendente e sair pergunta se quer salvar — é o que deixa o ATUALIZAR disponível quando você quiser fixar a data nova</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.289.5</span><span class="cl-ver-date">19/08/2026</span></div>
