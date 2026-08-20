@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.290.1</title>
+<title>VB - v1.290.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11976,6 +11976,15 @@ function REN_abrir(){
       var vt2=Number(r.valor_total)||0, cu2=Number(r.custo)||0, vsC=Number(r.valor_socio)||0;
       var luc2=Math.max(0, vt2-cu2);
       var consig2=false; try{ consig2=!!VB_consigVen(r.socio, vsC, cu2, r.lucro_vb_pct); }catch(e){}
+      /* DUAS PERGUNTAS DIFERENTES, NAO UMA (v1.290.2).
+         consig2 responde "o socio recebe SO o capital de volta?" -- exige capital 100% dele E
+         lucro 100% do VB. E a pergunta certa pra dinheiro: 19 pontos do app dependem dela pra
+         decidir se o socio leva lucro, e afrouxa-la tiraria o lucro dele em silencio.
+         consigCap2 responde "o capital e todo do socio?" -- so isso, e e a regua do VB pra
+         consignacao: relogio de outro, dividindo lucro ou nao. E a mesma VB_capitalDele que o
+         selo C/S do Historico ja usa. Manda na ORDEM de pagamento (quem pos 90.000 quer os
+         90.000 de volta primeiro) e no ROTULO. Nunca em quanto cada um recebe. */
+      var consigCap2=false; try{ consigCap2=!!VB_capitalDele(r.socio, vsC, cu2); }catch(e){}
       var pctVB2=(r.lucro_vb_pct!=null&&r.lucro_vb_pct!=='')?Number(r.lucro_vb_pct):50;
       var vsTot=consig2?vsC:(vsC + luc2*(1-pctVB2/100)); // capital do sócio + lucro do sócio (consig: valor já é o total)
       /* PARCELA PAGA EM TROCA NAO GERA REPASSE (v1.269.0).
@@ -11993,7 +12002,7 @@ function REN_abrir(){
         vt2=Math.round(Math.max(0, vt2-_vTroca)*100)/100;
         if(!consig2) vsTot=Math.round(vsTot*(vt2>0?(vt2/(vt2+_vTroca)):0)*100)/100;
       }
-      opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:'S\u00d3CIO', consig:consig2, pctVB:pctVB2};
+      opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:(consigCap2?'CONSIG':'S\u00d3CIO'), consig:consig2, consigCap:consigCap2, pctVB:pctVB2};
     });
     (res[1].data||[]).forEach(function(r){
       if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:VB_nomeCurto(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
@@ -12690,11 +12699,14 @@ function REN_prevSheet(k){
     +linhas
     +'<div id="renp-conf" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--ln2);"></div>'
     +'<button id="renp-salvar" onclick="REN_prevSalvar()" style="'+BP+'">SALVAR</button>'
-    /* SOCIO PRIMEIRO so faz sentido em consignacao, onde o capital e todo do outro e as
-       primeiras parcelas devolvem o dele. Em sociedade a regua do VB e proporcional -- o socio
-       recebe a medida que ele recebe -- e um botao que oferece pratica que ele nunca teve so
-       serve pra ser tocado por engano. */
-    +(oi.consig?('<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'):'')
+    /* SOCIO PRIMEIRO aparece quando o CAPITAL e todo do outro -- e por isso usa consigCap, nao
+       consig. Antes exigia tambem lucro 100% do VB, e uma peca 100% do socio COM divisao de
+       lucro (AP Navy do Romulo) ficava sem o botao: o dono do relogio nao podia receber
+       primeiro. O botao so ORDENA as parcelas dentro do mesmo total; nao muda quanto ninguem
+       recebe, e VOLTAR AO PROPORCIONAL desfaz.
+       Em sociedade de capital a regua do VB continua proporcional -- o socio recebe a medida
+       que ele recebe -- e ali o botao segue escondido. */
+    +(oi.consigCap?('<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'):'')
     +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button id="renp-b-extra" onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
     +'<button id="renp-b-prop" onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
@@ -18121,6 +18133,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.3</span><span class="cl-ver-date">19/08/2026</span></div>
+      <div class="cl-item">A folha de repasse passou a chamar o dono de CONSIG quando o relógio é 100% dele, em vez de SÓCIO — mesma régua do selo C do Histórico, que já fazia isso. Consignação é relógio de outro; dividir lucro ou não é outro assunto, e o fator de divisão continua sendo o que você definir na venda</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.2</span><span class="cl-ver-date">19/08/2026</span></div>
+      <div class="cl-item">O botão SÓCIO PRIMEIRO voltou a aparecer nas peças que são 100% do sócio mas têm divisão de lucro — como o AP Navy do Romulo, onde ele pôs os R$ 90.000 e divide o lucro com você. Antes o botão exigia também que o lucro fosse todo seu, e o dono do relógio ficava sem poder receber primeiro. Agora ele pergunta só de quem é o capital, que é o que decide a ordem do pagamento: quem pôs 90.000 quer os 90.000 de volta antes, tendo ou não lucro na história. Nada de dinheiro mudou — o botão só ordena as parcelas dentro do mesmo total, e VOLTAR AO PROPORCIONAL desfaz. A regra que decide se o sócio leva lucro ficou intacta nos 19 pontos onde ela vale</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.290.1</span><span class="cl-ver-date">19/08/2026</span></div>
