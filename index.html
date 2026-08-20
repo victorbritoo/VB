@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.291.0</title>
+<title>VB - v1.291.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -15329,11 +15329,13 @@ function VEN_seuDinPinta(){
   var _cic=VEN_cicloMeses(); if(_cic!=null && _cic<0.5) return;
   var r=VEN_cronoTir();
   if(!r){
-    el.innerHTML='<span style="color:var(--so);">SEU DINHEIRO \u00b7 SEM PARCELAS DA COMPRA</span>';
+    el.innerHTML='<span style="color:var(--so);">SEU DINHEIRO \u00b7 SEM PARCELAS</span>'
+      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
     el.style.display='block'; return;
   }
   el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u2248 '+VB_tirTxt(r.tir)+'</span>'
-    +' <span style="color:var(--so);">\u00b7 COMPRA '+r.qtd+'X \u00b7 simula\u00e7\u00e3o</span>';
+    +' <span style="color:var(--so);">\u00b7 COMPRA '+r.qtd+'X \u00b7 simula\u00e7\u00e3o</span>'
+    +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
   el.style.display='block';
 }
 /* ----- a folha: irma da PARCELAS DA COMPRA do Estoque, sem salvar ----------------------- */
@@ -15364,7 +15366,7 @@ function VEN_cronoLinhaHTML(l, i){
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:1px;text-align:center;';
   var vBR=l.valor?Number(l.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
   var dBR=l.venc?l.venc.split('-').reverse().join('/'):'';
-  return '<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div data-campo="1" style="display:flex;align-items:center;gap:4px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:6px 6px;"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input data-selall inputmode="decimal" value="'+vBR+'" oninput="VEN_cronoCampo('+i+',\'valor\',this)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:13px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"></div></div>'
+  return '<div><div style="'+RT+'">'+(i===0?'VALOR':'&nbsp;')+'</div><div data-campo="1" style="display:flex;align-items:center;gap:4px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:6px 6px;"><span style="font-size:11px;color:var(--so);font-weight:600;flex:none;">R$</span><input data-selall inputmode="decimal" value="'+vBR+'" oninput="VEN_cronoCampo('+i+',\'valor\',this)" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:13px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="flex:none;width:16px;"></span></div></div>'
     +'<div><div style="'+RT+'">'+(i===0?'PAGAMENTO':'&nbsp;')+'</div><input data-selall inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="'+dBR+'" onblur="autoCompleteDate(this);VEN_cronoCampo('+i+',\'venc\',this)" oninput="VEN_cronoCampo('+i+',\'venc\',this)" style="'+IN+'"></div>'
     +'<button data-arm="0" onclick="VEN_cronoRemove('+i+',this)" style="height:30px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--so2);font-size:14px;cursor:pointer;padding:0;line-height:1;font-family:-apple-system,sans-serif;">\u00d7</button>';
 }
@@ -15375,7 +15377,7 @@ function VEN_cronoRender(){
   var falta=custo-lanc;
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PARCELAS DA COMPRA</div>'
-    +'<div style="text-align:center;font-size:10px;color:var(--mu);margin-bottom:12px;">COMO VOC\u00ca PAGOU O RELOGIO. N\u00c3O GRAVA NADA.</div>';
+    +'<div style="height:8px;"></div>';
   hh+='<div id="ven-crono-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   VEN_crono.forEach(function(l, i){ hh+=VEN_cronoLinhaHTML(l, i); });
   hh+='</div>';
@@ -18352,6 +18354,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.291.1</span><span class="cl-ver-date">20/08/2026</span></div>
+      <div class="cl-item">Acabamento da linha do SEU DINHEIRO: a legenda saiu da folha, o aviso ficou só SEM PARCELAS, e a setinha de abrir apareceu nos dois estados da linha — com número e sem — porque os dois abrem a mesma folha. Na folha, o R$ empurrava o valor para a direita e ele não batia com a data ao lado; agora as duas colunas ficam no mesmo eixo, como nos outros campos com prefixo do app</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.291.0</span><span class="cl-ver-date">20/08/2026</span></div>
