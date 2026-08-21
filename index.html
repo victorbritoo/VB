@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.2</title>
+<title>VB - v1.292.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13310,11 +13310,17 @@ function FM_load(){
        ha detalhe embaixo do resumo. Bloco sem nada escondido nao ganha setinha. */
     var _blocoN=0;
     function fmDet(titulo, sub, valor){
-      return '<div style="border-top:0.5px solid var(--ln3);padding:6px 0 0;margin-top:6px;">'
+      return '<div style="padding:5px 0;">'
         +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">'
-        +'<span style="font-size:12px;font-weight:700;color:var(--tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">'+CLIP_esc(titulo)+'</span>'
-        +'<span style="font-size:12px;font-weight:700;color:var(--tx);flex:none;">'+valor+'</span></div>'
-        +'<div style="font-size:10px;color:var(--mu);margin-top:1px;text-transform:uppercase;">'+CLIP_esc(sub)+'</div></div>';
+        +'<span style="font-size:11px;font-weight:600;color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">'+CLIP_esc(titulo)+'</span>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--tx2);flex:none;">'+valor+'</span></div>'
+        +'<div style="font-size:9px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+CLIP_esc(sub)+'</div></div>';
+    }
+    /* Uma faixa recuada, nao um card novo: o card do detalhe nao teria titulo, e com sete linhas
+       o VB rolaria a tela, perderia o cabecalho de vista e ficaria olhando uma lista solta.
+       Preso ao bloco de cima, o detalhe nunca fica orfao. */
+    function fmDetCaixa(inner){
+      return '<div style="border-top:0.5px solid var(--ln3);margin-top:8px;padding-top:4px;">'+inner+'</div>';
     }
     function bloco(t,linhas,vazio,det){
       var tem=(vazio||!!det), id=_blocoN;
@@ -13358,7 +13364,7 @@ function FM_load(){
           REN_termo(it.tab,false,true)+' '+(it.idx+1)+' \u00b7 '+HIST_fmtMoeda(it.orig)+' \u2192 '+HIST_fmtMoeda(it.pago)+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''),
           HIST_fmtMoeda(it.juros));
       });
-      _ord.push({luc:_dPro.juros, html:bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]], false, _pdet)});
+      _ord.push({luc:_dPro.juros, html:bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]], false, fmDetCaixa(_pdet))});
     }
     _ord.sort(function(a,b){ return (Number(b.luc)||0)-(Number(a.luc)||0); });
     _ord.forEach(function(o){ hh+=o.html; });
@@ -13378,7 +13384,7 @@ function FM_load(){
       (_dGas.itens||[]).forEach(function(it){
         _gdet+=fmDet(it.peca, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):'')+(it.cobrar?'':' \u00b7 N\u00c3O COBRADO'), HIST_fmtMoeda(it.valor));
       });
-      hh+=bloco('CUSTOS COM PEÇAS · '+_dGas.n, glin, false, _gdet);
+      hh+=bloco('CUSTOS COM PEÇAS · '+_dGas.n, glin, false, fmDetCaixa(_gdet));
     }
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
@@ -18485,6 +18491,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.3</span><span class="cl-ver-date">21/08/2026</span></div>
+      <div class="cl-item">O detalhe de JUROS RECEBIDOS e CUSTOS COM PEÇAS tinha o mesmo peso visual do resumo, e o bloco virava uma parede de linhas iguais. Agora o detalhe entra rebaixado — menor e mais claro — separado por uma linha do resumo. Continua dentro do mesmo bloco: em card separado ele ficaria sem título, e com sete linhas você rolaria a tela e perderia de vista a que lista aquilo pertence</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.2</span><span class="cl-ver-date">21/08/2026</span></div>
