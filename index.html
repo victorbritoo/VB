@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.291.2</title>
+<title>VB - v1.291.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1994,6 +1994,12 @@ function HIST_abrirRelogio(idx){
     if(!m){ VB_toast('Sem relógio vinculado a esta venda.'); return; }
     if(!MER_rows.some(function(x){ return String(x.id)===String(m.id); })) MER_rows=MER_rows.concat([m]);
     MER_abrir(m.id);
+    if(!MER_gastosLoad){
+      try{ MER_gastosCarrega(function(){
+        var _ov=document.getElementById('mer-view-overlay');
+        if(_ov && _ov.style.display==='flex' && String(MER_viewId)===String(m.id)){ try{ MER_abrir(m.id); }catch(e){} }
+      }); }catch(e){}
+    }
   });
 }
 function HIST_abrirOperacao(idx){
@@ -9405,7 +9411,7 @@ function MER_pctLive(){
    marcado COBRAR entra no custo, e o PRECO SUGERIDO sobe sozinho antes de o VB abrir a boca.
    Gasto NAO COBRAR nao toca no preco (caso tipico da consignada, onde ele ganha sem investir),
    mas continua registrado: ele quer saber quanto essa escolha custa no ano. */
-var MER_gastos={}, MER_gastosErro='';
+var MER_gastos={}, MER_gastosErro='', MER_gastosLoad=false;
 function MER_gastosDe(id){ return (MER_gastos[String(id)]||[]); }
 function MER_gastoTotal(id, soCobrar){
   var t=0;
@@ -9431,6 +9437,7 @@ function MER_gastosCarrega(cb){
     Object.keys(MER_gastos).forEach(function(k){
       MER_gastos[k].sort(function(a,b){ return String(a.data||'')<String(b.data||'')?-1:1; });
     });
+    MER_gastosLoad=true;
     if(cb) cb();
   }).catch(function(){ if(cb) cb(); });
 }
@@ -18354,6 +18361,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.291.3</span><span class="cl-ver-date">20/08/2026</span></div>
+      <div class="cl-item">A ficha do relógio aberta pelo botão RELÓGIO no Histórico não mostrava os gastos da peça nem o CUSTO TOTAL — só o custo cru. Os gastos só eram buscados ao entrar no Estoque, e por esse caminho ninguém os buscava. Agora a ficha vai atrás deles e se completa sozinha. O mesmo valia para o botão CUSTOS por esse caminho</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.291.2</span><span class="cl-ver-date">20/08/2026</span></div>
