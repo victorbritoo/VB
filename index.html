@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.3</title>
+<title>VB - v1.292.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13444,6 +13444,12 @@ function FM_rendToggle(){
   d.style.display=aberto?'none':'block';
   var ch=document.getElementById('fm-rend-chev'); if(ch) ch.textContent=aberto?'\u25B8':'\u25BE';
 }
+/* A tela ordena VENDAS pelo lucro DA VB, nao pelo lucro total: na foto as partes ja vem
+   formatadas, entao le de volta em vez de recalcular e arriscar divergir da tela. */
+function VB_moedaNum(s){
+  var n=parseFloat(String(s||'').replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.'));
+  return isNaN(n)?0:n;
+}
 function FM_foto(){
   var d=FM_dados; if(!d){ VB_toast('Carregando ainda\u2026'); return; }
   var W=820, PAD=40, CW=W-PAD*2;
@@ -13462,8 +13468,28 @@ function FM_foto(){
   var linSai=[];
   if(d.sai && d.sai.venceN>0) linSai.push(['Vence no mês', HIST_fmtMoeda(d.sai.vence)]);
   if(d.sai && d.sai.pagoN>0) linSai.push(['Pago no mês', HIST_fmtMoeda(d.sai.pago)]);
+  /* Na foto so o RESUMO dos custos: o detalhe peca a peca e leitura de trabalho, e a foto e o
+     que o VB manda pra fora. Na tela ele abre a setinha quando quer conferir. */
+  var linGas=[];
+  if(d.gas && d.gas.n>0){
+    (d.gas.grupos||[]).forEach(function(g){ linGas.push([g.desc+(g.n>1?' · '+g.n+'×':''), HIST_fmtMoeda(g.v)]); });
+    if((d.gas.grupos||[]).length>1){ linGas.push(['—div—','']); linGas.push(['Total', HIST_fmtMoeda(d.gas.tot)]); }
+  }
   function boxH(l){ return 40+14+l.reduce(function(acc,x){ return acc+(x[0]==='—div—'?6:30); },0); }
-  var H=176 + (boxH(linAnt)+12) + (boxH(linFin)+12) + (boxH(linVen)+12) + (linSai.length?(boxH(linSai)+12):0) + 64 + 52;
+  /* bloco zerado vira uma faixa de titulo so, igual ao recolhido da tela */
+  function boxHv(l, vazio){ return vazio?46:boxH(l); }
+  /* mesma ordem da tela: resultado por lucro, caixa no fim */
+  var _fot=[
+    {luc:d.ant.luc, t:'ANTECIPAÇÕES · '+d.ant.n, l:linAnt, v:(d.ant.n===0)},
+    {luc:d.fin.luc, t:'FINANCIAMENTOS · '+d.fin.n, l:linFin, v:(d.fin.n===0)},
+    {luc:(d.ven.partes&&d.ven.partes.length?(function(){ var s=0; d.ven.partes.forEach(function(pp){ if(/^Lucro VB$/i.test(pp[0])) s=VB_moedaNum(pp[1]); }); return s; })():d.ven.luc), t:'VENDAS · '+d.ven.n, l:linVen, v:(d.ven.n===0)}
+  ];
+  if(linPro.length) _fot.push({luc:d.pro.juros, t:'JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), l:linPro, v:false});
+  _fot.sort(function(a,b){ return (Number(b.luc)||0)-(Number(a.luc)||0); });
+  if(linSai.length) _fot.push({luc:0, t:'SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), l:linSai, v:false});
+  if(linGas.length) _fot.push({luc:0, t:'CUSTOS COM PEÇAS · '+d.gas.n, l:linGas, v:false});
+  var _hSum=0; _fot.forEach(function(b){ _hSum+=boxHv(b.l,b.v)+12; });
+  var H=176 + _hSum + 64 + 52;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -13473,8 +13499,8 @@ function FM_foto(){
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
   c.fillText(d.titulo, PAD, 146);
   var y=176;
-  function selo(titulo, linhas){
-    var hh=boxH(linhas);
+  function selo(titulo, linhas, vazio){
+    var hh=boxHv(linhas, vazio);
     c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
     c.beginPath(); c.roundRect(PAD,y,CW,hh,14); c.fill(); c.stroke();
     c.fillStyle='#aaa'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
@@ -13489,11 +13515,7 @@ function FM_foto(){
     });
     y+=hh+12;
   }
-  selo('ANTECIPAÇÕES · '+d.ant.n, linAnt);
-  selo('FINANCIAMENTOS · '+d.fin.n, linFin);
-  selo('VENDAS · '+d.ven.n, linVen);
-  if(linPro.length) selo('JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), linPro);
-  if(linSai.length) selo('SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), linSai);
+  _fot.forEach(function(b){ selo(b.t, b.v?[]:b.l, b.v); });
   // faixa total
   c.fillStyle='#111'; c.beginPath(); c.roundRect(PAD,y,CW,64,14); c.fill();
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
@@ -18491,6 +18513,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.4</span><span class="cl-ver-date">21/08/2026</span></div>
+      <div class="cl-item">A foto do Fechamento tinha ficado para trás da tela: mantinha a ordem antiga, não trazia CUSTOS COM PEÇAS e gastava três linhas com um bloco zerado. Agora sai igual ao que você vê — mesma ordem por lucro, bloco sem operação reduzido a uma faixa de título, e o resumo dos custos incluído. O detalhe peça a peça fica só na tela: a foto é o que sai para fora</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.3</span><span class="cl-ver-date">21/08/2026</span></div>
