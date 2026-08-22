@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.6</title>
+<title>VB - v1.292.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12557,7 +12557,7 @@ function REN_ficha(k, exp){
     pgs.forEach(function(pg){
       ph+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;">'
         +'<span style="color:var(--mu);white-space:nowrap;"><span style="display:inline-block;min-width:84px;text-align:right;font-variant-numeric:tabular-nums;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span><span style="display:inline-block;margin:0 6px;">\u00b7</span><span style="display:inline-block;min-width:72px;font-variant-numeric:tabular-nums;">'+HIST_fmtData(String(pg.data).slice(0,10))+'</span>'+(pg.nota?('<span style="font-size:9px;color:var(--mu);margin-left:4px;">'+CLIP_esc(pg.nota)+'</span>'):'')+'</span>'
-        +(pg.id?('<span onclick="REN_apagaPag(\''+pg.id+'\',\''+k+'\')" style="color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;padding:0 4px;">\u2715</span>'):'')
+        +(pg.id?('<span onclick="REN_apagaPag(this,\''+pg.id+'\',\''+k+'\')" style="color:var(--mu);font-size:10px;font-weight:700;cursor:pointer;padding:0 4px;">\u2715</span>'):'')
         +'</div>';
     });
     ph+='<div style="border-top:0.5px solid var(--ln3);margin-top:6px;"></div>'
@@ -12576,7 +12576,7 @@ function REN_ficha(k, exp){
   if(_pend) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_P+'">REPASSAR \u00b7 '+HIST_fmtMoeda(_rvB)+'</button>';
   if(b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editRec(\''+k+'\');" style="'+(_pend?BTN_S:BTN_P)+'">EDITAR RECEBIMENTO</button>';
   if(b&&b.repassado_em) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_S+'">EDITAR REPASSE</button>';
-  if(b) hh+='<button onclick="REN_desfazFicha(\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
+  if(b) hh+='<button onclick="REN_desfazFicha(this,\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'padding:13px;">DAR BAIXA</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
   if(!b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_proSheet(\''+k+'\');" style="'+BTN_S+'">'+(x.prorrogada?'EDITAR PRORROGA\u00c7\u00c3O':'PRORROGAR')+'</button>';
@@ -12664,15 +12664,17 @@ function REN_salvaRec(k){
     REN_fichaVoltar=k; REN_abrir();
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
-function REN_desfazFicha(k){
+/* TOQUE DE NOVO em vez do confirm do iOS: e o padrao do app (17 lugares contra 8), e a caixa
+   do sistema tira o VB da tela pra dizer o que o proprio botao pode dizer. O recado do repasse
+   pago nao se perde -- vai pro toast, que e onde o app ja da esse tipo de aviso. */
+function REN_desfazFicha(btn, k){
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
-  /* x precisa vir do cache: a funcao so carregava b, e o ramo do repasse PENDENTE lia x.tab de
-     uma variavel que nao existe aqui. Estourava antes do confirm e o botao nao fazia nada --
-     so o ramo do repasse JA PAGO funcionava, porque ali a mensagem e texto fixo. */
-  var x=REN_cache&&REN_cache.map[k];
-  var _term=x?('dest'+((x.tab==='ant')?'e ':'a ')+REN_termo(x.tab).toLowerCase()):'desta baixa';
-  var msg=b.repassado_em?'Esta baixa tem REPASSE PAGO registrado. Desfazer a baixa apaga o repasse junto. Continuar?':('Desfazer a baixa '+_term+'?');
-  if(!confirm(msg)) return;
+  if(!VB_podeExec(btn)){
+    VB_toast(b.repassado_em?'Toque de novo. O repasse pago some junto.':'Toque de novo para desfazer.');
+    if(btn){ btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)';
+      setTimeout(function(){ try{ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER BAIXA'; VB_desarma(btn); } }catch(e){} },2500); }
+    return;
+  }
   var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
   REN_desfazDireto(b.id);
 }
@@ -12999,7 +13001,7 @@ function REN_repassar(k){
     +'</div>'
     +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
     +'<button onclick="REN_salvaRepasse(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(b.repassado_em?'SALVAR':'CONFIRMAR REPASSE')+'</button>'
-    +(b.repassado_em?'<button onclick="REN_desfazRepasse(\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
+    +(b.repassado_em?'<button onclick="REN_desfazRepasse(this,\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
@@ -13022,9 +13024,16 @@ function REN_salvaRepasse(k){
     REN_abrir();   /* volta pra lista, nao pro card da parcela */
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
-function REN_desfazRepasse(k){
+/* Da pra refazer: a parcela volta pra A REPASSAR e o VB marca de novo. Regra da casa --
+   se da pra refazer, TOQUE DE NOVO; se apaga algo que nao volta, caixa do sistema. */
+function REN_desfazRepasse(btn, k){
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
-  if(!confirm('Desfazer o repasse? A parcela volta pra A REPASSAR.')) return;
+  if(!VB_podeExec(btn)){
+    VB_toast('Toque de novo. A parcela volta pra A REPASSAR.');
+    if(btn){ btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)';
+      setTimeout(function(){ try{ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER REPASSE'; VB_desarma(btn); } }catch(e){} },2500); }
+    return;
+  }
   sb.from('parcela_baixas').update({repassado_em:null}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_toast('Repasse desfeito.');
@@ -13089,10 +13098,18 @@ function REN_fechaParcela(x, total, dataISO, nota){
   }).catch(function(e){ VB_toast('Sem conex\u00e3o \u2014 baixa n\u00e3o gravada.'); });
 }
 /* Apaga um pagamento. Se a parcela estava quitada, ela reabre. */
-function REN_apagaPag(pagId, k){
+function REN_apagaPag(el, pagId, k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var b=REN_cache.bx[k];
-  if(b&&b.repassado_em&&!confirm('Esta parcela tem REPASSE PAGO. Apagar o pagamento desfaz a baixa e o repasse. Continuar?')) return;
+  /* mesmo gatilho de antes -- so arma quando ha repasse pago -- trocando a caixa do sistema
+     pelo gesto do app. Num x nao cabe "TOQUE DE NOVO", entao ele fica vermelho, igual ao x
+     das parcelas da compra. */
+  if(b&&b.repassado_em&&!VB_podeExec(el)){
+    VB_toast('Toque de novo. Isso desfaz a baixa e o repasse.');
+    if(el){ el.dataset.armed='1'; el.style.color='var(--red)';
+      setTimeout(function(){ try{ if(el&&el.dataset.armed==='1'){ el.dataset.armed=''; VB_desarma(el); } }catch(e){} },2500); }
+    return;
+  }
   sb.from('parcela_pagamentos').delete().eq('id', pagId).then(function(r1){
     if(r1.error){ VB_erro(r1.error.message,'N\u00e3o apagou. Tente de novo.'); return; }
     try{ VB_log('RECEB\u00cdVEIS','apagou pagamento', x.cliente, x.rot); }catch(e){}
@@ -18518,6 +18535,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.8</span><span class="cl-ver-date">21/08/2026</span></div>
+      <div class="cl-item">DESFAZER REPASSE e apagar um pagamento com repasse pago passaram a usar o TOQUE DE NOVO. As duas coisas dão para refazer, então não precisam de caixa do sistema. Ficou valendo a regra: se dá para refazer, toque de novo; se apaga algo que não volta, a caixa continua</div>
+      <div class="cl-item">Seguem com a caixa do sistema, de propósito: excluir venda com contrato, excluir operação do histórico e converter antecipação para SIMPLES — essa última descarta as datas dos títulos, que não existem em nenhum outro lugar</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.7</span><span class="cl-ver-date">21/08/2026</span></div>
+      <div class="cl-item">O DESFAZER BAIXA pedia confirmação pela caixa do iOS. Agora usa o TOQUE DE NOVO, que é o padrão do app — a caixa do sistema tirava você da tela para dizer o que o próprio botão diz. Quando a baixa tem repasse pago, o aviso de que ele some junto aparece no toast</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.6</span><span class="cl-ver-date">21/08/2026</span></div>
