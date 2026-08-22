@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.4</title>
+<title>VB - v1.292.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12666,7 +12666,12 @@ function REN_salvaRec(k){
 }
 function REN_desfazFicha(k){
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
-  var msg=b.repassado_em?'Esta baixa tem REPASSE PAGO registrado. Desfazer a baixa apaga o repasse junto. Continuar?':('Desfazer a baixa deste '+REN_termo(x.tab).toLowerCase()+'?');
+  /* x precisa vir do cache: a funcao so carregava b, e o ramo do repasse PENDENTE lia x.tab de
+     uma variavel que nao existe aqui. Estourava antes do confirm e o botao nao fazia nada --
+     so o ramo do repasse JA PAGO funcionava, porque ali a mensagem e texto fixo. */
+  var x=REN_cache&&REN_cache.map[k];
+  var _term=x?REN_termo(x.tab).toLowerCase():'recebimento';
+  var msg=b.repassado_em?'Esta baixa tem REPASSE PAGO registrado. Desfazer a baixa apaga o repasse junto. Continuar?':('Desfazer a baixa deste '+_term+'?');
   if(!confirm(msg)) return;
   var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
   REN_desfazDireto(b.id);
@@ -18513,6 +18518,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.5</span><span class="cl-ver-date">21/08/2026</span></div>
+      <div class="cl-item">O DESFAZER BAIXA da ficha da parcela não fazia nada quando o repasse ao sócio ainda estava pendente. A pergunta de confirmação tentava montar o texto lendo um dado que a função não tinha em mãos, e travava antes de aparecer na tela. Quando o repasse já tinha sido pago o aviso era outro, fixo, e por isso o botão funcionava — o que fazia parecer defeito aleatório</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.4</span><span class="cl-ver-date">21/08/2026</span></div>
