@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.8</title>
+<title>VB - v1.292.9</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -14751,11 +14751,14 @@ function MER_viewEditar(id){
   /* Botao, nao campos: a folha de parcelas cria conta a pagar de verdade. Se os campos vivessem
      aqui, salvar a peca passaria a criar divida e cancelar teria que desfazer divida. Assim o
      formulario so salva a peca, como sempre, e a folha continua dona das parcelas.
-     So na edicao -- no cadastro a peca ainda nao existe e nao ha a que amarrar a parcela. */
-  if(r.status!=='vendida'){
-    hh+='<div id="mer-e-parcbtn" style="margin-top:8px;"></div>';
-    setTimeout(function(){ try{ MER_ePintaParc(String(r.id)); }catch(e){} },40);
-  }
+     So na edicao -- no cadastro a peca ainda nao existe e nao ha a que amarrar a parcela.
+     VENDIDA TAMBEM MOSTRA (sessao 25): o cronograma diz como VB paga o FORNECEDOR, e isso nao
+     tem relacao com a peca ja ter saido. Converter uma consignada em compra depois da venda e
+     caminho legitimo -- foi o caso do AP Navy, em que o comprador quitou em troca e o VB
+     assumiu pagar o consignante. A trava contra dupla contagem e outra e continua de pe: o
+     MER_ePintaParc esconde o botao enquanto houver socio/consignacao. */
+  hh+='<div id="mer-e-parcbtn" style="margin-top:8px;"></div>';
+  setTimeout(function(){ try{ MER_ePintaParc(String(r.id)); }catch(e){} },40);
   /* o botao de parcelas reage ao campo: limpou o socio, deixa de ser consignacao e ele acende
      na hora -- sem ter que salvar, sair e reabrir a edicao */
   hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','oninput="MER_viewTocou();MER_ePintaParc(\''+String(r.id)+'\')"');
@@ -18535,6 +18538,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.9</span><span class="cl-ver-date">22/08/2026</span></div>
+      <div class="cl-item">O botão PARCELAS DA COMPRA sumia na edição de peça já vendida. O cronograma diz como você paga o fornecedor, e isso não tem relação com a peça ter saído — converter uma consignada em compra depois da venda é caminho normal, como no AP Navy em que o comprador quitou em troca e você assumiu pagar o consignante. Agora o botão aparece também em peça vendida. A trava que importa continua: enquanto houver sócio ou consignação ele some, porque ali a dívida já vive no A REPASSAR</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.8</span><span class="cl-ver-date">21/08/2026</span></div>
