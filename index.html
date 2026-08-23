@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.9</title>
+<title>VB - v1.292.11</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -6596,13 +6596,22 @@ function VEN_syncFromParcelas(){
 
 // Fluxo único: a lista de parcelas é gerada dos campos de cima e fica sempre editável.
 // VEN_modoPersonalizado agora significa "lista editada manualmente".
+/* Conta a partir da DATA DA VENDA, nao de hoje. O numero aqui e o PRAZO que o VB deu ao
+   cliente -- e o que define o negocio -- e e a mesma ancora do RENDIMENTO logo abaixo. Contando
+   de hoje, os dois numeros da mesma tela usavam reguas diferentes, e o significado do rotulo
+   trocava sozinho: ao montar a venda dizia prazo concedido; ao reabrir dizia falta tanto.
+   Sem data da venda preenchida (venda ainda em branco) cai em hoje, que ali e a mesma coisa. */
 function VEN_diasTxt(dataStr){
   if(!dataStr || dataStr.length<10) return '';
   var pp=dataStr.split('/'); if(pp.length!==3) return '';
   var d=new Date(parseInt(pp[2]),parseInt(pp[1])-1,parseInt(pp[0]));
   if(isNaN(d.getTime())) return '';
-  var hoje=new Date(); hoje.setHours(0,0,0,0); d.setHours(0,0,0,0);
-  return '('+Math.round((d-hoje)/86400000)+'d)';
+  var base=null;
+  try{ base=VB_brToDate((document.getElementById('ven-dataVenda')||{}).value); }catch(e){}
+  if(!base) base=new Date();
+  base=new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  d.setHours(0,0,0,0);
+  return '('+Math.round((d-base)/86400000)+'d)';
 }
 function VEN_mostrarLista(show){ var sec=document.getElementById('ven-secPersonalizado'); if(sec) sec.style.display=show?'block':'none'; }
 function VEN_autoLista(){
@@ -14275,7 +14284,7 @@ function MER_cpRender(r){
   hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
-  hh+='<button data-fast="1" onpointerdown="event.preventDefault();MER_cpAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
+  hh+='<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAdd()" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</div>';
   /* CUSTO x LANCADO x FALTA e a pergunta que a folha responde: ja cobri tudo o que devo? */
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
@@ -15565,7 +15574,7 @@ function VEN_cronoRender(){
   hh+='<div id="ven-crono-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   VEN_crono.forEach(function(l, i){ hh+=VEN_cronoLinhaHTML(l, i); });
   hh+='</div>';
-  hh+='<button data-fast="1" onpointerdown="event.preventDefault();VEN_cronoAdd()" style="width:100%;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</button>';
+  hh+='<div data-fast="1" role="button" onpointerdown="event.preventDefault();VEN_cronoAdd()" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</div>';
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
   hh+='<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:10px 12px;margin-top:10px;">'
@@ -18538,6 +18547,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.11</span><span class="cl-ver-date">23/08/2026</span></div>
+      <div class="cl-item">Os dias ao lado de cada parcela na tela de Vendas contavam a partir de hoje, enquanto o RENDIMENTO logo abaixo conta a partir da data da venda — duas réguas diferentes na mesma tela. Agora os dois contam da data da venda, que é o prazo que você deu ao cliente. Ao montar uma venda nova nada muda, porque ali as duas datas são a mesma; ao reabrir uma venda antiga, o número passa a dizer o prazo do negócio em vez de quanto falta para hoje</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.10</span><span class="cl-ver-date">23/08/2026</span></div>
+      <div class="cl-item">O + REPETIR ÚLTIMA das PARCELAS DA COMPRA fechava o teclado, e você tinha que tocar na data de novo para continuar. O toque ia para um botão, que recebe foco no iPhone e derruba o teclado antes de a linha nova pegar o cursor. As mesmas listas na antecipação nunca tiveram o problema porque lá o alvo não é botão — agora as quatro seguem o mesmo desenho</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.9</span><span class="cl-ver-date">22/08/2026</span></div>
