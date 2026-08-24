@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.14</title>
+<title>VB - v1.292.15</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -15523,7 +15523,16 @@ function VEN_cronoTir(){
   });
   if(!temP) return null;
   var tir=VB_tirMensal(cf);
-  if(tir==null || !isFinite(tir)) return null;
+  if(tir==null || !isFinite(tir)){
+    /* sem TIR pode ser duas coisas diferentes. Se o caixa acumulado nunca fica negativo, o
+       comprador paga o vendedor e voce nao emprega capital nenhum: rendimento sobre zero nao
+       existe e nao ha numero honesto pra mostrar -- mas ha o que dizer. Qualquer outro motivo
+       segue calado, como antes. */
+    var _o=cf.slice().sort(function(a,b){ return a.d-b.d; }), _ac=0, _min=0;
+    for(var _i=0;_i<_o.length;_i++){ _ac+=_o[_i].v; if(_ac<_min) _min=_ac; }
+    if(_min>-0.005) return {semCapital:true};
+    return null;
+  }
   /* Sobra pequena nao e entrada: e gasto COBRAR somado depois da compra. Chamar de mais uma
      vez faria o rotulo mentir (compra em 3x virava 4x). Mesma regua do VB_cronoQtd. */
   return {tir:tir, qtd:lin.length + ((fr<0.98)?1:0)};
@@ -15540,6 +15549,14 @@ function VEN_seuDinPinta(){
   var r=VEN_cronoTir();
   if(!r){
     el.innerHTML='<span style="color:var(--so);">SEU DINHEIRO \u00b7 SEM PARCELAS</span>'
+      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+    el.style.display='block'; return;
+  }
+  if(r.semCapital){
+    /* voce lancou as parcelas e o caixa nunca fica negativo: quem paga o vendedor e o comprador.
+       Dizer SEM PARCELAS aqui seria mentira -- elas estao la, e o resultado e a melhor noticia
+       possivel num negocio. */
+    el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u00b7 SEM CAPITAL SEU</span>'
       +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
     el.style.display='block'; return;
   }
@@ -18564,6 +18581,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.15</span><span class="cl-ver-date">24/08/2026</span></div>
+      <div class="cl-item">SEU DINHEIRO dizia SEM PARCELAS mesmo com o cronograma lançado, quando a conta não fechava taxa nenhuma. Agora diz SEM CAPITAL SEU. É o caso em que cada parcela que entra cobre a que sai e você nunca fica no negativo: o comprador paga o vendedor, você não emprega um centavo e rendimento sobre zero não existe — não há número honesto a mostrar, mas há o que dizer, e é a melhor notícia possível num negócio. SEM PARCELAS voltou a significar só o que diz: a folha está vazia. Qualquer outro motivo de a taxa não sair continua sem mensagem</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.14</span><span class="cl-ver-date">24/08/2026</span></div>
