@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.13</title>
+<title>VB - v1.292.14</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11639,7 +11639,7 @@ function REN_cpBaixaSheet(id){
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">PAGAR CONTA</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.credor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<div><div style="'+RT+'">VALOR PAGO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencpb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
@@ -11647,7 +11647,7 @@ function REN_cpBaixaSheet(id){
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencpb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'
-    +'<button onclick="REN_cpBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR PAGAMENTO</button>'
+    +'<button onclick="REN_cpBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
     +'<button onclick="document.getElementById(\'ren-cpb-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
@@ -14776,7 +14776,10 @@ function MER_viewEditar(id){
   /* o botao de parcelas reage ao campo: limpou o socio, deixa de ser consignacao e ele acende
      na hora -- sem ter que salvar, sair e reabrir a edicao */
   hh+=MER_viewCampoIn('S\u00f3cio','mer-e-socio',r.socio||'','oninput="MER_viewTocou();MER_ePintaParc(\''+String(r.id)+'\')"');
-  setTimeout(function(){ try{ VB_cliAttach('mer-e-socio'); VB_cliAttach('mer-e-fornecedor'); }catch(e){} },60);
+  setTimeout(function(){ try{ VB_cliAttach('mer-e-socio'); VB_cliAttach('mer-e-fornecedor'); }catch(e){}
+    /* peca de troca nasce basica na venda e e completada aqui: MODELO e REF sugerem como no cadastro.
+       No SN a sugestao e leitura -- diz se o serial ja passou por voce -- e nunca reescreve o SN. */
+    try{ MER_sugAttach('mer-e-sn','sn','mer-e-'); MER_sugAttach('mer-e-ref','ref','mer-e-'); MER_sugAttach('mer-e-modelo','modelo','mer-e-'); }catch(e){} },60);
   hh+=MER_viewCampoIn('Parte do S\u00f3cio','mer-e-valorSocio', (r.valor_socio!=null&&Number(r.valor_socio)>0)?MER_fmtBR(r.valor_socio):'', 'inputmode="numeric" onclick="this.select()" oninput="MER_eMask(this);MER_ePintaParc(\''+String(r.id)+'\')"');
   hh+='</div>';
   if(ehBaixa){
@@ -15063,7 +15066,8 @@ function MER_sugHits(tipo, termo){
       var sn=VB_cliNorm(r.sn);
       if(!sn || sn.indexOf(t)!==0) return;   /* serial se digita do comeco: buscar pelo meio so cria ruido */
       if(vistos[sn]) return; vistos[sn]=1;  /* mesma peca que passou duas vezes = uma linha so, a mais recente */
-      if(MER_editId && String(r.id)===String(MER_editId)) return;  /* editando: a propria peca nao se sugere */
+      var _self=(MER_viewEdit&&MER_viewEditRow)?String(MER_viewEditRow.id):(MER_editId?String(MER_editId):'');
+      if(_self && String(r.id)===_self) return;  /* editando: a propria peca nao se sugere */
       out.push(r);
     });
     return out.slice(0,5);
@@ -15078,7 +15082,8 @@ function MER_sugHits(tipo, termo){
   });
   return out.slice(0,5);
 }
-function MER_sugAttach(inputId, tipo){
+function MER_sugAttach(inputId, tipo, pre){
+  pre=pre||'mer-';
   var el=document.getElementById(inputId); if(!el || el._merSug) return; el._merSug=true;
   function render(){
     var b=MER_sugBox(), v=(el.value||'').trim(), min=(tipo==='sn'?3:2);
@@ -15102,7 +15107,7 @@ function MER_sugAttach(inputId, tipo){
         ev.preventDefault(); ev.stopPropagation();
         var r=hits[Number(ch.getAttribute('data-i'))||0]; if(!r) return;
         MER_sugFechar();
-        if(tipo==='sn') MER_snAplica(r, !MER_editId); else MER_refAplica(r);
+        if(tipo==='sn') MER_snAplica(r, pre==='mer-', pre); else MER_refAplica(r, pre);
         try{ MER_dirtyPaint(); }catch(e){}
       }
       ch.addEventListener('touchend', function(ev){ var t=ev.changedTouches&&ev.changedTouches[0]; if(t && (Math.abs(t.clientX-(b._sx||t.clientX))>10 || Math.abs(t.clientY-(b._sy||t.clientY))>10)) return; pick(ev); });
@@ -15110,23 +15115,29 @@ function MER_sugAttach(inputId, tipo){
     });
     VB_cliSugPos(el,b); b.style.display='block';
   }
-  el.addEventListener('input', function(){ render(); if(tipo==='sn') MER_snCheck(); });
+  el.addEventListener('input', function(){ render(); if(tipo==='sn' && pre==='mer-') MER_snCheck(); });
   el.addEventListener('focus', render);
   el.addEventListener('blur', function(){ setTimeout(MER_sugFechar,250); });
 }
-function MER_refAplica(r){
-  var m=document.getElementById('mer-modelo'), f=document.getElementById('mer-ref');
+/* pre = prefixo dos campos: 'mer-' e o cadastro de peca nova, 'mer-e-' e a ficha (edicao).
+   A edicao migrou pra ficha na sessao 24; sem o prefixo a sugestao escrevia no formulario errado. */
+function MER_refAplica(r, pre){
+  pre=pre||'mer-';
+  var m=document.getElementById(pre+'modelo'), f=document.getElementById(pre+'ref');
   if(m) m.value=String(r.modelo||'').toUpperCase();
   if(f) f.value=String(r.ref||'').toUpperCase();
+  if(pre!=='mer-'){ try{ MER_viewTocou(); }catch(e){} }
 }
-function MER_snAplica(r, escreverSN){
-  var f=document.getElementById('mer-sn');
+function MER_snAplica(r, escreverSN, pre){
+  pre=pre||'mer-';
+  var f=document.getElementById(pre+'sn');
   if(f && escreverSN) f.value=String(r.sn||'').toUpperCase();
   var cx=MER_sugCtx(r);
-  [['mer-modelo',cx.modelo],['mer-ano',cx.ano],['mer-ref',r.ref]].forEach(function(par){
+  [[pre+'modelo',cx.modelo],[pre+'ano',cx.ano],[pre+'ref',r.ref]].forEach(function(par){
     var e=document.getElementById(par[0]);
     if(e && !(e.value||'').trim() && par[1]) e.value=String(par[1]).toUpperCase();
   });
+  if(pre!=='mer-'){ try{ MER_viewTocou(); }catch(e){} }
   MER_snLinha(r);
 }
 function MER_snInfoLimpa(){
@@ -18555,11 +18566,18 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.14</span><span class="cl-ver-date">24/08/2026</span></div>
+      <div class="cl-item">A sugestão de MODELO, REF e SN agora aparece de verdade ao editar uma peça. Existem dois formulários de peça — o de cadastro novo e o da ficha — e a edição mudou pra ficha na sessão 24; a 1.292.13 ligou a sugestão no formulário antigo, que hoje só serve pra peça nova, então nada apareceu. É o caminho da peça que entra por troca: nasce básica na venda e você completa depois</div>
+      <div class="cl-item">Na ficha, tocar na sugestão de SN preenche modelo, ano e ref vazios e nunca reescreve o SN — ali ela serve pra responder “esse serial já passou por mim?”, mostrando modelo, ano e VENDIDA/EM ESTOQUE. A própria peça fica fora da lista, e o reconhecimento automático no sair do campo continua só no cadastro novo, onde ele existe pra evitar SN duplicado</div>
+      <div class="cl-item">A folha de baixa da conta a pagar se chamava PAGAR CONTA e confirmava com CONFIRMAR PAGAMENTO, enquanto a folha irmã da parcela diz DAR BAIXA e CONFIRMAR BAIXA. Agora falam a mesma língua do botão que as abre</div>
+    </div>
+
+    <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.13</span><span class="cl-ver-date">24/08/2026</span></div>
       <div class="cl-item">A folha da conta a pagar abria com SALVAR em cima, preto — mas quem toca no card vai pagar, não corrigir um dado. Agora é DAR BAIXA no topo, como na ficha da parcela, e SALVAR desce (ele já só acende quando você muda alguma coisa). Em conta nova ou já paga, onde não existe baixa, SALVAR continua sendo o principal</div>
-      <div class="cl-item">MARCAR COMO PAGA virou DAR BAIXA. Era o único lugar do app com esse rótulo — a própria folha que ele abria já se chama BAIXA DA CONTA e confirma com DAR BAIXA. E baixa é o verbo certo: cobre pagar o valor cheio, pagar diferente do combinado e pagar em outra data</div>
+      <div class="cl-item">MARCAR COMO PAGA virou DAR BAIXA. Era o único lugar do app com esse rótulo, contra 8 DAR BAIXA e 5 DESFAZER BAIXA. E baixa é o verbo certo: cobre pagar o valor cheio, pagar diferente do combinado e pagar em outra data</div>
       <div class="cl-item">Botões da ficha da parcela e da folha da conta no mesmo tamanho: principal 13px/fonte 12, secundário 12px/fonte 11, que é o padrão da maioria das folhas. Antes, na conta a pagar, o FECHAR era maior que o EXCLUIR sem motivo</div>
-      <div class="cl-item">Sugestão de MODELO, REF e SN voltou a funcionar na EDIÇÃO da peça, não só no cadastro novo. É o caminho da peça que entra por troca: ela nasce básica na venda e você completa depois. No SN a sugestão serve pra ver se o serial já passou por você — mostra modelo, ano e VENDIDA/EM ESTOQUE — e tocar nela preenche modelo, ano e ref vazios sem nunca reescrever o SN que você está editando. A própria peça fica fora da lista</div>
+      <div class="cl-item">Sugestão de MODELO, REF e SN liberada na edição (ver 1.292.14: nesta versão o ajuste caiu no formulário errado e não apareceu na ficha). É o caminho da peça que entra por troca: ela nasce básica na venda e você completa depois. No SN a sugestão serve pra ver se o serial já passou por você — mostra modelo, ano e VENDIDA/EM ESTOQUE — e tocar nela preenche modelo, ano e ref vazios sem nunca reescrever o SN que você está editando. A própria peça fica fora da lista</div>
     </div>
 
     <div class="cl-version">
