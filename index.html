@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.15</title>
+<title>VB - v1.292.16</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10361,6 +10361,10 @@ function VB_cliIdDe(nome){
 function VB_cliGarantir(nome){
   // Fantasma silencioso: nome fora da base vira cadastro (nome+ativo, sem CPF/endereço) e as operações com esse nome grudam pelo cliente_id.
   var alvo=String(nome||'').trim(); if(!alvo) return;
+  /* Em troca nao existe fornecedor: o campo guarda uma frase (TROCA \u2014 modelo \u00b7 nome). Cadastrar
+     isso criava um "cliente" com nome de operacao a cada troca. Mesma regua do VB_nomeSePuro:
+     travessao ou dois pontos = frase, nao nome. A peca segue guardando o texto na ficha. */
+  if(alvo.indexOf('\u2014')>=0 || alvo.indexOf(':')>=0) return;
   VB_cliCarregar(function(lista){
     var hit=null;
     (lista||[]).some(function(c){ if(VB_cliNorm(c.nome)===VB_cliNorm(alvo)){ hit=c; return true; } return false; });
@@ -18581,6 +18585,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.16</span><span class="cl-ver-date">24/08/2026</span></div>
+      <div class="cl-item">Peça que entra por troca não cria mais cliente. Em troca não existe fornecedor — o campo guarda uma frase, TROCA — modelo · nome — e o cadastro automático tratava isso como se fosse gente: nascia um cliente com nome de operação a cada troca, misturado com os de verdade na lista e na busca. Agora texto com travessão ou dois pontos não passa, que é a mesma régua já usada pra decidir se o campo é nome ou frase. A peça continua guardando o texto na ficha; só não vira cliente. Os dois que já nasceram saem no ✕ da lista</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.15</span><span class="cl-ver-date">24/08/2026</span></div>
