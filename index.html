@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.11</title>
+<title>VB - v1.292.12</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11336,7 +11336,10 @@ function REN_cpOv(oid){
 }
 function REN_cpCard(c){
   var hoje=REN_hojeISO(), pago=!!c.pago_em, dtv=String(c.venc||'');
-  var atr=(!pago && dtv<hoje);
+  /* vermelho = precisa de voce HOJE, igual as ENTRADAS: o dia do vencimento e o ultimo
+     em que da pra pagar sem atrasar, entao ele acende junto com o atraso. O topo continua
+     dizendo EM DIA — ninguem fica atrasado no dia do vencimento. */
+  var atr=(!pago && dtv<=hoje);
   /* na paga, duas datas contam a historia: quando vencia e quando saiu. Iguais, uma so. */
   var dPag=String(c.pago_em||'').slice(8,10)+'/'+String(c.pago_em||'').slice(5,7);
   var dVen=dtv?(dtv.slice(8,10)+'/'+dtv.slice(5,7)):'';
@@ -18547,6 +18550,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.12</span><span class="cl-ver-date">24/08/2026</span></div>
+      <div class="cl-item">Conta a pagar que vence HOJE agora acende em vermelho, valor e data, como já acontecia com a parcela a receber. A regra do dia do vencimento tinha sido aplicada só nas ENTRADAS: nas SAÍDAS o vermelho só vinha no dia seguinte, quando o atraso já tinha acontecido. O dia em que a conta vence é o último em que dá pra pagar sem atrasar. O topo continua dizendo EM DIA e o bloco ATRASADAS continua sem essas contas — ninguém fica atrasado no dia do vencimento</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.11</span><span class="cl-ver-date">23/08/2026</span></div>
