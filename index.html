@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.294.5</title>
+<title>VB - v1.295.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1409,7 +1409,7 @@ body{ text-transform:uppercase; }
   <hr class="divider">
 
   <!-- SELETOR ESTOQUE / VENDIDOS -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
+  <div id="mer-seg-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
     <button id="mer-seg-estoque" onclick="MER_setTab('estoque')" style="padding:9px 0;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:var(--acc-tx);font-weight:600;cursor:pointer;">ESTOQUE</button>
     <button id="mer-seg-vendidas" onclick="MER_setTab('vendida')" style="padding:9px 0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:1px;color:var(--mu);font-weight:600;cursor:pointer;">VENDIDOS</button>
   </div>
@@ -14045,7 +14045,8 @@ function MER_diasEntre(a,b){
 function MER_render(){
   var lista=document.getElementById('mer-lista'); if(!lista) return;
   // vendas vinculadas dos VENDIDOS (pra lucro/cliente no card e na barra)
-  if(MER_tab==='vendida'){
+  var _termoAtu=((document.getElementById('mer-busca')||{}).value||'').trim();
+  if(MER_tab==='vendida' || _termoAtu){
     var _falta=MER_rows.filter(function(r){ return (r.status||'estoque')==='vendida' && r.venda_id && !(r.venda_id in MER_vendasMap); }).map(function(r){ return r.venda_id; });
     if(_falta.length && !MER_vendasBusy){
       MER_vendasBusy=true;
@@ -14058,18 +14059,32 @@ function MER_render(){
     }
   }
   var termo=((document.getElementById('mer-busca')||{}).value||'').trim().toLowerCase();
-  var rows=MER_rows.filter(function(r){ return (r.status||'estoque')===MER_tab; });
+  /* BUSCA E GLOBAL. Procurar um relogio nao e a mesma pergunta que folhear o estoque: quem digita
+     quer aquela peca, esteja ela onde estiver. A aba deixa de filtrar e vira grupo -- EM ESTOQUE
+     e VENDIDOS, cada um com sua contagem e seu total, porque as unidades sao diferentes (custo de
+     um lado, venda do outro) e nao se somam. Sem busca, tudo volta a obedecer a aba. */
+  var _global=!!termo;
+  var rows=MER_rows.filter(function(r){ return _global || (r.status||'estoque')===MER_tab; });
   rows=MER_ordena(rows);
   if(termo){
     rows=rows.filter(function(r){
       return [r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; });
     });
   }
+  if(_global){
+    /* estoque primeiro: e o que ainda da pra fazer alguma coisa */
+    var _est=rows.filter(function(r){ return (r.status||'estoque')!=='vendida'; });
+    var _ven=rows.filter(function(r){ return (r.status||'estoque')==='vendida'; });
+    rows=_est.concat(_ven);
+  }
+  /* enquanto busca, a aba nao manda em nada: esconder evita o pill aceso sobre uma lista que o ignora */
+  var _seg=document.getElementById('mer-seg-wrap');
+  if(_seg) _seg.style.display=_global?'none':'';
   /* O card preto ja e o relatorio da busca, mas de um lado so. Esta linha completa o outro lado:
      quantos e quanto, a um toque, com a busca preservada. Fica fora da lista de cards porque
      estoque e vendido mostram coisas diferentes (custo x venda e lucro) e nao se empilham. */
   var _outra=(MER_tab==='estoque')?'vendida':'estoque', _nOutra=0, _vOutra=0;
-  if(termo){
+  if(false){
     MER_rows.forEach(function(r){
       if((r.status||'estoque')!==_outra) return;
       if(![r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; })) return;
@@ -14086,9 +14101,29 @@ function MER_render(){
   } else {
     var html='';
     var _gAtu=null;
-    var _agrupa=(MER_tab==='vendida' && MER_ord!=='data_asc' && MER_ord!=='preco_desc' && MER_ord!=='preco_asc' && MER_ord!=='modelo');
+    /* na busca global o agrupamento por mes sairia junto com o agrupamento por local: dois niveis
+       de cabecalho pra uma lista curta. Manda o local. */
+    var _agrupa=(!_global && MER_tab==='vendida' && MER_ord!=='data_asc' && MER_ord!=='preco_desc' && MER_ord!=='preco_asc' && MER_ord!=='modelo');
+    var _locAtu=null;
+    function _locHdr(r){
+      if(!_global) return '';
+      var vend=((r.status||'estoque')==='vendida');
+      var k=vend?'v':'e';
+      if(k===_locAtu) return '';
+      _locAtu=k;
+      var lista2=rows.filter(function(x){ return (((x.status||'estoque')==='vendida')===vend); });
+      var val=0;
+      lista2.forEach(function(x){
+        if(vend){ var v=x.venda_id?MER_vendasMap[x.venda_id]:null; if(v) val+=Number(v.valor_total)||0; }
+        else val+=Number(x.custo)||0;
+      });
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 4px 4px;">'
+        +'<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(vend?'VENDIDOS':'EM ESTOQUE')+' \u00b7 '+lista2.length+'</span>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+(val>0?('R$ '+MER_fmtBR(val)):'')+'</span></div>';
+    }
     function _ymDe(y){ return (y.data_venda?String(y.data_venda).slice(0,7):(y.baixa_em?String(y.baixa_em).slice(0,7):null)); }
     rows.forEach(function(r){
+      html+=_locHdr(r);
       if(_agrupa){
         var _gK=_ymDe(r)||'sem';
         if(_gK!==_gAtu){
@@ -14114,7 +14149,7 @@ function MER_render(){
       }
       html+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;margin-bottom:5px;display:flex;align-items:center;">' 
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
-        +((MER_tab==='vendida'&&r.data_venda)
+        +(((_global?((r.status||'estoque')==='vendida'):(MER_tab==='vendida'))&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
               +'<span style="font-size:13px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)')+MER_seloPassagem(r), (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
@@ -14132,7 +14167,7 @@ function MER_render(){
             var _isC=VB_capitalDele(r.socio, r.valor_socio, r.custo);
             return ' <span style=\"display:inline-block;background:var(--acc);color:var(--acc-tx);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;\">'+(_isC?'C':'S')+'</span>';
           })())+'</div>'))
-        +(MER_tab==='vendida' ? (function(){
+        +((_global?((r.status||'estoque')==='vendida'):(MER_tab==='vendida')) ? (function(){
             var g=(r.data_compra&&r.data_venda&&MER_diasEntre(r.data_compra,r.data_venda)!=null)?(' <span style="color:var(--so);font-weight:600;">('+MER_diasEntre(r.data_compra,r.data_venda)+'d)</span>'):'';
             var v=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var t=v?(Number(v.valor_total)||0):0;
@@ -14194,6 +14229,26 @@ function MER_render(){
   var socios=est.reduce(function(a,r){ return a+(Number(r.valor_socio)||0); },0);
   var totLabel=(MER_tab==='estoque')?'ESTOQUE TOTAL':'VENDIDOS';
   var tot=document.getElementById('mer-total');
+  if(tot && _global){
+    /* dois lados na tela = duas somas, nunca uma so: custo e venda nao se somam. */
+    var _gE=est.filter(function(r){ return (r.status||'estoque')!=='vendida'; });
+    var _gV=est.filter(function(r){ return (r.status||'estoque')==='vendida'; });
+    var _sE=_gE.reduce(function(a,r){ return a+(Number(r.custo)||0); },0);
+    var _sV=0; _gV.forEach(function(r){ var v=r.venda_id?MER_vendasMap[r.venda_id]:null; if(v) _sV+=Number(v.valor_total)||0; });
+    var _linG=function(rot,n,val){
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;">'
+        +'<span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;">'+rot+' ('+n+')</span>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--acc-tx);">R$ '+MER_fmtBR(val)+'</span></div>';
+    };
+    tot.innerHTML='<div style="width:100%;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">ENCONTRADOS</span><span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span></div>'
+      +'<span class="mer-tot-x">'+(_gE.length?_linG('EM ESTOQUE',_gE.length,_sE):'')+(_gV.length?_linG('VENDIDOS',_gV.length,_sV):'')+'</span>'
+      +'</div>';
+    tot.style.display='flex';
+    var _wg=document.getElementById('mer-total-wrap'); if(_wg) _wg.style.display='flex';
+    MER_totMedir(); MER_totStickyInit();
+    return;
+  }
   if(tot){
     if(MER_tab==='vendida'){
       var vendaTot=0, lucroTot=0, lucroVB=0, temLucro=false;
@@ -18917,6 +18972,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.0</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">A busca do Estoque passou a ser global: procurar um relógio não é a mesma pergunta que folhear o estoque — quem digita quer aquela peça, esteja ela onde estiver. A aba deixa de filtrar e vira grupo: EM ESTOQUE primeiro, VENDIDOS depois, cada um com contagem e total próprios. Limpou a busca, tudo volta a obedecer a aba</div>
+      <div class="cl-item">Enquanto há busca, o seletor ESTOQUE/VENDIDOS some — pill aceso sobre uma lista que o ignora seria mentira. E cada card mantém o formato do que ele é: peça em estoque mostra custo e dias parados, peça vendida mostra venda e lucro</div>
+      <div class="cl-item">O card preto vira o relatório da busca, com duas somas separadas: EM ESTOQUE pelo custo, VENDIDOS pelo valor de venda. Não existe soma única — são unidades diferentes. A linha TAMBÉM da versão anterior saiu: agora os dois lados estão na tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.294.5</span><span class="cl-ver-date">25/08/2026</span></div>
