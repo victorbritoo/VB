@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.2</title>
+<title>VB - v1.295.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -17712,9 +17712,30 @@ function CLI_fichaDirty(){
   });
 }
 function CLI_fichaSync(){
+  CLI_apelidoHerda();
   var b=document.getElementById('clif-salvar'); if(!b) return;
   var d=CLI_fichaDirty();
   b.disabled=!d; b.style.opacity=d?'1':'0.35';
+}
+/* O nome digitado na venda quase nunca e o nome de registro: e como VB chama a pessoa
+   (GAEL BT, TONY DU CARRO). O cliente nasce com esse texto no NOME e, quando a ficha e
+   completada com o nome real, o apelido se perdia. Aqui ele e preservado.
+   So mexe em ficha ainda sem CPF -- as "a completar" -- e so em APELIDO vazio, entao nunca
+   sobrescreve o que VB escreveu. Se ele nao quiser, apaga: e um campo comum. */
+function CLI_apelidoHerda(){
+  if(!CLI_fichaEdit || CLI_fichaNovoMode) return;
+  var c=CLI_rows[CLI_fichaIdx]; if(!c) return;
+  if(String(c.cpf||'').trim()) return;
+  if(String(c.apelido||'').trim()) return;
+  var iN=document.getElementById('clif-nome'), iA=document.getElementById('clif-apelido');
+  if(!iN || !iA) return;
+  if(iA.value.trim() && iA.value.trim()!==String(c.nome||'').trim()) return;  /* VB ja escreveu algo */
+  var antigo=String((CLI_fichaOrig&&CLI_fichaOrig.nome)||c.nome||'').trim();
+  var atual=String(iN.value||'').trim();
+  if(!antigo) return;
+  if(VB_cliNorm(atual)===VB_cliNorm(antigo)){ if(iA.value.trim()===antigo) iA.value=''; return; }
+  if(!atual) return;
+  iA.value=antigo;
 }
 function CLI_fichaBuscaReserva(){
   var box=document.getElementById('clif-sug'); if(!box) return;
@@ -18976,6 +18997,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.3</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">O nome digitado numa venda quase nunca é o nome de registro — é como você chama a pessoa (GAEL BT, TONY DU CARRO). O cliente nascia com esse texto no NOME e, ao completar a ficha com o nome real, o apelido se perdia. Agora ele desce sozinho pro campo APELIDO enquanto você digita o nome novo</div>
+      <div class="cl-item">Só acontece em ficha ainda sem CPF, que é a assinatura das criadas automaticamente, e só com o APELIDO vazio: nunca sobrescreve o que você escreveu. Se voltar o nome ao original, o apelido se desfaz junto. E é campo comum — basta apagar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.2</span><span class="cl-ver-date">25/08/2026</span></div>
