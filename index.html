@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.293.5</title>
+<title>VB - v1.293.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13835,6 +13835,10 @@ function SOC_recebFoto(){
      na coluna de valor e TODA a sobra vai pra descricao -- que e a unica que precisa cortar. */
   var DESCX=PAD+22, NUMX=VALX-80, DATAX=NUMX-88;
   var DESCW=DATAX-DESCX-14;
+  /* DATA e PARCELA tem conteudo de largura constante (DD/MM/AAAA e NN de NN), entao titulo e
+     valor ficam centrados no meio da coluna. DESCRICAO segue a esquerda e VALOR a direita,
+     acompanhando o alinhamento do que esta embaixo delas. */
+  var DATAC=DATAX+44, NUMC=NUMX+40;
   var FT='700 9px -apple-system, Helvetica, sans-serif';
   var FM='700 10px -apple-system, Helvetica, sans-serif';
   var yy=y+TH;
@@ -13842,8 +13846,9 @@ function SOC_recebFoto(){
   c.fillStyle='#c0c0c0'; c.font=FT; c.textAlign='left';
   try{ c.letterSpacing='1.5px'; }catch(e){}
   c.fillText('DESCRI\u00c7\u00c3O', DESCX, yy);
-  c.fillText('DATA', DATAX, yy);
-  c.fillText('PARCELA', NUMX, yy);
+  c.textAlign='center';
+  c.fillText('DATA', DATAC, yy);
+  c.fillText('PARCELA', NUMC, yy);
   c.textAlign='right'; c.fillText('VALOR', PAD+CW-22, yy);
   try{ c.letterSpacing='0px'; }catch(e){}
   c.textAlign='left';
@@ -13862,9 +13867,9 @@ function SOC_recebFoto(){
       c.fillStyle='#111'; c.font=FN; c.textAlign='left';
       /* "SN:" e redundante -- o que vem depois so pode ser serial. Sao ~34px de volta pra descricao. */
       c.fillText(trunc(String(l.nome||'').replace(/\s*\bSN:\s*/i,' '), DESCW, FN), DESCX, yy);
-      c.fillStyle='#aaa'; c.font=FD;
-      c.fillText((l.d?HIST_fmtData(l.d):'\u2014'), DATAX, yy);
-      if(l.nm) c.fillText(l.nm, NUMX, yy);
+      c.fillStyle='#aaa'; c.font=FD; c.textAlign='center';
+      c.fillText((l.d?HIST_fmtData(l.d):'\u2014'), DATAC, yy);
+      if(l.nm) c.fillText(l.nm, NUMC, yy);
       /* R$ ancorado num x fixo e o numero encostado na direita: as duas bordas da coluna alinham,
          em vez de o R$ passear conforme o tamanho do valor */
       c.fillStyle='#4a4a4a'; c.font=FN;
@@ -18799,6 +18804,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.6</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">DATA e PARCELA centradas na coluna, título e conteúdo juntos — as duas têm largura constante, então centrar não desalinha nada. DESCRIÇÃO continua à esquerda e VALOR à direita, acompanhando o que está embaixo de cada uma</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.5</span><span class="cl-ver-date">25/08/2026</span></div>
