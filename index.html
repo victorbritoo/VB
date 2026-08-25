@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.3</title>
+<title>VB - v1.295.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -17658,6 +17658,13 @@ function CLI_render(){
   if(!q){
     if(CLI_pendMode){
       rows=rows.filter(function(c){ return !((c.cpf||'').trim()) && !((c.end1||'').trim()); });
+      /* aqui e lista de pendencia, nao agenda: o mais novo e o que VB acabou de criar e ainda
+         lembra quem e. Alfabetico so ajudaria a procurar alguem que ele ja sabe o nome. */
+      rows=rows.slice().sort(function(a,b){
+        var da=String(a.created_at||''), db=String(b.created_at||'');
+        if(da!==db) return da<db?1:-1;
+        return String(a.nome||'')<String(b.nome||'')?-1:1;
+      });
       pendBar='<div onclick="CLI_pendToggle()" style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--acc);font-weight:600;cursor:pointer;padding:3px 0 9px;">\u2190 TODOS \u00b7 '+_pend.length+' A COMPLETAR</div>';
     } else if(_pend.length){
       pendBar='<div onclick="CLI_pendToggle()" style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--mu);font-weight:600;cursor:pointer;padding:3px 0 9px;">'+_pend.length+' CLIENTE'+(_pend.length>1?'S':'')+' A COMPLETAR \u2192</div>';
@@ -18997,6 +19004,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.4</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">A lista A COMPLETAR passou a vir do mais novo pro mais antigo. É lista de pendência, não agenda: o cliente recém-criado é o que você ainda lembra quem é e de que operação veio. A lista completa de ATIVOS continua alfabética</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.3</span><span class="cl-ver-date">25/08/2026</span></div>
