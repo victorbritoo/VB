@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.16</title>
+<title>VB - v1.292.17</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10658,6 +10658,7 @@ function REN_addMesISO(iso, k){
 }
 function REN_num(x){ if(typeof x==='number') return x; var n=VB_dinheiroRaw(x); return isFinite(n)?n:0; }
 var VB_apelidos=null;
+var VB_apelidosPU=null;
 /* ===== VELOCIDADE UNIFORME DAS FOLHAS =====
    Toda folha desliza a propria altura. Com duracao fixa, folha alta percorre muito mais no mesmo
    tempo e parece mais rapida que a baixa. No iOS isso nao aparece porque a folha dele e sempre da
@@ -10746,8 +10747,21 @@ function VB_apelidosCarrega(){
   if(VB_apelidos!==null) return;
   VB_apelidos='loading';
   sb.from('clientes').select('nome,apelido').limit(3000).then(function(res){
-    VB_apelidos={};
-    if(!res.error) (res.data||[]).forEach(function(c){ if(c.nome && c.apelido) VB_apelidos[String(c.nome).trim().toUpperCase()]=String(c.apelido).trim().toUpperCase(); });
+    VB_apelidos={}; VB_apelidosPU={};
+    if(!res.error){
+      var _dados=res.data||[], _pu={};
+      /* Indice por primeiro+ultimo. Frase de troca guarda o nome JA encurtado
+         (TROCA \u2014 modelo \u00b7 FRANCISCO JUNIOR), entao a busca pelo nome completo nunca acha.
+         Chave repetida em mais de um cliente = ambigua: nao vale apelido nenhum, mostra o nome cru. */
+      _dados.forEach(function(c){ var k=VB_nomePUS(String(c.nome||'')).toUpperCase(); if(k) _pu[k]=(_pu[k]||0)+1; });
+      _dados.forEach(function(c){
+        if(!c.nome || !c.apelido) return;
+        var ap=String(c.apelido).trim().toUpperCase();
+        VB_apelidos[String(c.nome).trim().toUpperCase()]=ap;
+        var k=VB_nomePUS(String(c.nome)).toUpperCase();
+        if(k && _pu[k]===1) VB_apelidosPU[k]=ap;
+      });
+    }
     try{ if(typeof VB_telaAtual!=='undefined' && VB_telaAtual==='mer') MER_load(); }catch(e){}
   });
 }
@@ -10772,6 +10786,8 @@ function VB_nomeSePuro(s){
 function VB_nomeCurto(nome){
   var n=String(nome||'').trim(); if(!n) return n;
   if(VB_apelidos && typeof VB_apelidos==='object'){ var a=VB_apelidos[n.toUpperCase()]; if(a) return a; }
+  /* segunda tentativa: o nome pode ja ter chegado encurtado (frase de troca) */
+  if(VB_apelidosPU && typeof VB_apelidosPU==='object'){ var b=VB_apelidosPU[VB_nomePUS(n).toUpperCase()]; if(b) return b; }
   return VB_nomePU(n);
 }
 function VB_nomePU(nome){
@@ -18585,6 +18601,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.17</span><span class="cl-ver-date">24/08/2026</span></div>
+      <div class="cl-item">O apelido não aparecia no DE QUEM COMPREI da peça que entrou por troca. A frase da troca guarda o nome já encurtado (FRANCISCO JUNIOR) e a tabela de apelidos é indexada pelo nome completo (FRANCISCO BATISTA DA SILVA JUNIOR), então a busca nunca achava. Agora existe um segundo índice por primeiro+último nome, usado como segunda tentativa — vale em qualquer lugar que tenha guardado nome encurtado, não só na troca. Nome que se repete em mais de um cliente não entra nesse índice: FRANCISCO JUNIOR bate com dois cadastros, e chutar o apelido de um deles seria mentira. Nesses casos mostra o nome como sempre mostrou</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.16</span><span class="cl-ver-date">24/08/2026</span></div>
