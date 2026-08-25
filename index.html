@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.292.18</title>
+<title>VB - v1.293.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -480,6 +480,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
     </div>
     <div id="soc-view-body" style="margin-top:14px;font-family:-apple-system,sans-serif;"></div>
     <button onclick="SOC_extratoFoto()" style="width:100%;margin-top:14px;padding:11px;border:none;border-radius:12px;background:var(--acc);font-size:11px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">GERAR EXTRATO (FOTO)</button>
+    <button onclick="SOC_recebFoto()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">RECEBIMENTOS (FOTO)</button>
     <button onclick="SOC_viewFechar()" style="width:100%;margin-top:8px;padding:11px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
   </div>
 </div>
@@ -11969,7 +11970,9 @@ function REN_ordena(arr){
 function REN_abrir(){
   var body=document.getElementById('ren-body'); if(!body) return;
   body.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:16px;">Carregando...</div>';
-  Promise.all([
+  /* devolve a promise: RECEBIMENTOS do socio abre sem passar pela tela de ENTRADAS e precisa
+     esperar o REN_cache existir antes de montar o documento */
+  return Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos,simulacao').limit(10000),
     sb.from('financiamentos_hist').select('id,descricao,nome,qtd_parcelas,valor_parcela,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total,custo,lucro_vb_pct,simulacao').limit(10000),
@@ -13691,6 +13694,108 @@ function SOC_extratoFoto(){
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
   VB_fotoPreview(cv, 'VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg');
+}
+/* ===== RECEBIMENTOS DO SOCIO (foto) =====
+   Documento para MANDAR ao socio: tudo que ele recebe de VB, em ordem de data, num lugar so.
+   Hoje isso mora em tres lugares que nao se encontram -- contas a pagar (compra), repasse ja
+   devido (cliente pagou, repasse nao saiu) e repasse previsto (parcela do cliente por vir).
+
+   DUAS NATUREZAS, decididas com o VB:
+     DIVIDA  = conta a pagar. Data firme, dinheiro dele saindo.
+     REPASSE = parte do socio numa parcela. A data e a do vencimento da parcela do CLIENTE.
+
+   O que NAO entra, por decisao dele: capital parado no estoque (e dinheiro do socio, mas nao e
+   recebivel com data) e peca consignada ainda em vitrine (repasse so nasce na venda).
+   SEM MARCA DE ATRASO: "nao existe atraso pro meu socio". Data no passado e so data no passado --
+   ou o cliente ainda nao pagou, ou o repasse ainda nao saiu. Pintar de vermelho importaria a
+   inadimplencia do cliente para dentro da relacao com o socio.
+
+   Nao ha conta nova aqui: valor de repasse sai do REN_repDe/REN_repAlvo, os mesmos que a lista
+   A REPASSAR usa, e a data ja vem corrigida por prorrogacao pelo REN_cache. */
+function SOC_recebFoto(){
+  var d=SOC_viewData; if(!d || !d.nome){ VB_toast('Abra um s\u00f3cio primeiro.'); return; }
+  if(!REN_cache){
+    VB_toast('Carregando\u2026');
+    var pr=REN_abrir();
+    if(pr && pr.then){ pr.then(function(){ SOC_recebFoto(); }); return; }
+    setTimeout(function(){ if(REN_cache) SOC_recebFoto(); }, 1400);
+    return;
+  }
+  var alvo=VB_cliNorm(VB_nomeCurto(d.nome||''));
+  var alvoCheio=VB_cliNorm(d.nome||'');
+  function bate(n){ var s=VB_cliNorm(n||''); if(!s) return false; return s===alvo || s===alvoCheio || VB_cliNorm(VB_nomeCurto(n||''))===alvo; }
+  var linhas=[];
+  ((REN_cache.cp)||[]).forEach(function(c){
+    if(c.pago_em) return;
+    if(!bate(c.credor)) return;
+    linhas.push({d:String(c.venc||'').slice(0,10), tipo:'D\u00cdVIDA', v:Number(c.valor)||0,
+      nome:String(c.descricao||c.credor||'\u2014'), sub:''});
+  });
+  (REN_cache.itens||[]).forEach(function(x){
+    var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
+    if(!oi || !bate(oi.socio)) return;
+    var b=REN_cache.bx[REN_key(x)], v=0, data=x.venc;
+    if(b){
+      if(b.repassado_em) return;            /* ja pago a ele: nao e mais recebivel */
+      v=REN_repDe(x, b); data=String(b.venc||x.venc||'').slice(0,10);
+    } else {
+      v=Number(REN_repAlvo(oi, x))||0;
+    }
+    v=Math.round((Number(v)||0)*100)/100;
+    if(!(v>0.005)) return;
+    linhas.push({d:String(data||'').slice(0,10), tipo:'REPASSE', v:v,
+      nome:String(x.rot||x.nome||'\u2014'), sub:String(x.cliente||'')});
+  });
+  if(!linhas.length){ VB_toast('Nada a receber deste s\u00f3cio.'); return; }
+  /* sem data vai para o fim: e o unico lugar onde ela nao existe, nao um comeco de calendario */
+  linhas.sort(function(a,b2){
+    if(!a.d && !b2.d) return 0;
+    if(!a.d) return 1;
+    if(!b2.d) return -1;
+    return a.d<b2.d?-1:(a.d>b2.d?1:0);
+  });
+  var tD=0, tR=0;
+  linhas.forEach(function(l){ if(l.tipo==='D\u00cdVIDA') tD+=l.v; else tR+=l.v; });
+  var W=820, PAD=40, CW=W-PAD*2;
+  var H=176 + 34 + linhas.length*46 + 26 + ((tD>0.005&&tR>0.005)?44:0) + 52 + 40;
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var c=cv.getContext('2d');
+  c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
+  c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', PAD, 70);
+  c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
+  c.fillText('R E C E B I M E N T O S', PAD, 96);
+  c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
+  c.fillText(VB_nomeCurto(d.nome||'').toUpperCase(), PAD, 146);
+  function trunc(t,maxW,font){ c.font=font; t=String(t||''); if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'\u2026').width>maxW){ t=t.slice(0,-1); } return t+'\u2026'; }
+  var y=176, hh=34+linhas.length*46+26+((tD>0.005&&tR>0.005)?44:0);
+  c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
+  c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
+  var yy=y+34;
+  linhas.forEach(function(l){
+    c.fillStyle='#111'; c.font='700 15px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+    c.fillText(trunc(l.nome, 400, '700 15px -apple-system, Helvetica, sans-serif'), PAD+22, yy+8);
+    var esq=(l.d?HIST_fmtData(l.d):'Sem data')+'   \u00b7   '+l.tipo+(l.sub?('   \u00b7   '+VB_nomeCurto(l.sub)):'');
+    c.fillStyle='#aaa'; c.font='500 12px -apple-system, Helvetica, sans-serif';
+    c.fillText(trunc(esq, 430, '500 12px -apple-system, Helvetica, sans-serif'), PAD+22, yy+27);
+    c.fillStyle='#4a4a4a'; c.font='700 15px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
+    c.fillText(HIST_fmtMoeda(l.v), PAD+CW-22, yy+8);
+    c.textAlign='left'; yy+=46;
+  });
+  c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-2); c.lineTo(PAD+CW-22, yy-2); c.stroke();
+  c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+  c.fillText('TOTAL', PAD+22, yy+24);
+  c.textAlign='right';
+  var ly=yy+24;
+  if(tD>0.005 && tR>0.005){
+    c.fillText('D\u00edvida: '+HIST_fmtMoeda(tD), PAD+CW-22, ly); ly+=22;
+    c.fillText('Repasse: '+HIST_fmtMoeda(tR), PAD+CW-22, ly); ly+=22;
+  }
+  c.font='700 16px -apple-system, Helvetica, sans-serif';
+  c.fillText(HIST_fmtMoeda(tD+tR), PAD+CW-22, ly);
+  c.textAlign='left';
+  var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
+  VB_fotoPreview(cv, 'VB - Recebimentos '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg');
 }
 function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
 function SOC_toggleForm(force){
@@ -18606,6 +18711,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.0</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">RECEBIMENTOS (FOTO) no painel do sócio: tudo que ele recebe de você em ordem de data, num documento só, pra mandar no WhatsApp. Antes isso morava em três lugares que nunca se encontravam — conta a pagar da compra, repasse já devido (cliente pagou e o repasse não saiu) e repasse previsto. Duas naturezas na linha: DÍVIDA, com data firme, e REPASSE, na data do vencimento da parcela do cliente</div>
+      <div class="cl-item">Sem marca de atraso, de propósito: não existe atraso com sócio. Data no passado é só data no passado — ou o cliente ainda não pagou, ou o repasse ainda não saiu. Pintar de vermelho importaria a inadimplência do cliente pra dentro da relação com o sócio</div>
+      <div class="cl-item">Fora do documento por decisão: capital parado no estoque (é dinheiro dele, mas não é recebimento com data) e peça consignada ainda em vitrine (repasse só nasce na venda). O extrato do sócio continua sendo o retrospecto das operações; este é o calendário</div>
+      <div class="cl-item">Nenhuma conta nova: o valor do repasse sai dos mesmos cálculos da lista A REPASSAR e a data já vem corrigida por prorrogação. Parcela paga em troca continua sem gerar repasse, e repasse já feito não aparece</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.292.18</span><span class="cl-ver-date">25/08/2026</span></div>
