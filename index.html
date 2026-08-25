@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.294.3</title>
+<title>VB - v1.294.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -9455,6 +9455,26 @@ var PIN_unlockedUntil = 0;
 // ══════════ MERCADORIAS ══════════
 var MER_rows=[], MER_tab='estoque';
 function MER_fmtBR(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* Mesmo relogio que volta NAO e duplicidade: e outra passagem, com custo, venda, lucro e dias
+   proprios. Juntar num registro so apagaria a venda anterior do Fechamento. O que faltava era
+   o sinal -- duas pecas parecidas na lista sem dizer se e a mesma que voltou ou outra igual.
+   Conta pelo SN, na ordem da data de compra. 0 = passagem unica, nao marca nada. */
+function MER_passagem(r){
+  var sn=VB_cliNorm(r && r.sn); if(!sn) return 0;
+  var iguais=(MER_rows||[]).filter(function(x){ return VB_cliNorm(x.sn)===sn; });
+  if(iguais.length<2) return 0;
+  iguais.sort(function(a,b){
+    var da=String(a.data_compra||a.created_at||''), db=String(b.data_compra||b.created_at||'');
+    if(da!==db) return da<db?-1:1;
+    return String(a.id)<String(b.id)?-1:1;
+  });
+  for(var i=0;i<iguais.length;i++){ if(String(iguais[i].id)===String(r.id)) return i+1; }
+  return 0;
+}
+function MER_seloPassagem(r){
+  var n=MER_passagem(r); if(n<2) return '';
+  return ' <span style="display:inline-block;background:var(--sf3);color:var(--so);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;letter-spacing:0.5px;">'+n+'\u00aa PASSAGEM</span>';
+}
 function MER_tituloLista(r){
   if(r.modelo||r.marca||r.ano){ return (((r.marca?r.marca+' ':'')+(r.modelo||'')).trim()+(r.ano?' '+r.ano:'')).trim(); }
   var d=MER_desmontar(r.descricao||'');
@@ -14046,7 +14066,18 @@ function MER_render(){
     });
   }
   if(!rows.length){
-    lista.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;margin-top:24px;">'+(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.')+'</div>';
+    /* buscar na aba errada e receber "nada" e mentira por omissao: o app sabia que existia do
+       outro lado. A aba continua mandando -- achar em VENDIDOS e resposta diferente de achar em
+       ESTOQUE -- mas agora ela diz quantos tem la, a um toque, com a busca preservada. */
+    var _outra=(MER_tab==='estoque')?'vendida':'estoque', _nOutra=0;
+    if(termo){
+      _nOutra=MER_rows.filter(function(r){
+        if((r.status||'estoque')!==_outra) return false;
+        return [r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; });
+      }).length;
+    }
+    lista.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;margin-top:24px;">'+(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.')+'</div>'
+      +(_nOutra?('<div onclick="MER_setTab(\''+_outra+'\')" style="margin:14px auto 0;max-width:260px;text-align:center;padding:11px 14px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">'+_nOutra+' EM '+(_outra==='vendida'?'VENDIDOS':'ESTOQUE')+' \u2192</div>'):'');
   } else {
     var html='';
     var _gAtu=null;
@@ -14080,7 +14111,7 @@ function MER_render(){
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +((MER_tab==='vendida'&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
-              +'<span style="font-size:13px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge(MER_tituloLista(r)||'(sem descrição)', (function(){
+              +'<span style="font-size:13px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)')+MER_seloPassagem(r), (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
@@ -14089,7 +14120,7 @@ function MER_render(){
           })())+'</span>'
               +'<span style="font-size:10px;color:var(--so);font-weight:600;white-space:nowrap;">'+MER_fmtData(r.data_venda)+'</span>'
             +'</div>')
-          : ('<div style="font-size:13px;font-weight:700;color:var(--ink);">'+VB_glueBadge(MER_tituloLista(r)||'(sem descrição)', (function(){
+          : ('<div style="font-size:13px;font-weight:700;color:var(--ink);">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)')+MER_seloPassagem(r), (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
@@ -14287,6 +14318,21 @@ function MER_abrir(id){
   })();
   hh+=lin('Data da Compra', MER_fmtData(r.data_compra)||'');
   if(r.status==='estoque' && r.data_compra && MER_dias(r.data_compra)!=null) hh+=lin('Em Estoque', MER_dias(r.data_compra)+'d');
+  /* mesmo SN ja passou por aqui antes: diz qual passagem e esta e quando foi a anterior */
+  (function(){
+    var n=MER_passagem(r); if(n<2) return;
+    var sn=VB_cliNorm(r.sn);
+    var ant=(MER_rows||[]).filter(function(x){
+      return VB_cliNorm(x.sn)===sn && String(x.id)!==String(r.id)
+        && String(x.data_compra||'')<String(r.data_compra||'');
+    }).sort(function(a,b){ return String(a.data_compra||'')<String(b.data_compra||'')?1:-1; })[0];
+    var txt=n+'\u00aa';
+    if(ant){
+      var qdo=ant.data_venda?MER_fmtData(ant.data_venda):(ant.baixa_em?MER_fmtData(ant.baixa_em):MER_fmtData(ant.data_compra));
+      if(qdo) txt+=' \u00b7 SAIU EM '+qdo;
+    }
+    hh+=lin('Passagem', txt);
+  })();
 
   /* o fornecedor NEM SEMPRE e um nome: em troca ele e uma frase (TROCA \u2014 modelo \u00b7 nome).
      Encurtar nome ali pegava a primeira e a ultima palavra e virava "TROCA FILHO". */
@@ -18866,6 +18912,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.294.4</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">Buscar no Estoque e não achar agora diz onde está: se o termo tem resultado na outra aba, aparece 3 EM VENDIDOS →, e um toque leva pra lá com a busca preservada. Antes o app respondia “nada em estoque” sabendo que existia do outro lado. A aba continua mandando — achar em VENDIDOS é resposta diferente de achar em ESTOQUE</div>
+      <div class="cl-item">Selo 2ª PASSAGEM no card e linha PASSAGEM na ficha, com a data em que a peça saiu da vez anterior. Relógio que volta não é duplicidade: é outra passagem, com custo, venda, lucro e dias próprios — juntar num registro só apagaria a venda anterior do Fechamento. O que faltava era o sinal, pra duas peças parecidas na lista não virarem dúvida. Conta pelo SN, na ordem da data de compra; peça sem SN e passagem única não marcam nada</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.294.3</span><span class="cl-ver-date">25/08/2026</span></div>
