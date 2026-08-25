@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.293.7</title>
+<title>VB - v1.294.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10645,6 +10645,7 @@ function CLIP_abrir(nome, cliId, voltarK){
       con.forEach(function(c3){ innK+=ln(CLIP_esc(c3.descricao||'CONTRATO'), c3.assinado_em?'\u2713 ASSINADO':'AGUARDANDO'); });
       hh+=bl('CONTRATOS \u00b7 '+con.length, innK, (function(){ var na=0; con.forEach(function(c4){ if(c4.assinado_em) na++; }); return na+' ASSINADO'+(na===1?'':'S'); })(), con.length);
     }
+    hh+='<button onclick="CLIP_recebFoto(\''+CLIP_esc(nome).replace(/'/g,"\\'")+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">PARCELAS A VENCER (FOTO)</button>';
     hh+='<button onclick="'+(voltarK?('document.getElementById(\'clip-overlay\').style.display=\'none\';REN_ficha(\''+voltarK+'\')'):'document.getElementById(\'clip-overlay\').style.display=\'none\'')+'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">'+(voltarK?'VOLTAR':'FECHAR')+'</button>';
     hh+='</div>';
     ov.innerHTML=hh;
@@ -13749,11 +13750,17 @@ function SOC_recebFoto(){
   var alvoCheio=VB_cliNorm(d.nome||'');
   function bate(n){ var s=VB_cliNorm(n||''); if(!s) return false; return s===alvo || s===alvoCheio || VB_cliNorm(VB_nomeCurto(n||''))===alvo; }
   var linhas=[];
-  /* conta a pagar nao guarda numero de parcela: as linhas da mesma compra sao irmas pelo
-     credor + descricao. Conto por data, que e a ordem em que ele vai receber. */
+  /* conta a pagar nao guarda numero de parcela, mas guarda DE ONDE veio: origem_tab/origem_id
+     apontam pra peca, e toda conta criada pelo PARCELAS DA COMPRA vem preenchida. Irmas de
+     verdade sao as que dividem a origem. Conta digitada na mao nao tem origem: cai no antigo
+     credor + descricao, que e o unico laco que resta. Conto por data, a ordem do recebimento. */
   var _cps=((REN_cache.cp)||[]).filter(function(c){ return !c.pago_em && bate(c.credor); });
   var _grp={};
-  _cps.forEach(function(c){ var k=VB_cliNorm(c.credor)+'|'+VB_cliNorm(c.descricao); (_grp[k]=_grp[k]||[]).push(c); });
+  _cps.forEach(function(c){
+    var k=c.origem_id ? ('O|'+String(c.origem_tab||'')+'|'+String(c.origem_id))
+                      : ('M|'+VB_cliNorm(c.credor)+'|'+VB_cliNorm(c.descricao));
+    (_grp[k]=_grp[k]||[]).push(c);
+  });
   Object.keys(_grp).forEach(function(k){
     var g=_grp[k].slice();
     g.sort(function(a,b2){ return String(a.venc||'')<String(b2.venc||'')?-1:1; });
@@ -13779,16 +13786,22 @@ function SOC_recebFoto(){
       nome:String(x.rot||x.nome||'\u2014'), nm:(function(){ try{ return REN_nm(x)||''; }catch(e){ return ''; } })()});
   });
   if(!linhas.length){ VB_toast('Nada a receber deste s\u00f3cio.'); return; }
-  /* sem data vai para o fim: e o unico lugar onde ela nao existe, nao um comeco de calendario */
+  VB_recebDoc(d.nome, linhas, 'R E C E B I M E N T O S', 'Recebimentos');
+}
+/* O desenho e o mesmo dos dois lados -- socio (o que ele recebe de VB) e cliente (o que ele
+   deve a VB). Uma funcao so: quem chama entrega as linhas ja prontas
+   ({d:'YYYY-MM-DD', v:Number, nome:String, nm:'02 de 05'}) e o titulo. */
+function VB_recebDoc(nome, linhas, sub, arq){
+  if(!linhas || !linhas.length){ VB_toast('Nada a receber.'); return; }
+  var tot=0; linhas.forEach(function(l){ tot+=l.v; });
   linhas.sort(function(a,b2){
     if(!a.d && !b2.d) return 0;
     if(!a.d) return 1;
     if(!b2.d) return -1;
     return a.d<b2.d?-1:(a.d>b2.d?1:0);
   });
-  var tot=0;
-  linhas.forEach(function(l){ tot+=l.v; });
   var W=820, PAD=40, CW=W-PAD*2;
+
   var y=176, LH=30, MH=26, TH=26;   /* linha, cabecalho do mes, cabecalho das colunas */
   /* agrupado por mes: a pergunta que o socio faz olhando isso e "quanto eu recebo em setembro",
      e sem o subtotal ele soma na mao. Sem data cai num grupo proprio, no fim. */
@@ -13816,9 +13829,9 @@ function SOC_recebFoto(){
   c.fillStyle='#111'; c.font='400 44px Georgia,"Times New Roman",serif'; c.textAlign='left';
   try{ c.letterSpacing='1px'; }catch(e){} c.fillText('VB', PAD, 70); try{ c.letterSpacing='0px'; }catch(e){}
   c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
-  c.fillText('R E C E B I M E N T O S', PAD, 96);
+  c.fillText(sub, PAD, 96);
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
-  c.fillText(VB_nomeCurto(d.nome||'').toUpperCase(), PAD, 146);
+  c.fillText(VB_nomeCurto(nome||'').toUpperCase(), PAD, 146);
   /* total tambem no topo: no documento longo o socio rolava ate o fim so pra ver o numero */
   c.textAlign='right'; c.font='700 22px -apple-system, Helvetica, sans-serif';
   c.fillText(HIST_fmtMoeda(tot), PAD+CW, 146); c.textAlign='left';
@@ -13888,7 +13901,32 @@ function SOC_recebFoto(){
   c.textAlign='left';
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
-  VB_fotoPreview(cv, 'VB - Recebimentos '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg');
+  VB_fotoPreview(cv, 'VB - '+arq+' '+(nome||'')+' '+ds.replace(/\//g,'-')+'.jpg');
+}
+
+/* Espelho do RECEBIMENTOS do socio, do outro lado: o que o CLIENTE deve a VB, por data.
+   Mesma fonte do A RECEBER -- valor e o que FALTA (desconta pagamento parcial) e a data ja vem
+   corrigida por prorrogacao. Parcela paga em troca nao entra: ela ja foi quitada em relogio. */
+function CLIP_recebFoto(nome){
+  var alvo=VB_cliNorm(nome||''); if(!alvo){ VB_toast('Abra um cliente primeiro.'); return; }
+  if(!REN_cache){
+    VB_toast('Carregando\u2026');
+    var pr=REN_abrir();
+    if(pr && pr.then){ pr.then(function(){ CLIP_recebFoto(nome); }); return; }
+    setTimeout(function(){ if(REN_cache) CLIP_recebFoto(nome); }, 1400);
+    return;
+  }
+  var linhas=[];
+  (REN_cache.itens||[]).forEach(function(x){
+    if(VB_cliNorm(x.cliente)!==alvo) return;
+    if(REN_cache.bx[REN_key(x)]) return;          /* ja recebida */
+    var v=Math.round((Number(REN_falta(x))||0)*100)/100;
+    if(!(v>0.005)) return;
+    linhas.push({d:String(x.venc||'').slice(0,10), v:v,
+      nome:String(x.rot||'\u2014'), nm:(function(){ try{ return REN_nm(x)||''; }catch(e){ return ''; } })()});
+  });
+  if(!linhas.length){ VB_toast('Este cliente n\u00e3o tem parcela em aberto.'); return; }
+  VB_recebDoc(nome, linhas, 'P A R C E L A S   A   V E N C E R', 'Parcelas');
 }
 function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
 function SOC_toggleForm(force){
@@ -18804,6 +18842,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.294.1</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">A numeração das parcelas de compra no RECEBIMENTOS passou a usar o vínculo real com a peça (origem_tab/origem_id), que toda conta criada pelo PARCELAS DA COMPRA já guarda. Antes eu juntava pelo credor mais o texto da descrição — bastava digitar diferente numa delas pra virar duas compras separadas. Conta digitada na mão não tem origem e continua no critério antigo, que é o único laço que ela tem</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.294.0</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">PARCELAS A VENCER (FOTO) no panorama do cliente: o espelho do RECEBIMENTOS do sócio, do outro lado. Tudo que o cliente ainda deve, por mês, com subtotal e total — pra mandar quando ele pergunta quanto falta. O panorama fechava sem nenhuma ação; agora esse é o botão principal dele</div>
+      <div class="cl-item">O valor é o que FALTA, não o cheio: pagamento parcial já vem descontado e a data já vem corrigida por prorrogação — mesma fonte do A RECEBER, sem conta nova. Parcela paga em troca não entra, porque foi quitada em relógio</div>
+      <div class="cl-item">O desenho do documento virou uma função só, usada pelos dois lados. Ajuste de layout feito num aparece no outro sem precisar lembrar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.7</span><span class="cl-ver-date">25/08/2026</span></div>
