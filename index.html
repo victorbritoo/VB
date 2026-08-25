@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.293.1</title>
+<title>VB - v1.293.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13765,9 +13765,16 @@ function SOC_recebFoto(){
   var tot=0;
   linhas.forEach(function(l){ tot+=l.v; });
   var W=820, PAD=40, CW=W-PAD*2;
-  var H=176 + 34 + linhas.length*46 + 26 + 52 + 40;
-  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
-  var c=cv.getContext('2d');
+  var y=176, LH=32;
+  /* altura fechada a partir das posicoes reais: a linha do TOTAL estourava a borda do card
+     porque o rodape tinha 26px e o texto e desenhado 24 abaixo da ultima linha */
+  var hh=76 + linhas.length*LH;
+  var H=y + hh + 40;
+  /* 2x: a foto era gerada em 820px e o iPhone esticava. Todo o desenho continua em coordenadas
+     de 820 -- so o bitmap dobra. */
+  var DPR=2;
+  var cv=document.createElement('canvas'); cv.width=W*DPR; cv.height=H*DPR;
+  var c=cv.getContext('2d'); c.scale(DPR,DPR);
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
   c.fillStyle='#111'; c.font='700 44px Georgia, serif'; c.textAlign='left'; c.fillText('VB', PAD, 70);
   c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
@@ -13775,30 +13782,37 @@ function SOC_recebFoto(){
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
   c.fillText(VB_nomeCurto(d.nome||'').toUpperCase(), PAD, 146);
   function trunc(t,maxW,font){ c.font=font; t=String(t||''); if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'\u2026').width>maxW){ t=t.slice(0,-1); } return t+'\u2026'; }
-  var y=176, hh=34+linhas.length*46+26;
   c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
   c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
   var VALX=PAD+CW-22-138;   /* largura fixa da coluna de valor */
-  var yy=y+34;
+  var FN='700 15px -apple-system, Helvetica, sans-serif';
+  var FD='500 12px -apple-system, Helvetica, sans-serif';
+  var LIMITE=VALX-(PAD+22)-16;   /* o texto da esquerda nunca encosta na coluna de valor */
+  var yy=y+44;
   linhas.forEach(function(l){
-    c.fillStyle='#111'; c.font='700 15px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
-    c.fillText(trunc(l.nome, 400, '700 15px -apple-system, Helvetica, sans-serif'), PAD+22, yy+8);
-    var esq=(l.d?HIST_fmtData(l.d):'Sem data')+(l.nm?('   \u00b7   '+l.nm):'');
-    c.fillStyle='#aaa'; c.font='500 12px -apple-system, Helvetica, sans-serif';
-    c.fillText(trunc(esq, 430, '500 12px -apple-system, Helvetica, sans-serif'), PAD+22, yy+27);
+    /* uma linha so: descricao e, logo depois, data e contagem. O detalhe e curto e tem
+       tamanho previsivel, entao quem cede espaco e a descricao. */
+    var det='   \u00b7   '+(l.d?HIST_fmtData(l.d):'Sem data')+(l.nm?('   \u00b7   '+l.nm):'');
+    c.font=FD; var wDet=c.measureText(det).width;
+    var nome=trunc(l.nome, Math.max(60, LIMITE-wDet), FN);
+    c.fillStyle='#111'; c.font=FN; c.textAlign='left';
+    c.fillText(nome, PAD+22, yy);
+    var wN=c.measureText(nome).width;
+    c.fillStyle='#aaa'; c.font=FD;
+    c.fillText(det, PAD+22+wN, yy);
     /* R$ ancorado num x fixo e o numero encostado na direita: as duas bordas da coluna alinham,
        em vez de o R$ passear conforme o tamanho do valor */
-    c.fillStyle='#4a4a4a'; c.font='700 15px -apple-system, Helvetica, sans-serif';
-    c.textAlign='left';  c.fillText('R$', VALX, yy+8);
-    c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.v).replace(/^R\$\s*/,''), PAD+CW-22, yy+8);
-    c.textAlign='left'; yy+=46;
+    c.fillStyle='#4a4a4a'; c.font=FN;
+    c.textAlign='left';  c.fillText('R$', VALX, yy);
+    c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.v).replace(/^R\$\s*/,''), PAD+CW-22, yy);
+    c.textAlign='left'; yy+=LH;
   });
-  c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-2); c.lineTo(PAD+CW-22, yy-2); c.stroke();
+  c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-12); c.lineTo(PAD+CW-22, yy-12); c.stroke();
   c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
-  c.fillText('TOTAL \u00b7 '+linhas.length+(linhas.length===1?' LAN\u00c7AMENTO':' LAN\u00c7AMENTOS'), PAD+22, yy+24);
+  c.fillText('TOTAL \u00b7 '+linhas.length+(linhas.length===1?' LAN\u00c7AMENTO':' LAN\u00c7AMENTOS'), PAD+22, yy+14);
   c.font='700 16px -apple-system, Helvetica, sans-serif';
-  c.textAlign='left';  c.fillText('R$', VALX, yy+24);
-  c.textAlign='right'; c.fillText(HIST_fmtMoeda(tot).replace(/^R\$\s*/,''), PAD+CW-22, yy+24);
+  c.textAlign='left';  c.fillText('R$', VALX, yy+14);
+  c.textAlign='right'; c.fillText(HIST_fmtMoeda(tot).replace(/^R\$\s*/,''), PAD+CW-22, yy+14);
   c.textAlign='left';
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
@@ -18718,6 +18732,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.2</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">RECEBIMENTOS em uma linha por lançamento: a data e a contagem passaram pra mesma linha da descrição, logo depois dela. Quem cede espaço quando o nome é comprido é a descrição — o detalhe tem tamanho previsível e nunca encosta na coluna de valor. O documento ficou com pouco mais da metade da altura</div>
+      <div class="cl-item">A linha do TOTAL estourava a borda de baixo do card: o rodapé reservava 26px e o texto era desenhado 24 abaixo da última linha. Agora a altura sai das posições reais, e a sobra embaixo da foto é sempre a mesma</div>
+      <div class="cl-item">Foto do RECEBIMENTOS gerada no dobro da resolução. Ela saía com 820px de largura e o iPhone esticava pra tela; agora o bitmap dobra e o desenho continua nas mesmas medidas</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.1</span><span class="cl-ver-date">25/08/2026</span></div>
