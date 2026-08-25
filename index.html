@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.1</title>
+<title>VB - v1.295.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -14266,7 +14266,9 @@ function MER_render(){
           lucroVB+=l*(pVB/100);
         }
       });
-      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+'</span>'
+      /* peca baixada na mao saiu sem venda lancada: conta como item, mas nao tem valor pra somar */
+      var _cVend=est.filter(function(r){ return r.venda_id && MER_vendasMap[r.venda_id]; }).length;
+      tot.innerHTML='<span style="font-size:11px;letter-spacing:1px;color:var(--so);font-weight:600;">'+totLabel+' · '+est.length+' '+(est.length===1?'ITEM':'ITENS')+(_cVend<est.length?(' · '+_cVend+' C/ VENDA'):'')+'</span>'
         +'<span style="text-align:right;font-size:11px;line-height:1.7;">'
           +'<span style="color:var(--so);font-weight:600;">TOTAL: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(vendaTot)+'</span>'
           +(temLucro?('<span class="mer-tot-x"><br><span style="color:var(--so);font-weight:600;">LUCRO: </span><span style="color:var(--acc-tx);font-weight:700;">R$ '+MER_fmtBR(lucroTot)+'</span>'
@@ -18974,6 +18976,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.2</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">VENDIDOS · 6 · R$ 283.500 fazia parecer que as seis somavam isso, quando três saíram por baixa manual e não têm valor lançado. Agora o cabeçalho diz quantas têm venda: VENDIDOS · 6 (3 com venda). Vale na busca e também no card preto da aba VENDIDOS, que tinha o mesmo problema desde sempre</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.1</span><span class="cl-ver-date">25/08/2026</span></div>
