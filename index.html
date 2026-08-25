@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.293.4</title>
+<title>VB - v1.293.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13789,10 +13789,21 @@ function SOC_recebFoto(){
   var tot=0;
   linhas.forEach(function(l){ tot+=l.v; });
   var W=820, PAD=40, CW=W-PAD*2;
-  var y=176, LH=32;
-  /* altura fechada a partir das posicoes reais: a linha do TOTAL estourava a borda do card
-     porque o rodape tinha 26px e o texto e desenhado 24 abaixo da ultima linha */
-  var hh=76 + linhas.length*LH;
+  var y=176, LH=32, MH=34, TH=30;   /* linha, cabecalho do mes, cabecalho das colunas */
+  /* agrupado por mes: a pergunta que o socio faz olhando isso e "quanto eu recebo em setembro",
+     e sem o subtotal ele soma na mao. Sem data cai num grupo proprio, no fim. */
+  var grupos=[], gmap={};
+  linhas.forEach(function(l){
+    var k=l.d?String(l.d).slice(0,7):'zzz';
+    if(!gmap[k]){ gmap[k]={ym:k, itens:[], soma:0}; gmap[k].ordem=grupos.length; grupos.push(gmap[k]); }
+    gmap[k].itens.push(l); gmap[k].soma+=l.v;
+  });
+  /* altura fechada a partir das posicoes reais: a linha do TOTAL ja estourou a borda do card
+     uma vez por conta gasta no chute */
+  var pos=TH;
+  grupos.forEach(function(g){ pos+=MH+g.itens.length*LH; });
+  pos+=LH;
+  var hh=pos+32;
   var H=y + hh + 40;
   /* 2x: a foto era gerada em 820px e o iPhone esticava. Todo o desenho continua em coordenadas
      de 820 -- so o bitmap dobra. */
@@ -13808,6 +13819,9 @@ function SOC_recebFoto(){
   c.fillText('R E C E B I M E N T O S', PAD, 96);
   c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
   c.fillText(VB_nomeCurto(d.nome||'').toUpperCase(), PAD, 146);
+  /* total tambem no topo: no documento longo o socio rolava ate o fim so pra ver o numero */
+  c.textAlign='right'; c.font='700 22px -apple-system, Helvetica, sans-serif';
+  c.fillText(HIST_fmtMoeda(tot), PAD+CW, 146); c.textAlign='left';
   function trunc(t,maxW,font){ c.font=font; t=String(t||''); if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'\u2026').width>maxW){ t=t.slice(0,-1); } return t+'\u2026'; }
   c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
   c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
@@ -13821,20 +13835,45 @@ function SOC_recebFoto(){
      na coluna de valor e TODA a sobra vai pra descricao -- que e a unica que precisa cortar. */
   var DESCX=PAD+22, NUMX=VALX-80, DATAX=NUMX-88;
   var DESCW=DATAX-DESCX-14;
-  var yy=y+44;
-  linhas.forEach(function(l){
-    c.fillStyle='#111'; c.font=FN; c.textAlign='left';
-    c.fillText(trunc(l.nome, DESCW, FN), DESCX, yy);
-    c.fillStyle='#aaa'; c.font=FD;
-    c.fillText((l.d?HIST_fmtData(l.d):'Sem data'), DATAX, yy);
-    if(l.nm) c.fillText(l.nm, NUMX, yy);
-    /* R$ ancorado num x fixo e o numero encostado na direita: as duas bordas da coluna alinham,
-       em vez de o R$ passear conforme o tamanho do valor */
-    c.fillStyle='#4a4a4a'; c.font=FN;
-    c.textAlign='left';  c.fillText('R$', VALX, yy);
-    c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.v).replace(/^R\$\s*/,''), PAD+CW-22, yy);
-    c.textAlign='left'; yy+=LH;
+  var FT='700 9px -apple-system, Helvetica, sans-serif';
+  var FM='700 10px -apple-system, Helvetica, sans-serif';
+  var yy=y+TH;
+  /* cabecalho das colunas: sem ele a data solta no meio da linha nao se explica */
+  c.fillStyle='#c0c0c0'; c.font=FT; c.textAlign='left';
+  try{ c.letterSpacing='1.5px'; }catch(e){}
+  c.fillText('DESCRI\u00c7\u00c3O', DESCX, yy);
+  c.fillText('DATA', DATAX, yy);
+  c.fillText('PARCELA', NUMX, yy);
+  c.textAlign='right'; c.fillText('VALOR', PAD+CW-22, yy);
+  try{ c.letterSpacing='0px'; }catch(e){}
+  c.textAlign='left';
+  grupos.forEach(function(g){
+    yy+=MH;
+    var rot=(g.ym==='zzz')?'SEM DATA':((FM_MESES[Number(g.ym.slice(5,7))-1]||'')+' '+g.ym.slice(0,4));
+    c.fillStyle='#999'; c.font=FM; c.textAlign='left';
+    try{ c.letterSpacing='2px'; }catch(e){}
+    c.fillText(rot.toUpperCase(), DESCX, yy);
+    try{ c.letterSpacing='0px'; }catch(e){}
+    c.textAlign='right'; c.fillText(HIST_fmtMoeda(g.soma), PAD+CW-22, yy);
+    c.textAlign='left';
+    c.strokeStyle='#f0f0f0'; c.beginPath(); c.moveTo(DESCX, yy+8); c.lineTo(PAD+CW-22, yy+8); c.stroke();
+    g.itens.forEach(function(l){
+      yy+=LH;
+      c.fillStyle='#111'; c.font=FN; c.textAlign='left';
+      /* "SN:" e redundante -- o que vem depois so pode ser serial. Sao ~34px de volta pra descricao. */
+      c.fillText(trunc(String(l.nome||'').replace(/\s*\bSN:\s*/i,' '), DESCW, FN), DESCX, yy);
+      c.fillStyle='#aaa'; c.font=FD;
+      c.fillText((l.d?HIST_fmtData(l.d):'\u2014'), DATAX, yy);
+      if(l.nm) c.fillText(l.nm, NUMX, yy);
+      /* R$ ancorado num x fixo e o numero encostado na direita: as duas bordas da coluna alinham,
+         em vez de o R$ passear conforme o tamanho do valor */
+      c.fillStyle='#4a4a4a'; c.font=FN;
+      c.textAlign='left';  c.fillText('R$', VALX, yy);
+      c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.v).replace(/^R\$\s*/,''), PAD+CW-22, yy);
+      c.textAlign='left';
+    });
   });
+  yy+=LH;
   c.strokeStyle='#eee'; c.beginPath(); c.moveTo(PAD+22, yy-12); c.lineTo(PAD+CW-22, yy-12); c.stroke();
   c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
   c.fillText('TOTAL \u00b7 '+linhas.length+(linhas.length===1?' LAN\u00c7AMENTO':' LAN\u00c7AMENTOS'), PAD+22, yy+14);
@@ -18760,6 +18799,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.5</span><span class="cl-ver-date">25/08/2026</span></div>
+      <div class="cl-item">RECEBIMENTOS agrupado por mês, com subtotal em cada virada. É a pergunta que o sócio faz olhando o documento — quanto entra em setembro — e sem isso ele somava na mão. Lançamento sem data cai num grupo próprio, no fim</div>
+      <div class="cl-item">Cabeçalho de colunas: DESCRIÇÃO, DATA, PARCELA e VALOR. Sem ele a data solta no meio da linha não se explicava</div>
+      <div class="cl-item">O total também aparece no topo, ao lado do nome. No documento de 21 linhas o sócio rolava até o fim só pra ver o número</div>
+      <div class="cl-item">O “SN:” saiu da descrição — o que vem depois só pode ser serial. São uns 34px de volta, e a DAYTONA OYSTERFLEX PRETO passa a caber inteira. O Sky-Dweller continua cortando: 51 caracteres não cabem em largura nenhuma razoável</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.293.4</span><span class="cl-ver-date">25/08/2026</span></div>
