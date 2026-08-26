@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.4</title>
+<title>VB - v1.295.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -363,7 +363,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
   <div style="max-width:390px;margin:14px auto 0;text-align:center;">
     <div style="font-size:12px;letter-spacing:1px;color:var(--mu);margin-bottom:6px;font-weight:500;">↑ SEGURE A IMAGEM PARA SALVAR</div>
     <button onclick="VB_fotoShare()" style="width:100%;padding:9px;border:none;border-radius:14px;background:var(--acc);font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;margin-bottom:8px;">COMPARTILHAR</button>
-    <button onclick="VB_fotoPDF()" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;margin-bottom:8px;">COMPARTILHAR PDF</button>
+    <button id="vb-foto-pdf" onclick="VB_fotoPDF()" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;margin-bottom:8px;">COMPARTILHAR PDF</button>
     <button onclick="VB_fotoFechar()" style="width:100%;padding:9px;border:0.5px dashed var(--ln0);border-radius:14px;background:transparent;font-family:-apple-system,'Helvetica Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--mu);font-weight:600;cursor:pointer;">FECHAR</button>
   </div>
 </div>
@@ -5039,10 +5039,15 @@ function _dataURLtoBlob(durl){
 // Quando true, os geradores de imagem montam o canvas mas NÃO abrem o overlay (usado no compartilhar do histórico)
 var VB_silentGen=false;
 var VB_fotoNome='';
-function VB_fotoPreview(canvas, fname){
+function VB_fotoPreview(canvas, fname, comPDF){
   VB_fotoNome=fname||'VB.jpg';
   var img=document.getElementById('vb-foto-img');
   img.src=canvas.toDataURL('image/jpeg', 0.92);
+  /* PDF so faz sentido no documento longo, que como imagem vira tira altissima e o WhatsApp
+     comprime. Cartao curto (simulacao, recibo, fechamento) nao ganha nada -- e o botao a mais
+     so atrapalha. Quem chama diz se vale. */
+  var bp=document.getElementById('vb-foto-pdf');
+  if(bp) bp.style.display=comPDF?'block':'none';
   var ov=document.getElementById('vb-foto-overlay');
   if(ov.parentNode!==document.body) document.body.appendChild(ov); // nunca ficar preso dentro de uma tela escondida
   ov.style.display='block'; ov.scrollTop=0;
@@ -13762,7 +13767,7 @@ function SOC_extratoFoto(){
   }
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
-  VB_fotoPreview(cv, 'VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg');
+  VB_fotoPreview(cv, 'VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg', true);
 }
 /* ===== RECEBIMENTOS DO SOCIO (foto) =====
    Documento para MANDAR ao socio: tudo que ele recebe de VB, em ordem de data, num lugar so.
@@ -13945,7 +13950,7 @@ function VB_recebDoc(nome, linhas, sub, arq){
   c.textAlign='left';
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
-  VB_fotoPreview(cv, 'VB - '+arq+' '+(nome||'')+' '+ds.replace(/\//g,'-')+'.jpg');
+  VB_fotoPreview(cv, 'VB - '+arq+' '+(nome||'')+' '+ds.replace(/\//g,'-')+'.jpg', true);
 }
 
 /* Espelho do RECEBIMENTOS do socio, do outro lado: o que o CLIENTE deve a VB, por data.
@@ -19004,6 +19009,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.5</span><span class="cl-ver-date">26/08/2026</span></div>
+      <div class="cl-item">COMPARTILHAR PDF agora aparece só onde faz diferença: RECEBIMENTOS, PARCELAS A VENCER e extrato do sócio. Cartão curto — simulação de financiamento, investidor, fechamento — não ganha nada virando PDF, e o botão a mais só atrapalha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.4</span><span class="cl-ver-date">25/08/2026</span></div>
