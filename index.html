@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.5</title>
+<title>VB - v1.295.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5086,6 +5086,7 @@ function VB_fotoShare(){
   });
 }
 function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
+  if(prefix==='ANT'){ try{ ANT_copiaFrase(); }catch(e){} }
   if(prefix==='VEN'){
     try{
       var _el=document.getElementById(descId);
@@ -7451,6 +7452,16 @@ function VEN_codeB32(){ return 'VBVEN2:'+_b32enc(JSON.stringify(VEN_serializar()
 /* === ANTECIPAÇÃO JS === */
 
 function ANT_parseBR(s){ return VB_dinheiroRaw(s); }
+var ANT_fraseAtraso='';
+function ANT_copiaFrase(){
+  if(!ANT_fraseAtraso) return;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ANT_fraseAtraso);
+      VB_toast('Frase do atraso copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+    }
+  }catch(e){}
+}
 function ANT_formatBR(n){return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function ANT_maskVal(el,cb){
   el.addEventListener('input',function(){
@@ -8259,6 +8270,13 @@ function ANT_gerarTabela(){
 
   VB_drawWatermark(ctx, W, H);
   if(ANT_semCliente) VB_drawSelo(ctx, W, H, 'SIMULA\u00c7\u00c3O SEM VALIDADE');
+  /* Cobranca de atraso: alem da foto, a frase pronta pro WhatsApp. Os asteriscos sao do proprio
+     WhatsApp -- ele transforma em negrito ao colar. So nasce quando ha titulo vencido: numa
+     antecipacao normal "valor em atraso" seria mentira. */
+  /* o valor a cobrar e o LIQUIDO: em atraso o juro soma ao titulo, entao o bruto e menos do que
+     ele deve. E o mesmo numero do VALOR LIQUIDO no rodape da folha. */
+  ANT_fraseAtraso = rows.some(function(r){ return Number(r.prazo)<0; })
+    ? ('*Valor em Atraso: R$ '+ANT_formatBR(tlFinal)+' em '+hd+'/'+hm+'.*') : '';
 
   // Código + QR (rodapé, fundo limpo pra leitura)
   y+=secQrTop;
@@ -8278,6 +8296,7 @@ function ANT_gerarTabela(){
   var img=document.getElementById('ant-tabelaImagem');
   img.src=dataURL; img.style.display='block';
   document.getElementById('ant-tabelaDica').style.display='block';
+  if(!VB_silentGen) ANT_copiaFrase();
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
     ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
@@ -13199,6 +13218,16 @@ function REN_gravaBaixa(x, valor, dataISO, nota){
 /* Fecha a parcela: cria a baixa (que e o que dispara o repasse ao socio). */
 function REN_fechaParcela(x, total, dataISO, nota){
   if(!VB_gravando('REN_fechaParcela')) return;
+  /* A parcela foi recebida quando o dinheiro TERMINOU de entrar, e nao quando VB digitou o
+     ultimo pagamento. Apagar um parcial antigo e relanca-lo fazia dele o pagamento que fechava,
+     e a data dele virava a data da baixa -- a parcela voltava no tempo na lista de RECEBIDAS.
+     Vale a maior data entre os pagamentos. */
+  try{
+    (REN_pagsDe(x)||[]).forEach(function(pg){
+      var d=String(pg.data||'').slice(0,10);
+      if(d && d>dataISO) dataISO=d;
+    });
+  }catch(e){}
   var _rem=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
   var _pay={op_tab:x.tab, op_id:x.opId, parcela_idx:x.idx, venc:x.venc, valor:x.valor, valor_recebido:total, recebido_em:_rem, nota:(nota||null)};
   var _oi=REN_cache&&REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
@@ -19009,6 +19038,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.8</span><span class="cl-ver-date">26/08/2026</span></div>
+      <div class="cl-item">Tabela de antecipação com título vencido copia junto a frase pronta pro WhatsApp: *Valor em Atraso: R$ 220.866,15 em 26/08.* O valor é o LÍQUIDO, o mesmo do rodapé da folha — em atraso o juro soma ao título, então o bruto seria menos do que ele deve. Os asteriscos são do próprio WhatsApp, que vira negrito ao colar. Acontece nos dois caminhos — ao GERAR TABELA e ao COMPARTILHAR — igual à legenda da venda</div>
+      <div class="cl-item">Só nasce quando existe título vencido na operação. Numa antecipação normal, falar em valor em atraso seria mentira</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.6</span><span class="cl-ver-date">26/08/2026</span></div>
+      <div class="cl-item">A data em que a parcela foi recebida passou a ser a do último pagamento no calendário, não a do último digitado. Apagar um parcial antigo e relançá-lo fazia dele o pagamento que fechava a parcela, e a data dele virava a data da baixa — a parcela voltava no tempo na lista de RECEBIDAS e no mês do Fechamento. O dinheiro terminou de entrar na maior data, e é ela que vale</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.5</span><span class="cl-ver-date">26/08/2026</span></div>
