@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.8</title>
+<title>VB - v1.295.9</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8457,6 +8457,13 @@ function ANT_gerarResumoFoto(){
     for(var i=0;i<n;i++){ tj+=vpt*taxa*(prazos[i]/30); pt+=prazos[i]*vpt; }
     pm=pt/VB; tl=VB-tj-tar;
   }
+  /* a mesma frase da tabela: quem compartilha o RESUMO de uma cobranca atrasada precisa dela
+     igual. Sem isso, ela so existia no caminho do GERAR TABELA. */
+  var _rowsA = res ? res.rows : (function(){
+    var pr=ANT_calcPrazos()||[]; return pr.map(function(p){ return {prazo:p}; });
+  })();
+  ANT_fraseAtraso = _rowsA.some(function(r){ return Number(r.prazo)<0; })
+    ? ('*Valor em Atraso: R$ '+ANT_formatBR(tl)+' em '+hd+'/'+hm+'.*') : '';
   var dataStr=hd+'/'+hm+'/'+ha;
   var prazoStr=pm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dias';
   var taxaStr=(taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
@@ -8570,6 +8577,7 @@ function ANT_gerarResumoFoto(){
   VB_carimboData(ctx, W);
   img.src=cv.toDataURL('image/png'); img.style.display='block';
   document.getElementById('ant-tabelaDica').style.display='block';
+  if(!VB_silentGen) ANT_copiaFrase();
   if(!VB_silentGen){
     var ot=document.getElementById('ant-overlayTabela');
     ot.style.display='flex'; ot.style.flexDirection='column'; ot.style.alignItems='center';
@@ -19038,6 +19046,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.9</span><span class="cl-ver-date">26/08/2026</span></div>
+      <div class="cl-item">A frase do atraso passou a nascer também no COMPARTILHAR da tela de Antecipação, que gera o resumo. Antes ela só existia pelo caminho do GERAR TABELA, então quem compartilhava o resumo de uma cobrança atrasada não levava a legenda junto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.8</span><span class="cl-ver-date">26/08/2026</span></div>
