@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.1</title>
+<title>VB - v1.296.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10628,7 +10628,10 @@ function CLIP_abrir(nome, cliId, voltarK){
     var _temSoc=(Math.abs(lucTot-lucVB)>=0.005);
     /* Pontualidade: so parcelas com baixa, comparando o recebimento com o vencimento. */
     var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; });
-    var pgN=0, pgDia=0, pgAtr=0, pgDias=0;
+    var pgN=0, pgDia=0, pgAtr=0, pgDias=0, pgAtrL=[];
+    /* de qual operacao veio cada baixa: sem isso o bloco diz "1 com atraso" e nao diz qual */
+    var _opRot={}; ven.forEach(function(v){ _opRot['ven|'+String(v.id)]=String(v.descricao||v.nome||''); });
+    antOk.forEach(function(r){ _opRot['ant|'+String(r.id)]=String(r.nome||r.cliente||'ANTECIPA\u00c7\u00c3O'); });
     ((res[3]&&res[3].data)||[]).forEach(function(b3){
       if(!_ops[b3.op_tab+'|'+String(b3.op_id)]) return;
       if(!b3.venc || !b3.recebido_em) return;
@@ -10638,7 +10641,10 @@ function CLIP_abrir(nome, cliId, voltarK){
       pgAtr++;
       var dd2=Math.round((new Date(dRec+'T00:00:00')-new Date(dVen+'T00:00:00'))/86400000);
       if(isFinite(dd2)&&dd2>0) pgDias+=dd2;
+      pgAtrL.push({rot:_opRot[b3.op_tab+'|'+String(b3.op_id)]||'', venc:dVen, rec:dRec,
+        dias:(isFinite(dd2)?dd2:0), valor:Number(b3.valor_recebido!=null?b3.valor_recebido:b3.valor)||0});
     });
+    pgAtrL.sort(function(a,b){ return b.dias-a.dias; });
     function fdt(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4); }
     /* bl(titulo, conteudo, resumo, nLinhas). Passando nLinhas o bloco fica recolhivel: ate 4 linhas
        nasce aberto, acima disso nasce fechado - a regra so age quando o bloco atrapalha. */
@@ -10736,7 +10742,16 @@ function CLIP_abrir(nome, cliId, voltarK){
       innP+=ln('Em dia', String(pgDia));
       innP+=ln('Com atraso', pgAtr>0?('<span style="color:var(--red);font-weight:700;">'+pgAtr+'</span>'):'0');
       if(pgAtr>0) innP+=ln('Atraso m\u00e9dio', Math.round(pgDias/pgAtr)+' dias');
-      hh+=bl('COMO ELE PAGA', innP);
+      /* "1 com atraso" sozinho nao serve pra cobrar: quais foram, e de quanto */
+      if(pgAtrL.length){
+        innP+='<div style="border-top:0.5px solid var(--ln3);margin:7px 0 2px;"></div>';
+        pgAtrL.slice(0,8).forEach(function(a){
+          innP+=ln(fdt(a.venc)+' \u00b7 '+CLIP_esc(REN_rotCurto(a.rot)||a.rot),
+            '<span style="color:var(--red);font-weight:700;">+'+a.dias+'d</span> \u00b7 '+fdt(a.rec));
+        });
+        if(pgAtrL.length>8) innP+='<div style="font-size:10px;color:var(--mu);margin-top:5px;">+'+(pgAtrL.length-8)+' parcelas</div>';
+      }
+      hh+=bl('COMO ELE PAGA', innP, pgAtr>0?(pgAtr+' COM ATRASO'):'', pgAtr);
     }
     // CONTRATOS
     if(con.length){
@@ -15300,6 +15315,12 @@ function MER_viewEditar(id){
     hh+=MER_viewCampoIn('Data da Sa\u00edda','mer-e-dataSaida', MER_fmtData(r.data_venda)||'', 'inputmode="numeric" maxlength="10" onclick="this.select()" oninput="REC_maskData(this);MER_viewTocou()" onblur="autoCompleteDate(this);MER_viewTocou()"');
     hh+=MER_viewCampoIn('Nota da Sa\u00edda','mer-e-baixaNota', r.baixa_nota||'');
     hh+='</div>';
+  } else if(String(r.baixa_nota||'').trim()){
+    /* peca de volta ao estoque com historico escrito (VENDA DESFEITA): da pra ler e corrigir,
+       sem trazer junto o bloco de baixa manual, que aqui nao se aplica */
+    hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
+    hh+=MER_viewCampoIn('Nota da Sa\u00edda','mer-e-baixaNota', r.baixa_nota||'');
+    hh+='</div>';
   }
   if(r.status!=='vendida') hh+='<div id="mer-poss-card">'+MER_possibilidades(r)+'</div>';
   document.getElementById('mer-view-body').innerHTML=hh;
@@ -15335,6 +15356,9 @@ function MER_viewSalvar(){
   var ehBaixa=((r.status||'')==='vendida' && !r.venda_id);
   if(ehBaixa){
     var dsai=MER_eIso(MER_eVal('mer-e-dataSaida')); if(dsai) payload.data_venda=dsai;
+    payload.baixa_nota=MER_eVal('mer-e-baixaNota').trim().toUpperCase()||null;
+  } else if(document.getElementById('mer-e-baixaNota')){
+    /* o campo so existe quando ja havia texto; sem essa linha, editar a peca apagaria a nota */
     payload.baixa_nota=MER_eVal('mer-e-baixaNota').trim().toUpperCase()||null;
   }
   var b=document.getElementById('mer-view-editar');
@@ -19125,6 +19149,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.2</span><span class="cl-ver-date">27/08/2026</span></div>
+      <div class="cl-item">A NOTA DA SAÍDA só aparecia em peça vendida — justo o campo que guarda a linha da VENDA DESFEITA, que existe exatamente quando a peça voltou pro estoque. Ficava escrita e invisível. Agora aparece sempre que tiver texto, na ficha e na edição, e editar a peça não apaga mais o que estava lá</div>
+      <div class="cl-item">COMO ELE PAGA abre as parcelas que atrasaram: vencimento, operação, quantos dias e quando foi paga, da maior demora pra menor. Dizer 1 COM ATRASO sozinho não serve pra cobrar ninguém — e o bloco ganhou a setinha, como os outros</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.1</span><span class="cl-ver-date">27/08/2026</span></div>
