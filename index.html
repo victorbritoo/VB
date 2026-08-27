@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.295.9</title>
+<title>VB - v1.296.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11558,7 +11558,7 @@ function REN_cpEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
   var pp=[];
   (REN_cpParc||[]).forEach(function(_,i){ pp.push(g('rencp-pv-'+i)+'@'+g('rencp-pd-'+i)); });
-  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),pp.join(';')].join('\u241f');
+  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),(REN_cpJuros?'J':''),pp.join(';')].join('\u241f');
 }
 function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
@@ -11610,6 +11610,10 @@ function REN_cpSheet(id){
     +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencp-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+dBR+'" style="'+IN+'"></div>'
     +'</div>'):'')
     +(c?'':'<div id="rencp-parc"></div>')
+    /* juro de banco nao e compra de peca: ele DESCE do lucro do mes no Fechamento, agrupado pelo
+       CREDOR -- que aqui e a conta de onde foi debitado. Marcado em origem_tab, coluna que ja
+       existe, entao nao precisa de SQL. */
+    +'<div id="rencp-juros" onclick="REN_cpJurosToggle()" style="margin:10px 0 0;padding:9px 12px;border:0.5px dashed var(--ln0);border-radius:12px;text-align:center;font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;color:var(--mu2);">JUROS DA CONTA</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     /* a acao que traz voce aqui e a baixa, como na ficha da parcela: ela e a preta e a primeira.
@@ -11622,6 +11626,8 @@ function REN_cpSheet(id){
   ov.style.display='flex';
   delete VB_folhaCfg['cp'];   /* pintor proprio: REN_cpDirty. Ver a nota em REN_crAbrir */
   REN_cpEditId = c ? String(c.id) : '';
+  REN_cpJuros = !!(c && String(c.origem_tab||'')==='juros');
+  REN_cpJurosPinta();
   if(!c){ REN_cpParc=[{valor:'',data:''}]; REN_cpPinta(); }
   else { REN_cpParc=[]; }
   REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
@@ -11684,6 +11690,16 @@ function REN_cpDelParc(i){
   REN_cpParc.splice(i,1);
   REN_cpPinta();
 }
+var REN_cpJuros=false;
+function REN_cpJurosPinta(){
+  var e=document.getElementById('rencp-juros'); if(!e) return;
+  e.textContent=REN_cpJuros?'\u2713 JUROS DA CONTA':'JUROS DA CONTA';
+  e.style.borderStyle=REN_cpJuros?'solid':'dashed';
+  e.style.background=REN_cpJuros?'var(--sf2)':'transparent';
+  e.style.color=REN_cpJuros?'var(--tx)':'var(--mu2)';
+  e.style.borderColor=REN_cpJuros?'var(--ln3)':'var(--ln0)';
+}
+function REN_cpJurosToggle(){ REN_cpJuros=!REN_cpJuros; REN_cpJurosPinta(); try{ REN_cpDirty(); }catch(e){} }
 function REN_cpSalvar(id){
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
@@ -11708,7 +11724,9 @@ function REN_cpSalvar(id){
   }
   if(!VB_gravando('REN_cpSalvar')) return;
   var nT = linhas ? linhas.length : 1;
-  var reg = linhas ? linhas : {credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
+  var _ot = REN_cpJuros?'juros':null;
+  if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; });
+  var reg = linhas ? linhas : {credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot};
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
@@ -13381,10 +13399,29 @@ function FM_calcMes(ym, res, _merMap){
        esta dentro do lucro da venda. Descontar a parcela que VB deve por ela contaria o mesmo
        custo duas vezes. Aqui e caixa, nao resultado. */
     var _cpRows=((res[6]&&res[6].data)||[]), _cpVence=0, _cpVenceN=0, _cpPago=0, _cpPagoN=0;
+    /* JUROS PAGOS ao banco (cheque especial e afins). Esses SIM descem do lucro, e nao ha dupla
+       contagem: diferente do custo da peca, esse juro nunca entrou no custo de venda nenhuma --
+       ele nao aparece hoje em lugar nenhum. Ficam FORA do bloco SAIDAS pro mesmo numero nao ser
+       lido duas vezes. Contam pelo mes em que o dinheiro saiu (pago_em); enquanto nao pago, nao
+       descem de nada. Marcados com origem_tab='juros' na propria conta a pagar. */
+    var _juT=0,_juN=0,_juG={},_juIt=[];
     _cpRows.forEach(function(c){
+      if(String(c.origem_tab||'')==='juros'){
+        if(!c.pago_em || String(c.pago_em).slice(0,7)!==ym) return;
+        var vj=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; if(!(vj>0)) return;
+        var conta=String(c.credor||'\u2014').trim().toUpperCase();
+        _juT+=vj; _juN++;
+        var g=_juG[conta]||(_juG[conta]={n:0,v:0}); g.n++; g.v+=vj;
+        _juIt.push({conta:conta, desc:String(c.descricao||'JUROS').toUpperCase(), valor:vj, data:String(c.pago_em||'').slice(0,10)});
+        return;
+      }
       if(String(c.venc||'').slice(0,7)===ym){ _cpVence+=Number(c.valor)||0; _cpVenceN++; }
       if(c.pago_em && String(c.pago_em).slice(0,7)===ym){ _cpPago+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; _cpPagoN++; }
     });
+    _juIt.sort(function(a,b){ return String(a.data)<String(b.data)?-1:1; });
+    var dJur={n:_juN, tot:_juT,
+      grupos:Object.keys(_juG).map(function(k){ return {conta:k, n:_juG[k].n, v:_juG[k].v}; }).sort(function(a,b){ return b.v-a.v; }),
+      itens:_juIt};
     var dSai={vence:_cpVence, venceN:_cpVenceN, pago:_cpPago, pagoN:_cpPagoN};
     /* PRORROGACAO e receita a parte, nao lucro da operacao original: se entrasse nela, quem
        prorrogou pareceria ter feito um negocio melhor do que fez.
@@ -13443,9 +13480,10 @@ function FM_calcMes(ym, res, _merMap){
     var dGas={n:_gN, tot:_gT,
       grupos:Object.keys(_gGrupo).map(function(k){ return {desc:k, n:_gGrupo[k].n, v:_gGrupo[k].v}; }).sort(function(a,b){ return b.v-a.v; }),
       itens:_gItens};
-    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:dPro, gas:dGas, venLucVB:venLucVB, rend:rendMes,
+    return {ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:dPro, gas:dGas, jur:dJur, venLucVB:venLucVB, rend:rendMes,
       rendDet:{aL:_aL,aCM:_aCM,vL:_vL,vCM:_vCM,estCap:_estCap,rendTot:rendTot},
-      lucroTotal:dAnt.luc+dFin.luc+venLucVB+_proJ, nOps:(dAnt.n+dFin.n+dVen.n+_proN)};
+      lucroBruto:dAnt.luc+dFin.luc+venLucVB+_proJ,
+      lucroTotal:dAnt.luc+dFin.luc+venLucVB+_proJ-_juT, nOps:(dAnt.n+dFin.n+dVen.n+_proN)};
 }
 function FM_load(){
   var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
@@ -13472,7 +13510,7 @@ function FM_load(){
     var _pd=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
     var _pym=_pd.getFullYear()+'-'+('0'+(_pd.getMonth()+1)).slice(-2);
     var _prev=FM_calcMes(_pym, res, _merMap);
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:_c.pro, gas:_c.gas, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
+    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:_c.pro, gas:_c.gas, jur:_c.jur, lucroBruto:_c.lucroBruto, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
     /* Mes sem nenhuma operacao daquele tipo vira uma pilha de zeros que empurra o que importa
        pra baixo. Recolhido, o bloco continua existindo -- a ausencia tambem e informacao -- mas
        ocupa uma linha, e a setinha abre pra conferir. */
@@ -13557,6 +13595,20 @@ function FM_load(){
         _gdet+=fmDet(it.peca, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):'')+(it.cobrar?'':' \u00b7 N\u00c3O COBRADO'), HIST_fmtMoeda(it.valor));
       });
       hh+=bloco('CUSTOS COM PEÇAS · '+_dGas.n, glin, false, fmDetCaixa(_gdet));
+    }
+    /* diferente do bloco acima: este DESCE do lucro, e por isso mostra o antes e o depois */
+    var _dJur=(FM_dados&&FM_dados.jur)||{n:0};
+    if(_dJur.n>0){
+      var jlin=[];
+      _dJur.grupos.forEach(function(g){ jlin.push([g.conta+(g.n>1?' \u00b7 '+g.n+'\u00d7':''), HIST_fmtMoeda(g.v)]); });
+      jlin.push(['—div—','']);
+      jlin.push(['Lucro antes', HIST_fmtMoeda(FM_dados.lucroBruto)]);
+      jlin.push(['Juros pagos', '\u2212 '+HIST_fmtMoeda(_dJur.tot)]);
+      var _jdet='';
+      (_dJur.itens||[]).forEach(function(it){
+        _jdet+=fmDet(it.conta, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''), HIST_fmtMoeda(it.valor));
+      });
+      hh+=bloco('JUROS PAGOS · '+_dJur.n, jlin, false, fmDetCaixa(_jdet));
     }
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
@@ -19046,6 +19098,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.0</span><span class="cl-ver-date">26/08/2026</span></div>
+      <div class="cl-item">JUROS DA CONTA: novo marcador na folha da conta a pagar, pra juro de banco — cheque especial e afins. Lança o valor com o banco no CREDOR e marca o chip. No Fechamento nasce o bloco JUROS PAGOS, agrupado por conta, mostrando o lucro antes e o quanto desceu</div>
+      <div class="cl-item">Esse SIM desce do lucro do mês, e não há dupla contagem: diferente do custo da peça e do gasto marcado COBRAR, o juro do banco nunca entrou no custo de venda nenhuma — ele simplesmente não aparecia em lugar nenhum. Conta pelo mês em que o dinheiro saiu, o do pagamento; enquanto não pago, não desce de nada</div>
+      <div class="cl-item">Fica fora do bloco SAÍDAS de propósito, pro mesmo número não ser lido duas vezes — uma como caixa e outra como dedução. Sem SQL novo: o marcador usa a coluna origem_tab, que já existia</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.295.9</span><span class="cl-ver-date">26/08/2026</span></div>
