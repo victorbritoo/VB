@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.2</title>
+<title>VB - v1.296.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10560,6 +10560,13 @@ function CLIP_tog(id){
   b.style.display=aberto?'none':'block';
   var c=document.getElementById(id+'-c'); if(c) c.textContent=aberto?'\u2304':'\u2303';
 }
+/* empurra sabado/domingo pra segunda */
+function CLIP_diaUtil(iso){
+  var d=new Date(String(iso).slice(0,10)+'T12:00:00');
+  if(isNaN(d)) return iso;
+  while(d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10);
+}
 function CLIP_abrir(nome, cliId, voltarK){
   var alvo=String(nome||'').trim().toUpperCase(); if(!alvo) return;
   var alvoId=(cliId!=null)?String(cliId):null;
@@ -10637,11 +10644,16 @@ function CLIP_abrir(nome, cliId, voltarK){
       if(!b3.venc || !b3.recebido_em) return;
       pgN++;
       var dRec=String(b3.recebido_em).slice(0,10), dVen=String(b3.venc).slice(0,10);
-      if(dRec<=dVen){ pgDia++; return; }
+      /* venceu sabado ou domingo? a cobranca so acontece na segunda -- pagar NELA e pagar em dia.
+         A folga vale so pra isso: passou da segunda, o atraso conta desde o vencimento de
+         verdade, nao desde a segunda. Sabado pago na terca sao 3 dias, nao 1.
+         Vale so nesta leitura, que julga o CLIENTE. O vermelho do A RECEBER continua na data
+         cheia, porque ali a pergunta e outra: qual o ultimo dia de agir. */
+      if(dRec<=CLIP_diaUtil(dVen)){ pgDia++; return; }
       pgAtr++;
       var dd2=Math.round((new Date(dRec+'T00:00:00')-new Date(dVen+'T00:00:00'))/86400000);
       if(isFinite(dd2)&&dd2>0) pgDias+=dd2;
-      pgAtrL.push({rot:_opRot[b3.op_tab+'|'+String(b3.op_id)]||'', venc:dVen, rec:dRec,
+      pgAtrL.push({rot:_opRot[b3.op_tab+'|'+String(b3.op_id)]||'', venc:String(b3.venc).slice(0,10), rec:dRec,
         dias:(isFinite(dd2)?dd2:0), valor:Number(b3.valor_recebido!=null?b3.valor_recebido:b3.valor)||0});
     });
     pgAtrL.sort(function(a,b){ return b.dias-a.dias; });
@@ -14533,6 +14545,10 @@ function MER_abrir(id){
   /* o fornecedor NEM SEMPRE e um nome: em troca ele e uma frase (TROCA \u2014 modelo \u00b7 nome).
      Encurtar nome ali pegava a primeira e a ultima palavra e virava "TROCA FILHO". */
   hh+=lin('De Quem Comprei', VB_nomeSePuro(r.fornecedor||''));
+  /* a nota da saida so era desenhada em peca vendida por baixa manual -- justo o campo que
+     guarda a linha da VENDA DESFEITA, que existe quando a peca voltou pro estoque, e que
+     sobrevive quando ela e vendida de novo. Ficava escrita e invisivel. */
+  hh+=lin('Nota da Sa\u00edda', r.baixa_nota||'');
   if(r.pagamento) hh+='<div id="mer-view-pgtoline">'+lin('Forma de Pagamento', r.pagamento)+'</div>';
   /* a FORMA diz como; as PARCELAS dizem quanto e quando. Duas perguntas, duas linhas. */
   hh+='<div id="mer-view-parcinfo"></div>';
@@ -19149,6 +19165,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.4</span><span class="cl-ver-date">27/08/2026</span></div>
+      <div class="cl-item">A NOTA DA SAÍDA agora aparece mesmo na ficha — na 1.296.2 a correção ficou só na edição, o ajuste da leitura não chegou a ser gravado. A linha da VENDA DESFEITA sobrevive inclusive depois de a peça ser vendida de novo</div>
+      <div class="cl-item">Parcela que vence no sábado ou no domingo e é paga na segunda deixa de contar como atraso em COMO ELE PAGA. A cobrança só acontece na segunda; pagar nela é pagar em dia. A folga vale só pra isso: passou da segunda, o atraso conta desde o vencimento de verdade — sábado pago na terça são 3 dias, não 1</div>
+      <div class="cl-item">Vale só nessa leitura, que julga o cliente. O vermelho do A RECEBER continua na data cheia, porque ali a pergunta é outra: qual o último dia de agir</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.2</span><span class="cl-ver-date">27/08/2026</span></div>
