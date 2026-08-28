@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.7</title>
+<title>VB - v1.296.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3907,11 +3907,7 @@ var HIST_totEscopo='mes';
 function HIST_renderTotal(tab, rows, term){
   var totalEl=document.getElementById('hist-total');
   if(!totalEl) return;
-  if(!rows || rows.length===0){
-    totalEl.style.display='none';
-    try{ var _l0=document.getElementById('hist-lista'); if(_l0) _l0.style.paddingBottom=''; }catch(e){}
-    return;
-  }
+  if(!rows || rows.length===0){ totalEl.style.display='none'; return; }
   var busca=!!term;
   var fixo=(tab==='ant' && HIST_antSub==='atr'); // atrasado \u00e9 estoque a cobrar: sempre panorama geral, sem toque
   var filtro=(!busca && typeof HIST_hasActiveFilter==='function' && HIST_hasActiveFilter()); // filtro ativo: card soma o conjunto filtrado inteiro
@@ -4001,12 +3997,6 @@ function HIST_renderTotal(tab, rows, term){
     });
   }
   totalEl.style.display='flex';
-  /* mesma regra do Estoque: o card cola no fim da janela, entao a lista reserva a altura dele --
-     sem isso a ultima linha visivel fica sempre escondida por baixo, em qualquer ponto do scroll */
-  try{
-    var _lst=document.getElementById('hist-lista');
-    if(_lst){ var _a=totalEl.offsetHeight; if(_a>0) _lst.style.paddingBottom=(_a+14)+'px'; }
-  }catch(e){}
 }
 function HIST_dataOp(tab,r){ return tab==='ant'?r.data_operacao:tab==='fin'?r.data_inicio:tab==='ven'?r.data_primeira_parcela:(r.created_at?r.created_at.split('T')[0]:null); }
 // Data de NEGÓCIO da operação (eixo do tempo do Histórico): ant=data da operação, fin=início, ven=data da venda (fallback 1ª parcela), pag=carimbo
@@ -14502,6 +14492,12 @@ function MER_render(){
    transparente acima. Sem isso a barra encolhia, o documento encurtava, a sentinela entrava na tela,
    a barra crescia e o ciclo recomecava - a barra piscava. */
 function MER_totMedir(){
+  /* a v1.296.7 reservava a altura do card no fim da lista. Era desnecessario: o card ja ocupa
+     o proprio espaco la embaixo, e a reserva so abria um buraco. Limpa se sobrou de antes. */
+  try{
+    var _l=document.getElementById('mer-lista'); if(_l) _l.style.paddingBottom='';
+    var _h=document.getElementById('hist-lista'); if(_h) _h.style.paddingBottom='';
+  }catch(e){}
   var tot=document.getElementById('mer-total');
   var wrap=document.getElementById('mer-total-wrap');
   if(!tot || !wrap) return;
@@ -14511,10 +14507,6 @@ function MER_totMedir(){
   var alt=tot.offsetHeight;
   if(alt>0) wrap.style.minHeight=alt+'px';
   if(encolhido) tot.classList.add('enc');
-  /* Rodape colado no fim da janela so pode flutuar se a lista reservar a altura dele: sem isso
-     a ultima linha visivel fica SEMPRE por baixo do card, em qualquer ponto do scroll. */
-  var lista=document.getElementById('mer-lista');
-  if(lista && alt>0) lista.style.paddingBottom=(alt+14)+'px';
 }
 /* A sentinela fica logo abaixo do total. Fora da tela = ainda rolando, entao o total encolhe;
    visivel = chegou no fim da lista, o total pousa e volta inteiro. */
@@ -19231,6 +19223,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.8</span><span class="cl-ver-date">28/08/2026</span></div>
+      <div class="cl-item">Desfeita a reserva de espaço da 1.296.7. O card de totais nunca cobriu o fim da lista — ele já ocupava o próprio lugar lá embaixo — e a reserva só abriu um vazio entre o último item e o card, no Estoque e no Histórico. Volta a encostar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.7</span><span class="cl-ver-date">28/08/2026</span></div>
