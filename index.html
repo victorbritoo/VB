@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.4</title>
+<title>VB - v1.296.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12094,6 +12094,23 @@ function REN_notaSalvar(k){
   var reg={op_tab:alvo.op_tab, op_id:alvo.op_id, parcela_idx:alvo.parcela_idx, nota:t};
   sb.from('parcela_notas').upsert(reg, {onConflict:'op_tab,op_id,parcela_idx'}).then(fim).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
+/* Rateio de REFERENCIA para a leitura, nunca para o calculo. O REN_repDef divide pela media da
+   operacao inteira -- e essa media envelhece: quando a 1a parcela absorve um custo, ela puxa a
+   media pra baixo e TODAS as seguintes, mesmo sendo 50/50 limpas, passam a parecer "acima do
+   rateio". A pergunta certa e outra: dado o que o socio ja recebeu, quanto desta parcela seria
+   dele se o resto fosse dividido igual? Batendo, nao ha nada de combinado a dizer. */
+function REN_repRefResta(oi, x){
+  if(!oi || oi.fixo!=null || oi.consig) return REN_repDef(oi, x);
+  var ps=REN_opParcelas(x.tab, x.opId); if(!ps.length) return REN_repDef(oi, x);
+  var resta=Number(oi.vs)||0, aberto=0;
+  ps.forEach(function(i){
+    var b=REN_cache&&REN_cache.bx&&REN_cache.bx[REN_key(i)];
+    if(b){ resta-=REN_repDe(i, b); return; }
+    aberto+=Number(i.valor)||0;
+  });
+  if(!(aberto>0)) return REN_repDef(oi, x);
+  return Math.round(Math.max(0,resta)/aberto*(Number(x.valor)||0)*100)/100;
+}
 function REN_repDef(oi, x){
   if(!oi) return 0;
   if(oi.fixo!=null) return Math.round(Number(oi.fixo)*100)/100;
@@ -12705,12 +12722,32 @@ function REN_ficha(k, exp){
      Linha propria e nao dentro do bloco do SOCIO: la ela desalinharia a coluna do VB ao lado. */
   if(oi && !oi.consig){
     var _exC=REN_prevExtraVB(x.tab, x.opId);
-    if(_exC>0) hh+='<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin:-2px 0 4px;">CUSTOS DE '+HIST_fmtMoeda(_exC)+' NO REL\u00d3GIO</div>';
+    /* So na parcela que carregou o abatimento -- repetir em todas as sete transformava leitura
+       em cobranca pendente. Custo entra ANTES da divisao, entao cada um paga a sua metade:
+       o socio devolve a parte dele descontada do repasse desta parcela, e o VB banca a sua.
+       A parcela e achada pelo repasse previsto que foge do rateio para MENOS. */
+    if(_exC>0){
+      /* O custo sai INTEIRO da parcela onde foi abatido: e descontado ANTES de dividir, entao os
+         dois pagam metade dentro do proprio rateio -- nao existe "abatido do socio". Achamos essa
+         parcela pelo combinado que fica abaixo de metade do valor dela. */
+      var _pAbat=null;
+      try{
+        (REN_cache.itens||[]).forEach(function(y){
+          if(y.tab!==x.tab || String(y.opId)!==String(x.opId)) return;
+          var pv=REN_repPrev(y); if(pv==null) return;
+          if(pv < ((Number(y.valor)||0)/2)-0.005 && (_pAbat===null || y.idx<_pAbat)) _pAbat=y.idx;
+        });
+      }catch(e){}
+      if(_pAbat===null || _pAbat===x.idx){
+        hh+='<div style="font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin:-2px 0 4px;">CUSTOS DE '+HIST_fmtMoeda(_exC)+' NO REL\u00d3GIO'
+          +((_pAbat===x.idx)?' \u00b7 ABATIDOS AQUI':'')+'</div>';
+      }
+    }
   }
   /* Por que ESTA parcela foge do rateio. So aparece na que difere -- nas outras seria ruido.
      E medido na hora contra o rateio de agora, entao nao envelhece quando a venda muda. */
   if(oi && !REN_cache.bx[REN_key(x)] && REN_repPrev(x)!=null){
-    var _rp=REN_repAlvo(oi, x), _rt=Math.round((Number(REN_repDef(oi,x))||0)*100)/100;
+    var _rp=REN_repAlvo(oi, x), _rt=Math.round((Number(REN_repRefResta(oi,x))||0)*100)/100;
     var _dif=Math.round((_rt-_rp)*100)/100;
     if(Math.abs(_dif)>0.005){
       var _ex=REN_prevExtraVB(x.tab, x.opId);
@@ -12948,7 +12985,7 @@ function REN_prevSheet(k){
        Em sociedade de capital a regua do VB continua proporcional -- o socio recebe a medida
        que ele recebe -- e ali o botao segue escondido. */
     +(oi.consigCap?('<button onclick="REN_prevSocioPrim()" style="'+BS+'">S\u00d3CIO PRIMEIRO</button>'):'')
-    +((REN_prevExtraVB(x.tab, x.opId)>0)?('<button id="renp-b-extra" onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 '+HIST_fmtMoeda(REN_prevExtraVB(x.tab, x.opId))+'</button>'):'')
+    +((REN_prevExtraFalta(x.tab, x.opId, oi)>0.005)?('<button id="renp-b-extra" onclick="REN_prevExtraPrim()" style="'+BS+'">MEU EXTRA PRIMEIRO \u00b7 ANTECIPA '+HIST_fmtMoeda(REN_prevExtraFalta(x.tab, x.opId, oi))+'</button>'):'')
     +'<button id="renp-b-prop" onclick="REN_prevProp()" style="'+BS+'">VOLTAR AO PROPORCIONAL</button>'
     +'<button onclick="REN_prevVoltar()" style="'+BS+'">VOLTAR</button>'
     +'</div>';
@@ -13123,6 +13160,21 @@ function REN_prevExtraVB(tab, opId){
   /* O botao vale o extra INTEIRO: e o que saiu do bolso do VB e volta primeiro. A parte do
      socio no custo ja se acertou no lucro; aqui a conversa e so sobre ORDEM. */
   return Math.round(ex*100)/100;
+}
+/* Quanto do extra ainda NAO voltou. Nas parcelas ja baixadas, tudo que o VB levou acima da
+   metade do valor da parcela e recuperacao do extra. Zerou, o botao nao tem mais o que antecipar. */
+function REN_prevExtraFalta(tab, opId, oi){
+  var ex=REN_prevExtraVB(tab, opId); if(!(ex>0)) return 0;
+  if(!oi || oi.fixo!=null || oi.consig) return ex;
+  var ps=REN_opParcelas(tab, opId), volta=0;
+  ps.forEach(function(i){
+    var b=REN_cache&&REN_cache.bx&&REN_cache.bx[REN_key(i)];
+    if(!b) return;
+    var meu=(Number(i.valor)||0)-REN_repDe(i, b);
+    var d=meu-((Number(i.valor)||0)/2);
+    if(d>0) volta+=d;
+  });
+  return Math.round(Math.max(0, ex-volta)*100)/100;
 }
 function REN_prevExtraPrim(auto){
   var c=REN_prevCtx; if(!c) return;
@@ -19165,6 +19217,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.6</span><span class="cl-ver-date">27/08/2026</span></div>
+      <div class="cl-item">O COMBINADO comparava cada parcela com a média da operação inteira — e essa média envelhece: quando a 1ª parcela absorve um custo, ela puxa a média pra baixo e todas as seguintes, mesmo sendo 50/50 limpas, passavam a aparecer como acima do rateio. Agora a comparação é com o que ainda falta acontecer, e parcela sem nada combinado não diz nada. Muda só a leitura; o cálculo do repasse continua o mesmo</div>
+      <div class="cl-item">A linha de custos dizia ABATIDOS DO SÓCIO com metade do valor. Errado: o custo é descontado ANTES de dividir, então sai inteiro da parcela e cada um paga sua metade dentro do próprio rateio — na Daytona, 25.000 menos 1.250 dá 23.750, metade pra cada. Agora diz só ABATIDOS AQUI, com o valor cheio</div>
+      <div class="cl-item">MEU EXTRA PRIMEIRO some quando o extra já voltou, e mostra quanto ainda falta antecipar quando sobra algo. Antes aparecia sempre, oferecendo adiantar um dinheiro que já estava no bolso</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.5</span><span class="cl-ver-date">27/08/2026</span></div>
+      <div class="cl-item">A linha CUSTOS NO RELÓGIO aparecia em todas as parcelas da operação e virava ruído — parecia desconto ainda por vir, quando já tinha acontecido. Agora sai só na parcela que carregou o abatimento, e diz quanto: CUSTOS DE R$ 1.250,00 NO RELÓGIO · R$ 625,00 ABATIDOS DO SÓCIO AQUI</div>
+      <div class="cl-item">O custo entra antes da divisão, então cada um paga a sua metade: o sócio devolve a parte dele descontada do repasse dessa parcela e o VB banca a sua. Não há ressarcimento integral — metade do gasto é do próprio VB</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.4</span><span class="cl-ver-date">27/08/2026</span></div>
