@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.9</title>
+<title>VB - v1.296.10</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10817,7 +10817,11 @@ var VB_apelidosPU=null;
 var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log-overlay',
   'mer-baixa-overlay','mer-ord-overlay','mer-view-overlay','mer-voltar-overlay','mig-ov',
   'ren-baixa-ov','ren-ficha-ov','ren-prev-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-pan-ov','mer-cp-ov','soc-pick-overlay','soc-view-overlay',
-  'vb-autoteste-ov','ven-estoqueOverlay','ven-crono-ov'];
+  'vb-autoteste-ov','ven-estoqueOverlay','ven-crono-ov',
+  /* entraram na 1.296.10: estavam de fora e por isso nao soltavam o foco ao fechar. As tres
+     primeiras tem campo de digitar, entao sofriam do mesmo teclado que so subia no 3o toque. */
+  'mer-form-ov','ren-nota-ov','hist-filter-overlay','ant-overlay','changelog-overlay',
+  'login-overlay','vb-c2-overlay','vb-name-overlay','vb-sair-overlay','vb-foto-overlay'];
 function VB_folhaAjusta(ov){
   try{
     if(!ov || ov.style.display==='none' || ov.style.display==='') return;
@@ -10850,6 +10854,20 @@ function VB_folhaObserva(){
 }
 /* folhas criadas em JS entram depois: reobserva de vez em quando, barato e sem efeito colateral */
 document.addEventListener('DOMContentLoaded', function(){ VB_folhaObserva(); setInterval(VB_folhaObserva, 3000); });
+/* Rede de seguranca do foco: folha nova que ninguem lembrou de por na lista tambem passa a
+   soltar o cursor ao sumir. Observa o documento inteiro, mas so age quando o elemento que
+   ficou escondido contem o campo em foco -- entao nao interfere em mais nada. */
+document.addEventListener('DOMContentLoaded', function(){
+  if(!window.MutationObserver) return;
+  new MutationObserver(function(muts){
+    var a=document.activeElement;
+    if(!a || a===document.body || !a.blur) return;
+    for(var i=0;i<muts.length;i++){
+      var t=muts[i].target;
+      if(t && t.nodeType===1 && t.style && t.style.display==='none' && t!==a && t.contains(a)){ try{ a.blur(); }catch(e){} return; }
+    }
+  }).observe(document.body, {attributes:true, attributeFilter:['style'], subtree:true});
+});
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(HOME_pagarCarrega, 1200); });   /* primeira carga: espera a sessao subir */
 
 /* ===== ESTADO PRESSIONADO (motor) =====
@@ -19233,6 +19251,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.10</span><span class="cl-ver-date">30/08/2026</span></div>
+      <div class="cl-item">A correção do teclado preso valia só pras folhas de uma lista, e dez ficavam de fora — entre elas o cadastro de peça, a nota da parcela e o filtro do Histórico, que têm campo de digitar e sofriam do mesmo defeito. Todas entraram</div>
+      <div class="cl-item">E ganhou rede de segurança: qualquer folha que suma com o cursor dentro solta o foco, mesmo sem estar na lista. Só age quando o elemento escondido contém o campo em foco, então folha nova nasce protegida sem ninguém precisar lembrar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.9</span><span class="cl-ver-date">30/08/2026</span></div>
