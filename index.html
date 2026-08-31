@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.297.0</title>
+<title>VB - v1.297.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1853,14 +1853,37 @@ function HIST_abrevNome(n){
    digitacao. Um ouvinte so, porque o mesmo desenho esta em 7 folhas (custos, contas a receber
    e a pagar, baixa, repasse). O preventDefault e o que impede o teclado de fechar: sem ele o
    foco volta, mas piscando. */
+function VB_campoInput(alvo){
+  if(!alvo || !alvo.closest) return null;
+  if(alvo.tagName==='INPUT' || alvo.tagName==='TEXTAREA') return null;
+  if(alvo.closest('button,[onclick],[data-keepkb],select')) return null;   /* campo com botao dentro: o botao ganha */
+  var cx=alvo.closest('[data-campo]'); if(!cx) return null;
+  return cx.querySelector('input,textarea');
+}
+/* O foco vem no pointerdown; a POSICAO do cursor fica com a regra do app (VB_selall seleciona
+   tudo em valor e data). Forcar o cursor no fim aqui fazia a moldura se comportar diferente
+   do centro do campo. */
 document.addEventListener('pointerdown', function(e){
-  var alvo=e.target; if(!alvo || !alvo.closest) return;
-  if(alvo.tagName==='INPUT' || alvo.tagName==='TEXTAREA') return;
-  if(alvo.closest('button,[onclick],[data-keepkb],select')) return;   /* campo com botao dentro: o botao ganha */
-  var cx=alvo.closest('[data-campo]'); if(!cx) return;
-  var inp=cx.querySelector('input'); if(!inp) return;
+  var inp=VB_campoInput(e.target); if(!inp) return;
   e.preventDefault();
-  try{ inp.focus(); var n=inp.value.length; inp.setSelectionRange(n,n); }catch(err){ try{ inp.focus(); }catch(e2){} }
+  try{ inp.focus(); }catch(err){}
+}, {passive:false});
+/* O SEGUNDO toque na moldura derrubava o teclado: com o campo ja focado, o iOS gera um
+   mousedown a partir do touchend e ELE desfoca -- o preventDefault do pointerdown nao alcanca
+   esse caminho. Prevenindo o touchend, o mousedown nao nasce e o teclado fica.
+   So quando o dedo nao arrastou, senao a rolagem que comeca em cima do campo morreria. */
+var VB_dcTgt=null, VB_dcMoved=false;
+document.addEventListener('touchstart', function(e){
+  VB_dcMoved=false;
+  VB_dcTgt=(e.touches && e.touches.length===1) ? VB_campoInput(e.target) : null;
+}, {passive:true, capture:true});
+document.addEventListener('touchmove', function(){ VB_dcMoved=true; }, {passive:true, capture:true});
+document.addEventListener('touchend', function(e){
+  var inp=VB_dcTgt; VB_dcTgt=null;
+  if(!inp || VB_dcMoved) return;
+  if(VB_campoInput(e.target)!==inp) return;   /* soltou fora do mesmo campo */
+  try{ if(e.cancelable) e.preventDefault(); }catch(_){}
+  try{ inp.focus(); }catch(_){}
 }, {passive:false});
 function VB_leCarimbo(iso){
   var s=String(iso||''); if(!s) return null;
@@ -19259,6 +19282,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.297.1</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">Com o teclado já aberto, tocar de novo na moldura do campo fazia o teclado descer. Agora fica, e tocar na moldura passou a valer exatamente como tocar em cima do número</div>
+      <div class="cl-item">Rolar a tela com o dedo começando em cima de um campo continua rolando</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.297.0</span><span class="cl-ver-date">31/08/2026</span></div>
