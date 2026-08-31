@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.298.2</title>
+<title>VB - v1.298.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12890,7 +12890,7 @@ function REN_ficha(k, exp){
   var _pend=b&&_rvB>0;
   var BTN_P='width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;';
   var BTN_S='width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;';
-  if(_pend) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_P+'">REPASSAR \u00b7 '+HIST_fmtMoeda(_rvB)+'</button>';
+  if(_pend) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_P+'">REPASSAR</button>';
   if(b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editRec(\''+k+'\');" style="'+(_pend?BTN_S:BTN_P)+'">EDITAR RECEBIMENTO</button>';
   if(b&&b.repassado_em) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_S+'">EDITAR REPASSE</button>';
   if(b) hh+='<button onclick="REN_desfazFicha(this,\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
@@ -13333,7 +13333,7 @@ function REN_repassar(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">'+(b.repassado_em?'TOTAL REPASSADO':'VALOR PAGO AGORA')+'</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+(b.repassado_em?CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;'):'')+'" style="'+IN+'"></div>'
     +'<button onclick="REN_salvaRepasse(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(b.repassado_em?'SALVAR':'CONFIRMAR REPASSE')+'</button>'
     +(b.repassado_em?'<button onclick="REN_desfazRepasse(this,\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -19310,6 +19310,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.3</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">O botão da ficha voltou a dizer só REPASSAR. O campo continua abrindo com o saldo preenchido, mas você pode digitar qualquer valor — o botão não promete mais um número</div>
+      <div class="cl-item">A nota do repasse nasce vazia a cada pagamento. Antes ela vinha com o texto do pagamento anterior e, ao salvar, apagava o que estava lá</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.2</span><span class="cl-ver-date">31/08/2026</span></div>
