@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.298.1</title>
+<title>VB - v1.298.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12607,7 +12607,7 @@ function REN_render(){
       var _vc2=String(x.venc||'').slice(0,10); /* linha de cima: mesma coluna de data dos outros cards */
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
         +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repFalta(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
+        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repDe(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
         +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+' \u00b7 '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
         +(REN_repPago(b2)>0?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(REN_repPago(b2))+' \u00b7 FALTA: '+HIST_fmtMoeda(REN_repFalta(x, b2))+'</div>'):'')
         +'</div>'
@@ -12760,16 +12760,17 @@ function REN_ficha(k, exp){
          o numero mudava de lugar conforme o repasse tivesse saido ou nao. A nota vive na linha
          de baixo, uma vez so -- ela estava sendo escrita aqui E la embaixo. */
       var _rpg=REN_repPago(b), _rft=REN_repFalta(x, b);
-      var _rtx=b.repassado_em
-        ? ('PAGO \u00b7 '+HIST_fmtMoeda(_rpg>0?_rpg:(Number(b.repasse_valor)||_rv))+' \u00b7 '+HIST_fmtData(String(b.repassado_em).slice(0,10)))
-        : (_rpg>0
-            /* o parcial nao cabe numa linha so: estado e saldo em cima, a conta embaixo --
-               antes o numero quebrava no meio do R$ */
-            ? ('PARCIAL \u00b7 FALTAM '+HIST_fmtMoeda(_rft)+'<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;">PAGO: '+HIST_fmtMoeda(_rpg)+' DE '+HIST_fmtMoeda(_rv)+'</div>')
-            : ('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv)));
       /* a nota fecha a linha entre parenteses, no mesmo tamanho: em 9px e --so2 (#ccc) ela nao lia.
-         Fica em --mu, um degrau abaixo do numero, e nunca em vermelho -- vermelho e do estado. */
-      if(b.repasse_nota) _rtx+='<span style="color:var(--mu);font-weight:600;"> ('+CLIP_esc(b.repasse_nota)+')</span>';
+         Fica em --mu, um degrau abaixo do numero, e nunca em vermelho -- vermelho e do estado.
+         No PARCIAL ela cola no valor PAGO, que e a que ela descreve. */
+      var _rnt=b.repasse_nota?('<span style="color:var(--mu);font-weight:600;"> ('+CLIP_esc(b.repasse_nota)+')</span>'):'';
+      /* a segunda linha usa a MESMA fonte e o mesmo peso da primeira, so um degrau de cor --
+         o combinado nao se repete aqui porque ele ja esta no bloco do socio, logo ao lado. */
+      var _rtx=b.repassado_em
+        ? ('PAGO \u00b7 '+HIST_fmtMoeda(_rpg>0?_rpg:(Number(b.repasse_valor)||_rv))+' \u00b7 '+HIST_fmtData(String(b.repassado_em).slice(0,10))+_rnt)
+        : (_rpg>0
+            ? ('PARCIAL \u00b7 FALTAM '+HIST_fmtMoeda(_rft)+'<div style="font-size:12px;font-weight:600;color:var(--mu);margin-top:1px;">PAGO: '+HIST_fmtMoeda(_rpg)+_rnt+'</div>')
+            : ('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv)+_rnt));
       _bRep='<div style="margin-bottom:4px;min-width:0;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">REPASSE</div><div style="font-size:12px;font-weight:600;margin-top:1px;color:'+((b.repassado_em || String(x.venc||'').slice(0,10)>REN_hojeISO())?'var(--tx)':'var(--red)')+';">'+_rtx+'</div></div>';
     }
   }
@@ -19309,6 +19310,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.2</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">No card da lista o número grande voltou a ser o combinado cheio, e a conta do parcial mora só na linha de baixo — o saldo aparecia duas vezes</div>
+      <div class="cl-item">Na ficha, a linha PAGO ganhou o mesmo tamanho e peso das outras, e a nota do repasse passou a vir colada no valor pago</div>
+      <div class="cl-item">O combinado saiu dessa linha: ele já está no bloco do sócio, ao lado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.1</span><span class="cl-ver-date">31/08/2026</span></div>
