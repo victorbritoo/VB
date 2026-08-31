@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.296.10</title>
+<title>VB - v1.296.11</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12592,7 +12592,10 @@ function REN_render(){
       var ym=x.venc.slice(0,7);
       if(ym!==gAtu){
         gAtu=ym; var gtot=0, gn=0, gvb=0;
-        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?REN_repDef(oiY,y):0); } });
+        /* REN_repAlvo, nao REN_repDef: o cabecalho ignorava o repasse COMBINADO e usava so o
+           rateio proporcional, entao discordava da ficha em toda venda com repasse fixado a mao.
+           Combinado e decisao do VB; rateio e o palpite do app quando nao ha decisao. */
+        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?(Number(REN_repAlvo(oiY,y))||0):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
         hh+='<div id="renmes-'+ym+'" onclick="REN_painel()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
@@ -19251,6 +19254,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.11</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">O VB entre parênteses no cabeçalho de cada mês do A RECEBER ignorava o repasse COMBINADO e usava só o rateio proporcional — então discordava da ficha em toda venda com repasse fixado à mão. No IWC Big Pilot do Ivo Dias, agosto mostrava R$ 2.500,00 e a ficha R$ 5.000,00; o certo é 5.000. Agora os dois usam a mesma régua: combinado quando existe, rateio só quando não há decisão registrada</div>
+      <div class="cl-item">O bloco das RECEBIDAS já estava certo: ali o repasse vem da própria baixa, que é o que de fato aconteceu</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.296.10</span><span class="cl-ver-date">30/08/2026</span></div>
