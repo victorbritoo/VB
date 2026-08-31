@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.297.1</title>
+<title>VB - v1.298.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11138,6 +11138,16 @@ function REN_repDe(x, b){
   if(!oi) return 0;
   return Number(REN_repAlvo(oi, x))||0;
 }
+/* O COMBINADO (REN_repDe) e o que voce deve ao socio naquela parcela. O PAGO e quanto ja saiu.
+   Sao coisas diferentes: antes o app tinha so um campo, entao registrar um pagamento menor
+   REESCREVIA a divida e os 12.500 que faltavam sumiam -- e a parcela ainda dava a diferenca
+   como lucro da VB. Agora o repasse fecha igual ao recebimento do cliente: soma ate alcancar. */
+function REN_repPago(b){ return b?(Math.round((Number(b.repasse_pago)||0)*100)/100):0; }
+function REN_repFalta(x, b){
+  if(!b || b.repassado_em) return 0;
+  var f=Math.round((REN_repDe(x, b)-REN_repPago(b))*100)/100;
+  return f>0.005?f:0;
+}
 function REN_repAlvo(oi, x){
   var pv=REN_repPrev(x);
   if(pv!=null) return Math.round(pv*100)/100;
@@ -12398,7 +12408,7 @@ function REN_render(){
       +'<div onclick="REN_ficha(\''+REN_key(x)+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;">'+HIST_fmtMoeda(Number(b.valor_recebido)||0)+' \u00b7 <span style="font-weight:600;">'+dt.slice(8,10)+'/'+dt.slice(5,7)+'</span></span></div>'
       +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+REN_nm(x)+(Number(b.valor_recebido)!==Number(x.valor)?(' \u00b7 '+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)):'')+(b.nota?(' \u00b7 '+CLIP_esc(b.nota)):'')+(rc?(' \u00b7 '+CLIP_esc(rc)):'')+'</div>'
-      +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; var _rp2=REN_repDe(x, b); if(_rp2>0&&!b.repassado_em) return '<div style="font-size:10px;color:'+((String(x.venc||'').slice(0,10)<=REN_hojeISO())?'var(--red)':'var(--tx)')+';font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(_rp2)+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+(b.repasse_nota?(' \u00b7 '+CLIP_esc(b.repasse_nota)):'')+'</div>'; return ''; })()
+      +(function(){ var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; var _rp2=REN_repFalta(x, b); if(_rp2>0) return '<div style="font-size:10px;color:'+((String(x.venc||'').slice(0,10)<=REN_hojeISO())?'var(--red)':'var(--tx)')+';font-weight:700;margin-top:1px;">REPASSE PENDENTE \u00b7 '+HIST_fmtMoeda(_rp2)+(oi2?(' \u00b7 '+CLIP_esc(String(oi2.socio).toUpperCase())):'')+'</div>'; if(b.repassado_em) return '<div style="font-size:9px;color:var(--so);margin-top:1px;">repassado '+String(b.repassado_em).slice(8,10)+'/'+String(b.repassado_em).slice(5,7)+(b.repasse_nota?(' \u00b7 '+CLIP_esc(b.repasse_nota)):'')+'</div>'; return ''; })()
       +'</div>'
       +'<button onclick="REN_desfaz(this,\''+b.id+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:12px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u21a9\ufe0e</button>'
       +'</div>';
@@ -12579,14 +12589,14 @@ function REN_render(){
   hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipOrd()
     +'<span onclick="REN_crSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);margin-left:6px;margin-right:auto;">+</span>'
     +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS \u2192</span></div>';
-  var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && REN_repDe(x, b2)>0 && !b2.repassado_em; });
+  var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && REN_repFalta(x, b2)>0; });
   if(repPend.length){
     repPend.sort(function(a,b2){ var av=(bx[REN_key(a)].recebido_em||''), bv=(bx[REN_key(b2)].recebido_em||''); return av<bv?-1:1; });
     /* vermelho quer dizer que acabou o prazo, mesma regua dos outros cards.
        Cliente que pagou adiantado nao deixa o repasse vencido. */
     var repTot=0, _hjR=REN_hojeISO(), repRed=false;
     repPend.forEach(function(x){
-      repTot+=REN_repDe(x, bx[REN_key(x)]);
+      repTot+=REN_repFalta(x, bx[REN_key(x)]);
       var _v=String(x.venc||'').slice(0,10); if(_v && _v<=_hjR) repRed=true;
     });
     hh+=secHdr('A REPASSAR \u00b7 '+repPend.length, HIST_fmtMoeda(repTot), repRed);
@@ -12597,8 +12607,8 @@ function REN_render(){
       var _vc2=String(x.venc||'').slice(0,10); /* linha de cima: mesma coluna de data dos outros cards */
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
         +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repDe(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
-        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+' \u00b7 '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
+        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repFalta(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
+        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+(REN_repPago(b2)>0?(' \u00b7 PAGO '+HIST_fmtMoeda(REN_repPago(b2))+' DE '+HIST_fmtMoeda(REN_repDe(x,b2))):'')+' \u00b7 '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
         +'</div>'
         +'<button onclick="REN_repQuick(this,\''+k2+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
         +'</div>';
@@ -12748,9 +12758,12 @@ function REN_ficha(k, exp){
       /* o valor vem logo depois do estado nos DOIS casos: PENDENTE nao tem data, e antes disso
          o numero mudava de lugar conforme o repasse tivesse saido ou nao. A nota vive na linha
          de baixo, uma vez so -- ela estava sendo escrita aqui E la embaixo. */
+      var _rpg=REN_repPago(b), _rft=REN_repFalta(x, b);
       var _rtx=b.repassado_em
-        ? ('PAGO \u00b7 '+HIST_fmtMoeda(Number(b.repasse_valor)||_rv)+' \u00b7 '+HIST_fmtData(String(b.repassado_em).slice(0,10)))
-        : ('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv));
+        ? ('PAGO \u00b7 '+HIST_fmtMoeda(_rpg>0?_rpg:(Number(b.repasse_valor)||_rv))+' \u00b7 '+HIST_fmtData(String(b.repassado_em).slice(0,10)))
+        : (_rpg>0
+            ? ('PARCIAL \u00b7 PAGO '+HIST_fmtMoeda(_rpg)+' DE '+HIST_fmtMoeda(_rv)+' \u00b7 FALTAM '+HIST_fmtMoeda(_rft))
+            : ('PENDENTE \u00b7 '+HIST_fmtMoeda(_rv)));
       /* a nota fecha a linha entre parenteses, no mesmo tamanho: em 9px e --so2 (#ccc) ela nao lia.
          Fica em --mu, um degrau abaixo do numero, e nunca em vermelho -- vermelho e do estado. */
       if(b.repasse_nota) _rtx+='<span style="color:var(--mu);font-weight:600;"> ('+CLIP_esc(b.repasse_nota)+')</span>';
@@ -12869,8 +12882,8 @@ function REN_ficha(k, exp){
   })();
   hh+='<div style="border-top:0.5px solid var(--ln3);margin-top:2px;padding-top:6px;">';
   hh+='<div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:1px;text-align:center;">'+REN_termo(x.tab,true,true)+' DA OPERA\u00c7\u00c3O</div>'+tl+'</div>';
-  var _rvB=REN_repDe(x, b);
-  var _pend=b&&_rvB>0&&!b.repassado_em;
+  var _rvB=b?REN_repFalta(x, b):0;
+  var _pend=b&&_rvB>0;
   var BTN_P='width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;';
   var BTN_S='width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;';
   if(_pend) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_P+'">REPASSAR \u00b7 '+HIST_fmtMoeda(_rvB)+'</button>';
@@ -12984,7 +12997,7 @@ function REN_repQuick(btn, k){
   /* se o valor so existia calculado, o pagamento e a hora de grava-lo: sem isso o repasse
      ficaria marcado como pago valendo zero no banco. */
   var _xQ=REN_cache&&REN_cache.map[k], _rvQ=REN_repDe(_xQ, b);
-  var _updQ={repassado_em:VB_carimbo()};
+  var _updQ={repassado_em:VB_carimbo(), repasse_pago:_rvQ};
   if(!(Number(b.repasse_valor)>0) && _rvQ>0) _updQ.repasse_valor=_rvQ;
   sb.from('parcela_baixas').update(_updQ).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
@@ -13297,7 +13310,8 @@ function REN_repassar(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var b=REN_cache.bx[k]; if(!b){ VB_toast('D\u00ea baixa na parcela primeiro.'); return; }
   var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
-  var rv=REN_repDe(x, b);
+  var rv=b.repassado_em ? (REN_repPago(b)||REN_repDe(x, b)) : REN_repFalta(x, b);
+  var _rDev=REN_repDe(x, b), _rJa=REN_repPago(b);
   var ov=document.getElementById('ren-baixa-ov');
   if(!ov){
     ov=document.createElement('div'); ov.id='ren-baixa-ov';
@@ -13310,8 +13324,9 @@ function REN_repassar(k){
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(b.repassado_em?'EDITAR REPASSE':'REPASSAR')+'</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+(oi?CLIP_esc(String(oi.socio).toUpperCase())+' \u00b7 ':'')+CLIP_esc(VB_nomeCurto(x.cliente))+' \u00b7 Parcela '+REN_nm(x)+'</div>'
+    +((!b.repassado_em && _rJa>0)?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">COMBINADO: '+HIST_fmtMoeda(_rDev)+' \u00b7 J\u00c1 PAGO: '+HIST_fmtMoeda(_rJa)+'</div>'):'')
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
-    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR DO REPASSE</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">'+(b.repassado_em?'TOTAL REPASSADO':'VALOR PAGO AGORA')+'</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
@@ -13331,10 +13346,19 @@ function REN_salvaRepasse(k){
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   var ts=(d===REN_hojeISO())?VB_carimbo():(d+'T12:00:00.000Z');
   if(b.repassado_em && d===String(b.repassado_em).slice(0,10)) ts=b.repassado_em;
-  sb.from('parcela_baixas').update({repasse_valor:v, repassado_em:ts, repasse_nota:(nt||null)}).eq('id', b.id).then(function(res){
+  /* editando um repasse ja quitado, o valor digitado E o total; com a divida em aberto, ele
+     SOMA ao que ja saiu. Quem manda no combinado e o repasse_valor, e ele nao se mexe aqui. */
+  var _dev=REN_repDe(x, b);
+  var _novo=b.repassado_em ? v : Math.round((REN_repPago(b)+v)*100)/100;
+  var _quita=(_novo >= _dev-0.005);
+  var _upd={repasse_pago:_novo, repassado_em:(_quita?ts:null), repasse_nota:(nt||null)};
+  /* combinado que so existia calculado vira numero gravado no primeiro pagamento, senao a
+     divida mudaria de tamanho sozinha quando o rateio da operacao envelhecesse. */
+  if(!(Number(b.repasse_valor)>0) && _dev>0) _upd.repasse_valor=_dev;
+  sb.from('parcela_baixas').update(_upd).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', x.cliente, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')+(nt?(' \u00b7 '+nt):'')); }catch(e){}
-    VB_toast('Repasse registrado.');
+    try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', x.cliente, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')+(_quita?'':(' \u00b7 PARCIAL, FALTAM '+HIST_fmtMoeda(_dev-_novo)))+(nt?(' \u00b7 '+nt):'')); }catch(e){}
+    VB_toast(_quita?'Repasse registrado.':('Parcial. Faltam '+HIST_fmtMoeda(Math.round((_dev-_novo)*100)/100)+'.'));
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     REN_abrir();   /* volta pra lista, nao pro card da parcela */
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
@@ -13349,7 +13373,7 @@ function REN_desfazRepasse(btn, k){
       setTimeout(function(){ try{ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER REPASSE'; VB_desarma(btn); } }catch(e){} },2500); }
     return;
   }
-  sb.from('parcela_baixas').update({repassado_em:null}).eq('id', b.id).then(function(res){
+  sb.from('parcela_baixas').update({repassado_em:null, repasse_pago:null}).eq('id', b.id).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_toast('Repasse desfeito.');
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
@@ -14071,7 +14095,7 @@ function SOC_recebFoto(){
     var b=REN_cache.bx[REN_key(x)], v=0, data=x.venc;
     if(b){
       if(b.repassado_em) return;            /* ja pago a ele: nao e mais recebivel */
-      v=REN_repDe(x, b); data=String(b.venc||x.venc||'').slice(0,10);
+      v=REN_repFalta(x, b); data=String(b.venc||x.venc||'').slice(0,10);   /* so o saldo */
     } else {
       v=Number(REN_repAlvo(oi, x))||0;
     }
@@ -19282,6 +19306,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.0</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">REPASSE PARCIAL. Repassar menos que o combinado não apaga mais a diferença: a parcela continua em A REPASSAR com o saldo e só sai quando fechar</div>
+      <div class="cl-item">Antes, lançar 17.500 de um repasse de 30.000 reescrevia a dívida para 17.500, dava a parcela por quitada e ainda mostrava os 12.500 como se fossem seus</div>
+      <div class="cl-item">A ficha passou a dizer PARCIAL · PAGO 17.500 DE 30.000 · FALTAM 12.500, e o card da lista mostra o saldo</div>
+      <div class="cl-item">O documento de RECEBIMENTOS do sócio leva o saldo, não o valor cheio</div>
+      <div class="cl-item">Coluna nova no banco: repasse_pago</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.297.1</span><span class="cl-ver-date">31/08/2026</span></div>
