@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.299.0</title>
+<title>VB - v1.299.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11930,6 +11930,15 @@ function REN_cpBaixaSalvar(id){
   var nt=((document.getElementById('rencpb-nota')||{}).value||'').trim().toUpperCase();
   if(!(v>0)){ VB_toast('Informe o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
+  /* JUROS DA CONTA fica na folha de EDITAR, e DAR BAIXA sai de la sem passar pelo SALVAR:
+     acender o marcador e tocar baixar gravava a baixa e jogava fora a marcacao, calada. */
+  var _jOn=REN_cpJuros, _jEra=(String(c.origem_tab||'')==='juros');
+  if(_jOn!==_jEra && document.getElementById('rencp-juros')){
+    c.origem_tab=_jOn?'juros':null;
+    sb.from('contas_pagar').update({origem_tab:c.origem_tab}).eq('id', c.id).then(function(r){
+      if(r.error) VB_erro(r.error.message,'N\u00e3o gravou a marca\u00e7\u00e3o de juros.');
+    }).catch(function(){});
+  }
   REN_cpGravaPag(c, v, d, nt);
 }
 function REN_notaDe(x){ return (REN_cache&&REN_cache.notas&&REN_cache.notas[REN_key(x)])||''; }
@@ -13699,7 +13708,9 @@ function FM_load(){
     sb.from('pagamentos').select('*').limit(10000),
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
     sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
-    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago').limit(10000),
+    /* origem_tab, credor e descricao entram aqui porque o bloco JUROS PAGOS agrupa por banco:
+       sem origem_tab a checagem de juros nunca era verdadeira e o valor caia em SAIDAS. */
+    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago,origem_tab,credor,descricao').limit(10000),
     sb.from('parcela_prorroga').select('*').limit(10000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,valor_recebido,recebido_em').limit(20000),
     sb.from('mercadoria_custos').select('mercadoria_id,valor,data,descricao,cobrar').limit(20000),
@@ -19327,6 +19338,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.1</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">O Fechamento não enxergava a marcação de juros: ele buscava a conta a pagar sem esse campo, então todo juros caía em SAÍDAS e o bloco JUROS PAGOS nunca aparecia</div>
+      <div class="cl-item">DAR BAIXA passou a gravar o JUROS DA CONTA que estiver aceso na folha. Antes o botão baixava a conta e descartava a marcação sem avisar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.0</span><span class="cl-ver-date">31/08/2026</span></div>
