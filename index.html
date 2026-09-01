@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.298.4</title>
+<title>VB - v1.299.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11843,14 +11843,25 @@ function REN_cpSalvar(id){
   if(!VB_gravando('REN_cpSalvar')) return;
   var nT = linhas ? linhas.length : 1;
   var _ot = REN_cpJuros?'juros':null;
-  if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; });
-  var reg = linhas ? linhas : {credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot};
+  /* JUROS DA CONTA ja saiu do banco no dia do vencimento -- deixar pendente era obrigar uma baixa
+     manual de dinheiro que ja foi, e o Fechamento so conta juros depois de pago (pago_em). Entao
+     a conta nasce paga, com pago_em na propria data do vencimento. Desmarcar NAO desfaz a baixa:
+     apagar registro de pagamento e sempre um ato explicito. */
+  function _cpJurosPago(o){
+    if(!_ot || o.pago_em) return o;
+    var dj=String(o.venc||'').slice(0,10); if(!dj) return o;
+    o.pago_em=(dj===REN_hojeISO())?VB_carimbo():(dj+'T12:00:00.000Z');
+    o.valor_pago=Math.round((Number(o.valor)||0)*100)/100;
+    return o;
+  }
+  if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; _cpJurosPago(l); });
+  var reg = linhas ? linhas : _cpJurosPago({credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot, pago_em:((REN_cpDe(id)||{}).pago_em||null)});
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
     try{ VB_log('CONTAS A PAGAR', id?'editou conta':('nova conta'+(nT>1?(' \u00b7 '+nT+' parcelas'):'')), cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
-    VB_toast(id?'Conta salva.':(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.'));
+    VB_toast(id?'Conta salva.':(_ot?(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
@@ -19316,6 +19327,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.0</span><span class="cl-ver-date">31/08/2026</span></div>
+      <div class="cl-item">Conta marcada como JUROS DA CONTA já nasce paga, na data do vencimento — o banco debita direto, e ficar pendente obrigava uma baixa à mão de dinheiro que já saiu</div>
+      <div class="cl-item">Ela sai do total A PAGAR na hora e entra no Fechamento do mês, que só conta juros depois de pagos</div>
+      <div class="cl-item">Marcar JUROS numa conta pendente que já existe também baixa. Desmarcar não desfaz a baixa: isso continua sendo DESFAZER, no botão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.298.4</span><span class="cl-ver-date">31/08/2026</span></div>
