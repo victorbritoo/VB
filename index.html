@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.299.1</title>
+<title>VB - v1.299.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -8022,7 +8022,7 @@ function ANT_zoomApply(){ var e=ANT_zoomEls(); if(e.img) e.img.style.transform='
 function ANT_zoomBadge(){
   var b=document.getElementById('ant-zoomBadge'); if(!b) return;
   b.textContent=ANT_zoom.s.toFixed(1).replace('.',',')+'×';
-  b.style.opacity=(ANT_zoom.s>1.02)?'1':'0';
+  b.style.opacity=(ANT_zoom.s>ANT_zoomFit()*1.02)?'1':'0';
   if(ANT_zoom.badgeTimer) clearTimeout(ANT_zoom.badgeTimer);
   ANT_zoom.badgeTimer=setTimeout(function(){ b.style.opacity='0'; }, 900);
 }
@@ -8031,6 +8031,15 @@ function ANT_zoomDims(){
   var natW=e.img&&e.img.naturalWidth?e.img.naturalWidth:wrapW, natH=e.img&&e.img.naturalHeight?e.img.naturalHeight:wrapW;
   var dispH=wrapW*(natH/natW);
   return {wrapW:wrapW, wrapH:wrapH, dispH:dispH};
+}
+/* Documento mais alto que o visor (resumo de atrasada tem 14 titulos) nascia em largura cheia e
+   so mostrava o comeco -- parecia cortado. A escala 1 deixa de ser o piso: o piso passa a ser a
+   que faz o documento inteiro caber, e o pinch sobe dali. Quem ja cabia (a tabela) tem fit=1. */
+function ANT_zoomFit(){
+  var d=ANT_zoomDims();
+  if(!(d.dispH>0)||!(d.wrapH>0)) return 1;
+  var f=d.wrapH/d.dispH;
+  return f<1?f:1;
 }
 function ANT_zoomSizeWrap(){
   var e=ANT_zoomEls(); if(!e.wrap||!e.img) return;
@@ -8045,12 +8054,12 @@ function ANT_canPanY(){ var d=ANT_zoomDims(); return d.dispH*ANT_zoom.s > d.wrap
 function ANT_zoomClamp(){
   var d=ANT_zoomDims(); var s=ANT_zoom.s;
   var scaledW=d.wrapW*s, scaledH=d.dispH*s;
-  if(scaledW<=d.wrapW+0.5){ ANT_zoom.tx=0; }
+  if(scaledW<=d.wrapW+0.5){ ANT_zoom.tx=(d.wrapW-scaledW)/2; }
   else { var minX=d.wrapW-scaledW; if(ANT_zoom.tx>0)ANT_zoom.tx=0; if(ANT_zoom.tx<minX)ANT_zoom.tx=minX; }
-  if(scaledH<=d.wrapH+0.5){ ANT_zoom.ty=0; }
+  if(scaledH<=d.wrapH+0.5){ ANT_zoom.ty=(d.wrapH-scaledH)/2; }
   else { var minY=d.wrapH-scaledH; if(ANT_zoom.ty>0)ANT_zoom.ty=0; if(ANT_zoom.ty<minY)ANT_zoom.ty=minY; }
 }
-function ANT_zoomReset(){ ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomSizeWrap(); ANT_zoomClamp(); ANT_zoomApply(); var b=document.getElementById('ant-zoomBadge'); if(b) b.style.opacity='0'; }
+function ANT_zoomReset(){ ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomSizeWrap(); ANT_zoom.s=ANT_zoomFit(); ANT_zoomClamp(); ANT_zoomApply(); var b=document.getElementById('ant-zoomBadge'); if(b) b.style.opacity='0'; }
 function _antDist(t){ var dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
 function _antMid(t,rect){ return { x:(t[0].clientX+t[1].clientX)/2-rect.left, y:(t[0].clientY+t[1].clientY)/2-rect.top }; }
 function ANT_zoomInit(){
@@ -8070,7 +8079,7 @@ function ANT_zoomInit(){
     var t=ev.touches, rect=e.wrap.getBoundingClientRect();
     if(ANT_zoom.mode==='pinch' && t.length===2){
       ev.preventDefault();
-      var f=_antDist(t)/(ANT_zoom.startDist||1); var ns=ANT_zoom.startS*f; if(ns<1)ns=1; if(ns>4)ns=4;
+      var f=_antDist(t)/(ANT_zoom.startDist||1); var ns=ANT_zoom.startS*f; var _fit=ANT_zoomFit(); if(ns<_fit)ns=_fit; if(ns>4)ns=4;
       var m=_antMid(t,rect);
       ANT_zoom.s=ns; ANT_zoom.tx=m.x-ANT_zoom.imgPx*ns; ANT_zoom.ty=m.y-ANT_zoom.imgPy*ns;
       ANT_zoomClamp(); ANT_zoomApply(); ANT_zoomBadge();
@@ -8088,7 +8097,8 @@ function ANT_zoomInit(){
       if(ANT_zoom.mode!=='pinch' && (now-ANT_zoom.lastTap)<300){ ANT_zoomReset(); ANT_zoom.lastTap=0; }
       else { ANT_zoom.lastTap=now; }
     }
-    if(ANT_zoom.s<=1.001){ ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomClamp(); ANT_zoomApply(); }
+    var _fitE=ANT_zoomFit();
+    if(ANT_zoom.s<=_fitE*1.001){ ANT_zoom.s=_fitE; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoomClamp(); ANT_zoomApply(); }
     if(ev.touches.length===0){ ANT_zoom.mode=null; }
     else if(ev.touches.length===1 && (ANT_canPanX()||ANT_canPanY())){
       ANT_zoom.mode='pan'; ANT_zoom.panX=ev.touches[0].clientX; ANT_zoom.panY=ev.touches[0].clientY;
@@ -8101,7 +8111,7 @@ function ANT_prepZoom(){
   var e=ANT_zoomEls(); if(!e.wrap) return;
   e.wrap.style.display='block';
   ANT_zoomInit();
-  ANT_zoom.s=1; ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoom.lastTap=0;
+  ANT_zoom.tx=0; ANT_zoom.ty=0; ANT_zoom.lastTap=0;
   e.img.onload=function(){ ANT_zoomReset(); };
   if(e.img.complete && e.img.naturalWidth){ ANT_zoomReset(); }
 }
@@ -19338,6 +19348,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.2</span><span class="cl-ver-date">03/09/2026</span></div>
+      <div class="cl-item">O resumo da Antecipação com muitos títulos abria mostrando só o começo e parecia cortado. Agora a imagem abre inteira, reduzida até caber, e o pinch aproxima a partir dali</div>
+      <div class="cl-item">A tabela não muda: ela já cabia na tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.1</span><span class="cl-ver-date">31/08/2026</span></div>
