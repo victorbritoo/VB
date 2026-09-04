@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.3</title>
+<title>VB - v1.300.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12663,19 +12663,47 @@ function REN_render(){
       var _v=String(x.venc||'').slice(0,10); if(_v && _v<=_hjR) repRed=true;
     });
     hh+=secHdr('A REPASSAR \u00b7 '+repPend.length, HIST_fmtMoeda(repTot), repRed);
+    /* AGRUPADO POR SOCIO (v1.300.4). Esta pilha so esvazia quando o VB paga o socio, entao ela
+       cresce sozinha no topo da tela que ele mais abre. Agrupar encolhe a lista mostrando, nao
+       escondendo: a pergunta e "quanto devo a cada um", e o pagamento tambem sai junto -- o
+       proprio placeholder da nota do repasse diz "3 PARCELAS JUNTAS".
+       Dentro do grupo a primeira linha passa a ser o CLIENTE: o socio ja esta no cabecalho e
+       repeti-lo em toda parcela gastaria a linha com a palavra que menos separa uma da outra. */
+    var _gOrd=[], _gMap={};
     repPend.forEach(function(x){
+      var oiG=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
+      var nmG=oiG?String(oiG.socio).toUpperCase():'S\u00d3CIO';
+      if(!_gMap[nmG]){ _gMap[nmG]={nome:nmG, itens:[], tot:0, red:false}; _gOrd.push(_gMap[nmG]); }
+      var g=_gMap[nmG]; g.itens.push(x); g.tot+=REN_repFalta(x, bx[REN_key(x)]);
+      var _vg=String(x.venc||'').slice(0,10); if(_vg && _vg<=_hjR) g.red=true;
+    });
+    _gOrd.sort(function(a,b2){ return b2.tot-a.tot; });
+    _gOrd.forEach(function(g, gi){
+      var gid='renrep-'+gi;
+      /* socio unico nasce aberto: agrupar um grupo so seria esconder sem motivo. Nos demais o
+         que o VB abriu antes continua aberto depois do redesenho da tela. */
+      var _ab=(REN_repAberto[g.nome]!=null) ? (REN_repAberto[g.nome]===true) : (_gOrd.length===1);
+      REN_repNomes[gi]=g.nome;
+      hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;">'
+        +'<div onclick="REN_repTog('+gi+')" style="cursor:pointer;display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);">'
+        +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(g.nome)+' \u00b7 '+g.itens.length+'<span id="'+gid+'-c" style="color:var(--mu);margin-left:5px;font-weight:600;">'+(_ab?'\u2303':'\u2304')+'</span></span>'
+        +'<span style="white-space:nowrap;flex:none;padding-left:8px;'+(g.red?'color:var(--red);':'')+'">'+HIST_fmtMoeda(g.tot)+'</span>'
+        +'</div></div>';
+      hh+='<div id="'+gid+'" style="display:'+(_ab?'block':'none')+';padding-left:10px;">';
+      g.itens.forEach(function(x){
       var b2=bx[REN_key(x)], k2=REN_key(x);
-      var oi2=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId];
       var dr=String(b2.recebido_em||x.venc).slice(0,10);
       var _vc2=String(x.venc||'').slice(0,10); /* linha de cima: mesma coluna de data dos outros cards */
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
         +'<div onclick="REN_ficha(\''+k2+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(oi2?CLIP_esc(String(oi2.socio).toUpperCase()):'S\u00d3CIO')+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repDe(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
-        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+' \u00b7 '+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
+        +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span'+((_vc2.length>=10 && _vc2<=_hjR)?' style="color:var(--red);"':'')+'>'+HIST_fmtMoeda(REN_repDe(x, b2))+'</span>'+(_vc2.length>=10?(' \u00b7 <span style="font-weight:600;">'+_vc2.slice(8,10)+'/'+_vc2.slice(5,7)+'</span>'):'')+'</span></div>'
+        +'<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+REN_nm(x)+' \u00b7 recebida '+dr.slice(8,10)+'/'+dr.slice(5,7)+'</div>'
         +(REN_repPago(b2)>0?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(REN_repPago(b2))+' \u00b7 FALTA: '+HIST_fmtMoeda(REN_repFalta(x, b2))+'</div>'):'')
         +'</div>'
         +'<button onclick="REN_repQuick(this,\''+k2+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
         +'</div>';
+      });
+      hh+='</div>';
     });
   }
   if(atr.length){
@@ -13062,6 +13090,17 @@ function REN_desfazFicha(btn, k){
    1.300.2 e este continuava gravando com toque duplo -- o mesmo desenho fazendo duas coisas
    diferentes na mesma tela. Agora ele tambem abre a folha, onde ja cabe repasse parcial, data
    e nota; a confirmacao e o SALVAR. */
+/* O que o VB abriu tem que continuar aberto depois de salvar um repasse -- REN_abrir redesenha
+   a lista inteira, e sem isto o grupo fecharia na cara dele no meio do pagamento. */
+var REN_repAberto={}, REN_repNomes=[];
+function REN_repTog(gi){
+  var nome=REN_repNomes[gi]; if(nome==null) return;
+  var el=document.getElementById('renrep-'+gi); if(!el) return;
+  var aberto=(el.style.display!=='none');
+  el.style.display=aberto?'none':'block';
+  REN_repAberto[nome]=!aberto;
+  var c=document.getElementById('renrep-'+gi+'-c'); if(c) c.textContent=aberto?'\u2304':'\u2303';
+}
 function REN_repQuick(btn, k){
   REN_repassar(k);
 }
@@ -18482,10 +18521,24 @@ function CTR_paginas(doc){
         if(_ip===_iAss && y+_altAss()>maxY) nova();
         if(p==='IMG'){
           if(fotoImg){
-            var iw=W-2*M, ih=iw*fotoImg.height/fotoImg.width;
-            if(y+ih>maxY){ nova(); }
-            ctx.drawImage(fotoImg, M, y-24, iw, ih);
-            y+=ih+4;
+            /* A TABELA ENCOLHE EM VEZ DE PULAR (v1.300.5). Antes, faltando um dedo de pagina a
+               foto ia inteira para a seguinte e deixava a pagina das parcelas quase em branco --
+               no contrato do Lucas Braga faltaram 28px de 1042, e a folha saiu com tres linhas
+               de texto e o resto vazio. Agora ela se ajusta ao que sobrou, desde que nao precise
+               ficar pequena demais para ler; se precisar, ai sim vai para a proxima, onde tem a
+               pagina toda. */
+            var iw=W-2*M, ih=iw*fotoImg.height/fotoImg.width, _top=y-24;
+            var _sobra=maxY-_top;
+            if(ih>_sobra){
+              var _esc=_sobra/ih;
+              if(_esc>=0.72){ iw*=_esc; ih*=_esc; }
+              else {
+                nova(); _top=y-24; _sobra=maxY-_top;
+                if(ih>_sobra){ var _e2=_sobra/ih; iw*=_e2; ih*=_e2; }
+              }
+            }
+            ctx.drawImage(fotoImg, M+((W-2*M)-iw)/2, _top, iw, ih);
+            y=_top+ih+28;
           }
           return;
         }
@@ -19376,6 +19429,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.5</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">A tabela de parcelas do contrato quebrava a página. Faltando pouco espaço ela ia inteira para a folha seguinte e deixava a das parcelas quase em branco &mdash; no contrato do Lucas Braga faltaram 28 pontos de 1042, e a página saiu com três linhas e o resto vazio. Agora ela se ajusta ao espaço que sobrou e fica junto das parcelas que descreve</div>
+      <div class="cl-item">Só pula de página se tiver que encolher a ponto de não dar para ler, e aí vai para a folha seguinte inteira. Encolhida, ela fica centralizada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.4</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">O A REPASSAR passou a ser agrupado por sócio. A lista crescia sozinha no topo da tela porque a pilha só esvazia quando você paga; agora cada sócio é uma linha com o total e a quantidade, e um toque abre as parcelas. Encolhe mostrando, não escondendo &mdash; e responde a pergunta que interessa, quanto você deve a cada um</div>
+      <div class="cl-item">Dentro do grupo a primeira linha da parcela virou o CLIENTE. O sócio já está no cabeçalho, e repeti-lo em toda parcela gastava a linha com a palavra que menos distingue uma da outra</div>
+      <div class="cl-item">Com um sócio só o grupo nasce aberto, e o que você abriu continua aberto depois de salvar um repasse</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.3</span><span class="cl-ver-date">04/09/2026</span></div>
