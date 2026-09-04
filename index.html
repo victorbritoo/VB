@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.2</title>
+<title>VB - v1.300.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -13058,19 +13058,12 @@ function REN_desfazFicha(btn, k){
   var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
   REN_desfazDireto(b.id);
 }
+/* MESMO SIMBOLO, MESMA PROMESSA (v1.300.3). O check do recebimento passou a abrir a folha na
+   1.300.2 e este continuava gravando com toque duplo -- o mesmo desenho fazendo duas coisas
+   diferentes na mesma tela. Agora ele tambem abre a folha, onde ja cabe repasse parcial, data
+   e nota; a confirmacao e o SALVAR. */
 function REN_repQuick(btn, k){
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar o repasse.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
-  var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
-  /* se o valor so existia calculado, o pagamento e a hora de grava-lo: sem isso o repasse
-     ficaria marcado como pago valendo zero no banco. */
-  var _xQ=REN_cache&&REN_cache.map[k], _rvQ=REN_repDe(_xQ, b);
-  var _updQ={repassado_em:VB_carimbo(), repasse_pago:_rvQ};
-  if(!(Number(b.repasse_valor)>0) && _rvQ>0) _updQ.repasse_valor=_rvQ;
-  sb.from('parcela_baixas').update(_updQ).eq('id', b.id).then(function(res){
-    if(res.error){ VB_erro(res.error.message); return; }
-    try{ VB_log('RECEB\u00cdVEIS','repasse ao s\u00f3cio', '', HIST_fmtMoeda(_rvQ)); }catch(e){}
-    VB_toast('Repasse registrado.'); REN_abrir();
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  REN_repassar(k);
 }
 /* Combina de antemao quanto cada parcela repassa ao socio. Mostra a operacao inteira porque
    o que importa nao e a parcela isolada e sim se a soma fecha com o que e dele. */
@@ -13571,7 +13564,9 @@ function REN_editBaixa(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" style="'+IN+'"></div>'
-    +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
+    /* com parcial em aberto o botao nao da baixa nenhuma: ele lanca mais um pagamento, e a
+       parcela so fecha quando a soma alcanca o valor. O titulo ja dizia isso; o botao, nao. */
+    +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(_ja>0?'REGISTRAR PAGAMENTO':'CONFIRMAR BAIXA')+'</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
   ov.style.display='flex';
@@ -19381,6 +19376,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.3</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">O ✓ do A REPASSAR agora abre a folha de REPASSAR, como o do recebimento. Depois da 1.300.2 o mesmo símbolo fazia duas coisas na mesma tela: num lugar abria folha, no outro gravava com toque duplo. E abrindo a folha você já paga parcial, escolhe a data e escreve a nota, que era o que o atalho não deixava</div>
+      <div class="cl-item">Na folha de um pagamento parcial o botão dizia CONFIRMAR BAIXA e não dava baixa nenhuma &mdash; lançava mais um pagamento, e a parcela só fecha quando a soma alcança o valor. Agora ele diz REGISTRAR PAGAMENTO, junto com o título da folha</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.2</span><span class="cl-ver-date">04/09/2026</span></div>
