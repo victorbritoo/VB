@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.0</title>
+<title>VB - v1.300.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10769,7 +10769,6 @@ function CLIP_abrir(nome, cliId, voltarK){
          ate hoje. Duas dividas de natureza diferente -- por isso duas linhas, nao uma soma. */
       if(totAtr>0) innR+=ln('Em atraso \u00b7 '+atrN+' parcela'+(atrN===1?'':'s'), HIST_fmtMoeda(totAtr), true);
       if(totCob>0) innR+=ln('Em cobran\u00e7a', HIST_fmtMoeda(totCob), true);
-      if(jaPago>0) innR+=ln('J\u00e1 pago \u00b7 '+jaN+' parcela'+(jaN===1?'':'s')+(jaParc>0?(' \u00b7 '+jaParc+' parcial'):''), HIST_fmtMoeda(jaPago));
     }
     hh+=bl('RESULTADO', innR);
     // RELÓGIOS
@@ -10813,12 +10812,15 @@ function CLIP_abrir(nome, cliId, voltarK){
       hh+=bl('EM COBRAN\u00c7A \u00b7 '+antAtr.length, innC, HIST_fmtMoeda(totCob), antAtr.length);
     }
     // COMO ELE PAGA
-    if(pgN>0){
+    if(pgN>0 || jaPago>0){
       var innP='';
       innP+=ln('Parcelas pagas', String(pgN));
       innP+=ln('Em dia', String(pgDia));
       innP+=ln('Com atraso', pgAtr>0?('<span style="color:var(--red);font-weight:700;">'+pgAtr+'</span>'):'0');
       if(pgAtr>0) innP+=ln('Atraso m\u00e9dio', Math.round(pgDias/pgAtr)+' dias');
+      /* O quanto ele ja pagou e historia, nao divida: no RESULTADO sujava um card que responde
+         quanto ele deve. Aqui mora ao lado da contagem que ele explica. */
+      if(jaPago>0) innP+=ln('Total pago'+(jaParc>0?(' \u00b7 '+jaParc+' parcial'+(jaParc===1?'':'is')):''), HIST_fmtMoeda(jaPago));
       /* "1 com atraso" sozinho nao serve pra cobrar: quais foram, e de quanto */
       if(pgAtrL.length){
         innP+='<div style="border-top:0.5px solid var(--ln3);margin:7px 0 2px;"></div>';
@@ -13463,11 +13465,17 @@ function REN_desfazDireto(baixaId){
     VB_toast('Baixa desfeita.'); REN_abrir();
   }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
 }
+/* O CHECK ABRE A FOLHA, NAO GRAVA (v1.300.2). Antes ele lancava a baixa cheia de uma vez, e por
+   isso pedia toque duplo -- a trava existia porque a acao gravava dinheiro sem ninguem ver.
+   A auditoria da sessao 22 mostrou que ele quase nao era usado: das 27 baixas, so 2 tinham a
+   assinatura dele (valor cheio, sem nota, mesmo dia). O motivo e simples -- quase toda parcela
+   pede nota, valor parcial ou data de outro dia, e o atalho nao deixava; o caminho real era
+   card -> ficha -> DAR BAIXA -> folha.
+   Agora e um toque so ate a folha. Sem trava, porque abrir folha nao grava nada: a confirmacao
+   passou a ser o SALVAR, com o valor e a data na tela. */
 function REN_quick(btn, k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para dar baixa.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
-  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
-  REN_gravaBaixa(x, REN_falta(x), REN_hojeISO());
+  REN_editBaixa(k);
 }
 /* Cada entrada de dinheiro vira uma linha. A parcela so e considerada paga (e so ai nasce o
    repasse) quando a soma dos pagamentos alcanca o valor dela. */
@@ -19373,6 +19381,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.2</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">O ✓ do card do A RECEBER passou a abrir a folha de BAIXA em vez de lançar a baixa cheia. Ele quase não era usado: quase toda parcela pede nota, valor parcial ou data de outro dia, e o atalho não deixava &mdash; o caminho de verdade era card, ficha, DAR BAIXA, folha. Agora é um toque até a folha</div>
+      <div class="cl-item">E perdeu o toque duplo, de propósito. A trava existia porque o botão gravava dinheiro sem ninguém ver; abrir folha não grava nada. A confirmação continua existindo, só mudou de lugar: virou o SALVAR da folha, com o valor e a data na tela</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.1</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">O JÁ PAGO saiu do card RESULTADO e virou TOTAL PAGO dentro do COMO ELE PAGA, ao lado de PARCELAS PAGAS. O RESULTADO responde quanto o cliente deve; quanto ele já pagou é histórico e estava sujando a leitura</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.0</span><span class="cl-ver-date">04/09/2026</span></div>
