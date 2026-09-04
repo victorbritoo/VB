@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.299.2</title>
+<title>VB - v1.300.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10627,7 +10627,8 @@ function CLIP_abrir(nome, cliId, voltarK){
     sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
-    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em').limit(20000)
+    sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em,valor_recebido').limit(20000),
+    sb.from('parcela_pagamentos').select('op_tab,op_id,parcela_idx,valor').limit(20000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
@@ -10638,10 +10639,25 @@ function CLIP_abrir(nome, cliId, voltarK){
     var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
     var antAtr=ant.filter(function(r){ return (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0); });
     // em aberto = parcelas sem baixa (futuras e vencidas)
-    var _bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ _bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=1; });
-    var fut=REN_coleta(antOk, [], ven).filter(function(x){ return !_bx[REN_key(x)]; });
+    var _bx={}; ((res[3]&&res[3].data)||[]).forEach(function(b){ _bx[b.op_tab+'|'+b.op_id+'|'+b.parcela_idx]=b; });
+    /* RECEBIMENTO PARCIAL. A tela A RECEBER soma pelo que FALTA (REN_falta); o panorama somava a
+       parcela CHEIA -- o mesmo cliente aparecia com dois totais diferentes na mesma tarde. A conta
+       aqui e a mesma da REN_pagsDe: as linhas de parcela_pagamentos quando existem, senao o
+       valor_recebido da baixa (baixa antiga nao tem linhas). Somar os dois contaria em dobro --
+       a baixa grava o TOTAL, nao a ultima entrada. */
+    var _pgm={}; ((res[4]&&res[4].data)||[]).forEach(function(pg){ var k2=pg.op_tab+'|'+pg.op_id+'|'+pg.parcela_idx; _pgm[k2]=(_pgm[k2]||0)+(Number(pg.valor)||0); });
+    function _pagoDe(k2){ var v2=_pgm[k2]||0; if(v2>0) return Math.round(v2*100)/100; var b2=_bx[k2]; return b2?(Math.round((Number(b2.valor_recebido)||0)*100)/100):0; }
+    var todas=REN_coleta(antOk, [], ven);
+    /* JA PAGO = tudo que ja entrou nas operacoes dele, quitadas ou nao. */
+    var jaPago=0, jaN=0, jaParc=0;
+    todas.forEach(function(x){ var k3=REN_key(x), pv=_pagoDe(k3); if(pv<=0) return; jaPago+=pv; if(_bx[k3]) jaN++; else jaParc++; });
+    jaPago=Math.round(jaPago*100)/100;
+    var fut=todas.filter(function(x){ return !_bx[REN_key(x)]; });
+    fut.forEach(function(x){ var f2=Math.round(((Number(x.valor)||0)-_pagoDe(REN_key(x)))*100)/100; x._falta=(f2>0?f2:0); });
     fut.sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:0; });
-    var totFut=0; fut.forEach(function(x){ totFut+=x.valor; });
+    var totFut=0; fut.forEach(function(x){ totFut+=x._falta; });
+    /* Vencida e nao paga estava dentro de A RECEBER e do bloco A VENCER, sem numero proprio. */
+    var totAtr=0, atrN=0; fut.forEach(function(x){ if(x.venc<hoje){ totAtr+=x._falta; atrN++; } });
     // cobrança
     var totCob=0; var cobL=antAtr.map(function(r){ var v=HIST_atrHoje(r); totCob+=v; return {rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), valor:v}; });
     // histórico + lucro VB gerado
@@ -10746,10 +10762,14 @@ function CLIP_abrir(nome, cliId, voltarK){
       innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
       innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
     }
-    if(totFut>0 || totCob>0){
+    if(totFut>0 || totCob>0 || jaPago>0){
       innR+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>';
       if(totFut>0) innR+=ln('A receber', HIST_fmtMoeda(totFut));
+      /* EM ATRASO e parcela vencida dele; EM COBRANCA e antecipacao atrasada, com juro corrigido
+         ate hoje. Duas dividas de natureza diferente -- por isso duas linhas, nao uma soma. */
+      if(totAtr>0) innR+=ln('Em atraso \u00b7 '+atrN+' parcela'+(atrN===1?'':'s'), HIST_fmtMoeda(totAtr), true);
       if(totCob>0) innR+=ln('Em cobran\u00e7a', HIST_fmtMoeda(totCob), true);
+      if(jaPago>0) innR+=ln('J\u00e1 pago \u00b7 '+jaN+' parcela'+(jaN===1?'':'s')+(jaParc>0?(' \u00b7 '+jaParc+' parcial'):''), HIST_fmtMoeda(jaPago));
     }
     hh+=bl('RESULTADO', innR);
     // RELÓGIOS
@@ -10776,7 +10796,12 @@ function CLIP_abrir(nome, cliId, voltarK){
     if(!fut.length) inner+='<div style="font-size:11px;color:var(--mu);margin-top:5px;">Nada a vencer.</div>';
     else{
       var mostra=fut.slice(0,12);
-      mostra.forEach(function(x){ var atrX=(x.venc<hoje); inner+=ln((atrX?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):fdt(x.venc))+' \u00b7 '+CLIP_esc(REN_rotCurto(x.rot)||x.rot), HIST_fmtMoeda(x.valor), atrX); });
+      mostra.forEach(function(x){
+        var atrX=(x.venc<hoje), _jp=Math.round(((Number(x.valor)||0)-x._falta)*100)/100;
+        inner+=ln((atrX?('<span style="color:var(--red);font-weight:700;">'+fdt(x.venc)+'</span>'):fdt(x.venc))+' \u00b7 '+CLIP_esc(REN_rotCurto(x.rot)||x.rot), HIST_fmtMoeda(x._falta), atrX)
+          /* sem esta linha um resto de 1.500 numa parcela de 3.500 parece erro */
+          +(_jp>0?('<div class="vb-det" style="text-align:right;">PAGO: '+HIST_fmtMoeda(_jp)+'</div>'):'');
+      });
       if(fut.length>12) inner+='<div style="font-size:10px;color:var(--mu);margin-top:5px;">+'+(fut.length-12)+' parcelas</div>';
       inner+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Total a vencer</b>', HIST_fmtMoeda(totFut));
     }
@@ -19348,6 +19373,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.0</span><span class="cl-ver-date">04/09/2026</span></div>
+      <div class="cl-item">O Panorama do cliente ganhou EM ATRASO no card RESULTADO: quanto ele deve de parcela já vencida e não paga, com a contagem. Esse dinheiro existia só dentro de A RECEBER e do bloco A VENCER, sem número próprio &mdash; no Pedro Furtado Belem são R$ 7.000,00 em 2 parcelas dentro dos R$ 31.500,00</div>
+      <div class="cl-item">A RECEBER continua sendo o total em aberto. EM ATRASO é leitura de quanto dele já venceu, não uma subtração &mdash; o número que você já conhece não muda de significado</div>
+      <div class="cl-item">EM ATRASO e EM COBRANÇA são dívidas de natureza diferente e ficam em linhas separadas: a primeira é parcela vencida, a segunda é antecipação atrasada com o juro corrigido até hoje</div>
+      <div class="cl-item">E ganhou JÁ PAGO: tudo que o cliente já pagou nas operações dele, com quantas parcelas fecharam. Quando há parcela recebida pela metade, a linha diz também quantas estão parciais</div>
+      <div class="cl-item">Corrigida uma divergência entre duas telas: a A RECEBER sempre somou pelo que FALTA e o Panorama somava a parcela CHEIA, então um cliente com recebimento parcial aparecia com dois totais diferentes no mesmo dia. Agora as duas usam a mesma régua, e a parcela pela metade mostra PAGO abaixo do resto</div>
+      <div class="cl-item">A consulta do Panorama não trazia o valor recebido de cada baixa &mdash; havia código lendo esse campo e recebendo zero calado. Entrou junto</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.299.2</span><span class="cl-ver-date">03/09/2026</span></div>
