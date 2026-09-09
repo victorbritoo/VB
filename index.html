@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.5</title>
+<title>VB - v1.300.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -12267,7 +12267,26 @@ function REN_buscaInput(el){ REN_busca=String(el.value||'').toUpperCase(); REN_b
    completo saiu: casar com um pedaco do meio que a tela nunca escreve devolvia linha sem o termo
    em lugar nenhum -- buscar FRANC trazia um JORGE MURAD. Quem procura por nome do meio ou CPF
    tem a busca geral da Home, que continua lendo o cadastro inteiro. */
-function REN_filtra(arr){ if(!REN_busca) return arr; return arr.filter(function(x){ return (VB_nomeCurto(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor)).toUpperCase().indexOf(REN_busca)>=0; }); }
+/* A BUSCA LE AS NOTAS (v1.300.6). A nota e onde mora quem de fato pagou -- "PIX GPA",
+   "CH ROMULO", "DEP INTER". O card ja escrevia isso na tela e o buscador respondia NADA
+   ENCONTRADO; e o filtro das SAIDAS ja lia nota, entao o lado das entradas e que estava fora do
+   padrao. Entram a nota da baixa, a nota livre da parcela e as notas dos pagamentos parciais.
+   A nota do repasse fica de fora: ela e sobre o pagamento ao socio, nao aparece na lista, e so
+   engordaria o resultado. */
+function REN_filtra(arr){
+  if(!REN_busca) return arr;
+  return arr.filter(function(x){
+    var s=VB_nomeCurto(x.cliente||'')+' '+String(x.rot||'')+REN_buscaVal(x.valor);
+    if(REN_cache){
+      var k=REN_key(x);
+      var b=REN_cache.bx&&REN_cache.bx[k]; if(b&&b.nota) s+=' '+b.nota;
+      var nl=REN_cache.notas&&REN_cache.notas[k]; if(nl) s+=' '+nl;
+      var pp=(REN_cache.pags&&REN_cache.pags[k])||[];
+      pp.forEach(function(pg){ if(pg&&pg.nota) s+=' '+pg.nota; });
+    }
+    return s.toUpperCase().indexOf(REN_busca)>=0;
+  });
+}
 function REN_ordena(arr){
   var a=arr.slice();
   if(REN_sort==='valor') a.sort(function(x,y){ return y.valor-x.valor; });
@@ -12485,7 +12504,10 @@ function REN_render(){
     var on, vazia=false, ac='';
     if(REN_busca){
       var s=(id==='aberto')?'ent':(id==='cp'?'sai':'cli');
-      if(s==='cli'){ on=false; ac='REN_setAba(\'cli\')'; }
+      /* CLIENTES nao participa da busca, entao com termo digitado ele apaga junto com as abas
+         vazias. Ficava aceso a 100% s\u00f3 porque as outras duas caiam para 35% -- parecia o
+         escolhido, e levava a uma tela que nao respondia ao que estava escrito. */
+      if(s==='cli'){ on=false; vazia=!!REN_busca; ac=vazia?'':'REN_setAba(\'cli\')'; }
       else {
         vazia=!REN_bsetTem(s);
         on=(REN_bset===s);
@@ -12507,7 +12529,7 @@ function REN_render(){
     if(REN_aba==='rec') hh+=trav('aberto','\u2190 A RECEBER');
     else if(REN_aba==='cpp') hh+=trav('cp','\u2190 A PAGAR');
   }
-  if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;position:relative;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE OU OPERA\u00c7\u00c3O" style="width:100%;box-sizing:border-box;padding:10px 34px 10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;">'+(REN_busca?'<button onclick="REN_limparBusca()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--sf3);color:var(--mu0);border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">\u00d7</button>':'')+'</div>';
+  if(REN_buscaOn) hh+='<div style="margin:-4px 0 10px;position:relative;"><input id="ren-busca-inp" value="'+CLIP_esc(REN_busca).replace(/"/g,'&quot;')+'" oninput="REN_buscaInput(this)" placeholder="BUSCAR CLIENTE, OPERA\u00c7\u00c3O OU NOTA" style="width:100%;box-sizing:border-box;padding:10px 34px 10px 12px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;outline:none;text-transform:uppercase;">'+(REN_busca?'<button onclick="REN_limparBusca()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--sf3);color:var(--mu0);border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">\u00d7</button>':'')+'</div>';
   /* Busca geral: o termo nao pertence a um sub. Procurar um nome e perguntar "onde ele aparece",
      entao o resultado vem dividido por secao em vez de preso na aba em que voce estava. */
   if(REN_busca){
@@ -19429,6 +19451,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.6</span><span class="cl-ver-date">09/09/2026</span></div>
+      <div class="cl-item">A busca do A RECEBER passou a ler as notas: a da baixa, a nota livre da parcela e as dos pagamentos parciais. É na nota que mora quem de fato pagou &mdash; PIX GPA, CH ROMULO, DEP INTER &mdash; e o card já escrevia isso na tela enquanto o buscador respondia NADA ENCONTRADO. O filtro das SAÍDAS já lia nota; o das entradas é que estava fora do padrão</div>
+      <div class="cl-item">A nota do repasse ficou de fora de propósito: ela é sobre o pagamento ao sócio, não aparece na lista, e só engordaria o resultado</div>
+      <div class="cl-item">Com termo digitado, o botão CLIENTES apaga junto com as abas vazias. Ele não participa da busca e ficava aceso só porque ENTRADAS e SAÍDAS caíam para 35% quando não achavam nada &mdash; parecia o escolhido e levava a uma tela que ignorava o que estava escrito</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.5</span><span class="cl-ver-date">04/09/2026</span></div>
