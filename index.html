@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.8</title>
+<title>VB - v1.300.10</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -1887,16 +1887,16 @@ document.addEventListener('touchend', function(e){
 }, {passive:false});
 function VB_leCarimbo(iso){
   var s=String(iso||''); if(!s) return null;
-  var p2=function(n){ return ('0'+n).slice(-2); };
-  /* Carimbo com fuso explicito (+00:00) vem do banco em UTC e precisa virar hora daqui -- era
-     por isso que o contrato aparecia 22:22 em vez de 19:22. O carimbo proprio do app (VB_carimbo)
-     termina em 'Z' mas ja guarda hora local, entao esse continua sendo lido ao pe da letra.
-     A distincao e o formato do sufixo, nao o significado: nao mexer sem olhar VB_carimbo. */
-  if(/[+-]\d{2}:?\d{2}$/.test(s)){
-    var _s=s.replace(/(\.\d{3})\d+/, '$1');   /* Safari nao aceita fracao de 6 digitos */
-    var _d=new Date(_s);
-    if(!isNaN(_d.getTime())) return {dt:p2(_d.getDate())+'/'+p2(_d.getMonth()+1)+'/'+_d.getFullYear(), hr:p2(_d.getHours())+':'+p2(_d.getMinutes())};
-  }
+  /* UMA CONVENCAO SO: TUDO E HORA DE FORTALEZA (v1.300.10). O app carimba o relogio da parede e
+     termina o texto com 'Z'. O Postgres acredita no Z, guarda 18:36 como se fosse Londres, e
+     devolve o campo marcado '+00:00'. A regra antiga convertia tudo que viesse com esse sufixo,
+     e por isso a venda salva as 18:36 aparecia 15:36 -- exatamente tres horas para tras.
+     Pelo sufixo e impossivel separar o carimbo do app do carimbo do banco: os dois voltam
+     '+00:00'. Entao a ambiguidade morre na origem -- o app passou a carimbar tambem contratos e
+     log, que antes nasciam do now() do Postgres, e aqui o campo e lido ao pe da letra, sempre.
+     A data importa tanto quanto a hora: recebido_em, pago_em e repassado_em sao cortados em
+     slice(0,10) para virar a data do negocio, e uma baixa das 21:00 viraria o dia seguinte se
+     este campo passasse a ser instante. Nao mexer sem olhar VB_carimbo. */
   var m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
   if(m) return {dt:m[3]+'/'+m[2]+'/'+m[1], hr:(m[4]?(m[4]+':'+m[5]):'')};
   var d=new Date(s); if(isNaN(d.getTime())) return null;
@@ -2438,7 +2438,7 @@ function VB_logDet(r){
 }
 function VB_log(modulo, acao, registro, detalhe){
   try{
-    sb.from('log').insert({modulo:modulo, acao:acao, registro:String(registro||'').slice(0,120), detalhe:String(detalhe||'').slice(0,500)}).then(function(){});
+    sb.from('log').insert({created_at:VB_carimbo(), modulo:modulo, acao:acao, registro:String(registro||'').slice(0,120), detalhe:String(detalhe||'').slice(0,500)}).then(function(){});
   }catch(e){}
 }
 function VB_fmtBackupRel(iso){
@@ -18554,29 +18554,53 @@ function CTR_paginas(doc){
        ele comprime ate 55px -- ainda espaco de sobra para assinar a mao -- e o bloco cabe. So se
        nem comprimido couber e que vai para a folha seguinte, e ai a folha so das assinaturas e o
        comportamento certo, melhor que espremer. */
-    var VAO_ASS=90, VAO_MIN=55, _vaoAss=VAO_ASS;
-    function _altAss(vao){
+    var VAO_ASS=90, VAO_MIN=55, ESP_ASS=14, ESP_MIN=6;
+    var _vaoAss=VAO_ASS, _espAss=ESP_ASS;
+    function _altAss(vao, esp){
       var t=0;
       for(var i=_iAss;i<doc.paras.length;i++){
         var q=doc.paras[i];
         if(q==='IMG') continue;
-        if(!q || !q.length){ t+=14; continue; }
+        if(!q || !q.length){ t+=esp; continue; }
         t += ehLinhaAss(q) ? (vao+lh+8) : (lh+8);
       }
       return t;
     }
-    /* devolve o maior vao que faz o bloco caber daqui ate o fim da pagina, ou 0 se nem o minimo cabe */
-    function _vaoQueCabe(yAtual){
-      for(var v=VAO_ASS; v>=VAO_MIN; v-=5){ if(yAtual+_altAss(v)<=maxY) return v; }
-      return 0;
+    /* Quanto da para ceder: os vaos da caneta e os paragrafos vazios de dentro do bloco. O .docx
+       real tem CINCO vazios entre as duas assinaturas, nao tres como o modelo HTML -- so eles ja
+       sao 70px de enfeite. Comprimir os dois juntos e o que faz o bloco caber de verdade; mexer
+       so no vao rendia 70px e faltava por pouco. */
+    function _contaAss(){
+      var nv=0, ne=0;
+      for(var i=_iAss;i<doc.paras.length;i++){
+        var q=doc.paras[i];
+        if(q==='IMG') continue;
+        if(!q || !q.length){ ne++; continue; }
+        if(ehLinhaAss(q)) nv++;
+      }
+      return [nv,ne];
+    }
+    /* Em vez de tentar tamanhos no chute, mede o que falta e distribui pelo que da para ceder.
+       Sobrando folha, nada muda e o contrato sai identico. */
+    function _ajustaAss(yAtual){
+      _vaoAss=VAO_ASS; _espAss=ESP_ASS;
+      var falta=(yAtual+_altAss(VAO_ASS,ESP_ASS))-maxY;
+      if(falta<=0) return true;
+      var c=_contaAss();
+      var folga=c[0]*(VAO_ASS-VAO_MIN)+c[1]*(ESP_ASS-ESP_MIN);
+      if(folga<=0 || falta>folga) return false;
+      var f=falta/folga;
+      _vaoAss=Math.floor(VAO_ASS-(VAO_ASS-VAO_MIN)*f);
+      _espAss=Math.floor(ESP_ASS-(ESP_ASS-ESP_MIN)*f);
+      /* o arredondamento pode deixar 1 ou 2px sobrando: aperta o vao ate fechar */
+      while(yAtual+_altAss(_vaoAss,_espAss)>maxY && _vaoAss>VAO_MIN){ _vaoAss--; }
+      while(yAtual+_altAss(_vaoAss,_espAss)>maxY && _espAss>ESP_MIN){ _espAss--; }
+      return yAtual+_altAss(_vaoAss,_espAss)<=maxY;
     }
     function desenha(fotoImg){
       nova();
       doc.paras.forEach(function(p,_ip){
-        if(_ip===_iAss){
-          var _v=_vaoQueCabe(y);
-          if(_v){ _vaoAss=_v; } else { nova(); _vaoAss=VAO_ASS; }
-        }
+        if(_ip===_iAss && !_ajustaAss(y)){ nova(); _ajustaAss(y); }
         if(p==='IMG'){
           if(fotoImg){
             /* A TABELA ENCOLHE EM VEZ DE PULAR (v1.300.5). Antes, faltando um dedo de pagina a
@@ -18600,7 +18624,7 @@ function CTR_paginas(doc){
           }
           return;
         }
-        if(!p.length){ _li=0; y+=14; return; }
+        if(!p.length){ _li=0; y+=(_iAss>=0 && _ip>_iAss)?_espAss:14; return; }
         if(p._num){ paragrafo(p, String.fromCharCode(97+(_li++))+')'); }
         else { _li=0; paragrafo(p); }
       });
@@ -18923,7 +18947,7 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
     var fr=new FileReader();
     fr.onload=function(){
       var b64=String(fr.result).split(',')[1]||'';
-      sb.from('contratos').insert({cliente_nome:nome, cpf:cpf||null, descricao:marca||null, valor_total:total||null, fname:fname, arquivo_b64:b64, venda_id:vendaId||null}).select('id').then(function(res){
+      sb.from('contratos').insert({created_at:VB_carimbo(), cliente_nome:nome, cpf:cpf||null, descricao:marca||null, valor_total:total||null, fname:fname, arquivo_b64:b64, venda_id:vendaId||null}).select('id').then(function(res){
         if(res.error){ VB_erro(res.error.message,'Contrato n\u00e3o salvo na Gest\u00e3o.'); return; }
         try{ HIST_conStatus=null; }catch(e){}
         var _novoId=(res.data&&res.data[0])?res.data[0].id:null;
@@ -19487,6 +19511,19 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.10</span><span class="cl-ver-date">10/09/2026</span></div>
+      <div class="cl-item">A hora de salvamento aparecia três horas atrasada. O app carimba o relógio da parede mas termina o texto com Z; o Postgres acredita no Z, guarda 18:36 como se fosse Londres e devolve o campo marcado +00:00 &mdash; e a leitura convertia isso para 15:36. Valia para venda, antecipação, financiamento, pagamento, baixa, repasse e prorrogação</div>
+      <div class="cl-item">Pelo sufixo era impossível separar o carimbo do app do carimbo do banco: os dois voltam +00:00. Então a ambiguidade morreu na origem &mdash; contratos e log, que antes nasciam do relógio do Postgres, passaram a ser carimbados pelo app como todo o resto. Agora existe uma convenção só, e ela é hora de Fortaleza</div>
+      <div class="cl-item">A data andava junto com a hora: recebido_em, pago_em e repassado_em viram a data do negócio, e uma baixa das 21:00 cairia no dia seguinte se o campo virasse instante. Por isso o conserto foi na leitura, não no carimbo</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.9</span><span class="cl-ver-date">10/09/2026</span></div>
+      <div class="cl-item">A compressão das assinaturas da 1.300.8 não dava conta: ela cedia só os dois vãos da caneta, 70px, e faltava por pouco. O .docx de verdade tem cinco parágrafos vazios entre as duas assinaturas, não três como eu tinha contado &mdash; são outros 70px de puro enfeite. Agora os dois cedem juntos</div>
+      <div class="cl-item">E parou de tentar tamanhos no chute: o app mede quanto falta para caber e distribui essa falta pelo que dá para ceder. Sobrando folha, nada muda e o contrato sai idêntico</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.8</span><span class="cl-ver-date">10/09/2026</span></div>
