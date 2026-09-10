@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.12</title>
+<title>VB - v1.300.13</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -18886,7 +18886,7 @@ function CON_fichaObj(c, aoGerarNovo){
   document.body.appendChild(ov);
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
-  ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f,null,c.descricao); }); });
+  ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f,null,c._vendaDesc||c.descricao); }); });
   var bn=ov.querySelector('#conf-novo');
   if(bn){ var _armN=false; bn.addEventListener('click',function(){
     if(c.assinado_em && !_armN){
@@ -19028,11 +19028,20 @@ function CON_load(){
     CON_rows=res.data||[];
     var _ids=CON_rows.filter(function(c){ return c.venda_id; }).map(function(c){ return c.venda_id; });
     if(!_ids.length){ CON_orfaos={}; CON_render(); return; }
-    sb.from('vendas').select('id').in('id', _ids).then(function(r2){
+    /* A descricao vem junto na mesma consulta que ja checava se a venda existe. O contrato guarda
+       so a MARCA, que por desenho nao tem ano -- o ano entra na Clausula 1a como "Ano 2025" --
+       e por isso a etiqueta da legenda saia sem ele. Pegando da venda, os contratos ja gerados
+       tambem passam a sair com o ano, sem precisar refazer nenhum. */
+    sb.from('vendas').select('id,descricao').in('id', _ids).then(function(r2){
       CON_orfaos={};
       if(!r2.error){
-        var _vivas={}; (r2.data||[]).forEach(function(v){ _vivas[String(v.id)]=1; });
-        CON_rows.forEach(function(c){ if(c.venda_id && !_vivas[String(c.venda_id)]) CON_orfaos[String(c.id)]=1; });
+        var _vivas={}, _desc={};
+        (r2.data||[]).forEach(function(v){ _vivas[String(v.id)]=1; _desc[String(v.id)]=v.descricao||''; });
+        CON_rows.forEach(function(c){
+          if(!c.venda_id) return;
+          if(!_vivas[String(c.venda_id)]) CON_orfaos[String(c.id)]=1;
+          if(_desc[String(c.venda_id)]) c._vendaDesc=_desc[String(c.venda_id)];
+        });
       }
       CON_render();
     });
@@ -19563,6 +19572,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.13</span><span class="cl-ver-date">10/09/2026</span></div>
+      <div class="cl-item">A etiqueta da legenda do contrato voltou a ter o ano, inclusive nos contratos já gerados. O registro guarda só a MARCA, que por desenho não tem ano &mdash; ele entra na Cláusula 1ª como "Ano 2025" &mdash; então a correção da 1.300.12 só valia para contrato novo. Agora a descrição vem da venda, na mesma consulta que a lista já fazia para checar se a venda ainda existe: nenhuma ida a mais ao banco e nada para refazer</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.12</span><span class="cl-ver-date">10/09/2026</span></div>
