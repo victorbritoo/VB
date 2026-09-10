@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.11</title>
+<title>VB - v1.300.12</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -5136,11 +5136,14 @@ function VB_fotoShare(){
    o relogio em negrito em cima, o que aconteceu no meio, o que o VB quer embaixo.
    O negrito no topo e o que identifica a conversa no WhatsApp sem precisar ler o resto.
    O SN sai -- e numero de controle, nao recado -- mas o ano fica, porque e ele que separa
-   dois relogios do mesmo modelo. Ponto final fora dos asteriscos: linha de titulo nao leva
-   pontuacao, e o ponto em negrito junto do nome fica sujo. */
+   dois relogios do mesmo modelo.
+   O ponto depois do negrito nao e enfeite: a legenda de DOCUMENTO no WhatsApp e de uma linha so
+   e engole a quebra, entao o contrato saia "DAYTONA CERAMICA PRETO Segue contrato". Com o ponto,
+   a linha continua certa quando a quebra sobrevive e vira frase quando ela e engolida. Ele fica
+   FORA dos asteriscos para o negrito nao pegar a pontuacao junto. */
 function VB_etiqueta(desc){
   var t=String(desc||'').replace(/\bSN[:.\s]+\S+/i,'').replace(/\s{2,}/g,' ').trim().replace(/[.\s]+$/,'');
-  return t?('*'+t+'*'):'';
+  return t?('*'+t+'*.'):'';
 }
 function VB_legenda(desc, corpo, fecho){
   var e=VB_etiqueta(desc);
@@ -10932,6 +10935,19 @@ function VB_folhaSolta(ov){
    dentro de onclick escrito em texto), a decisao mora num lugar so: a cada mudanca de style de
    qualquer folha, olha a pilha inteira e trava se houver ao menos uma aberta. Folha nova nasce
    coberta sem ninguem precisar lembrar. */
+/* FOLHA NOVA NASCE COBERTA (v1.300.12). A lista VB_FOLHAS so conhece as folhas que existem no
+   HTML desde o inicio. O visualizador do contrato, a ficha e a escolha PDF/WORD sao criadas na
+   hora e ficaram de fora -- com elas abertas a pagina voltou a rolar por baixo, o mesmo defeito
+   que a 1.300.7 tinha consertado. Manter a lista em dia e promessa que ninguem cumpre, entao o
+   app passou a reconhecer folha pelo que ela e: camada fixa que cobre a tela inteira. Aviso e
+   toast sao fixos mas nao cobrem, e continuam de fora. */
+function VB_ehFolha(el){
+  if(!el || el.nodeType!==1) return false;
+  var s=String((el.getAttribute&&el.getAttribute('style'))||'');
+  if(!/position\s*:\s*fixed/.test(s)) return false;
+  if(/display\s*:\s*none/.test(s)) return false;
+  return /inset\s*:\s*0/.test(s) || (/top\s*:\s*0/.test(s) && /bottom\s*:\s*0/.test(s));
+}
 function VB_folhaTrava(){
   try{
     var aberta=false;
@@ -10939,11 +10955,22 @@ function VB_folhaTrava(){
       var e=document.getElementById(VB_FOLHAS[i]);
       if(e && e.style && e.style.display && e.style.display!=='none'){ aberta=true; break; }
     }
+    if(!aberta){
+      var f=document.body?document.body.children:[];
+      for(var j=0;j<f.length;j++){ if(VB_ehFolha(f[j])){ aberta=true; break; } }
+    }
     VB_travaFundo(aberta);
   }catch(e){}
 }
+/* folha criada na hora entra e sai do body: e o proprio body que avisa */
+function VB_folhaObservaBody(){
+  if(!window.MutationObserver || !document.body || document.body.dataset.moFolhas) return;
+  document.body.dataset.moFolhas='1';
+  new MutationObserver(function(){ VB_folhaTrava(); }).observe(document.body, {childList:true});
+}
 function VB_folhaObserva(){
   if(!window.MutationObserver) return;
+  VB_folhaObservaBody();
   VB_FOLHAS.forEach(function(id){
     var ov=document.getElementById(id); if(!ov || ov.dataset.moObs) return;
     ov.dataset.moObs='1';
@@ -19494,7 +19521,9 @@ function CTR_gerar(ov){
       var s=document.getElementById('vb-ctr-sheet'); if(s) s.remove();
       showScreen('hist');
     }, r.descricao||g('ctr-marca'));
-    CTR_salvarRegistro(blob, fname, nome, cpf, g('ctr-marca').toUpperCase(), total, r.id);
+    /* guarda a descricao da venda, com ano: era so a marca, e a etiqueta da legenda saia sem o
+       ano -- que e justamente o que separa dois relogios do mesmo modelo. */
+    CTR_salvarRegistro(blob, fname, nome, cpf, (r.descricao||g('ctr-marca')).toUpperCase(), total, r.id);
     VB_log('VENDA','gerou contrato', r.descricao||nome, nome+' · '+CTR_fmtV(total));
     try{
       var _q=(g('ctr-qual')||'').split(',').map(function(s){return s.trim();});
@@ -19534,6 +19563,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.12</span><span class="cl-ver-date">10/09/2026</span></div>
+      <div class="cl-item">A página voltava a rolar por baixo do visualizador do contrato, da ficha e da escolha PDF/WORD. Essas folhas são criadas na hora e não estavam na lista que a 1.300.7 usava &mdash; e manter lista em dia é promessa que ninguém cumpre. Agora o app reconhece folha pelo que ela é: camada fixa que cobre a tela inteira. Avisos e toasts são fixos mas não cobrem, e seguem de fora</div>
+      <div class="cl-item">A legenda do contrato ganhou ponto depois do relógio. A legenda de DOCUMENTO no WhatsApp é de uma linha só e engole a quebra, então saía "DAYTONA CERÂMICA PRETO Segue contrato". Com o ponto, a linha continua certa quando a quebra sobrevive e vira frase quando ela é engolida. O ponto fica fora dos asteriscos, para o negrito não pegar a pontuação junto</div>
+      <div class="cl-item">O contrato passou a guardar a descrição da venda com o ano. Guardava só a marca, e a etiqueta saía "DAYTONA CERÂMICA PRETO" sem o 2025 &mdash; que é justamente o que separa dois relógios do mesmo modelo. Vale para os contratos novos; os antigos seguem com o que está salvo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.11</span><span class="cl-ver-date">10/09/2026</span></div>
