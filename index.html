@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.7</title>
+<title>VB - v1.300.8</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -18510,8 +18510,8 @@ function CTR_paginas(doc){
       var cabem=(y>maxY)?0:(Math.floor((maxY-y)/lh)+1);
       if(cabem<lines.length && (cabem<=2 || lines.length-cabem<2)){ nova(); }
       if(centrado && toks.length && /^_{6,}/.test(toks[0][1])){
-        var need=90+2*(lh+8);
-        if(y+need>maxY){ nova(); y+=24; } else { y+=90; }
+        var need=_vaoAss+2*(lh+8);
+        if(y+need>maxY){ nova(); y+=24; } else { y+=_vaoAss; }
       }
       lines.forEach(function(L,li){
         if(y>maxY) nova();
@@ -18545,20 +18545,38 @@ function CTR_paginas(doc){
     function ehLinhaAss(p){ return p && p.length && p._c && /^_{6,}/.test(String(p[0][1])); }
     var _iAss=-1;
     doc.paras.forEach(function(p,i){ if(_iAss<0 && ehLinhaAss(p)) _iAss=i; });
-    function _altAss(){
+    /* VAO ELASTICO DA ASSINATURA (v1.300.8). O bloco inteiro pesa 430px, quase um terco da
+       folha, e 180 desses 430 sao os dois vaos em branco para a caneta. Quem empurra e a tabela
+       de parcelas, que muda de tamanho a cada venda -- entao qualquer altura fixa cabe num
+       contrato e nao cabe no seguinte, e a folha de assinatura sai sozinha.
+       Mesma saida da foto na 1.300.5: em vez de pular, encolhe o que da para encolher. Sobrando
+       folha, o vao fica nos 90px de sempre e o contrato sai identico ao de hoje. Faltando pouco,
+       ele comprime ate 55px -- ainda espaco de sobra para assinar a mao -- e o bloco cabe. So se
+       nem comprimido couber e que vai para a folha seguinte, e ai a folha so das assinaturas e o
+       comportamento certo, melhor que espremer. */
+    var VAO_ASS=90, VAO_MIN=55, _vaoAss=VAO_ASS;
+    function _altAss(vao){
       var t=0;
       for(var i=_iAss;i<doc.paras.length;i++){
         var q=doc.paras[i];
         if(q==='IMG') continue;
         if(!q || !q.length){ t+=14; continue; }
-        t += ehLinhaAss(q) ? (90+lh+8) : (lh+8);
+        t += ehLinhaAss(q) ? (vao+lh+8) : (lh+8);
       }
       return t;
+    }
+    /* devolve o maior vao que faz o bloco caber daqui ate o fim da pagina, ou 0 se nem o minimo cabe */
+    function _vaoQueCabe(yAtual){
+      for(var v=VAO_ASS; v>=VAO_MIN; v-=5){ if(yAtual+_altAss(v)<=maxY) return v; }
+      return 0;
     }
     function desenha(fotoImg){
       nova();
       doc.paras.forEach(function(p,_ip){
-        if(_ip===_iAss && y+_altAss()>maxY) nova();
+        if(_ip===_iAss){
+          var _v=_vaoQueCabe(y);
+          if(_v){ _vaoAss=_v; } else { nova(); _vaoAss=VAO_ASS; }
+        }
         if(p==='IMG'){
           if(fotoImg){
             /* A TABELA ENCOLHE EM VEZ DE PULAR (v1.300.5). Antes, faltando um dedo de pagina a
@@ -19469,6 +19487,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.8</span><span class="cl-ver-date">10/09/2026</span></div>
+      <div class="cl-item">O bloco de assinaturas deixou de cair sozinho na última folha por pouco. Ele pesa 430px, quase um terço da página, e 180 desses 430 são os dois vãos em branco para a caneta. Quem empurra é a tabela de parcelas, que muda de tamanho a cada venda &mdash; então qualquer altura fixa cabe num contrato e não cabe no seguinte</div>
+      <div class="cl-item">Agora o vão é elástico, como a foto da tabela na 1.300.5. Sobrando folha ele fica nos 90px de sempre e o contrato sai idêntico ao de hoje; faltando pouco, comprime até 55px e o bloco cabe. Comprimido, o bloco cai de 430 para 360px</div>
+      <div class="cl-item">Se nem comprimido couber, aí sim vai para a folha seguinte inteira &mdash; em contrato de tabela longa, a folha só de assinaturas é o certo, melhor que espremer</div>
+      <div class="cl-item">As assinaturas continuam uma embaixo da outra. Lado a lado ganharia meia folha e cobraria o nome do devedor quebrado em duas linhas, logo no documento que a Cláusula 11ª chama de título executivo</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.7</span><span class="cl-ver-date">09/09/2026</span></div>
