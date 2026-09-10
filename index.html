@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.6</title>
+<title>VB - v1.300.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10910,12 +10910,30 @@ function VB_folhaSolta(ov){
     if(a && a!==document.body && ov.contains(a) && a.blur) a.blur();
   }catch(e){}
 }
+/* A FOLHA SEGURA O FUNDO (v1.300.7). VB_travaFundo ja existia desde o painel mes a mes, mas so
+   tres folhas o chamavam. Nas outras -- TITULO, PANORAMA, BAIXA, REPASSE -- o corpo da pagina
+   continuava rolando por baixo: no iPhone a lista corria junto com a folha aberta e os cards
+   apareciam embaixo dela, como se a folha tivesse desgrudado da tela.
+   Em vez de sair chamando a trava em cada abertura e cada fechamento (dezenas de lugares, varios
+   dentro de onclick escrito em texto), a decisao mora num lugar so: a cada mudanca de style de
+   qualquer folha, olha a pilha inteira e trava se houver ao menos uma aberta. Folha nova nasce
+   coberta sem ninguem precisar lembrar. */
+function VB_folhaTrava(){
+  try{
+    var aberta=false;
+    for(var i=0;i<VB_FOLHAS.length;i++){
+      var e=document.getElementById(VB_FOLHAS[i]);
+      if(e && e.style && e.style.display && e.style.display!=='none'){ aberta=true; break; }
+    }
+    VB_travaFundo(aberta);
+  }catch(e){}
+}
 function VB_folhaObserva(){
   if(!window.MutationObserver) return;
   VB_FOLHAS.forEach(function(id){
     var ov=document.getElementById(id); if(!ov || ov.dataset.moObs) return;
     ov.dataset.moObs='1';
-    new MutationObserver(function(){ VB_folhaAjusta(ov); VB_folhaSolta(ov); })
+    new MutationObserver(function(){ VB_folhaAjusta(ov); VB_folhaSolta(ov); VB_folhaTrava(); })
       .observe(ov, {attributes:true, attributeFilter:['style']});
   });
 }
@@ -19451,6 +19469,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.7</span><span class="cl-ver-date">09/09/2026</span></div>
+      <div class="cl-item">Com uma folha aberta, a lista atrás dela parou de rolar. No iPhone o corpo da página corria por baixo do TÍTULO, do PANORAMA, da BAIXA e do REPASSE, e os cards apareciam embaixo da folha como se ela tivesse desgrudado da tela</div>
+      <div class="cl-item">A trava já existia desde o painel mês a mês, mas só três folhas a chamavam. Agora a decisão mora num lugar só e vale para a pilha inteira &mdash; folha nova nasce coberta sem ninguém precisar lembrar</div>
+      <div class="cl-item">Ao fechar, a página volta exatamente para onde você estava, inclusive quando uma folha abre outra</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.6</span><span class="cl-ver-date">09/09/2026</span></div>
