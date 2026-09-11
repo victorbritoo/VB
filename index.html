@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.18</title>
+<title>VB - v1.300.19</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10905,7 +10905,11 @@ var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log
   /* entraram na 1.296.10: estavam de fora e por isso nao soltavam o foco ao fechar. As tres
      primeiras tem campo de digitar, entao sofriam do mesmo teclado que so subia no 3o toque. */
   'mer-form-ov','ren-nota-ov','hist-filter-overlay','ant-overlay','changelog-overlay',
-  'login-overlay','vb-c2-overlay','vb-name-overlay','vb-sair-overlay','vb-foto-overlay'];
+  'login-overlay','vb-c2-overlay','vb-name-overlay','vb-sair-overlay','vb-foto-overlay',
+  /* criadas na hora: nao existem quando a pagina abre, mas o observador do body avisa quando
+     entram. Sem elas na lista, a pagina rolava por baixo do contrato -- defeito da 1.300.12. */
+  'vb-ctr-sh','vb-ctr-view','vb-ctr-vass','vb-ctr-prev','vb-ctr-sheet','vb-con-ficha',
+  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr'];
 function VB_folhaAjusta(ov){
   try{
     if(!ov || ov.style.display==='none' || ov.style.display==='') return;
@@ -10935,30 +10939,13 @@ function VB_folhaSolta(ov){
    dentro de onclick escrito em texto), a decisao mora num lugar so: a cada mudanca de style de
    qualquer folha, olha a pilha inteira e trava se houver ao menos uma aberta. Folha nova nasce
    coberta sem ninguem precisar lembrar. */
-/* FOLHA NOVA NASCE COBERTA (v1.300.12). A lista VB_FOLHAS so conhece as folhas que existem no
-   HTML desde o inicio. O visualizador do contrato, a ficha e a escolha PDF/WORD sao criadas na
-   hora e ficaram de fora -- com elas abertas a pagina voltou a rolar por baixo, o mesmo defeito
-   que a 1.300.7 tinha consertado. Manter a lista em dia e promessa que ninguem cumpre, entao o
-   app passou a reconhecer folha pelo que ela e: camada fixa que cobre a tela inteira. Aviso e
-   toast sao fixos mas nao cobrem, e continuam de fora. */
-function VB_ehFolha(el){
-  if(!el || el.nodeType!==1) return false;
-  /* Lia o atributo style como texto, e por isso enxergava folha onde nao havia: overlay escondido
-     por CLASSE continua com position:fixed escrito ali, sem display:none nenhum. Bastava um deles
-     existir na pagina para o fundo ficar travado para sempre -- a tela de Vendas parava de rolar
-     sem nenhuma folha aberta. Agora pergunta ao navegador como o elemento esta de fato, e exige
-     que ele cubra a tela: aviso e toast sao fixos mas pequenos, e continuam de fora. */
-  var cs=null; try{ cs=window.getComputedStyle(el); }catch(e){ return false; }
-  if(!cs || cs.position!=='fixed') return false;
-  if(cs.display==='none' || cs.visibility==='hidden' || Number(cs.opacity)===0) return false;
-  var r=null; try{ r=el.getBoundingClientRect(); }catch(e){ return false; }
-  if(!r || !r.width || !r.height) return false;
-  return r.width>=(window.innerWidth*0.9) && r.height>=(window.innerHeight*0.9);
-}
-/* LINHA NOVA NASCE VISIVEL (v1.300.16). O + REPETIR ULTIMA acrescenta a linha no fim e poe o
-   cursor nela, mas quem estava com o teclado aberto nao via nada: a linha nascia atras do
-   teclado, no pe da folha. O foco sozinho nao resolve -- a folha tem rolagem propria, e o iPhone
-   so cuida da rolagem da pagina. Uma funcao so para as quatro listas que repetem linha. */
+/* QUEM TRAVA O FUNDO E A LISTA, NAO O PALPITE (v1.300.19). Da 1.300.12 a 1.300.18 o app tentou
+   reconhecer folha sozinho -- "camada fixa que cobre a tela". A ideia era boa e errou duas vezes
+   seguidas travando a rolagem da tela de Vendas, onde nao ha folha nenhuma. Travar a tela do
+   sujeito no meio do trabalho e caro demais para um palpite: voltou a lista explicita, que rodou
+   dias sem reclamacao, e as folhas criadas na hora foram acrescentadas a ela pelo nome.
+   O observador do body continua, mas so como gatilho: avisa que algo entrou ou saiu, e quem
+   decide e a lista. */
 function VB_rolaAteLinha(el){
   if(!el) return;
   try{
@@ -10988,10 +10975,6 @@ function VB_folhaTrava(){
     for(var i=0;i<VB_FOLHAS.length;i++){
       var e=document.getElementById(VB_FOLHAS[i]);
       if(e && e.style && e.style.display && e.style.display!=='none'){ aberta=true; break; }
-    }
-    if(!aberta){
-      var f=document.body?document.body.children:[];
-      for(var j=0;j<f.length;j++){ if(VB_ehFolha(f[j])){ aberta=true; break; } }
     }
     VB_travaFundo(aberta);
   }catch(e){}
@@ -19625,6 +19608,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.19</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">A tela de Vendas voltou a rolar. Da 1.300.12 para cá o app tentava reconhecer folha sozinho, pela aparência &mdash; "camada fixa que cobre a tela". A ideia errou duas vezes seguidas travando a rolagem onde não havia folha nenhuma, e travar a tela no meio do trabalho é caro demais para um palpite</div>
+      <div class="cl-item">Voltou a lista explícita, que rodou dias sem reclamação, e as folhas criadas na hora entraram nela pelo nome &mdash; contrato, ficha, escolha PDF/WORD e as demais. O observador continua, mas só como gatilho: avisa que algo entrou ou saiu, e quem decide é a lista</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.18</span><span class="cl-ver-date">11/09/2026</span></div>
