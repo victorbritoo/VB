@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.14</title>
+<title>VB - v1.300.15</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11649,10 +11649,23 @@ function REN_cpTotAberto(){
   var t=0; ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){ if(!c.pago_em) t+=Number(c.valor)||0; });
   return Math.round(t*100)/100;
 }
+/* CADA PALAVRA E UM FILTRO (v1.300.15). A busca comparava o texto digitado inteiro, de uma vez,
+   contra o texto do card. Entao "ALBU GMT" so acharia se o card tivesse "ALBU GMT" colado --
+   e ele tem "JOAO ALBUQUERQUE GMT BRUCE WAYNE", com o resto do sobrenome no meio. Resultado:
+   achava o cliente, e no momento de separar qual relogio dele, sumia tudo.
+   Agora o texto e quebrado em palavras e o card precisa conter TODAS. Cada palavra estreita o
+   resultado anterior, que e como qualquer busca se comporta. */
+function REN_casa(txt){
+  if(!REN_busca) return true;
+  var s=String(txt||'').toUpperCase();
+  var termos=REN_busca.split(/\s+/);
+  for(var i=0;i<termos.length;i++){ if(termos[i] && s.indexOf(termos[i])<0) return false; }
+  return true;
+}
 function REN_cpFiltra(arr){
   if(!REN_busca) return arr;
   /* Mesma regra do REN_filtra: so o nome que o card escreve. */
-  return arr.filter(function(c){ return (VB_nomeCurto(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')).toUpperCase().indexOf(REN_busca)>=0; });
+  return arr.filter(function(c){ return REN_casa(VB_nomeCurto(c.credor||'')+' '+String(c.descricao||'')+' '+String(c.nota||'')+REN_buscaVal(c.valor)+(c.valor_pago!=null?REN_buscaVal(c.valor_pago):'')); });
 }
 function REN_cpOv(oid){
   var ov=document.getElementById(oid);
@@ -12343,7 +12356,7 @@ function REN_filtra(arr){
       var pp=(REN_cache.pags&&REN_cache.pags[k])||[];
       pp.forEach(function(pg){ if(pg&&pg.nota) s+=' '+pg.nota; });
     }
-    return s.toUpperCase().indexOf(REN_busca)>=0;
+    return REN_casa(s);
   });
 }
 function REN_ordena(arr){
@@ -19577,6 +19590,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.15</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">A busca do A RECEBER e do A PAGAR passou a tratar cada palavra como um filtro. Antes ela comparava o texto inteiro de uma vez, então "ALBU GMT" só acharia se o card tivesse essas duas palavras coladas &mdash; e ele tem "JOÃO ALBUQUERQUE GMT BRUCE WAYNE", com o resto do sobrenome no meio. Achava o cliente e sumia tudo na hora de separar qual relógio dele</div>
+      <div class="cl-item">Agora cada palavra estreita o resultado anterior: "ALBU" traz o cliente, "ALBU GMT" traz só as parcelas do GMT dele. A ordem das palavras não importa</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.14</span><span class="cl-ver-date">11/09/2026</span></div>
