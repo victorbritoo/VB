@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.16</title>
+<title>VB - v1.300.17</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10953,10 +10953,26 @@ function VB_ehFolha(el){
    teclado, no pe da folha. O foco sozinho nao resolve -- a folha tem rolagem propria, e o iPhone
    so cuida da rolagem da pagina. Uma funcao so para as quatro listas que repetem linha. */
 function VB_rolaAteLinha(el){
-  if(!el || !el.scrollIntoView) return;
+  if(!el) return;
   try{
-    var f=function(){ try{ el.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){ try{ el.scrollIntoView(false); }catch(e2){} } };
-    if(window.requestAnimationFrame) requestAnimationFrame(function(){ setTimeout(f,60); }); else setTimeout(f,60);
+    /* scrollIntoView sobe a arvore inteira e acaba mexendo na rolagem da PAGINA -- com o fundo
+       travado pela folha aberta, a pagina ficava presa depois de fechar. Aqui so a caixa que
+       tem rolagem propria e movida, na mao; se a lista nao estiver dentro de uma, nao faz nada.
+       Melhor nao rolar do que travar a tela. */
+    var sc=el.parentNode;
+    while(sc && sc!==document.body){
+      var ov=''; try{ ov=(window.getComputedStyle(sc).overflowY||''); }catch(e){}
+      if((ov==='auto'||ov==='scroll') && sc.scrollHeight>sc.clientHeight+4) break;
+      sc=sc.parentNode;
+    }
+    if(!sc || sc===document.body || !sc.getBoundingClientRect) return;
+    setTimeout(function(){
+      try{
+        var r=el.getBoundingClientRect(), rs=sc.getBoundingClientRect();
+        var alvo=sc.scrollTop+(r.top-rs.top)-(sc.clientHeight/2)+(r.height/2);
+        sc.scrollTop=Math.max(0, alvo);
+      }catch(e){}
+    },60);
   }catch(e){}
 }
 function VB_folhaTrava(){
@@ -19602,6 +19618,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.17</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">A tela de Vendas travava a rolagem depois de repetir uma linha. O ajuste da 1.300.16 pedia ao navegador para trazer a linha à vista, e esse pedido sobe a árvore inteira: acabava mexendo na rolagem da página, que estava travada pela folha aberta, e a página ficava presa depois de fechar</div>
+      <div class="cl-item">Agora só a caixa que tem rolagem própria é movida, na mão. Se a lista não estiver dentro de uma, não faz nada &mdash; melhor não rolar do que travar a tela</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.16</span><span class="cl-ver-date">11/09/2026</span></div>
