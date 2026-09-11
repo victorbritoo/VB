@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.20</title>
+<title>VB - v1.300.21</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10980,14 +10980,21 @@ function VB_tecladoAjusta(){
   try{
     var vv=window.visualViewport; if(!vv) return;
     var kb=Math.round(window.innerHeight-vv.height-vv.offsetTop);
-    if(!(kb>=100)) kb=0;   /* barra do Safari muda poucos px; teclado e bem mais que isso */
+    if(!(kb>=150)) kb=0;   /* barra do Safari muda ate ~140px; teclado passa de 250 */
+    /* SO LEVANTA ENQUANTO SE DIGITA (v1.300.21). A folha do contrato abria ja levantada, com um
+       buraco embaixo: a conta de altura viu diferenca sem teclado nenhum. A medida sozinha nao e
+       prova de teclado -- prova e haver um campo com o cursor. Sem campo focado, folga zero,
+       aconteca o que acontecer com a altura da tela. */
+    var ae=document.activeElement;
+    var digitando=!!(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||''));
     for(var i=0;i<VB_FOLHAS.length;i++){
       var e=document.getElementById(VB_FOLHAS[i]); if(!e) continue;
       var st=String(e.getAttribute('style')||'');
       if(!/align-items\s*:\s*flex-end/.test(st)) continue;
       var ch=e.firstElementChild;
       var aberta=!!(e.style.display && e.style.display!=='none');
-      if(!aberta || !kb){
+      var aqui=digitando && e.contains(ae);
+      if(!aberta || !kb || !aqui){
         if(e.style.paddingBottom) e.style.paddingBottom='';
         if(ch && ch.dataset && ch.dataset.mhOrig!=null){ ch.style.maxHeight=ch.dataset.mhOrig; delete ch.dataset.mhOrig; }
         continue;
@@ -11004,6 +11011,9 @@ if(window.visualViewport){
   try{
     window.visualViewport.addEventListener('resize', VB_tecladoAjusta);
     window.visualViewport.addEventListener('scroll', VB_tecladoAjusta);
+    /* o foco sai antes de o teclado baixar: a folga tem que cair junto com ele */
+    document.addEventListener('focusin', function(){ setTimeout(VB_tecladoAjusta, 80); });
+    document.addEventListener('focusout', function(){ setTimeout(VB_tecladoAjusta, 80); });
   }catch(e){}
 }
 function VB_folhaTrava(){
@@ -19646,6 +19656,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.21</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">A folha do contrato abria levantada, com um buraco embaixo. A regra da 1.300.20 levantava a folha sempre que a altura da tela diminuísse, e a medida sozinha não é prova de teclado. Agora a folha só sobe enquanto há um campo dela com o cursor; sem campo focado, folga zero, aconteça o que acontecer com a altura. E a folga cai junto com o foco, não só quando o teclado termina de baixar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.20</span><span class="cl-ver-date">11/09/2026</span></div>
