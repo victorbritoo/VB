@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.13</title>
+<title>VB - v1.300.14</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -19336,6 +19336,11 @@ function CTR_abrir(idx){
     var arr=(!res.error && res.data)?res.data:[];
     if(arr.length){
       var _pref=arr.filter(function(x){ return x.assinado_em; })[0] || arr[0]; /* assinado manda, mesmo que exista um mais novo */
+      /* A ficha monta a etiqueta da legenda com _vendaDesc, porque o registro do contrato guarda
+         so a MARCA e marca nao tem ano. Quem chega pela lista de Contratos recebe isso da consulta
+         de vendas; quem chega pelo card do Historico vem sem, e a legenda saia sem o ano. Aqui a
+         venda esta na mao -- e so passar. */
+      if(r0.descricao) _pref._vendaDesc=r0.descricao;
       CON_fichaObj(_pref, function(){ CTR_abrirForm(idx); });
     }
     else { CTR_abrirForm(idx); }
@@ -19572,6 +19577,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.14</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">O ano da etiqueta agora vale também para o contrato aberto pelo botão CONTRATO do card do Histórico. A correção da 1.300.13 pegava a descrição na consulta da lista de Contratos, e esse caminho não passa por ela &mdash; vai direto do card para a ficha. São duas portas para a mesma ficha, e só uma estava entregando o dado</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.13</span><span class="cl-ver-date">10/09/2026</span></div>
