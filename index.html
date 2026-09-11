@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.17</title>
+<title>VB - v1.300.18</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10943,10 +10943,17 @@ function VB_folhaSolta(ov){
    toast sao fixos mas nao cobrem, e continuam de fora. */
 function VB_ehFolha(el){
   if(!el || el.nodeType!==1) return false;
-  var s=String((el.getAttribute&&el.getAttribute('style'))||'');
-  if(!/position\s*:\s*fixed/.test(s)) return false;
-  if(/display\s*:\s*none/.test(s)) return false;
-  return /inset\s*:\s*0/.test(s) || (/top\s*:\s*0/.test(s) && /bottom\s*:\s*0/.test(s));
+  /* Lia o atributo style como texto, e por isso enxergava folha onde nao havia: overlay escondido
+     por CLASSE continua com position:fixed escrito ali, sem display:none nenhum. Bastava um deles
+     existir na pagina para o fundo ficar travado para sempre -- a tela de Vendas parava de rolar
+     sem nenhuma folha aberta. Agora pergunta ao navegador como o elemento esta de fato, e exige
+     que ele cubra a tela: aviso e toast sao fixos mas pequenos, e continuam de fora. */
+  var cs=null; try{ cs=window.getComputedStyle(el); }catch(e){ return false; }
+  if(!cs || cs.position!=='fixed') return false;
+  if(cs.display==='none' || cs.visibility==='hidden' || Number(cs.opacity)===0) return false;
+  var r=null; try{ r=el.getBoundingClientRect(); }catch(e){ return false; }
+  if(!r || !r.width || !r.height) return false;
+  return r.width>=(window.innerWidth*0.9) && r.height>=(window.innerHeight*0.9);
 }
 /* LINHA NOVA NASCE VISIVEL (v1.300.16). O + REPETIR ULTIMA acrescenta a linha no fim e poe o
    cursor nela, mas quem estava com o teclado aberto nao via nada: a linha nascia atras do
@@ -19618,6 +19625,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.18</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">A tela de Vendas ficava sem rolar mesmo sem nenhuma folha aberta. A regra que reconhece folha, criada na 1.300.12, lia o atributo style como texto &mdash; e overlay escondido por CLASSE continua com position:fixed escrito ali. Bastava um deles existir na página para o fundo ficar travado para sempre</div>
+      <div class="cl-item">Agora a pergunta é feita ao navegador: como o elemento está de fato, e se ele cobre a tela. Aviso e toast são fixos mas pequenos, e seguem de fora</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.17</span><span class="cl-ver-date">11/09/2026</span></div>
