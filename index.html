@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.19</title>
+<title>VB - v1.300.20</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -10969,6 +10969,43 @@ function VB_rolaAteLinha(el){
     },60);
   }catch(e){}
 }
+/* A FOLHA SOBE COM O TECLADO (v1.300.20). A folha e uma camada presa no rodape da tela, e o
+   teclado do iPhone nao empurra esse rodape: ele cobre. Folha baixa (2 linhas) ainda mostrava a
+   linha nova; folha mais alta escondia o pe -- linha nova, botao PRONTO, tudo -- atras do teclado.
+   O iPhone informa quanto o teclado ocupa (visualViewport); a folha passa a se apoiar em cima
+   dele, com uma folga embaixo do overlay do tamanho do teclado. So folhas de rodape (flex-end);
+   tela cheia como a foto ou o login nao mexe. E o miolo da folha ganha um teto igual ao que
+   sobrou de tela, senao o topo dela sairia pela parte de cima. */
+function VB_tecladoAjusta(){
+  try{
+    var vv=window.visualViewport; if(!vv) return;
+    var kb=Math.round(window.innerHeight-vv.height-vv.offsetTop);
+    if(!(kb>=100)) kb=0;   /* barra do Safari muda poucos px; teclado e bem mais que isso */
+    for(var i=0;i<VB_FOLHAS.length;i++){
+      var e=document.getElementById(VB_FOLHAS[i]); if(!e) continue;
+      var st=String(e.getAttribute('style')||'');
+      if(!/align-items\s*:\s*flex-end/.test(st)) continue;
+      var ch=e.firstElementChild;
+      var aberta=!!(e.style.display && e.style.display!=='none');
+      if(!aberta || !kb){
+        if(e.style.paddingBottom) e.style.paddingBottom='';
+        if(ch && ch.dataset && ch.dataset.mhOrig!=null){ ch.style.maxHeight=ch.dataset.mhOrig; delete ch.dataset.mhOrig; }
+        continue;
+      }
+      e.style.paddingBottom=kb+'px';
+      if(ch && ch.dataset){
+        if(ch.dataset.mhOrig==null) ch.dataset.mhOrig=ch.style.maxHeight||'';
+        ch.style.maxHeight=Math.max(200, Math.round(vv.height-16))+'px';
+      }
+    }
+  }catch(e){}
+}
+if(window.visualViewport){
+  try{
+    window.visualViewport.addEventListener('resize', VB_tecladoAjusta);
+    window.visualViewport.addEventListener('scroll', VB_tecladoAjusta);
+  }catch(e){}
+}
 function VB_folhaTrava(){
   try{
     var aberta=false;
@@ -10977,6 +11014,7 @@ function VB_folhaTrava(){
       if(e && e.style && e.style.display && e.style.display!=='none'){ aberta=true; break; }
     }
     VB_travaFundo(aberta);
+    VB_tecladoAjusta();
   }catch(e){}
 }
 /* folha criada na hora entra e sai do body: e o proprio body que avisa */
@@ -19608,6 +19646,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.20</span><span class="cl-ver-date">11/09/2026</span></div>
+      <div class="cl-item">As folhas passaram a subir com o teclado. A folha é uma camada presa no rodapé da tela, e o teclado do iPhone não empurra esse rodapé: ele cobre. Folha baixa ainda mostrava a linha nova; folha mais alta escondia o pé &mdash; linha nova, botão PRONTO, tudo &mdash; atrás do teclado. Por isso o + REPETIR ÚLTIMA das PARCELAS DA COMPRA ora aparecia, ora sumia</div>
+      <div class="cl-item">Agora o iPhone informa quanto o teclado ocupa e a folha se apóia em cima dele. Vale para toda folha de rodapé com campo de digitar; tela cheia, como a foto e o login, não mexe. Quando o teclado baixa, tudo volta ao lugar</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.19</span><span class="cl-ver-date">11/09/2026</span></div>
