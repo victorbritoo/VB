@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.21</title>
+<title>VB - v1.300.22</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -3785,7 +3785,16 @@ function HIST_clickShare(el, event){
   if(_ap){ VB_shareNomeOverride=_ap; VB_shareApelido=true; }
   else { VB_shareNomeOverride=null; VB_shareApelido=false; }
   try{
-    if(tab==='ant'){ HIST_carregarAnt(r, true); ANT_gerarTabela(); }   /* foto: data salva, nao hoje */
+    /* ATRASADO E A EXCECAO (v1.300.22). A foto sai com a data salva de proposito: o olhinho carrega
+       a operacao de verdade na tela, e deixar a data virar hoje fazia a foto cobrar um valor
+       diferente do que o card mostra -- no Pedro Belem, 38.487,50 na foto contra 37.653,40 no card.
+       Num atrasado, porem, o juro corre todo dia e o proprio ponto da foto e cobrar o valor de
+       HOJE; a data salva e a unica que nao serve para nada ali. Entao so ele vai para hoje, e nos
+       demais a regra continua valendo. */
+    if(tab==='ant'){
+      var _atr=(Number(r.valor_liquido)||0) > (Number(r.valor_bruto)||0);
+      HIST_carregarAnt(r, !_atr); ANT_gerarTabela();
+    }
     else if(tab==='fin'){ HIST_carregarFin(r); FIN_compartilharTabela(); }
     else if(tab==='ven'){ HIST_carregarVen(r); VEN_gerarTabela(); }
     else { HIST_carregarPag(r); PAG_compartilhar(); }
@@ -19656,6 +19665,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.22</span><span class="cl-ver-date">12/09/2026</span></div>
+      <div class="cl-item">O olhinho de uma antecipação ATRASADA passou a abrir com a data de hoje. A foto sai com a data salva de propósito &mdash; é o que impede a foto de cobrar um valor diferente do que o card mostra. Mas num atrasado o juro corre todo dia e o próprio ponto da foto é cobrar o valor de hoje; a data salva ali é a única que não serve para nada</div>
+      <div class="cl-item">A exceção vale só para o atrasado, reconhecido pelo líquido maior que o bruto. Financiamento, venda, pagamento e antecipação normal continuam saindo como foram salvos</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.21</span><span class="cl-ver-date">11/09/2026</span></div>
