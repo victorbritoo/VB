@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.22</title>
+<title>VB - v1.300.23</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -16932,13 +16932,18 @@ function PIN_grant(target){
 /* Vir da Home para uma tela de operacao significa comecar uma NOVA. Se a tela ainda estiver
    carregada com uma operacao SALVA (aberta antes pelo Historico), ela e limpa - senao voce edita
    e confirma achando que e nova, e na verdade sobrescreve a antiga. Rascunho nao salvo e mantido:
-   ali nao ha id de operacao. Sair com alteracao ja e barrado pela guarda de tela. */
+   ali nao ha id de operacao. Sair com alteracao ja e barrado pela guarda de tela.
+
+   PAGAMENTOS E A EXCECAO (v1.300.23). Montar uma prestacao e ir e voltar: o VB abre a prestacao
+   pelo Historico, sai para conferir um valor em Entradas/Saidas e volta pela Home -- e encontrava
+   a tela limpa, tendo que refazer o caminho e digitar tudo de novo. Aqui a tela guarda o que
+   estava sendo feito. Comecar do zero passa a ser o LIMPAR, e enquanto houver prestacao carregada
+   o botao continua escrito ATUALIZAR, que e o aviso de que ele mexe numa que ja existe. */
 function VB_novaOperacao(target){
   try{
     if(target==='ant' && typeof ANT_currentOperationId!=='undefined' && ANT_currentOperationId){ ANT_limpar(); }
     else if(target==='ven' && typeof VEN_currentOperationId!=='undefined' && VEN_currentOperationId){ VEN_limpar(); }
     else if(target==='fin' && typeof FIN_currentOperationId!=='undefined' && FIN_currentOperationId){ FIN_limpar(); }
-    else if(target==='pag' && typeof PAG_currentOperationId!=='undefined' && PAG_currentOperationId){ PAG_limpar(); }
   }catch(e){}
 }
 function PIN_request(target){
@@ -19665,6 +19670,13 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.23</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">A tela de Pagamentos parou de perder o que estava sendo feito. Montando uma prestação aberta pelo Histórico, sair para conferir um valor em Entradas/Saídas e voltar pela Home deixava a tela limpa &mdash; e só restava refazer o caminho e digitar tudo de novo. Agora sair e voltar devolve tudo como estava</div>
+      <div class="cl-item">Começar uma prestação do zero passa a ser o LIMPAR. Enquanto houver uma carregada, o botão continua escrito ATUALIZAR &mdash; é o aviso de que você mexe numa que já existe, não cria outra</div>
+      <div class="cl-item">Vale só para Pagamentos. Antecipação, Venda e Financiamento continuam começando do zero pela Home</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.22</span><span class="cl-ver-date">12/09/2026</span></div>
