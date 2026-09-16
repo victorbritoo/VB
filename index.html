@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.26</title>
+<title>VB - v1.300.28</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11992,31 +11992,14 @@ function REN_cpSheet(id){
        CREDOR -- que aqui e a conta de onde foi debitado. Marcado em origem_tab, coluna que ja
        existe, entao nao precisa de SQL. */
     +'<div id="rencp-juros" onclick="REN_cpJurosToggle()" style="margin:10px 0 0;padding:9px 12px;border:0.5px dashed var(--ln0);border-radius:12px;text-align:center;font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;color:var(--mu2);">JUROS DA CONTA</div>'
-    /* Os pagamentos ficam a vista, cada um com data e nota, e da para apagar um. Era isso que
-       faltava: com uma nota so, dois pix em dias diferentes viravam uma linha. */
-    +(function(){
-       var L=c?REN_cpPagsDe(c):[]; if(!L.length) return '';
-       var t='<div style="'+RT+'margin-top:10px;">PAGAMENTOS</div><div style="border:0.5px solid var(--ln3);border-radius:12px;padding:6px 10px;background:var(--sf2);">';
-       L.forEach(function(pg){
-         var d=String(pg.data||'').slice(0,10).split('-').reverse().join('/');
-         t+='<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:11px;">'
-           +'<span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span>'
-           +'<span style="color:var(--mu);white-space:nowrap;">'+d+'</span>'
-           +'<span style="flex:1;min-width:0;color:var(--so);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(pg.nota||'')+'</span>'
-           +'<span onclick="REN_cpPagDel(\''+String(c.id)+'\',\''+String(pg.id)+'\')" style="flex:none;color:var(--mu);cursor:pointer;padding:0 4px;">\u00d7</span>'
-           +'</div>';
-       });
-       t+='<div style="border-top:0.5px solid var(--ln3);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;">'
-         +'<span>'+HIST_fmtMoeda(REN_cpPagoTot(c))+'</span>'
-         +'<span style="color:'+(c.pago_em?'var(--mu)':'var(--red)')+';">'+(c.pago_em?'QUITADA':('RESTA '+HIST_fmtMoeda(REN_cpFalta(c))))+'</span></div></div>';
-       return t;
-     })()
+    /* O historico de pagamentos vive na FICHA, nao aqui: este formulario existe para corrigir
+       credor, descricao, valor e vencimento. Mostrar a mesma lista nos dois lugares so fazia o
+       EDITAR nascer comprido. */
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
-    /* a acao que traz voce aqui e a baixa, como na ficha da parcela: ela e a preta e a primeira.
-       SALVAR desce -- serve pra corrigir um dado, e o REN_cpDirty so o acende quando ha mudanca. */
-    +((c&&!c.pago_em)?('<button onclick="REN_cpBaixaSheet(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">DAR BAIXA</button>'):'')
-    +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="'+((c&&!c.pago_em)?'width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;':'width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;')+'" id="rencp-salvar">SALVAR</button>'
+    /* DAR BAIXA saiu daqui: quem paga passa pela ficha, que e a porta do card. Aqui a acao e
+       salvar a correcao, e o REN_cpDirty so acende o botao quando ha mudanca de verdade. */
+    +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
     +(c?('<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
     +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
@@ -12168,23 +12151,33 @@ function REN_cpQuick(btn, id){
 function REN_cpGravaPag(c, valor, dataISO, nota){
   var v=Math.round((Number(valor)||0)*100)/100;
   sb.from('conta_pagamentos').insert({conta_id:c.id, valor:v, data:dataISO, nota:(nota||null)}).then(function(res){
+    REN_cpGravando=false;
     if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
     try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(v)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
-    var total=Math.round((REN_cpPagoTot(c)+v)*100)/100;
-    var alvo=Number(c.valor)||0;
-    if(total < alvo-0.005){
-      ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
-      VB_toast('Pagamento parcial registrado.');
-      REN_abrir(); return;
-    }
-    var dMax=dataISO;
-    REN_cpPagsDe(c).forEach(function(pg){ var d=String(pg.data||'').slice(0,10); if(d && d>dMax) dMax=d; });
-    var ts=(dMax===REN_hojeISO())?VB_carimbo():(dMax+'T12:00:00.000Z');
-    sb.from('contas_pagar').update({pago_em:ts, valor_pago:total, nota_baixa:(nota||null)}).eq('id', c.id).then(function(r2){
-      if(r2.error){ VB_erro(r2.error.message,'Pagamento gravado, mas a conta n\u00e3o fechou.'); return; }
-      ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
-      VB_toast('Conta paga.');
-      REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
+    /* A SOMA VEM DO BANCO (v1.300.27). Ela vinha do cache da tela, e o cache so se atualiza
+       depois. Dois toques seguidos no confirmar gravavam dois pagamentos e os dois liam zero
+       pago: a conta de 25.000 ficou com 46.000 lancados e mesmo assim em aberto. Agora a decisao
+       de fechar le o que esta gravado de verdade. */
+    sb.from('conta_pagamentos').select('valor,data').eq('conta_id', c.id).then(function(rs){
+      var total=0, dMax=dataISO;
+      ((rs&&rs.data)||[]).forEach(function(pg){
+        total+=Number(pg.valor)||0;
+        var d=String(pg.data||'').slice(0,10); if(d && d>dMax) dMax=d;
+      });
+      total=Math.round(total*100)/100;
+      var alvo=Number(c.valor)||0;
+      if(total < alvo-0.005){
+        ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
+        VB_toast('Pagamento parcial registrado.');
+        REN_abrir(); return;
+      }
+      var ts=(dMax===REN_hojeISO())?VB_carimbo():(dMax+'T12:00:00.000Z');
+      sb.from('contas_pagar').update({pago_em:ts, valor_pago:total, nota_baixa:(nota||null)}).eq('id', c.id).then(function(r2){
+        if(r2.error){ VB_erro(r2.error.message,'Pagamento gravado, mas a conta n\u00e3o fechou.'); return; }
+        ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
+        VB_toast('Conta paga.');
+        REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
+      }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
     }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
@@ -12237,7 +12230,11 @@ function REN_cpBaixaSheet(id){
     +'</div>';
   ov.style.display='flex';
 }
+var REN_cpGravando=false;
 function REN_cpBaixaSalvar(id){
+  /* o toque repetido gravava dois pagamentos iguais -- foi assim que a conta do Vicente recebeu
+     23.000 duas vezes, a segunda sem nota. A trava solta sozinha se algo der errado no caminho. */
+  if(REN_cpGravando){ return; }
   var c=REN_cpDe(id); if(!c) return;
   var v=REN_num((document.getElementById('rencpb-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('rencpb-data')||{}).value);
@@ -12253,6 +12250,7 @@ function REN_cpBaixaSalvar(id){
       if(r.error) VB_erro(r.error.message,'N\u00e3o gravou a marca\u00e7\u00e3o de juros.');
     }).catch(function(){});
   }
+  REN_cpGravando=true; setTimeout(function(){ REN_cpGravando=false; }, 4000);
   REN_cpGravaPag(c, v, d, nt);
 }
 function REN_notaDe(x){ return (REN_cache&&REN_cache.notas&&REN_cache.notas[REN_key(x)])||''; }
@@ -19816,6 +19814,18 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.28</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">O EDITAR CONTA voltou a ser só o formulário. O histórico de pagamentos ficou aparecendo nos dois lugares quando a ficha nasceu na 1.300.26 &mdash; agora ele vive só na ficha, e o EDITAR serve para corrigir credor, descrição, valor e vencimento</div>
+      <div class="cl-item">O DAR BAIXA também saiu do formulário: quem paga passa pela ficha, que é a porta do card. Ali o SALVAR virou a ação principal, e continua acendendo só quando há mudança</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.27</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">Uma conta podia receber mais do que devia e não fechar. A soma dos pagamentos vinha do cache da tela, que só se atualiza depois &mdash; dois toques seguidos no confirmar gravavam dois pagamentos e os dois liam zero pago. A conta de R$ 25.000,00 ficou com R$ 46.000,00 lançados e ainda em aberto. Agora a decisão de fechar lê o que está gravado de verdade</div>
+      <div class="cl-item">E o botão de confirmar trava enquanto grava, para o toque repetido não lançar o mesmo pagamento duas vezes</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.26</span><span class="cl-ver-date">14/09/2026</span></div>
