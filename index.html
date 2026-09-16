@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.23</title>
+<title>VB - v1.300.24</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11714,6 +11714,24 @@ function REN_crExcluir(btn, id){
     REN_abrir();
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
+/* Espelho de REN_pagsDe/REN_falta do lado das entradas: quem ja pagou, quanto falta, e se a
+   conta esta pela metade. Conta antiga, paga antes desta versao, nao tem linha de pagamento --
+   o valor_pago dela vale como pagamento unico, como as baixas antigas do A RECEBER. */
+function REN_cpPagsDe(c){
+  if(!c || !REN_cache) return [];
+  return (REN_cache.cpPag&&REN_cache.cpPag[String(c.id)])||[];
+}
+function REN_cpPagoTot(c){
+  var L=REN_cpPagsDe(c), s=0;
+  L.forEach(function(pg){ s+=Number(pg.valor)||0; });
+  if(!L.length && c && c.pago_em && c.valor_pago!=null) s=Number(c.valor_pago)||0;
+  return Math.round(s*100)/100;
+}
+function REN_cpFalta(c){
+  var f=Math.round(((Number(c&&c.valor)||0)-REN_cpPagoTot(c))*100)/100;
+  return f>0.005?f:0;
+}
+function REN_cpParcial(c){ return !!(c && !c.pago_em && REN_cpPagoTot(c)>0); }
 function REN_cpDe(id){
   var achou=null; if(!id) return null;
   ((REN_cache&&REN_cache.cp)||[]).forEach(function(y){ if(String(y.id)===String(id)) achou=y; });
@@ -11769,7 +11787,8 @@ function REN_cpCard(c){
   var dVen=dtv?(dtv.slice(8,10)+'/'+dtv.slice(5,7)):'';
   var dt=pago?((dVen&&dVen!==dPag)?(dVen+' \u2192 '+dPag):dPag)
              :((dtv===hoje)?'<b>HOJE</b>':REN_dataCard(dtv));
-  var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(Number(c.valor)||0);
+  var _pgPar=REN_cpPagoTot(c);
+  var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(REN_cpParcial(c)?REN_cpFalta(c):(Number(c.valor)||0));
   var tit=String(c.credor||c.descricao||'\u2014');
   var sub=(c.credor&&c.descricao)?String(c.descricao):'';
   var cor=atr?'var(--red)':(pago?'var(--mu)':'var(--tx)');
@@ -11781,6 +11800,7 @@ function REN_cpCard(c){
     +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(tit))+'</span>'+selo+'</span>'
     +'<span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+cor+';">'+HIST_fmtMoeda(val)+'</span> \u00b7 <span style="font-weight:600;color:'+(atr?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>';
   if(sub) s+='<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(sub)+'</div>';
+  if(REN_cpParcial(c)) s+='<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(_pgPar)+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_cpFalta(c))+'</div>';
   if(c.nota) s+='<div style="font-size:10px;color:var(--tx2);font-weight:600;margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(c.nota)+'</div>';
   if(pago&&c.nota_baixa) s+='<div style="font-size:9px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+CLIP_esc(c.nota_baixa)+'</div>';
   s+='</div>';
@@ -11795,8 +11815,8 @@ function REN_cpLista(){
   var pagas=REN_cpFiltra(todas.filter(function(c){ return !!c.pago_em; }));
   var atr=abertas.filter(function(c){ return String(c.venc||'')<hoje; });
   var venc=abertas.filter(function(c){ return String(c.venc||'')>=hoje; });
-  var tot=0; abertas.forEach(function(c){ tot+=Number(c.valor)||0; });
-  var tAtr=0; atr.forEach(function(c){ tAtr+=Number(c.valor)||0; });
+  var tot=0; abertas.forEach(function(c){ tot+=REN_cpFalta(c); });
+  var tAtr=0; atr.forEach(function(c){ tAtr+=REN_cpFalta(c); });
   function sec(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   var hh='';
   if(REN_cache.cpErro) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Contas a pagar indispon\u00edveis: '+CLIP_esc(REN_cache.cpErro)+'</div>';
@@ -11915,6 +11935,25 @@ function REN_cpSheet(id){
        CREDOR -- que aqui e a conta de onde foi debitado. Marcado em origem_tab, coluna que ja
        existe, entao nao precisa de SQL. */
     +'<div id="rencp-juros" onclick="REN_cpJurosToggle()" style="margin:10px 0 0;padding:9px 12px;border:0.5px dashed var(--ln0);border-radius:12px;text-align:center;font-size:10px;letter-spacing:2px;font-weight:600;cursor:pointer;color:var(--mu2);">JUROS DA CONTA</div>'
+    /* Os pagamentos ficam a vista, cada um com data e nota, e da para apagar um. Era isso que
+       faltava: com uma nota so, dois pix em dias diferentes viravam uma linha. */
+    +(function(){
+       var L=c?REN_cpPagsDe(c):[]; if(!L.length) return '';
+       var t='<div style="'+RT+'margin-top:10px;">PAGAMENTOS</div><div style="border:0.5px solid var(--ln3);border-radius:12px;padding:6px 10px;background:var(--sf2);">';
+       L.forEach(function(pg){
+         var d=String(pg.data||'').slice(0,10).split('-').reverse().join('/');
+         t+='<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:11px;">'
+           +'<span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span>'
+           +'<span style="color:var(--mu);white-space:nowrap;">'+d+'</span>'
+           +'<span style="flex:1;min-width:0;color:var(--so);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(pg.nota||'')+'</span>'
+           +'<span onclick="REN_cpPagDel(\''+String(c.id)+'\',\''+String(pg.id)+'\')" style="flex:none;color:var(--mu);cursor:pointer;padding:0 4px;">\u00d7</span>'
+           +'</div>';
+       });
+       t+='<div style="border-top:0.5px solid var(--ln3);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;">'
+         +'<span>'+HIST_fmtMoeda(REN_cpPagoTot(c))+'</span>'
+         +'<span style="color:'+(c.pago_em?'var(--mu)':'var(--red)')+';">'+(c.pago_em?'QUITADA':('RESTA '+HIST_fmtMoeda(REN_cpFalta(c))))+'</span></div></div>';
+       return t;
+     })()
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     /* a acao que traz voce aqui e a baixa, como na ficha da parcela: ela e a preta e a primeira.
@@ -12059,22 +12098,53 @@ function REN_cpExcluir(btn, id){
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
+/* Mesma decisao do check do A RECEBER: ele abre a folha em vez de gravar. Com pagamento parcial
+   a conta quase nunca sai pelo valor cheio, e o atalho que gravava tudo de uma vez so servia
+   para o caso raro. */
 function REN_cpQuick(btn, id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
-  if(!VB_podeExec(btn)){ VB_toast('Toque de novo para marcar como paga.'); btn.dataset.armed='1'; btn.style.background='var(--acc)'; btn.style.color='var(--acc-tx)'; btn.style.borderColor='var(--acc)'; setTimeout(function(){ if(btn){ VB_desarma(btn); } },2200); return; }
-  var c=REN_cpDe(id); if(!c) return;
-  REN_cpGravaPag(c, Number(c.valor)||0, REN_hojeISO(), null);
+  REN_cpBaixaSheet(id);
 }
+/* Cada pagamento vira uma linha. A conta so fecha quando a soma alcanca o valor -- e a data da
+   baixa e a do ultimo pagamento, nao a do dia em que VB digitou, pela mesma razao do A RECEBER:
+   apagar um parcial antigo e relanca-lo faria a conta viajar no tempo na lista de PAGAS. */
 function REN_cpGravaPag(c, valor, dataISO, nota){
-  /* hoje carrega a hora local (VB_carimbo) para a lista PAGAS ordenar de verdade;
-     data retroativa fica no meio-dia, que e onde a hora e desconhecida */
-  var ts=(dataISO===REN_hojeISO())?VB_carimbo():(dataISO+'T12:00:00.000Z');
-  sb.from('contas_pagar').update({pago_em:ts, valor_pago:Math.round((Number(valor)||0)*100)/100, nota_baixa:(nota||null)}).eq('id', c.id).then(function(res){
+  var v=Math.round((Number(valor)||0)*100)/100;
+  sb.from('conta_pagamentos').insert({conta_id:c.id, valor:v, data:dataISO, nota:(nota||null)}).then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
-    try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
-    ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
-    VB_toast('Conta paga.');
-    REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
+    try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(v)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
+    var total=Math.round((REN_cpPagoTot(c)+v)*100)/100;
+    var alvo=Number(c.valor)||0;
+    if(total < alvo-0.005){
+      ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
+      VB_toast('Pagamento parcial registrado.');
+      REN_abrir(); return;
+    }
+    var dMax=dataISO;
+    REN_cpPagsDe(c).forEach(function(pg){ var d=String(pg.data||'').slice(0,10); if(d && d>dMax) dMax=d; });
+    var ts=(dMax===REN_hojeISO())?VB_carimbo():(dMax+'T12:00:00.000Z');
+    sb.from('contas_pagar').update({pago_em:ts, valor_pago:total, nota_baixa:(nota||null)}).eq('id', c.id).then(function(r2){
+      if(r2.error){ VB_erro(r2.error.message,'Pagamento gravado, mas a conta n\u00e3o fechou.'); return; }
+      ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
+      VB_toast('Conta paga.');
+      REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
+    }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+}
+/* Apaga um pagamento. Se a conta estava fechada, ela reabre com o que sobrou. */
+function REN_cpPagDel(contaId, pagId){
+  var c=REN_cpDe(contaId); if(!c) return;
+  sb.from('conta_pagamentos').delete().eq('id', pagId).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'N\u00e3o apagou.'); return; }
+    var resto=0;
+    REN_cpPagsDe(c).forEach(function(pg){ if(String(pg.id)!==String(pagId)) resto+=Number(pg.valor)||0; });
+    resto=Math.round(resto*100)/100;
+    var fim=function(){ VB_toast('Pagamento apagado.'); REN_abrir(); };
+    if(c.pago_em && resto < (Number(c.valor)||0)-0.005){
+      sb.from('contas_pagar').update({pago_em:null, valor_pago:null, nota_baixa:null}).eq('id', c.id).then(fim).catch(fim);
+    } else if(c.pago_em){
+      sb.from('contas_pagar').update({valor_pago:resto}).eq('id', c.id).then(fim).catch(fim);
+    } else fim();
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
 function REN_cpDesfaz(btn, id){
@@ -12089,14 +12159,18 @@ function REN_cpDesfaz(btn, id){
 }
 function REN_cpBaixaSheet(id){
   var c=REN_cpDe(id); if(!c) return;
+  var _cJa=REN_cpPagoTot(c), _cFalta=REN_cpFalta(c);
   var ov=REN_cpOv('ren-cpb-ov');
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">DAR BAIXA</div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.credor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
+    /* com parcial em aberto o botao nao da baixa nenhuma: lanca mais um pagamento, e a conta so
+       fecha quando a soma alcanca o valor. Mesma regra da folha do A RECEBER. */
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">'+(_cJa>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:'+(_cJa>0?'2px':'12px')+';text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(String(c.credor||c.descricao||'\u2014')))+' \u00b7 vence '+HIST_fmtData(c.venc)+'</div>'
+    +(_cJa>0?('<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-bottom:12px;">PAGO: '+HIST_fmtMoeda(_cJa)+' \u00b7 RESTA: '+HIST_fmtMoeda(_cFalta)+'</div>'):'')
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
-    +'<div><div style="'+RT+'">VALOR PAGO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencpb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
+    +'<div><div style="'+RT+'">VALOR PAGO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencpb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(_cFalta||c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="'+RT+'">DATA DO PAGAMENTO</div><input data-selall id="rencpb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
@@ -12457,7 +12531,8 @@ function REN_abrir(){
     sb.from('parcela_prorroga').select('*').limit(20000),
     sb.from('contas_receber').select('*').limit(20000),
     sb.from('mercadorias').select('id,venda_id').not('venda_id','is',null).limit(20000),
-    sb.from('mercadoria_custos').select('mercadoria_id,descricao,valor,cobrar,data').limit(20000)
+    sb.from('mercadoria_custos').select('mercadoria_id,descricao,valor,cobrar,data').limit(20000),
+    sb.from('conta_pagamentos').select('*').limit(20000)
   ]).then(function(res){
     var semTabela=!!(res[3]&&res[3].error);
     var erroBx=semTabela?String((res[3].error&&res[3].error.message)||''):'';
@@ -12561,6 +12636,17 @@ function REN_abrir(){
     /* contas a pagar: linha digitada, nao derivada. Sem a tabela, a aba avisa e o resto segue. */
     var cpErro=(res[7]&&res[7].error)?String((res[7].error&&res[7].error.message)||''):'';
     var cp=((res[7]&&res[7].data)||[]).slice();
+    /* PAGAMENTO PARCIAL NA SAIDA (v1.300.24). Ate aqui a conta era tudo ou nada: pagar 10 de 25
+       gravava a conta como PAGA por 10 e os 15 restantes sumiam do TOTAL A PAGAR. Agora cada
+       pagamento e uma linha propria, com data e nota -- dois pix em dias diferentes deixam de
+       virar uma nota so. Mesmo desenho do A RECEBER: a conta fica na lista mostrando o que falta
+       e so fecha quando a soma alcanca o valor. */
+    var cpPag={};
+    ((res[10]&&res[10].data)||[]).forEach(function(pg){
+      var k=String(pg.conta_id||''); if(!k) return;
+      (cpPag[k]=cpPag[k]||[]).push(pg);
+    });
+    Object.keys(cpPag).forEach(function(k){ cpPag[k].sort(function(a,b2){ return String(a.data)<String(b2.data)?-1:1; }); });
     cp.sort(function(a,b2){ return String(a.venc||'')<String(b2.venc||'')?-1:1; });
         /* O extra adiantado precisa ser lido AQUI: antes ele saia de MER_rows/MER_gastos, que so
        existem depois de o VB abrir a tela de Estoque. Vindo direto para ENTRADAS a memoria
@@ -12578,7 +12664,7 @@ function REN_abrir(){
         (exNomes[vid]=exNomes[vid]||[]).push(String(g.descricao||'GASTO').toUpperCase());
       });
     })();
-    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro, exVenda:exVenda, exNomes:exNomes};
+    REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpPag:cpPag, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro, exVenda:exVenda, exNomes:exNomes};
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
     /* Vindo do aviso de repasse velho: abre a folha do combinado desta venda direto, na primeira
@@ -19670,6 +19756,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.24</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">As contas a pagar aceitam pagamento parcial. Antes era tudo ou nada: pagar 10 de 25 gravava a conta como PAGA por 10, e os 15 restantes sumiam do TOTAL A PAGAR. Agora a conta fica na lista com PAGO e RESTA, igual ao card do A RECEBER, e só fecha quando a soma alcança o valor</div>
+      <div class="cl-item">Cada pagamento é uma linha com valor, data e nota &mdash; dois pix em dias diferentes deixam de virar uma nota só. A ficha da conta lista todos e deixa apagar um; apagando, a conta reabre com o que sobrou</div>
+      <div class="cl-item">O ✓ do card passou a abrir a folha em vez de marcar como paga de uma vez, como já acontece no A RECEBER. E o TOTAL A PAGAR conta o que falta, não o valor cheio</div>
+      <div class="cl-item">Conta paga antes desta versão não tem linha de pagamento: o valor pago dela vale como pagamento único, do mesmo jeito que as baixas antigas do A RECEBER</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.23</span><span class="cl-ver-date">14/09/2026</span></div>
