@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.24</title>
+<title>VB - v1.300.26</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -11796,7 +11796,7 @@ function REN_cpCard(c){
   /* selo E: conta que nasceu de uma peca do estoque, no lugar onde as entradas tem o V/A */
   var selo=(c.origem_tab==='mercadorias')?GLB_badge('E'):'';
   var s='<div style="background:var(--sf);border:0.5px solid var(--ln'+(pago?'3':'2')+');border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;'+(pago?'opacity:0.75;':'')+'">'
-    +'<div onclick="REN_cpSheet(\'' + id + '\')" style="flex:1;min-width:0;cursor:pointer;">'
+    +'<div onclick="REN_cpFicha(\'' + id + '\')" style="flex:1;min-width:0;cursor:pointer;">'
     +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(tit))+'</span>'+selo+'</span>'
     +'<span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+cor+';">'+HIST_fmtMoeda(val)+'</span> \u00b7 <span style="font-weight:600;color:'+(atr?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>';
   if(sub) s+='<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(sub)+'</div>';
@@ -11910,6 +11910,63 @@ function REN_cpFecharGuard(){
     if(salvar) REN_cpSalvar(REN_cpEditId||'');
     else fecha();
   });
+}
+/* FICHA ANTES DO FORMULARIO (v1.300.26). O card da conta abria direto nos campos editaveis.
+   Fazia sentido quando a conta era so credor, descricao, valor e vencimento -- nao havia o que
+   ver alem do que ja estava no formulario. Deixou de fazer: agora a conta tem historico de
+   pagamentos, e conta com selo E nasceu de uma peca do estoque, nao da digitacao do VB --
+   abrir direto no campo editavel e onde um toque errado estraga.
+   Mesmo desenho do TITULO das entradas: le primeiro, edita se quiser. */
+function REN_cpFicha(id){
+  if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
+  var c=REN_cpDe(id); if(!c){ REN_cpSheet(id); return; }
+  var ov=REN_cpOv('ren-cp-ov');
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:2px;text-align:center;';
+  var VL='font-size:14px;font-weight:700;color:var(--tx);text-align:center;text-transform:uppercase;';
+  var BT='width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;';
+  var ja=REN_cpPagoTot(c), falta=REN_cpFalta(c), pago=!!c.pago_em;
+  var dBR=(c.venc)?String(c.venc).slice(0,10).split('-').reverse().join('/'):'\u2014';
+  function cel(r,v,cor){ return '<div><div style="'+RT+'">'+r+'</div><div style="'+VL+(cor?('color:'+cor+';'):'')+'">'+v+'</div></div>'; }
+  var st=pago?('PAGA \u00b7 '+String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7)):(ja>0?'PARCIAL':(String(c.venc||'')<REN_hojeISO()?'ATRASADA':'EM ABERTO'));
+  var stCor=pago?'var(--mu)':((ja>0||String(c.venc||'')<REN_hojeISO())?'var(--red)':'var(--tx)');
+  var s='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">CONTA</div>'
+    +cel('CREDOR', CLIP_esc(String(c.credor||'\u2014')))
+    +(c.descricao?('<div style="margin-top:8px;">'+cel('DESCRI\u00c7\u00c3O', CLIP_esc(String(c.descricao)))+'</div>'):'')
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px;">'
+    +cel('VALOR', HIST_fmtMoeda(Number(c.valor)||0))
+    +cel('VENCIMENTO', dBR)
+    +cel('STATUS', st, stCor)
+    +'</div>'
+    +((!pago && ja>0)?('<div style="text-align:center;font-size:12px;color:var(--mu2);font-weight:600;margin-top:8px;">PAGO: '+HIST_fmtMoeda(ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</div>'):'')
+    +(c.nota?('<div style="text-align:center;font-size:11px;color:var(--tx2);font-weight:600;margin-top:8px;text-transform:uppercase;">'+CLIP_esc(c.nota)+'</div>'):'')
+    +((String(c.origem_tab||'')==='mercadorias')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">NASCEU DE UMA PE\u00c7A DO ESTOQUE</div>'):'')
+    +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'');
+  var L=REN_cpPagsDe(c);
+  if(L.length){
+    s+='<div style="'+RT+'margin-top:12px;">PAGAMENTOS</div><div style="border:0.5px solid var(--ln3);border-radius:12px;padding:6px 10px;background:var(--sf2);">';
+    L.forEach(function(pg){
+      var d=String(pg.data||'').slice(0,10).split('-').reverse().join('/');
+      s+='<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:11px;">'
+        +'<span style="font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(Number(pg.valor)||0)+'</span>'
+        +'<span style="color:var(--mu);white-space:nowrap;">'+d+'</span>'
+        +'<span style="flex:1;min-width:0;color:var(--so);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(pg.nota||'')+'</span>'
+        +'<span onclick="REN_cpPagDel(\''+String(c.id)+'\',\''+String(pg.id)+'\')" style="flex:none;color:var(--mu);cursor:pointer;padding:0 4px;">\u00d7</span>'
+        +'</div>';
+    });
+    s+='<div style="border-top:0.5px solid var(--ln3);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;">'
+      +'<span>'+HIST_fmtMoeda(ja)+'</span>'
+      +'<span style="color:'+(pago?'var(--mu)':'var(--red)')+';">'+(pago?'QUITADA':('RESTA '+HIST_fmtMoeda(falta)))+'</span></div></div>';
+  }
+  s+=(!pago?('<button onclick="REN_cpBaixaSheet(\''+String(c.id)+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(ja>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</button>'):'')
+    +'<button onclick="REN_cpSheet(\''+String(c.id)+'\')" style="'+BT+(pago?'margin-top:12px;':'')+'">EDITAR</button>'
+    +'<button onclick="REN_cpExcluir(this,\''+String(c.id)+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
+    +'<button onclick="document.getElementById(\'ren-cp-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  ov.innerHTML=s;
+  ov.style.display='flex';
+  /* ficha nao tem campo: nao entra na guarda de alteracoes do formulario */
+  REN_cpEditId='';
 }
 function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
@@ -12642,7 +12699,10 @@ function REN_abrir(){
        virar uma nota so. Mesmo desenho do A RECEBER: a conta fica na lista mostrando o que falta
        e so fecha quando a soma alcanca o valor. */
     var cpPag={};
-    ((res[10]&&res[10].data)||[]).forEach(function(pg){
+    /* res[12] -- conta_pagamentos e a ultima da lista. Contei errado na 1.300.24 e li res[10],
+       que e a consulta de mercadorias: nenhuma linha tem conta_id, entao o mapa nascia vazio,
+       o pagamento gravava e a tela nao mudava nada. */
+    ((res[12]&&res[12].data)||[]).forEach(function(pg){
       var k=String(pg.conta_id||''); if(!k) return;
       (cpPag[k]=cpPag[k]||[]).push(pg);
     });
@@ -19756,6 +19816,17 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.26</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">O card da conta a pagar passou a abrir a ficha, não o formulário. Abrir direto nos campos editáveis fazia sentido quando a conta era só credor, descrição, valor e vencimento &mdash; não havia o que ver além do que já estava ali. Deixou de fazer: a conta agora tem histórico de pagamentos, e a que tem selo E nasceu de uma peça do estoque, não da sua digitação</div>
+      <div class="cl-item">A ficha mostra credor, descrição, valor, vencimento e status; o PAGO e o RESTA; os pagamentos com data e nota; e de onde a conta veio. DAR BAIXA fica em preto, EDITAR abre o formulário de sempre, sem mudança nenhuma nele. Mesmo desenho do TÍTULO das entradas: lê primeiro, edita se quiser</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.25</span><span class="cl-ver-date">14/09/2026</span></div>
+      <div class="cl-item">O pagamento parcial gravava e a tela não mudava nada. A lista de consultas que a tela faz tem treze itens, e eu li a décima primeira em vez da última &mdash; caí na consulta de mercadorias, onde nenhuma linha tem conta, então o mapa de pagamentos nascia vazio</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.24</span><span class="cl-ver-date">14/09/2026</span></div>
