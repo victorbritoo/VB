@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.30</title>
+<title>VB - v1.300.32</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:56px 20px 24px;}
@@ -590,8 +590,8 @@ body{ text-transform:uppercase; }
 <div id="screen-home">
   <div class="card">
 
-    <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:46px;right:18px;font-size:13px;color:var(--mu);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
-    <div onclick="PIN_request('log')" style="position:absolute;top:14px;right:18px;font-size:9px;letter-spacing:1px;color:var(--mu);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.195.3<br>28/07/2026</div>
+    <div id="vb-dark-btn" onclick="VB_darkToggle()" style="position:absolute;top:86px;right:18px;font-size:13px;color:var(--mu);cursor:pointer;padding:2px 6px;text-align:right;font-family:-apple-system,sans-serif;">☾</div>
+    <div onclick="PIN_request('log')" style="position:absolute;top:54px;right:18px;font-size:9px;letter-spacing:1px;color:var(--mu);font-weight:400;font-family:-apple-system,sans-serif;text-align:right;line-height:1.6;cursor:pointer;" id="vb-versao-badge">V: 1.195.3<br>28/07/2026</div>
     <div id="vb-autoteste" style="display:none;margin:10px 0 0;text-align:center;"><button onclick="VB_autotesteDetalhe()" style="padding:7px 14px;border:0.5px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font-size:10px;letter-spacing:2px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;">CONFERÊNCIA DIVERGIU — TOQUE</button></div>
     <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;letter-spacing:1px;color:var(--tx);line-height:1;margin-bottom:8px;">VB</div>
     <hr style="border:none;border-top:0.5px solid var(--ln0);margin-bottom:12px;">
@@ -7526,13 +7526,20 @@ function VEN_codeB32(){ return 'VBVEN2:'+_b32enc(JSON.stringify(VEN_serializar()
 
 function ANT_parseBR(s){ return VB_dinheiroRaw(s); }
 var ANT_fraseAtraso='';
+/* Sem frase de atraso, COMPARTILHAR e GERAR TABELA copiam a legenda curta da antecipacao.
+   Cada linha leva seu par de asteriscos porque o negrito do WhatsApp nao atravessa a quebra.
+   Com atraso, a frase do atraso continua mandando: ela e especifica daquele caso. */
+var ANT_LEGENDA='*Ficaremos nesse cen\u00e1rio.*\n*Confere?*';
 function ANT_copiaFrase(){
-  if(!ANT_fraseAtraso) return;
   try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
+    if(!(navigator.clipboard && navigator.clipboard.writeText)) return;
+    if(ANT_fraseAtraso){
       navigator.clipboard.writeText(ANT_fraseAtraso);
       VB_toast('Frase do atraso copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+      return;
     }
+    navigator.clipboard.writeText(ANT_LEGENDA);
+    VB_toast('Legenda copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
   }catch(e){}
 }
 function ANT_formatBR(n){return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -19882,6 +19889,16 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.32</span><span class="cl-ver-date">17/09/2026</span></div>
+      <div class="cl-item">COMPARTILHAR e GERAR TABELA da Antecipação passaram a copiar a legenda curta (Ficaremos nesse cenário. / Confere?) em negrito do WhatsApp. Havendo frase de atraso, ela continua sendo a copiada</div>
+    </div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.31</span><span class="cl-ver-date">17/09/2026</span></div>
+      <div class="cl-item">Na Home, a versão e a lua desceram junto com o VB: ficaram para trás na 1.300.30 e continuavam dentro da faixa que o iOS desfoca</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.30</span><span class="cl-ver-date">17/09/2026</span></div>
