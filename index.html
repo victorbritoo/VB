@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.28</title>
+<title>VB - v1.300.29</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:16px 20px 24px;}
@@ -313,6 +313,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<div id="vb-topo-ios" aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:4px;background:var(--bg);z-index:50;pointer-events:none;"></div>
 
 <div id="login-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;">
   <form id="login-form" onsubmit="return VB_login(event)" style="width:100%;max-width:340px;text-align:center;">
@@ -11790,7 +11791,7 @@ function REN_cpCard(c){
   var _pgPar=REN_cpPagoTot(c);
   var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(REN_cpParcial(c)?REN_cpFalta(c):(Number(c.valor)||0));
   var tit=String(c.credor||c.descricao||'\u2014');
-  var sub=(c.credor&&c.descricao)?String(c.descricao):'';
+  var sub=(c.credor&&c.descricao)?REN_rotCurto(c.descricao):'';
   var cor=atr?'var(--red)':(pago?'var(--mu)':'var(--tx)');
   var id=String(c.id);
   /* selo E: conta que nasceu de uma peca do estoque, no lugar onde as entradas tem o V/A */
@@ -11902,6 +11903,16 @@ function REN_cpDirty(){
   b.style.cursor=ok?'pointer':'not-allowed';
   b.style.pointerEvents=ok?'':'none';
 }
+/* VOLTAR do EDITAR: folha aberta a partir da ficha volta para a ficha (padrao das entradas).
+   Com alteracao, passa pelo mesmo dialogo; DESCARTAR tambem volta para a ficha. */
+function REN_cpVoltarGuard(id){
+  function volta(){ REN_cpFicha(id); }
+  if(REN_cpForm===null || REN_cpEstado()===REN_cpForm){ volta(); return; }
+  VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
+    if(salvar) REN_cpSalvar(REN_cpEditId||id);
+    else volta();
+  });
+}
 function REN_cpFecharGuard(){
   function fecha(){ var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none'; }
   if(REN_cpForm===null || REN_cpEstado()===REN_cpForm){ fecha(); return; }
@@ -11927,12 +11938,12 @@ function REN_cpFicha(id){
   var ja=REN_cpPagoTot(c), falta=REN_cpFalta(c), pago=!!c.pago_em;
   var dBR=(c.venc)?String(c.venc).slice(0,10).split('-').reverse().join('/'):'\u2014';
   function cel(r,v,cor){ return '<div><div style="'+RT+'">'+r+'</div><div style="'+VL+(cor?('color:'+cor+';'):'')+'">'+v+'</div></div>'; }
-  var st=pago?('PAGA \u00b7 '+String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7)):(ja>0?'PARCIAL':(String(c.venc||'')<REN_hojeISO()?'ATRASADA':'EM ABERTO'));
-  var stCor=pago?'var(--mu)':((ja>0||String(c.venc||'')<REN_hojeISO())?'var(--red)':'var(--tx)');
+  var st=pago?('PAGA \u00b7 '+String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7)):(ja>0?'PARCIAL':(String(c.venc||'')<REN_hojeISO()?'ATRASADA':(String(c.venc||'').slice(0,10)===REN_hojeISO()?'VENCE HOJE':'A VENCER')));
+  var stCor=pago?'var(--mu)':((ja>0||String(c.venc||'').slice(0,10)<=REN_hojeISO())?'var(--red)':'var(--tx)');
   var s='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">CONTA</div>'
     +cel('CREDOR', CLIP_esc(String(c.credor||'\u2014')))
-    +(c.descricao?('<div style="margin-top:8px;">'+cel('DESCRI\u00c7\u00c3O', CLIP_esc(String(c.descricao)))+'</div>'):'')
+    +(REN_rotCurto(c.descricao)?('<div style="margin-top:8px;">'+cel('DESCRI\u00c7\u00c3O', CLIP_esc(REN_rotCurto(c.descricao)))+'</div>'):'')
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px;">'
     +cel('VALOR', HIST_fmtMoeda(Number(c.valor)||0))
     +cel('VENCIMENTO', dBR)
@@ -11940,7 +11951,6 @@ function REN_cpFicha(id){
     +'</div>'
     +((!pago && ja>0)?('<div style="text-align:center;font-size:12px;color:var(--mu2);font-weight:600;margin-top:8px;">PAGO: '+HIST_fmtMoeda(ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</div>'):'')
     +(c.nota?('<div style="text-align:center;font-size:11px;color:var(--tx2);font-weight:600;margin-top:8px;text-transform:uppercase;">'+CLIP_esc(c.nota)+'</div>'):'')
-    +((String(c.origem_tab||'')==='mercadorias')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">NASCEU DE UMA PE\u00c7A DO ESTOQUE</div>'):'')
     +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'');
   var L=REN_cpPagsDe(c);
   if(L.length){
@@ -11960,13 +11970,17 @@ function REN_cpFicha(id){
   }
   s+=(!pago?('<button onclick="REN_cpBaixaSheet(\''+String(c.id)+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(ja>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</button>'):'')
     +'<button onclick="REN_cpSheet(\''+String(c.id)+'\')" style="'+BT+(pago?'margin-top:12px;':'')+'">EDITAR</button>'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<button onclick="REN_cpExcluir(this,\''+String(c.id)+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
     +'<button onclick="document.getElementById(\'ren-cp-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>'
     +'</div>';
   ov.innerHTML=s;
   ov.style.display='flex';
-  /* ficha nao tem campo: nao entra na guarda de alteracoes do formulario */
-  REN_cpEditId='';
+  /* ficha nao tem campo: nao entra na guarda de alteracoes do formulario.
+     REN_cpForm zera junto: sem isso, voltar do EDITAR deixava a foto do formulario viva e um
+     toque fora da ficha acusava ALTERACOES FEITAS numa tela sem campo. */
+  REN_cpEditId=''; REN_cpForm=null;
 }
 function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
@@ -12000,8 +12014,11 @@ function REN_cpSheet(id){
     /* DAR BAIXA saiu daqui: quem paga passa pela ficha, que e a porta do card. Aqui a acao e
        salvar a correcao, e o REN_cpDirty so acende o botao quando ha mudanca de verdade. */
     +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
-    +(c?('<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'):'')
-    +'<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
+        +'<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
+        +'<button onclick="REN_cpVoltarGuard(\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
+        +'</div>')
+      :('<button onclick="REN_cpFecharGuard()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'))
     +'</div>';
   ov.style.display='flex';
   delete VB_folhaCfg['cp'];   /* pintor proprio: REN_cpDirty. Ver a nota em REN_crAbrir */
@@ -19814,6 +19831,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.29</span><span class="cl-ver-date">17/09/2026</span></div>
+      <div class="cl-item">A ficha da conta a pagar deixou de dizer EM ABERTO para tudo: agora diz A VENCER, VENCE HOJE (em vermelho, como o card) ou ATRASADA, no mesmo padrão das entradas</div>
+      <div class="cl-item">O EDITAR CONTA ganhou VOLTAR, que devolve para a ficha &mdash; com aviso se houver alteração. Conta nova continua com FECHAR. EXCLUIR e FECHAR/VOLTAR passaram a dividir a linha</div>
+      <div class="cl-item">A descrição da conta sai sem o SN no card e na ficha, como já era nas entradas. O EDITAR e a busca continuam com o texto inteiro</div>
+      <div class="cl-item">Saiu a linha NASCEU DE UMA PEÇA DO ESTOQUE: o selo E e a descrição já dizem isso</div>
+      <div class="cl-item">Faixa fixa no topo da tela para o iOS 26 deixar de desfocar o VB e a versão</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.28</span><span class="cl-ver-date">14/09/2026</span></div>
