@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.33</title>
+<title>VB - v1.300.34</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -10106,7 +10106,25 @@ function GLB_dataOp(tipo, r){
 function GLB_badge(letra){
   return ' <span style="display:inline-block;vertical-align:middle;font-size:8px;letter-spacing:0;font-weight:700;color:var(--acc-tx);background:var(--acc);border-radius:6px;padding:2px 6px;margin-left:2px;white-space:nowrap;text-align:center;">'+letra+'</span>';
 }
-function GLB_dica(tipo, r){ // devolve {b:badge, n:nome} — badge colado no título, nome em cinza
+/* SN do item: coluna sn quando existe, senao o pedaco depois de SN: na descricao.
+   Serve para mostrar o SN so quando foi ELE que o VB digitou na busca. */
+function GLB_sn(r){
+  var s=String(r.sn||'').trim();
+  if(!s){ var m=String(r.descricao||r.nome||'').match(/SN[:\s]*([A-Za-z0-9._-]+)/i); if(m) s=m[1]; }
+  return String(s||'').trim();
+}
+function GLB_dica(tipo, r, termo){ // devolve {b:badge, n:nome} — badge colado no titulo, nome em cinza
+  var _base=GLB_dicaBase(tipo, r);
+  /* Buscou pelo SN, ve o SN. Buscou pelo modelo, ve so o dono: a linha continua de uma linha so. */
+  if(tipo==='mer'||tipo==='ven'||tipo==='fin'){
+    var _sn=GLB_sn(r), _t=GLB_norm(termo||'');
+    if(_sn && _t.length>=2 && GLB_norm(_sn).indexOf(_t)>=0){
+      return { b:(_base&&_base.b)||'', n:'SN '+_sn+((_base&&_base.n)?(' \u00b7 '+_base.n):'') };
+    }
+  }
+  return _base;
+}
+function GLB_dicaBase(tipo, r){
   try{
     /* caixa alta na exibicao: o cadastro tem 'Fortaleza' e 'FORTALEZA' gravados, e a diferenca
        aparecia na lista como se fosse outra coisa */
@@ -10193,7 +10211,19 @@ function GLB_buscar(){
       GLB_cache[key]=it.r;
       html+='<button data-gt="'+it.tipo+'" data-gi="'+String(it.r.id)+'" onclick="GLB_ir(\''+it.tipo+'\',\''+String(it.r.id)+'\')" style="display:block;width:100%;text-align:left;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:5px;cursor:pointer;font-family:-apple-system,sans-serif;">'
         +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'
-          +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc((it.tipo==='cli')?it.nome:VB_nomeCurto(it.nome))+(function(){ var d=GLB_dica(it.tipo, it.r); if(!d) return ''; return (d.b?GLB_badge(d.b):'')+'<span style="font-size:11px;color:var(--so);font-weight:600;"> \u00b7 '+HIST_esc(d.n)+'</span>'; })()+'</span>'
+          +(function(){
+            /* O titulo de relogio nao passa mais pelo encurtador de nome de gente: aquele devolve
+               primeira + ultima palavra e comia o miolo do modelo (DJ 0R1L9329). Nome de gente
+               segue encurtado. Quem cede espaco e o cinza, nunca a descricao: flex-shrink alto. */
+            var _tit=(it.tipo==='cli')?it.nome
+              :((it.tipo==='mer'||it.tipo==='ven'||it.tipo==='fin')?(REN_rotCurto(it.nome)||it.nome):VB_nomeCurto(it.nome));
+            var d=GLB_dica(it.tipo, it.r, termo);
+            return '<span style="display:flex;align-items:baseline;min-width:0;flex:1;">'
+              +'<span style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;">'+HIST_esc(_tit)+'</span>'
+              +((d&&d.b)?('<span style="flex:none;">'+GLB_badge(d.b)+'</span>'):'')
+              +((d&&d.n)?('<span style="font-size:11px;color:var(--so);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:50 1 auto;min-width:0;"> \u00b7 '+HIST_esc(d.n)+'</span>'):'')
+            +'</span>';
+          })()
           +'<span style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+it.rot+'</span>'
         +'</div>'
       +'</button>';
@@ -19889,6 +19919,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.34</span><span class="cl-ver-date">17/09/2026</span></div>
+      <div class="cl-item">Busca geral: o relógio deixou de aparecer como "DJ 0R1L9329". O título de estoque, venda e financiamento agora traz a descrição inteira sem o SN, e quem corta com reticências é o nome cinza do sócio ou do cliente, nunca a peça</div>
+      <div class="cl-item">Busca geral: procurando pelo SN, o SN aparece no cinza do resultado. Procurando pelo modelo, o cinza fica só com o dono — a linha continua com a mesma altura</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.33</span><span class="cl-ver-date">17/09/2026</span></div>
