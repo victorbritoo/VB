@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.35</title>
+<title>VB - v1.300.36</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11246,7 +11246,11 @@ function REN_coleta(ant, fin, ven){
     if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return; // atrasada: já virou cobrança, fora do cronograma
     var cli=String(r.cliente||r.nome||'\u2014').toUpperCase();
     var ops=[];
-    (r.titulos||[]).forEach(function(t,ix){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) ops.push({venc:d, valor:v, cliente:cli, rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), tab:'ant', opId:String(r.id), idx:ix}); });
+    /* Carimbo MM/AA da data da operacao: cliente que antecipa varias vezes com o mesmo nome
+       (OP GOST LINCOLN) tinha operacoes identicas na lista e na foto de parcelas a vencer.
+       Mes e ano bastam para quem opera a cada dois meses e nao repetem virando o ano. */
+    var _rotAnt=(r.nome||'ANTECIPA\u00c7\u00c3O')+REN_opCarimbo(r.data_operacao||r.created_at);
+    (r.titulos||[]).forEach(function(t,ix){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) ops.push({venc:d, valor:v, cliente:cli, rot:_rotAnt, tab:'ant', opId:String(r.id), idx:ix}); });
     fecha(ops);
   });
   (fin||[]).forEach(function(r){
@@ -11946,6 +11950,11 @@ function REN_cpDirty(){
    origem. Irmas sao as que dividem origem_tab/origem_id; conta digitada sem origem cai em
    credor + descricao -- a mesma regra do documento RECEBIMENTOS. Juros da conta nunca agrupa.
    Conta PAGA continua contando: a 3a segue 03 DE 03 depois que as outras fecham. */
+function REN_opCarimbo(data){
+  var s=String(data||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  return ' \u00b7 OP '+s.slice(5,7)+'/'+s.slice(2,4);
+}
 function REN_cpGrupo(c){
   if(c.origem_id) return 'O|'+String(c.origem_tab||'')+'|'+String(c.origem_id);
   var a=VB_cliNorm(c.credor||''), b=VB_cliNorm(c.descricao||'');
@@ -19919,6 +19928,11 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.36</span><span class="cl-ver-date">17/09/2026</span></div>
+      <div class="cl-item">Parcela de antecipação passou a levar o carimbo do mês da operação: "OP GOST LINCOLN · OP 09/26". Vale nas ENTRADAS e na foto PARCELAS A VENCER, e separa as operações do mesmo cliente que têm o mesmo nome</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.35</span><span class="cl-ver-date">17/09/2026</span></div>
