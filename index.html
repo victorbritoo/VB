@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.38</title>
+<title>VB - v1.300.39</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -4667,6 +4667,59 @@ function VB_tirAntReg(r){
   });
   if(!tem) return null;
   return VB_tirMensal(cf);
+}
+/* TIR do conjunto de antecipacoes de um cliente (panorama). Media de medias mentiria:
+   operacoes de tamanhos e prazos diferentes pesam diferente. Aqui os fluxos de todas as
+   operacoes entram numa linha do tempo unica, com origem na operacao mais antiga, e a TIR
+   sai do fluxo inteiro. Mesma regua da operacao isolada: data REAL do vencimento, sem o
+   +4 da cobranca. Atrasada (liquido > bruto) fica de fora: nao ha rendimento a medir. */
+function VB_tirAntConj(rows){
+  var base=null, itens=[];
+  (rows||[]).forEach(function(r){
+    if(!r) return;
+    var liq=Number(r.valor_liquido)||0, bru=Number(r.valor_bruto)||0;
+    if(!(liq>0) || liq>bru) return;
+    var p=String(r.data_operacao||'').split('T')[0].split('-');
+    if(p.length!==3) return;
+    var d0=new Date(+p[0],+p[1]-1,+p[2]);
+    if(isNaN(d0.getTime())) return;
+    var tit=[];
+    (r.titulos||[]).forEach(function(t){
+      var v=VB_dinheiroRaw(t.v||t.valor||'');
+      var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t.d||t.data||'').trim());
+      if(isNaN(v)||!(v>0)||!m) return;
+      var dt=new Date(+m[3],+m[2]-1,+m[1]);
+      var dias=(dt-d0)/86400000; if(!isFinite(dias)) return; if(dias<0) dias=0;
+      tit.push({dias:dias, v:(((t.tp||t.tipo||'')==='pg')?-1:1)*v});
+    });
+    if(!tit.length) return;
+    itens.push({d0:d0, liq:liq, tit:tit});
+    if(base===null || d0<base) base=d0;
+  });
+  if(!itens.length || !base) return null;
+  var cf=[];
+  itens.forEach(function(it){
+    var off=(it.d0-base)/86400000; if(!isFinite(off)||off<0) off=0;
+    cf.push({d:off, v:-it.liq});
+    it.tit.forEach(function(t){ cf.push({d:off+t.dias, v:t.v}); });
+  });
+  return VB_tirMensal(cf);
+}
+/* Prazo medio do conjunto: ponderado pelo bruto de cada operacao, a mesma conta do
+   relatorio completo. Operacao sem prazo_medio gravado fica fora dos dois lados. */
+function VB_przAntConj(rows){
+  var soma=0, peso=0;
+  (rows||[]).forEach(function(r){
+    var pm=Number(r&&r.prazo_medio), b=Number(r&&r.valor_bruto)||0;
+    if(!isFinite(pm)||pm<=0||!(b>0)) return;
+    soma+=pm*b; peso+=b;
+  });
+  return peso>0?(soma/peso):null;
+}
+function VB_przTxt(d){
+  d=Number(d);
+  if(!isFinite(d)||d<=0) return null;
+  return d.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' d';
 }
 function VB_termometro(lucro, capital, meses){
   lucro=Number(lucro); capital=Number(capital); meses=Number(meses);
@@ -10687,7 +10740,7 @@ function CLIP_abrir(nome, cliId, voltarK){
   ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--mu);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
   Promise.all([
-    sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao').limit(10000),
+    sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao,prazo_medio').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em,valor_recebido').limit(20000),
@@ -10731,7 +10784,8 @@ function CLIP_abrir(nome, cliId, voltarK){
     antOk.forEach(function(r){ /* antAtr ja aparece sozinho no bloco EM COBRANCA */
       var b2=Number(r.valor_bruto)||0; antBruto+=b2;
       var l=HIST_lucroRow('ant', r)||0; antLuc+=l;
-      antL.push({rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), data:String(r.data_operacao||r.created_at||'').slice(0,10), bruto:b2, liq:Number(r.valor_liquido)||0, luc:l});
+      antL.push({rot:(r.nome||'ANTECIPA\u00c7\u00c3O'), data:String(r.data_operacao||r.created_at||'').slice(0,10), bruto:b2, liq:Number(r.valor_liquido)||0, luc:l,
+        prz:VB_przTxt(r.prazo_medio), tir:VB_tirTxt(VB_tirAntReg(r))});
     });
     ven.forEach(function(v){
       var t=Number(v.valor_total)||0; venTot+=t;
@@ -10805,7 +10859,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     /* Sem percentual: nao existe denominador honesto para as tres formas. Em peca propria a base
        e o seu custo, em sociedade e a sua parte dele, em consignacao e zero. O giro em dias, sim,
        vale igual nos tres e diz se o dinheiro foi rapido. */
-    function lnLuc(esq, dir, luc, dias, lucT){
+    function lnLuc(esq, dir, luc, dias, lucT, extra){
       /* Com socio, LUCRO sozinho e ambiguo: o valor mostrado sempre foi a parte do VB. */
       var _dif=(lucT!=null && luc!=null && Math.abs(lucT-luc)>=0.005);
       return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">'
@@ -10813,7 +10867,8 @@ function CLIP_abrir(nome, cliId, voltarK){
         +'<span style="color:var(--tx);font-weight:600;white-space:nowrap;">'+dir+'</span></div>'
         +(luc!=null?('<div class="vb-det" style="text-align:right;">'+(_dif?'LUCRO VB':'LUCRO')+': '+HIST_fmtMoeda(luc)
             +(_dif?(' \u00b7 TOTAL: '+HIST_fmtMoeda(lucT)):'')
-            +((dias!=null&&dias>=0)?(' \u00b7 '+dias+' DIA'+(dias===1?'':'S')):'')+'</div>'):'');
+            +((dias!=null&&dias>=0)?(' \u00b7 '+dias+' DIA'+(dias===1?'':'S')):'')
+            +(extra?(' \u00b7 '+extra):'')+'</div>'):'');
     }
     // RESULTADO
     /* a quebra so diz algo quando existem as duas verticais; com uma so ela repete o total */
@@ -10849,8 +10904,15 @@ function CLIP_abrir(nome, cliId, voltarK){
     if(antL.length){
       var innA='';
       antL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
-      antL.forEach(function(a2){ innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc, null); });
-      innA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Antecipado</b>', HIST_fmtMoeda(antBruto))+ln('<b>Lucro</b>', HIST_fmtMoeda(antLuc));
+      antL.forEach(function(a2){
+        /* prazo e rendimento por operacao: o lucro sozinho nao diz se valeu, porque nao carrega o tempo */
+        var _ex=[a2.prz, a2.tir].filter(Boolean).join(' \u00b7 ').toUpperCase();
+        innA+=lnLuc((a2.data?fdt(a2.data)+' \u00b7 ':'')+CLIP_esc(a2.rot), HIST_fmtMoeda(a2.bruto), a2.luc, null, null, _ex);
+      });
+      var _przC=VB_przTxt(VB_przAntConj(antOk)), _tirC=VB_tirTxt(VB_tirAntConj(antOk));
+      innA+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Antecipado</b>', HIST_fmtMoeda(antBruto))+ln('<b>Lucro</b>', HIST_fmtMoeda(antLuc))
+        +(_przC?ln('Prazo m\u00e9dio', _przC):'')
+        +(_tirC?ln('Rendimento', _tirC):'');
       hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA, HIST_fmtMoeda(antBruto), antL.length);
     }
     // EM ABERTO
@@ -19928,6 +19990,12 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.39</span><span class="cl-ver-date">18/09/2026</span></div>
+      <div class="cl-item">Panorama do cliente: cada antecipação passou a mostrar prazo médio e rendimento ao lado do lucro, e o bloco ganhou o consolidado dos dois</div>
+      <div class="cl-item">O rendimento é TIR sobre a data real do vencimento, a mesma régua do Histórico — o +4 da cobrança continua fora da medição. O consolidado junta os fluxos de todas as operações numa linha do tempo só, em vez de tirar média de médias. Prazo médio ponderado pelo bruto, e operação atrasada fica fora dos dois</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.38</span><span class="cl-ver-date">18/09/2026</span></div>
