@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.39</title>
+<title>VB - v1.300.40</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11983,7 +11983,7 @@ function REN_cpEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
   var pp=[];
   (REN_cpParc||[]).forEach(function(_,i){ pp.push(g('rencp-pv-'+i)+'@'+g('rencp-pd-'+i)); });
-  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),(REN_cpJuros?'J':''),pp.join(';')].join('\u241f');
+  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),(REN_cpJuros?'J':''),g('rencp-socio'),g('rencp-socval'),pp.join(';')].join('\u241f');
 }
 function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
@@ -12058,6 +12058,51 @@ function REN_cpFecharGuard(){
    pagamentos, e conta com selo E nasceu de uma peca do estoque, nao da digitacao do VB --
    abrir direto no campo editavel e onde um toque errado estraga.
    Mesmo desenho do TITULO das entradas: le primeiro, edita se quiser. */
+/* DIVISAO DA CONTA COM SOCIO (v1.300.40). A conta a pagar sempre nasceu 100% do VB: peca com
+   socio de 50% lancava o valor CHEIO e o A PAGAR ficava inflado na parte que e do outro.
+   A divisao e EXPLICITA e opcional -- em branco, a conta segue 100% dele, como sempre foi.
+   Os totais (TOTAL A PAGAR, card da Home, Fechamento) continuam no valor CHEIO de proposito:
+   e o que de fato sai da conta bancaria, e mexer neles mudaria todo numero que o VB ja conhece.
+   A divisao e LEITURA na ficha. Quem cobra a parte do socio e outra conversa (conta a receber). */
+function REN_cpParteVB(c){
+  var v=Number(c&&c.valor)||0, s=Number(c&&c.socio_valor)||0;
+  if(!(s>0)) return null;
+  return Math.round((v-s)*100)/100;
+}
+var REN_cpSug=null;
+function REN_cpSugAplica(){
+  if(!REN_cpSug) return;
+  var n=document.getElementById('rencp-socio'), v=document.getElementById('rencp-socval');
+  if(n) n.value=REN_cpSug.nome;
+  if(v) v.value=Number(REN_cpSug.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  REN_cpSug=null;
+  var el=document.getElementById('rencp-socsug'); if(el) el.innerHTML='';
+  REN_cpDirty();
+}
+/* Sugere, nunca preenche sozinho: regra que mexe em dinheiro nao age calada. A proporcao vem da
+   peca (valor_socio / custo) aplicada ao valor DESTA parcela. Consignada nao entra -- ela nem
+   gera conta a pagar, o repasse dela vive em A REPASSAR. */
+function REN_cpSugPinta(c){
+  REN_cpSug=null;
+  var el0=document.getElementById('rencp-socsug'); if(el0) el0.innerHTML='';
+  if(!c || String(c.origem_tab||'')!=='mercadorias' || !c.origem_id) return;
+  if(String(c.socio_nome||'').trim()) return;   /* ja dividida: nao sugerir por cima */
+  try{
+    sb.from('mercadorias').select('socio,valor_socio,custo').eq('id', String(c.origem_id)).limit(1).then(function(res){
+      var m=(((res&&res.data)||[])[0])||null; if(!m) return;
+      var soc=String(m.socio||'').trim(), vs=Number(m.valor_socio)||0, cu=Number(m.custo)||0;
+      if(!soc || !(vs>0) || !(cu>0)) return;
+      try{ if(VB_consigVen(soc, vs, cu, null)) return; }catch(e){}
+      var parte=Math.round(((Number(c.valor)||0)*(vs/cu))*100)/100;
+      if(!(parte>0)) return;
+      if(String(REN_cpEditId||'')!==String(c.id)) return;   /* folha ja mudou de conta */
+      REN_cpSug={nome:soc.toUpperCase(), valor:parte};
+      var el=document.getElementById('rencp-socsug'); if(!el) return;
+      el.innerHTML='<span onclick="REN_cpSugAplica()" style="cursor:pointer;text-decoration:underline;">A PE\u00c7A TEM '
+        +CLIP_esc(VB_nomeCurto(soc))+' COM '+Math.round(vs/cu*100)+'% \u00b7 USAR '+HIST_fmtMoeda(parte)+'</span>';
+    }).catch(function(){});
+  }catch(e){}
+}
 function REN_cpFicha(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
   var c=REN_cpDe(id); if(!c){ REN_cpSheet(id); return; }
@@ -12089,7 +12134,13 @@ function REN_cpFicha(id){
         +'</div>'))
     +((!pago && ja>0)?('<div style="text-align:center;font-size:12px;color:var(--mu2);font-weight:600;margin-top:8px;">PAGO: '+HIST_fmtMoeda(ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</div>'):'')
     +(c.nota?('<div style="text-align:center;font-size:11px;color:var(--tx2);font-weight:600;margin-top:8px;text-transform:uppercase;">'+CLIP_esc(c.nota)+'</div>'):'')
-    +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'');
+    +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'')
+    +(function(){
+        /* leitura, nunca deducao: o valor da conta continua sendo o que sai da conta bancaria */
+        var _pv=REN_cpParteVB(c); if(_pv===null) return '';
+        return '<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-top:8px;text-transform:uppercase;">SUA PARTE: '
+          +HIST_fmtMoeda(_pv)+' \u00b7 '+CLIP_esc(VB_nomeCurto(String(c.socio_nome||'')))+': '+HIST_fmtMoeda(Number(c.socio_valor)||0)+'</div>';
+      })();
   /* PARCELAS DA COMPRA: mesma linha do tempo da ficha das entradas, colunas de largura fixa */
   if(_nmF){
     var _NUM='font-variant-numeric:tabular-nums;';
@@ -12145,6 +12196,7 @@ function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }
   var c=REN_cpDe(id);
   var ov=REN_cpOv('ren-cp-ov');
+  var svBR=(c&&Number(c.socio_valor)>0)?Number(c.socio_valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
   var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
   var vBR=c?Number(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
@@ -12170,6 +12222,13 @@ function REN_cpSheet(id){
        EDITAR nascer comprido. */
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
+    /* DIVISAO: opcional e so na edicao, como VALOR e VENCIMENTO. Em branco, conta 100% do VB. */
+    +(c?('<div style="'+RT+'margin-top:10px;">DIVIS\u00c3O COM S\u00d3CIO</div>'
+      +'<div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px;">'
+      +'<input id="rencp-socio" oninput="REN_cpDirty()" placeholder="S\u00d3CIO" value="'+esc(c&&c.socio_nome)+'" style="'+IN+'">'
+      +'<div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-socval" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+svBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div>'
+      +'</div>'
+      +'<div id="rencp-socsug" style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:5px;"></div>'):'')
     /* DAR BAIXA saiu daqui: quem paga passa pela ficha, que e a porta do card. Aqui a acao e
        salvar a correcao, e o REN_cpDirty so acende o botao quando ha mudanca de verdade. */
     +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
@@ -12189,6 +12248,8 @@ function REN_cpSheet(id){
   REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
   REN_cpDirty();
   try{ VB_cliAttach('rencp-credor'); }catch(e){}
+  try{ VB_cliAttach('rencp-socio'); }catch(e){}   /* socio sai da mesma lista de CLIENTES */
+  try{ REN_cpSugPinta(c); }catch(e){}
 }
 /* Uma linha por vencimento -- mesmo padrao da NOVA ENTRADA, que ja resolvia isto na aba ao lado.
    Compra parcelada e o formato padrao do negocio ("50K + 2X DE 50K", "70K + 75K 31/08"): as
@@ -12261,12 +12322,20 @@ function REN_cpSalvar(id){
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
   var nt=((document.getElementById('rencp-nota')||{}).value||'').trim().toUpperCase();
   if(!cr){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
-  var v, d, linhas=null;
+  var v, d, linhas=null, sn='', sv=0;
   if(id){
     v=REN_num((document.getElementById('rencp-valor')||{}).value);
     d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
     if(!(v>0)){ VB_toast('Informe o valor.'); return; }
     if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+    sn=((document.getElementById('rencp-socio')||{}).value||'').trim().toUpperCase();
+    sv=REN_num((document.getElementById('rencp-socval')||{}).value||'');
+    if(!(sv>0)) sv=0;
+    /* nome sem valor (ou o contrario) e dado que nao diz nada -- o app ja aprendeu isso com o
+       socio de valor zerado na peca, que ninguem soube explicar depois. Exige os dois ou nenhum. */
+    if(sn && !(sv>0)){ VB_toast('Diga quanto da conta \u00e9 do s\u00f3cio.'); return; }
+    if(!sn && sv>0){ VB_toast('Diga de quem \u00e9 essa parte.'); return; }
+    if(sv>0 && sv>v+0.005){ VB_toast('A parte do s\u00f3cio n\u00e3o cabe no valor da conta.'); return; }
   } else {
     REN_cpParcLe();
     linhas=[]; var ruim=false;
@@ -12293,7 +12362,8 @@ function REN_cpSalvar(id){
     return o;
   }
   if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; _cpJurosPago(l); });
-  var reg = linhas ? linhas : _cpJurosPago({credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot, pago_em:((REN_cpDe(id)||{}).pago_em||null)});
+  var reg = linhas ? linhas : _cpJurosPago({credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot, pago_em:((REN_cpDe(id)||{}).pago_em||null),
+    socio_nome:(sn||null), socio_valor:(sv>0?sv:null)});
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
@@ -19990,6 +20060,15 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.40</span><span class="cl-ver-date">19/09/2026</span></div>
+      <div class="cl-item">Requer SQL: alter table contas_pagar add column if not exists socio_nome text, add column if not exists socio_valor numeric;</div>
+      <div class="cl-item">A conta a pagar ganhou DIVISÃO COM SÓCIO no EDITAR: peça com sócio de 50% lançava o valor cheio e não havia onde dizer que metade era do outro. Em branco, a conta segue 100% sua, como sempre foi</div>
+      <div class="cl-item">A ficha da conta mostra SUA PARTE e a parte do sócio. É leitura: TOTAL A PAGAR, card da Home e Fechamento continuam no valor cheio, que é o que sai da conta bancária</div>
+      <div class="cl-item">Conta nascida de uma peça com sócio sugere a divisão pela proporção da peça (valor do sócio ÷ custo) aplicada àquela parcela — um toque preenche, nada é preenchido sozinho. Consignada não sugere: ela nem gera conta a pagar</div>
+      <div class="cl-item">Nome e valor andam juntos: um sem o outro é recusado, e a parte do sócio não pode passar o valor da conta</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.39</span><span class="cl-ver-date">18/09/2026</span></div>
