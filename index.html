@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.51</title>
+<title>VB - v1.300.52</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20046,6 +20046,47 @@ function CTR_finCorpo(o){
   [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome: ________________________   CPF: ________________']],{c:1})+V(1)+V(1); });
   return x;
 }
+/* Tabela de parcelas SO do contrato (v1.300.52): compacta, em duas colunas acima de 6 parcelas.
+   A foto do COMPARTILHAR tem uma parcela por linha e, com 24, nao cabia no resto da pagina: ia
+   inteira para a seguinte e deixava meia folha em branco. A foto do WhatsApp nao muda. */
+function CTR_finTabela(r, titulo){
+  var ps=CTR_finParcelas(r); if(!ps.length) return null;
+  var n=ps.length, cols=(n>6)?2:1, rows=Math.ceil(n/cols);
+  var W=560, esc=2, pad=10, gap=16, padV=6, altTit=20, altHead=16, altRow=16, altTot=18, fs=9.5;
+  var H=padV*2+altTit+altHead+rows*altRow+altTot;
+  var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=padV;
+  ctx.fillStyle='#111'; ctx.font='bold '+(fs+2)+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+  ctx.fillText(String(titulo||'').toUpperCase(), W/2, y+altTit*0.68);
+  y+=altTit;
+  var cw=(W-pad*2-gap*(cols-1))/cols;
+  function xs(c){ var x0=pad+c*(cw+gap); return [x0, x0+cw*0.16, x0+cw*0.52, x0+cw*0.84]; }
+  for(var c=0;c<cols;c++){
+    var X=xs(c);
+    ctx.fillStyle='#e8e8e8'; ctx.fillRect(X[0], y, cw, altHead);
+    ctx.fillStyle='#555'; ctx.font='600 '+(fs-0.5)+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Parcela', X[1], y+altHead*0.7); ctx.fillText('Valor', X[2], y+altHead*0.7); ctx.fillText('Data', X[3], y+altHead*0.7);
+  }
+  var y0=y+altHead;
+  ps.forEach(function(p,i){
+    var c=Math.floor(i/rows), k=i%rows, X=xs(c), yy=y0+k*altRow;
+    ctx.fillStyle=(k%2)?'#f5f5f5':'#fff'; ctx.fillRect(X[0], yy, cw, altRow);
+    var cy=yy+altRow*0.7;
+    ctx.textAlign='center';
+    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica, Arial, sans-serif'; ctx.fillText(String(i+1).padStart(2,'0'), X[1], cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica, Arial, sans-serif'; ctx.fillText('R$ '+CTR_fmtV(p.v), X[2], cy);
+    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica, Arial, sans-serif'; ctx.fillText(p.d, X[3], cy);
+  });
+  y=y0+rows*altRow;
+  var tot=ps.reduce(function(a,p){ return a+p.v; },0);
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad, y, W-pad*2, altTot);
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Total · '+n+' parcelas · R$ '+CTR_fmtV(Math.round(tot*100)/100), W/2, y+altTot*0.68);
+  return cv;
+}
 function CTR_finAbrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
   sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path').eq('fin_id',String(r0.id)).order('created_at',{ascending:false}).then(function(res){
@@ -20186,19 +20227,14 @@ function CTR_finGerar(ov){
   }
   var veic={marca:g('ctrv-marca').toUpperCase(), modelo:g('ctrv-modelo').toUpperCase(), placa:g('ctrv-placa').toUpperCase().replace(/[^A-Z0-9]/g,''), chassi:g('ctrv-chassi').toUpperCase(), renavam:g('ctrv-renavam'), cor:g('ctrv-cor').toUpperCase(), ano:g('ctrv-ano')};
   if(!veic.marca || !veic.modelo || !veic.placa || !veic.renavam){ trava('PREENCHA MARCA, MODELO, PLACA E RENAVAM'); return; }
+  if(veic.marca.replace(/[^A-Z0-9]/g,'')===veic.placa){ trava('MARCA IGUAL \u00c0 PLACA'); return; }
   var parcelas=CTR_finParcelas(r);
   if(!parcelas.length){ trava('FINANCIAMENTO SEM PARCELAS'); return; }
   if(falta) falta.style.display='none';
   var total=Math.round(parcelas.reduce(function(a,p){ return a+p.v; },0)*100)/100;
   var btn=ov.querySelector('#ctr-gerar'); btn.textContent='GERANDO...'; btn.disabled=true;
-  /* tabela de parcelas: a mesma foto do COMPARTILHAR do financiamento, capturada em silencio */
-  CTR_canvas=null; CTR_capturando=true;
-  try{
-    if(VB_telaAtual!=='fin'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarFin(r); }
-    FIN_compartilharTabela();
-  }catch(e){}
-  CTR_capturando=false;
-  var cv=CTR_canvas;
+  /* tabela de parcelas propria do contrato: compacta, duas colunas (CTR_finTabela) */
+  var cv=null; try{ cv=CTR_finTabela(r, r.descricao||(veic.modelo+' '+veic.placa)); }catch(e){ cv=null; }
   var fotoP = cv ? new Promise(function(res){ cv.toBlob(function(b){ b.arrayBuffer().then(function(ab){ res(new Uint8Array(ab)); }); },'image/jpeg',0.92); }) : Promise.resolve(null);
   Promise.all([CTR_unzipBytes(CTR_b64bytes(CTR_TPL_B64)), fotoP]).then(function(rr){
     var parts=rr[0], foto=rr[1];
@@ -20527,6 +20563,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.52</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Contrato do financiamento com tabela própria: compacta e em duas colunas (acima de 6 parcelas), cabendo logo abaixo da Cláusula 4ª em vez de pular de página. A foto do COMPARTILHAR não muda. Marca igual à placa é recusada</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.51</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">Contrato do financiamento: veículo só com MARCA, MODELO, PLACA e RENAVAM, os quatro obrigatórios. Saíram chassi, cor e ano (o ano fica no modelo). Legenda da tabela com a descrição em negrito</div>
   </div>
