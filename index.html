@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.46</title>
+<title>VB - v1.300.48</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1993,7 +1993,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
            '<div style="font-size:13px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_esc(c.v)+'</div></div>';
     });
     h += '</div>';
-    var _nBtn = 1 + (temRelogio?1:0) + (temSocioBtn?1:0) + (tab==='ven'?1:0);
+    var _nBtn = 1 + (temRelogio?1:0) + (temSocioBtn?1:0) + ((tab==='ven'||tab==='fin')?1:0);
     h += '<div style="display:grid;grid-template-columns:repeat('+_nBtn+',1fr);gap:6px;margin-top:8px;margin-left:-23px;">';
     var abrirLbl = (tab==='ven') ? 'ABRIR VENDA' : (tab==='pag') ? 'ABRIR PAGAMENTO' : 'ABRIR OPERAÇÃO';
     var _btnCss = 'white-space:nowrap;overflow:hidden;padding:8px 2px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-size:10px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;text-align:center;';
@@ -2001,6 +2001,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
     if(temRelogio){ h += '<button onclick="event.stopPropagation();HIST_abrirRelogio('+idx+')" style="'+_btnCss+'">RELÓGIO</button>'; }
     if(temSocioBtn){ h += '<button onclick="event.stopPropagation();HIST_resumoSocio('+idx+')" style="'+_btnCss+'">SÓCIO</button>'; }
     if(tab==='ven'){ h += '<button onclick="event.stopPropagation();CTR_abrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
+    if(tab==='fin'){ h += '<button onclick="event.stopPropagation();CTR_finAbrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
     h += '</div>';
 
     h += '</div>';
@@ -2884,7 +2885,7 @@ function VB_fetchTudo(onOk, onErr){
   /* baixas, pagamentos e repasse combinado sao dado operacional: sem eles a restauracao
      devolve as vendas com todas as parcelas em aberto de novo. */
   var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos'];
-  Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
+  Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
     var dados={}, total=0;
@@ -3307,7 +3308,7 @@ function VB_diffCampos(a,b){
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
   var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos'];
-  Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
+  Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
     res.forEach(function(x){
@@ -4810,12 +4811,13 @@ function HIST_fetch(term){
       if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
     });
   }
-  if(tab==='ven' && HIST_conStatus===null){
+  if((tab==='ven'||tab==='fin') && HIST_conStatus===null){
     HIST_conStatus='loading';
-    sb.from('contratos').select('venda_id,assinado_em,created_at').not('venda_id','is',null).then(function(q3){
+    sb.from('contratos').select('venda_id,fin_id,assinado_em,created_at').then(function(q3){
       HIST_conStatus={};
-      if(!q3.error) (q3.data||[]).forEach(function(c){ if(!c.venda_id) return; var _k=String(c.venda_id), _cur=HIST_conStatus[_k]; if(!_cur || (!_cur.ass && c.assinado_em)) HIST_conStatus[_k]={ass:c.assinado_em||null, ger:c.created_at||null}; });
-      if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
+      /* venda e financiamento no mesmo mapa: os ids sao uuid, nao colidem */
+      if(!q3.error) (q3.data||[]).forEach(function(c){ var _id=c.venda_id||c.fin_id; if(!_id) return; var _k=String(_id), _cur=HIST_conStatus[_k]; if(!_cur || (!_cur.ass && c.assinado_em)) HIST_conStatus[_k]={ass:c.assinado_em||null, ger:c.created_at||null}; });
+      if(HIST_tabAtual==='ven'||HIST_tabAtual==='fin') try{ HIST_fetch(term); }catch(e){}
     });
   }
   var q=sb.from(HIST_tabela(tab)).select('*');
@@ -5011,6 +5013,11 @@ function HIST_renderRows(tab, rows){
       if(r.cliente) _l2F.push(HIST_nomeFit(VB_nomeCurto(r.cliente)));
       if(_l2F.length) linha2=_l2F.join('<span style="color:var(--mu);"> · </span>');
       if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
+      (function(){
+        var _cs=(HIST_conStatus&&typeof HIST_conStatus==='object')?HIST_conStatus[String(r.id)]:null; if(!_cs) return;
+        function _conDH(iso){ var s=CON_dtHora(iso)||''; return s.replace(/^(\d{2}\/\d{2})\/\d{4}\s*/, '$1 \u00b7 '); }
+        campos.push({l:'Contrato', v:(_cs.ass?('Assinado · '+(_conDH(_cs.ass)||HIST_fmtData(String(_cs.ass).slice(0,10)))):('Gerado'+(_cs.ger?(' \u00b7 '+_conDH(_cs.ger)):'')))});
+      })();
       var _dopF=String(r.data_operacao||r.data_inicio||'').slice(0,10);
       if(_dopF) campos.push({l:'Data da operação', v:HIST_fmtData(_dopF)});
       if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
@@ -6103,6 +6110,7 @@ function FIN_compartilharTabela(){
 
   VB_drawWatermark(ctx, W, H);
   VB_carimboData(ctx, W);
+  if(typeof CTR_capturando!=='undefined' && CTR_capturando){ CTR_canvas=cv; CTR_capturando=false; return; } /* contrato do financiamento */
   var dataURL = cv.toDataURL('image/png');
   var img = document.getElementById('fin-tabelaImagem');
   img.src = dataURL;
@@ -8483,7 +8491,9 @@ var VB_carimboTS = null;
 function VB_carimboData(ctx, W, opt){
   try{
     var o=opt||{};
-    var k = (VB_carimboTS ? VB_leCarimbo(VB_carimboTS) : null) || VB_leCarimbo(VB_carimbo());
+    /* agora:true = documento do momento (Fechamento, extrato, PARCELAS A VENCER, RECEBIMENTOS):
+       o VB_carimboTS e da ultima OPERACAO aberta e vazava pra ca -- a foto do cliente saia com 23/07 */
+    var k = ((!o.agora && VB_carimboTS) ? VB_leCarimbo(VB_carimboTS) : null) || VB_leCarimbo(VB_carimbo());
     var txt = k ? (k.dt+(k.hr?(' '+k.hr):'')) : '';
     ctx.save();
     try{ ctx.letterSpacing='0px'; }catch(e){}   /* letter-spacing sobra depois da ultima letra e desalinha a direita */
@@ -14690,7 +14700,7 @@ function FM_foto(){
     c.font='700 14px -apple-system, Helvetica, sans-serif'; c.fillStyle='#111'; c.textAlign='right';
     c.fillText(d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.', PAD+CW-22, y+10); c.textAlign='left';
   }
-  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb', agora:true});
   VB_fotoPreview(cv, 'VB - Fechamento '+d.titulo+'.jpg');
 }
 var SOC_viewData=null;
@@ -14794,7 +14804,7 @@ function SOC_extratoFoto(){
     c.fillText('Sem operações registradas.', PAD, y+30); y+=60;
   }
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb', agora:true});
   VB_fotoPreview(cv, 'VB - Extrato '+(d.nome||'Socio')+' '+ds.replace(/\//g,'-')+'.jpg', true);
 }
 /* ===== RECEBIMENTOS DO SOCIO (foto) =====
@@ -14977,7 +14987,7 @@ function VB_recebDoc(nome, linhas, sub, arq){
   c.textAlign='right'; c.fillText(HIST_fmtMoeda(tot).replace(/^R\$\s*/,''), PAD+CW-22, yy+14);
   c.textAlign='left';
   var hoje=new Date(), ds=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb'});
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb', agora:true});
   VB_fotoPreview(cv, 'VB - '+arq+' '+(nome||'')+' '+ds.replace(/\//g,'-')+'.jpg', true);
 }
 
@@ -19059,7 +19069,7 @@ function CTR_docxParse(bytes){
       var fus=[];
       segs.forEach(function(s){ if(fus.length && fus[fus.length-1][0]===s[0] && fus[fus.length-1][2]===s[2]) fus[fus.length-1][1]+=s[1]; else fus.push([s[0],s[1],s[2]]); });
       segs=fus;
-      if(p.indexOf('<w:numPr>')>=0) segs._num=true;
+      if(p.indexOf('<w:numPr>')>=0) segs._num=(p.indexOf('<w:numId w:val="11"/>')>=0)?'b':true; /* 11 = bolinha (contrato do financiamento); o resto e a), b) */
       if(p.indexOf('<w:jc w:val="center"')>=0) segs._c=true;
       paras.push(segs);
     }
@@ -19259,7 +19269,8 @@ function CTR_paginas(doc){
           return;
         }
         if(!p.length){ _li=0; y+=(_iAss>=0 && _ip>_iAss)?_espAss:14; return; }
-        if(p._num){ paragrafo(p, String.fromCharCode(97+(_li++))+')'); }
+        if(p._num==='b'){ paragrafo(p, '\u2022'); }
+        else if(p._num){ paragrafo(p, String.fromCharCode(97+(_li++))+')'); }
         else { _li=0; paragrafo(p); }
       });
       pgs.forEach(function(pg,i){
@@ -19616,7 +19627,7 @@ function CON_aguarda(c){
   return '';
 }
 function CON_load(){
-  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').order('created_at',{ascending:false}).limit(200).then(function(res){
+  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path').order('created_at',{ascending:false}).limit(200).then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     CON_rows=res.data||[];
     var _ids=CON_rows.filter(function(c){ return c.venda_id; }).map(function(c){ return c.venda_id; });
@@ -19923,6 +19934,327 @@ function CTR_parcelasDaVenda(r){
   return out;
 }
 // ---- UI ----
+/* ===== CONTRATO DO FINANCIAMENTO (v1.300.48) =====
+   Texto do modelo do VB (confissao da Pajero RXJ7B22), sobre o pacote do contrato de venda --
+   mesmo cabecalho, estilos, rodape e o encaixe da foto que o PDF do app ja sabe paginar.
+   O corpo e montado aqui, paragrafo a paragrafo: com um ou dois devedores o texto inteiro muda
+   de numero (O DEVEDOR confessa / Os DEVEDORES confessam), e remendar singular/plural dentro do
+   XML do Word e pedir para errar concordancia em documento executivo. */
+var CTR_FIN_CREDOR='VB FACTORING E FOMENTO MERCANTIL LTDA';
+var CTR_finRow=null, CTR_finDev2=null;
+function CTR_finRpr(f){
+  var b=(f==='b'||f==='bu'), u=(f==='bu');
+  return '<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'+(b?'<w:b/><w:bCs/>':'')+'<w:sz w:val="26"/><w:szCs w:val="26"/>'+(u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+}
+function CTR_finP(segs, o){
+  o=o||{};
+  var jc=o.c?'center':'both';
+  var ppr=o.bullet
+    ? '<w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="11"/></w:numPr><w:jc w:val="both"/>'+CTR_finRpr('')+'</w:pPr>'
+    : '<w:pPr><w:jc w:val="'+jc+'"/>'+CTR_finRpr('')+'</w:pPr>';
+  var s='<w:p>'+ppr;
+  (segs||[]).forEach(function(x){ if(x[1]==='' || x[1]==null) return; s+='<w:r>'+CTR_finRpr(x[0])+'<w:t xml:space="preserve">'+CTR_esc(x[1])+'</w:t></w:r>'; });
+  return s+'</w:p>';
+}
+function CTR_finVazio(c){ return '<w:p><w:pPr><w:jc w:val="'+(c?'center':'both')+'"/></w:pPr></w:p>'; }
+/* placa Mercosul (ABC1D23) ou antiga (ABC1234) */
+function CTR_finPlaca(t){ var m=String(t||'').toUpperCase().match(/\b[A-Z]{3}-?\d[A-Z0-9]\d{2}\b/); return m?m[0].replace('-',''):''; }
+function CTR_finParcelas(r){
+  var n=Number(r.qtd_parcelas)||0, v=Number(r.valor_parcela)||0, d1=r.data_inicio?String(r.data_inicio).slice(0,10):null, out=[];
+  if(!(n>0 && v>0 && d1)) return out;
+  for(var k=0;k<n;k++){ var iso=REN_addMesISO(d1,k); out.push({v:v, d:iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4)}); }
+  return out;
+}
+function CTR_finCorpo(o){
+  var um=(o.devs.length===1);
+  function S(a,b){ return um?a:b; }
+  var DEV=S('DEVEDOR','DEVEDORES');
+  var P=CTR_finP, V=CTR_finVazio, x='';
+  /* partes */
+  var sp=[[ '', 'De um lado, '],['bu',CTR_FIN_CREDOR],['', ', pessoa jurídica de direito privado inscrita no CNPJ sob o Nº 54.870.933/0001-69, estabelecida em Fortaleza/CE, na AV. Santos Dumont Nº 2626, Comp. 113, Aldeota, CEP 60.150-162, representada por seu sócio-administrador '],['bu','VICTOR FERNANDES BRITO'],['', ', brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente '],['bu','CREDOR'],['', ', e, de outro lado, ']];
+  o.devs.forEach(function(d,i){
+    if(i>0) sp.push(['', ', e ']);
+    sp.push(['bu', d.nome]);
+    sp.push(['', ', '+d.qual+', titular do CPF Nº. '+d.cpf+(d.semDoc?'':(', e do '+d.doc))+', domiciliado '+d.end]);
+  });
+  sp.push(['', ', como ']); sp.push(['bu', DEV]); sp.push(['', '.']);
+  x+=P(sp)+V();
+  x+=P([['','Têm entre si, justo e acertado o presente '],['b','CONTRATO DE CONFISSÃO DE DÍVIDA E NOVAÇÃO'],['',', que se regerá pelas seguintes cláusulas e condições:']])+V();
+  /* 1a */
+  x+=P([['bu','Cláusula 1ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' confessa e assume',' confessam e assumem')+', em caráter irrevogável e irretratável, uma dívida de '],['bu','R$ '+CTR_fmtV(o.total)+' ('+CTR_extensoReais(o.total)+')'],['',', referente à venda do veículo:']]);
+  var v=o.veic, vs=[];
+  function vc(rot, val, fim){ if(!String(val||'').trim()) return; vs.push(['b',rot]); vs.push(['',': '+val+(fim||'. ')]); }
+  vc('Marca', v.marca); vc('Modelo', v.modelo, (v.placa?' — ':'. ')); vc('Placa', v.placa); vc('Chassi', v.chassi); vc('Renavam', v.renavam); vc('Cor', v.cor); vc('Ano fab./modelo', v.ano);
+  x+=P(vs)+V();
+  /* 2a */
+  x+=P([['bu','Cláusula 2ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' assume',' assumem')+', a partir da data de assinatura deste instrumento, '],['b','todas as responsabilidades civis, administrativas e criminais'],['',' decorrentes do uso, posse, propriedade ou circulação do veículo descrito na Cláusula 1ª, '],['b','ainda que o referido veículo permaneça registrado em nome do CREDOR perante o órgão de trânsito competente'],['',', inclusive, mas não se limitando, a:']])+V();
+  ['multas de trânsito;','tributos e taxas (como IPVA, licenciamento e seguro obrigatório);','indenizações por danos materiais ou morais causados a terceiros;','envolvimento em ilícitos penais.'].forEach(function(t){ x+=P([['',t]],{bullet:1}); });
+  x+=V();
+  x+=P([['',S('O ','Os ')],['bu',DEV],['',S(' obriga-se',' obrigam-se')+' a isentar e ressarcir integralmente o '],['bu','CREDOR'],['',' de quaisquer valores pagos, despesas, prejuízos ou penalidades que este venha a sofrer em razão de fatos relacionados ao veículo, ainda que tais débitos ou penalidades sejam apurados ou lançados em momento posterior à assinatura deste contrato.']])+V();
+  /* 3a */
+  x+=P([['bu','Cláusula 3ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' confessa e assume a quantia acima referida, e se propõe',' confessam e assumem a quantia acima referida, e se propõem')+' a pagá-la nos termos e condições previstas no presente contrato, desde já aceitas pelo '],['bu','CREDOR'],['','.']])+V();
+  /* 4a */
+  x+=P([['bu','Cláusula 4ª'],['b','. '],['','Pelo presente instrumento, a dívida reconhecida e novada acima referida, a qual '+S('o ','os ')],['bu',DEV],['',S(' confessa e assume',' confessam e assumem')+' de forma solidária e integral, em caráter irrevogável e irretratável, e '+S('se compromete','se comprometem')+' a pagá-la, mediante transferência via PIX: 54870933000169, de titularidade do '],['bu','CREDOR'],['',', valendo o comprovante de transferência como recibo, da seguinte forma:']])+V();
+  x+=o.itens+V();
+  x+=o.imgPara+V();
+  /* 5a em diante */
+  var cl=[
+    [['',S('O ','Os ')],['bu',DEV],['',S(' fica expressamente proibido',' ficam expressamente proibidos')+' de alienar, ceder, transferir, gravar, oferecer em garantia ou de qualquer forma onerar o veículo descrito na Cláusula 1ª, seja por meio de financiamento bancário, alienação fiduciária, arrendamento mercantil (leasing), consórcio ou qualquer outra modalidade de crédito junto a instituições financeiras, enquanto perdurar o saldo devedor do presente contrato. O descumprimento desta cláusula implicará o vencimento antecipado e imediato de todas as parcelas vincendas, facultando ao '],['bu','CREDOR'],['',' protestar e/ou executar o presente instrumento, independentemente de qualquer notificação prévia, sem prejuízo das demais sanções legais cabíveis.']],
+    [['',S('O ','Os ')],['bu',DEV],['',S(' renuncia',' renunciam')+' expressamente, desde já, em caráter irrevogável e irretratável, a qualquer reclamação, controvérsia ou contestação em relação ao valor e procedência da dívida objeto do presente contrato.']],
+    [['','O presente instrumento passa a vigorar e a produzir todos os seus devidos efeitos legais entre as partes a partir da data da sua assinatura.']],
+    [['','O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita '+S('o ','os ')],['bu',DEV],['',' ao pagamento de multa de 5% (cinco por cento), correção monetária pelo IGPM, ou outro índice que venha a substituí-lo, e juros mensais de 1% (um por cento) ao mês, independente de qualquer notificação prévia ou protesto.']],
+    [['',S('O ','Os ')],['bu',DEV],['',S(' poderá',' poderão')+' realizar a quitação antecipada do saldo devedor deste contrato, a qualquer momento. Em caso de quitação total antecipada, será concedido um desconto de '],['bu','2% (Dois Por Cento)'],['',' ao mês sobre o valor das parcelas vincendas, calculado proporcionalmente ao período entre a data da quitação e os vencimentos originais das parcelas. O desconto será aplicado exclusivamente sobre as parcelas vincendas, não incidindo sobre encargos já vencidos, tributos ou eventuais penalidades. A quitação antecipada somente será considerada efetivada após a compensação dos valores pagos '+S('pelo ','pelos ')],['bu',DEV],['','.']],
+    [['','O inadimplemento de quaisquer das parcelas assumidas no presente contrato sujeita '+S('o ','os ')],['bu',DEV],['',' ao vencimento automático e antecipado de todas as parcelas subsequentes à vencida, vencendo, portanto, todo o saldo devedor do presente contrato, sendo facultado ao '],['bu','CREDOR'],['',' protestar e/ou executar o presente contrato, independente de qualquer notificação prévia ou protesto.']],
+    [['','Qualquer tolerância do '],['bu','CREDOR'],['',' em relação à eventual inadimplência '+S('do ','dos ')],['bu',DEV],['',' constituirá mera liberalidade, não importando em qualquer perdão, novação ou remição da dívida.']],
+    [['','As obrigações, cláusulas e condições firmadas e assumidas no presente contrato são estendidas aos herdeiros e sucessores na falta de quaisquer das partes.']],
+    [['','O presente contrato constitui título executivo extrajudicial, nos termos do art. 784, inciso III, do CPC/2015.']],
+    [['','Fica eleito o Foro da Comarca de Fortaleza/CE para dirimir eventuais dúvidas e/ou controvérsias decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.']]
+  ];
+  cl.forEach(function(segs,i){ x+=P([['bu','Cláusula '+(5+i)+'ª'],['b','. ']].concat(segs))+V(); });
+  x+=P([['','E, por estarem assim justos e contratados, as partes acima qualificadas firmam o presente instrumento, em duas vias de igual teor e forma.']])+V()+V();
+  /* data e assinaturas: o marcador {{DATA_EXTENSO}} e o gancho do CTR_xmlAssinaturaJunta */
+  x+=P([['','Fortaleza/CE, {{DATA_EXTENSO}}.']],{c:1})+V(1)+V(1)+V(1);
+  function ass(nome){ return P([['','___________________________________________________________']],{c:1})+P([['b',nome]],{c:1})+V(1)+V(1)+V(1); }
+  x+=ass(CTR_FIN_CREDOR);
+  o.devs.forEach(function(d){ x+=ass(d.nome); });
+  x+=P([['b','Testemunhas:']],{c:1})+V(1)+V(1);
+  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome: ________________________   CPF: ________________']],{c:1})+V(1)+V(1); });
+  return x;
+}
+function CTR_finAbrir(idx){
+  var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
+  sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path').eq('fin_id',String(r0.id)).order('created_at',{ascending:false}).then(function(res){
+    if(res.error){ VB_erro(res.error.message,'Rode o SQL do contrato do financiamento primeiro.'); return; }
+    var arr=res.data||[];
+    if(arr.length){
+      var _pref=arr.filter(function(x){ return x.assinado_em; })[0] || arr[0];
+      if(r0.descricao) _pref._vendaDesc=r0.descricao;
+      CON_fichaObj(_pref, function(){ CTR_finAbrirForm(idx); });
+    } else CTR_finAbrirForm(idx);
+  });
+}
+function CTR_finAbrirForm(idx){
+  var r=HIST_rowsCache[idx]; if(!r){ VB_toast('Linha não encontrada.'); return; }
+  CTR_finRow=r; CTR_rowAtual=r; CTR_cliSel=null; CTR_finDev2=null;
+  var old=document.getElementById('vb-ctr-sheet'); if(old) old.remove();
+  var desc=String(r.descricao||'').toUpperCase();
+  var vg=(r.veiculo&&typeof r.veiculo==='object')?r.veiculo:{};
+  var _placa=vg.placa||CTR_finPlaca(desc);
+  var _anoM=desc.match(/\b(19|20)\d{2}(\/(19|20)\d{2})?\b/), _ano=vg.ano||(_anoM?_anoM[0]:'');
+  var _modelo=vg.modelo||desc.replace(_placa,'').replace(/\b(19|20)\d{2}(\/(19|20)\d{2})?\b/,'').replace(/\s{2,}/g,' ').trim();
+  var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
+  var SL='padding:9px 2px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:12px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-align-last:center;width:100%;box-sizing:border-box;';
+  var LB='display:block;font-size:8px;letter-spacing:1px;color:var(--mu2);font-weight:600;text-align:center;padding-left:1px;margin-bottom:3px;';
+  function inp(id,ph,val,extra){ return '<input id="'+id+'" placeholder="'+ph+'" '+(extra||'')+' value="'+CTR_esc(val||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'; }
+  function campo(id,rot,val,extra,ph){ return '<div><span style="'+LB+'">'+CTR_esc(rot)+'</span>'+inp(id,(ph||''),val,extra)+'</div>'; }
+  var SEC='font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;margin:6px 0 5px;';
+  var ov=document.createElement('div');
+  ov.id='vb-ctr-sheet';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO</div>'
+    +'<div style="'+SEC+'margin-top:2px;">DEVEDOR</div>'
+    +'<div style="position:relative;">'
+    +campo('ctr-nome','NOME COMPLETO','','oninput="CTR_buscaCli(this)"','DIGITE PARA BUSCAR')
+    +'<div id="ctr-cli-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
+    +'</div>'
+    +campo('ctr-qual','QUALIFICAÇÃO','brasileiro, casado, empresário')
+    +'<div style="display:grid;grid-template-columns:1.3fr 74px 1fr;gap:6px;">'
+    +campo('ctr-cpf','CPF','','inputmode="numeric" oninput="CLI_maskCPF(this)"')
+    +'<div><span style="'+LB+'">TIPO</span><select id="ctr-doctipo" style="'+SL+'"><option>RG</option><option>CNH</option><option value="Passaporte">PASS.</option></select></div>'
+    +campo('ctr-docnum','Nº DOCUMENTO','')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;">'
+    +campo('ctr-cep','CEP','','inputmode="numeric" oninput="CLI_cepInput(this)"')
+    +campo('ctr-end1','ENDEREÇO','')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:54px 1fr 1fr;gap:6px;">'+campo('ctr-numero','Nº','')+campo('ctr-end2','COMPL.','')+campo('ctr-bairro','BAIRRO','')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1.6fr 60px;gap:6px;">'+campo('ctr-cidade','CIDADE','')+campo('ctr-uf','UF','','maxlength="2"')+'</div>'
+    +'<div style="'+SEC+'">2º DEVEDOR (OPCIONAL)</div>'
+    +'<div style="position:relative;">'
+    +campo('ctr2-nome','NOME COMPLETO','','oninput="CTR_finBusca2(this)"','DIGITE PARA BUSCAR NO CADASTRO')
+    +'<div id="ctr2-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
+    +'</div>'
+    +'<div id="ctr2-info" style="font-size:10px;letter-spacing:0.5px;color:var(--mu);text-align:center;margin:-2px 0 6px;"></div>'
+    +'<div style="'+SEC+'">VEÍCULO</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;">'+campo('ctrv-marca','MARCA',vg.marca||'')+campo('ctrv-modelo','MODELO',_modelo)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'+campo('ctrv-placa','PLACA',_placa)+campo('ctrv-ano','ANO FAB./MODELO',_ano,'','2022/2023')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:6px;">'+campo('ctrv-chassi','CHASSI',vg.chassi||'')+campo('ctrv-renavam','RENAVAM',vg.renavam||'','inputmode="numeric"')+'</div>'
+    +campo('ctrv-cor','COR',vg.cor||'')
+    +'<div id="ctr-fin-falta" style="display:none;font-size:10px;letter-spacing:1px;color:var(--red);font-weight:700;text-align:center;margin-top:4px;"></div>'
+    +'<button id="ctr-gerar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR CONTRATO (.docx)</button>'
+    +'<button id="ctr-cancel" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CANCELAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#ctr-cancel').addEventListener('click',function(){ ov.remove(); });
+  ov.querySelector('#ctr-gerar').addEventListener('click',function(){ CTR_finGerar(ov); });
+  CTR_clientes=[];
+  sb.from('clientes').select('*').order('nome',{ascending:true}).then(function(res){
+    if(!res.error && res.data) CTR_clientes=res.data;
+    try{
+      var _cli=null;
+      if(r.cliente_id!=null){ _cli=CTR_clientes.find(function(c){ return String(c.id)===String(r.cliente_id); }); }
+      if(!_cli && r.cliente){ var _m=CTR_clientes.filter(function(c){ return VB_cliNorm(c.nome)===VB_cliNorm(r.cliente); }); if(_m.length===1) _cli=_m[0]; }
+      if(_cli){ CTR_pegaCli(CTR_clientes.indexOf(_cli)); }
+      if(vg.dev2_id!=null){ var _c2=CTR_clientes.find(function(c){ return String(c.id)===String(vg.dev2_id); }); if(_c2) CTR_finPega2(CTR_clientes.indexOf(_c2)); }
+    }catch(e){}
+  });
+}
+function CTR_finBusca2(el){
+  var q=(el.value||'').trim().toUpperCase();
+  var box=document.getElementById('ctr2-res'); if(!box) return;
+  CTR_finDev2=null; var inf=document.getElementById('ctr2-info'); if(inf) inf.textContent='';
+  if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
+  var achou=CTR_clientes.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || String(c.apelido||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }).slice(0,6);
+  if(!achou.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML=achou.map(function(c){
+    var i=CTR_clientes.indexOf(c);
+    return '<div onpointerdown="event.preventDefault();CTR_finPega2('+i+')" style="padding:10px 12px;border-bottom:0.5px solid var(--ln3);cursor:pointer;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;">'+CTR_esc(c.nome||'')+'</div>'
+      +'<div style="font-size:9px;color:var(--so);">'+CTR_esc(c.cpf||'SEM CPF')+'</div></div>';
+  }).join('');
+  box.style.display='block';
+}
+/* O 2o devedor sai so do cadastro: sem CPF ou sem endereco la, o contrato nao sai com ele. */
+function CTR_finDevCad(c){
+  var d=CLI_decEnd1(c);
+  function _tit(s){ if(!s) return s; var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1}; return String(s).toUpperCase().split(' ').map(function(w,i){ if(i>0 && con[w]) return w.toLowerCase(); if(/^\d/.test(w)) return w; return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); }
+  var _linha=d.e1?(_tit(d.e1)+(d.num?(', Nº '+String(d.num).toUpperCase()):'')):null;
+  var _comp=[_tit(d.e2),_tit(d.bai)].filter(Boolean).join(', ')||null;
+  var end=CLI_compEnd(_linha,_comp,_tit(c.cidade),String(c.uf||'').toUpperCase(),c.cep)||'';
+  var docn=String(c.doc_num||'').toUpperCase(), cpf=c.cpf||'';
+  var semDoc=(!docn.trim()) || (String(docn).replace(/\D/g,'')!=='' && String(docn).replace(/\D/g,'')===String(cpf).replace(/\D/g,''));
+  var falta=[]; if(!cpf) falta.push('CPF'); if(!d.e1) falta.push('ENDEREÇO');
+  return {nome:String(c.nome||'').toUpperCase(), qual:c.qualificacao||'brasileiro(a)', cpf:cpf, doc:(c.doc_tipo||'RG')+' Nº. '+docn, semDoc:semDoc, end:end, falta:falta, id:c.id};
+}
+function CTR_finPega2(i){
+  var c=CTR_clientes[i]; if(!c) return;
+  var box=document.getElementById('ctr2-res'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  var el=document.getElementById('ctr2-nome'); if(el){ el.value=c.nome||''; el.blur(); }
+  CTR_finDev2=CTR_finDevCad(c);
+  var inf=document.getElementById('ctr2-info');
+  if(inf){
+    if(CTR_finDev2.falta.length){ inf.style.color='var(--red)'; inf.textContent='CADASTRO SEM '+CTR_finDev2.falta.join(' E '); }
+    else { inf.style.color='var(--mu)'; inf.textContent=(c.cpf||'')+' · '+(c.cidade||''); }
+  }
+}
+function CTR_finGerar(ov){
+  var r=CTR_finRow; if(!r) return;
+  var g=function(id){ var el=document.getElementById(id); return el?(el.value||'').trim():''; };
+  var falta=ov.querySelector('#ctr-fin-falta');
+  function trava(t){ if(falta){ falta.textContent=t; falta.style.display='block'; } VB_toast(t); }
+  /* devedor 1: mesma leitura do contrato de venda */
+  var nome=g('ctr-nome').toUpperCase(), cpf=g('ctr-cpf'), doct=document.getElementById('ctr-doctipo').value, docn=g('ctr-docnum').toUpperCase();
+  var _docDig=String(docn).replace(/\D/g,''), _cpfDig=String(cpf||'').replace(/\D/g,'');
+  var semDoc=(!docn.trim()) || (!!_docDig && _docDig===_cpfDig);
+  var _e1=g('ctr-end1').toUpperCase(), _num=g('ctr-numero').toUpperCase(), _e2=g('ctr-end2').toUpperCase(), _bai=g('ctr-bairro').toUpperCase(), _cid=g('ctr-cidade').toUpperCase(), _uf=g('ctr-uf').toUpperCase(), _cep=g('ctr-cep');
+  function _tit(s){ if(!s) return s; var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1}; return s.split(' ').map(function(w,i){ if(i>0 && con[w]) return w.toLowerCase(); if(/^\d/.test(w)) return w; return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); }
+  var _linha=_e1?(_tit(_e1)+(_num?(', Nº '+_num):'')):null;
+  var _comp=[_tit(_e2),_tit(_bai)].filter(Boolean).join(', ')||null;
+  var end=CLI_compEnd(_linha,_comp,_tit(_cid),_uf,_cep)||'';
+  if(!nome||!cpf||!_e1){ trava('PREENCHA NOME, CPF E ENDEREÇO DO DEVEDOR'); return; }
+  var devs=[{nome:nome, qual:g('ctr-qual')||'brasileiro(a)', cpf:cpf, doc:doct+' Nº. '+docn, semDoc:semDoc, end:end}];
+  if(g('ctr2-nome')){
+    if(!CTR_finDev2){ trava('ESCOLHA O 2º DEVEDOR NA LISTA'); return; }
+    if(CTR_finDev2.falta.length){ trava('CADASTRO DO 2º DEVEDOR SEM '+CTR_finDev2.falta.join(' E ')); return; }
+    if(String(CTR_finDev2.cpf).replace(/\D/g,'')===_cpfDig){ trava('2º DEVEDOR IGUAL AO 1º'); return; }
+    devs.push(CTR_finDev2);
+  }
+  var veic={marca:g('ctrv-marca').toUpperCase(), modelo:g('ctrv-modelo').toUpperCase(), placa:g('ctrv-placa').toUpperCase().replace(/[^A-Z0-9]/g,''), chassi:g('ctrv-chassi').toUpperCase(), renavam:g('ctrv-renavam'), cor:g('ctrv-cor').toUpperCase(), ano:g('ctrv-ano')};
+  if(!veic.modelo || !veic.placa){ trava('PREENCHA MODELO E PLACA'); return; }
+  var parcelas=CTR_finParcelas(r);
+  if(!parcelas.length){ trava('FINANCIAMENTO SEM PARCELAS'); return; }
+  if(falta) falta.style.display='none';
+  var total=Math.round(parcelas.reduce(function(a,p){ return a+p.v; },0)*100)/100;
+  var btn=ov.querySelector('#ctr-gerar'); btn.textContent='GERANDO...'; btn.disabled=true;
+  /* tabela de parcelas: a mesma foto do COMPARTILHAR do financiamento, capturada em silencio */
+  CTR_canvas=null; CTR_capturando=true;
+  try{
+    if(VB_telaAtual!=='fin'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarFin(r); }
+    FIN_compartilharTabela();
+  }catch(e){}
+  CTR_capturando=false;
+  var cv=CTR_canvas;
+  var fotoP = cv ? new Promise(function(res){ cv.toBlob(function(b){ b.arrayBuffer().then(function(ab){ res(new Uint8Array(ab)); }); },'image/jpeg',0.92); }) : Promise.resolve(null);
+  Promise.all([CTR_unzipBytes(CTR_b64bytes(CTR_TPL_B64)), fotoP]).then(function(rr){
+    var parts=rr[0], foto=rr[1];
+    var dec=new TextDecoder(), enc=new TextEncoder();
+    var base=dec.decode(parts['word/document.xml']);
+    var ib=base.indexOf('<w:body>')+8, is=base.lastIndexOf('<w:sectPr');
+    var mImg=base.match(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?<w:drawing[\s\S]*?<\/w:p>/);
+    var imgPara=(mImg&&foto)?mImg[0]:'';
+    var dvBR=HIST_fmtData(String(r.data_operacao||r.data_inicio||'').slice(0,10));
+    var corpo=CTR_finCorpo({devs:devs, total:total, veic:veic, itens:CTR_itensClausula(parcelas, dvBR), imgPara:imgPara});
+    var doc=base.slice(0,ib)+corpo+base.slice(is);
+    doc=CTR_xmlAssinaturaJunta(doc);
+    doc=doc.split('{{DATA_EXTENSO}}').join(CTR_esc(CTR_hoje()));
+    doc=doc.split('{{IMG_CX}}').join(String(5200000)).split('{{IMG_CY}}').join(String(cv?Math.round(5200000*cv.height/cv.width):3666666));
+    var hd=dec.decode(parts['word/header1.xml']);
+    hd=hd.split('VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME').join(CTR_FIN_CREDOR);
+    hd=hd.split('{{DEVEDOR_NOME}}').join(CTR_esc(devs.map(function(d){ return d.nome; }).join(' e ')));
+    if(devs.length>1) hd=hd.split('<w:t>DEVEDOR</w:t>').join('<w:t>DEVEDORES</w:t>');
+    parts['word/document.xml']=enc.encode(doc);
+    parts['word/header1.xml']=enc.encode(hd);
+    if(foto) parts['word/media/image1.jpg']=foto;
+    var files=Object.keys(parts).map(function(nm){ return {name:nm, data:parts[nm]}; });
+    var blob=CTR_zip(files);
+    var _np=nome.split(' ').filter(Boolean);
+    var _nomeArq=_np.length>1?(_np[0]+' '+_np[_np.length-1]):_np[0];
+    var fname='CONTRATO '+(veic.modelo+' '+veic.placa).trim()+' '+_nomeArq+'.docx';
+    btn.textContent='GERAR CONTRATO (.docx)'; btn.disabled=false;
+    CTR_viewerPDF(blob, fname, function(){
+      var s=document.getElementById('vb-ctr-sheet'); if(s) s.remove();
+      showScreen('hist');
+    }, r.descricao||veic.modelo);
+    CTR_finSalvarRegistro(blob, fname, devs.map(function(d){ return d.nome; }).join(' E '), cpf, String(r.descricao||(veic.modelo+' '+veic.placa)).toUpperCase(), total, r.id);
+    /* veiculo e 2o devedor ficam no financiamento: gerar de novo nao pede para redigitar */
+    var _vg={marca:veic.marca, modelo:veic.modelo, placa:veic.placa, chassi:veic.chassi, renavam:veic.renavam, cor:veic.cor, ano:veic.ano, dev2_id:(devs[1]?devs[1].id:null)};
+    sb.from('financiamentos_hist').update({veiculo:_vg}).eq('id', r.id).then(function(rs){ if(!rs.error) r.veiculo=_vg; });
+    VB_log('FINANCIAMENTO','gerou contrato', r.descricao||nome, devs.map(function(d){ return d.nome; }).join(' e ')+' · '+CTR_fmtV(total));
+    /* devedor 1: o cadastro acompanha o que foi corrigido na folha, como no contrato de venda */
+    try{
+      var _q=(g('ctr-qual')||'').split(',').map(function(s){return s.trim();});
+      var _pay={nome:nome,cpf:cpf,doc_tipo:doct,doc_num:docn,qualificacao:g('ctr-qual')||null,endereco:end,
+        nacionalidade:_q[0]||null,estado_civil:_q[1]||null,profissao:_q.slice(2).join(', ')||null,
+        end1:_e1||null,numero:_num||null,end2:_e2||null,bairro:_bai||null,cidade:_cid||null,uf:_uf||null,cep:_cep||null};
+      if(CTR_cliSel){
+        var _mudou=Object.keys(_pay).some(function(k){ return String(_pay[k]||'')!==String(CTR_cliSel[k]||''); });
+        if(CTR_cliSel.ativo===false){ _pay.ativo=true; _mudou=true; }
+        if(_mudou){
+          var _det=VB_logDiff(CTR_cliSel,_pay)||'';
+          sb.from('clientes').update(_pay).eq('id',CTR_cliSel.id).then(function(res2){ if(!res2.error){ VB_toast('Cadastro do cliente atualizado.'); VB_log('CLIENTES','editou', nome, _det); } });
+        }
+      } else {
+        var _ja=CTR_clientes.some(function(c){ return (c.cpf||'')===cpf || (c.nome||'').toUpperCase()===nome; });
+        if(!_ja){ sb.from('clientes').insert(_pay).then(function(res2){ if(!res2.error){ VB_toast('Cliente salvo no cadastro.'); VB_log('CLIENTES','criou', nome, cpf); } }); }
+      }
+    }catch(e){}
+  }).catch(function(e){
+    VB_erro(e&&e.message||e,'Não gerou. Tente de novo.');
+    btn.textContent='GERAR CONTRATO (.docx)'; btn.disabled=false;
+  });
+}
+function CTR_finSalvarRegistro(blob, fname, nome, cpf, desc, total, finId){
+  if(!VB_gravando('CTR_finSalvarRegistro')) return;
+  try{
+    var fr=new FileReader();
+    fr.onload=function(){
+      var b64=String(fr.result).split(',')[1]||'';
+      sb.from('contratos').insert({created_at:VB_carimbo(), cliente_nome:nome, cpf:cpf||null, descricao:desc||null, valor_total:total||null, fname:fname, arquivo_b64:b64, fin_id:String(finId)}).select('id').then(function(res){
+        if(res.error){ VB_erro(res.error.message,'Contrato não salvo na Gestão.'); return; }
+        try{ HIST_conStatus=null; }catch(e){}
+        var _novoId=(res.data&&res.data[0])?res.data[0].id:null;
+        if(_novoId){
+          /* um contrato por financiamento: rascunho nao assinado sai. Assinado nunca e apagado. */
+          sb.from('contratos').delete().eq('fin_id',String(finId)).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
+        }
+        VB_toast('Contrato salvo em Gestão › Contratos.');
+      });
+    };
+    fr.readAsDataURL(blob);
+  }catch(e){}
+}
 function CTR_abrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
   sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path').eq('venda_id',r0.id).order('created_at',{ascending:false}).then(function(res){
@@ -20172,6 +20504,14 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.48</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">CONTRATO DO FINANCIAMENTO: botão CONTRATO no card do Histórico, igual ao da venda. Texto do modelo da Pajero (confissão de dívida da VB FACTORING): devedor puxado do cliente da operação, 2º devedor opcional tirado do cadastro, veículo com marca, modelo, placa, chassi, RENAVAM, cor e ano. Valor, parcelas, vencimentos e tabela saem da operação. Um ou dois devedores muda o texto inteiro (O DEVEDOR confessa / Os DEVEDORES confessam). Veículo e 2º devedor ficam gravados no financiamento para gerar de novo sem redigitar</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.47</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Carimbo de data e hora certo nas fotos do momento (PARCELAS A VENCER, RECEBIMENTOS do sócio, Extrato do Sócio e Fechamento). Elas herdavam a data da última operação aberta: a foto do Leo Torres de hoje saiu com 23/07/2026 12:12, a data do Felipe Buick</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.46</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">PANORAMA do cliente com FINANCIAMENTOS: bloco próprio (data, descrição, valor financiado, lucro, parcelas e taxa), lucro somado no RESULTADO, parcelas no A VENCER e na pontualidade. Só entra financiamento com CLIENTE preenchido</div>
       <div class="cl-item">Reabrir um financiamento não muda mais a prestação: o app recalculava no arredondamento padrão (¢) e 2.365,00 em 5/0 voltava 2.361,90. Agora ele reconhece o arredondamento gravado; prestação digitada à mão fica como está</div>
