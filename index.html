@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.51</title>
+<title>VB - v1.300.55</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2503,9 +2503,22 @@ function HOME_pagarCarrega(){
     var hoje=REN_hojeISO();   /* dia LOCAL: depois das 21h o UTC ja acha que e amanha */
     var lim=(function(){ var d=new Date(hoje+'T12:00:00'); d.setDate(d.getDate()+3);
       return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
-    sb.from('contas_pagar').select('valor,venc,pago_em,credor').is('pago_em', null).lte('venc', lim).limit(2000)
+    sb.from('contas_pagar').select('id,valor,venc,pago_em,credor').is('pago_em', null).lte('venc', lim).limit(2000)
       .then(function(r){
-        var rows=(r&&r.data)||[];
+        var rows0=(r&&r.data)||[];
+        /* PAGO EM PARTE: o card somava o valor cheio (Vicente 25.000 com 23.000 pagos). Mesma regua
+           do TOTAL A PAGAR: o que FALTA, lido de conta_pagamentos. */
+        var ids=rows0.map(function(c){ return c.id; });
+        if(!ids.length) return {rows0:rows0, pg:[]};
+        return sb.from('conta_pagamentos').select('conta_id,valor').in('conta_id', ids).limit(5000)
+          .then(function(q){ return {rows0:rows0, pg:(q&&q.data)||[]}; });
+      }).then(function(z){
+        var pgm={}; (z.pg||[]).forEach(function(x){ pgm[x.conta_id]=(pgm[x.conta_id]||0)+(Number(x.valor)||0); });
+        var rows=[];
+        (z.rows0||[]).forEach(function(c){
+          var f=Math.round(((Number(c.valor)||0)-(pgm[c.id]||0))*100)/100;
+          if(f>0.005){ var c2={}; for(var k in c) c2[k]=c[k]; c2.valor=f; rows.push(c2); }
+        });
         try{ VB_apelidosCarrega(); }catch(e){}
         var rot=document.getElementById('home-pagar-rot'), val=document.getElementById('home-pagar-val'), cred=document.getElementById('home-pagar-cred');
         var agora=rows.filter(function(c){ return String(c.venc||'')<=hoje; });
@@ -12071,7 +12084,7 @@ function REN_cpEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
   var pp=[];
   (REN_cpParc||[]).forEach(function(_,i){ pp.push(g('rencp-pv-'+i)+'@'+g('rencp-pd-'+i)); });
-  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),(REN_cpJuros?'J':''),g('rencp-socio'),g('rencp-socval'),pp.join(';')].join('\u241f');
+  return [g('rencp-credor'),g('rencp-desc'),g('rencp-valor'),g('rencp-venc'),g('rencp-nota'),(REN_cpJuros?'J':''),g('rencp-socio'),g('rencp-socval'),g('rencp-jurv'),pp.join(';')].join('\u241f');
 }
 function REN_cpDirty(){
   var b=document.getElementById('rencp-salvar'); if(!b) return;
@@ -12241,6 +12254,10 @@ function REN_cpFicha(id){
     +((!pago && ja>0)?('<div style="text-align:center;font-size:12px;color:var(--mu2);font-weight:600;margin-top:8px;">PAGO: '+HIST_fmtMoeda(ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</div>'):'')
     +(c.nota?('<div style="text-align:center;font-size:11px;color:var(--tx2);font-weight:600;margin-top:8px;text-transform:uppercase;">'+CLIP_esc(c.nota)+'</div>'):'')
     +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'')
+    +((Number(c.juros)>0)?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 10px;margin-top:10px;">'
+        +cel('JUROS', HIST_fmtMoeda(Number(c.juros)), null, 1)
+        +cel('AMORTIZA\u00c7\u00c3O', HIST_fmtMoeda(Math.max(0,(Number(c.valor)||0)-Number(c.juros))), null, 1)
+        +'</div>'):'')
     +(function(){
         /* leitura, nunca deducao: o valor da conta continua sendo o que sai da conta bancaria */
         var _pv=REN_cpParteVB(c); if(_pv===null) return '';
@@ -12335,6 +12352,11 @@ function REN_cpSheet(id){
        EDITAR nascer comprido. */
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencp-nota" oninput="REN_cpDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
+    /* JUROS DENTRO DA PARCELA (v1.300.55): emprestimo pago em parcela fixa (mutuo do irmao,
+       17.200 = juros + amortizacao). So a parte de juros desce do lucro no Fechamento, quando a
+       conta e paga. Em branco, a conta e caixa pura, como sempre foi. */
+    +(c?('<div style="'+RT+'margin-top:10px;">JUROS DENTRO DA PARCELA</div>'
+      +'<div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencp-jurv" inputmode="decimal" placeholder="0,00" oninput="REC_maskVal(this);REN_cpDirty()" value="'+((c&&Number(c.juros)>0)?Number(c.juros).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')+'" style="flex:1;min-width:0;border:none;background:transparent;outline:none;font-size:14px;color:var(--tx);text-align:center;font-family:-apple-system,sans-serif;"><span style="flex:none;width:22px;"></span></div>'):'')
     /* DIVISAO: opcional e so na edicao, como VALOR e VENCIMENTO. Em branco, conta 100% do VB. */
     +(c?('<div style="'+RT+'margin-top:10px;">DIVIS\u00c3O COM S\u00d3CIO</div>'
       +'<div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px;">'
@@ -12436,7 +12458,7 @@ function REN_cpSalvar(id){
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
   var nt=((document.getElementById('rencp-nota')||{}).value||'').trim().toUpperCase();
   if(!cr){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
-  var v, d, linhas=null, sn='', sv=0;
+  var v, d, linhas=null, sn='', sv=0, jv=0;
   if(id){
     v=REN_num((document.getElementById('rencp-valor')||{}).value);
     d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
@@ -12450,6 +12472,9 @@ function REN_cpSalvar(id){
     if(sn && !(sv>0)){ VB_toast('Diga quanto da conta \u00e9 do s\u00f3cio.'); return; }
     if(!sn && sv>0){ VB_toast('Diga de quem \u00e9 essa parte.'); return; }
     if(sv>0 && sv>v+0.005){ VB_toast('A parte do s\u00f3cio n\u00e3o cabe no valor da conta.'); return; }
+    jv=REN_num((document.getElementById('rencp-jurv')||{}).value||''); if(!(jv>0)) jv=0;
+    if(jv>0 && jv>v+0.005){ VB_toast('Os juros n\u00e3o cabem no valor da parcela.'); return; }
+    if(jv>0 && REN_cpJuros){ VB_toast('Conta marcada JUROS DA CONTA j\u00e1 \u00e9 toda juros.'); return; }
   } else {
     REN_cpParcLe();
     linhas=[]; var ruim=false;
@@ -12481,7 +12506,7 @@ function REN_cpSalvar(id){
   }
   if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; _cpJurosPago(l); });
   var reg = linhas ? linhas : _cpJurosPago({credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot, pago_em:((REN_cpDe(id)||{}).pago_em||null),
-    socio_nome:(sn||null), socio_valor:(sv>0?sv:null)});
+    socio_nome:(sn||null), socio_valor:(sv>0?sv:null), juros:(jv>0?jv:null)});
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
@@ -14379,8 +14404,22 @@ function FM_calcMes(ym, res, _merMap){
         _juIt.push({conta:conta, desc:String(c.descricao||'JUROS').toUpperCase(), valor:vj, data:String(c.pago_em||'').slice(0,10)});
         return;
       }
+      /* JUROS DENTRO DA PARCELA (v1.300.55): a parte de juros desce do lucro no mes em que a conta
+         foi paga, e sai do bloco SAIDAS pelo mesmo motivo do juro de banco -- um numero lido uma vez.
+         O que sobra em SAIDAS e a amortizacao. */
+      var _jE=Number(c.juros)||0;
       if(String(c.venc||'').slice(0,7)===ym){ _cpVence+=Number(c.valor)||0; _cpVenceN++; }
-      if(c.pago_em && String(c.pago_em).slice(0,7)===ym){ _cpPago+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; _cpPagoN++; }
+      if(c.pago_em && String(c.pago_em).slice(0,7)===ym){
+        var _pgv=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0;
+        if(_jE>0){
+          var _jx=Math.min(_jE,_pgv), contaE=String(c.credor||'\u2014').trim().toUpperCase();
+          _juT+=_jx; _juN++;
+          var gE=_juG[contaE]||(_juG[contaE]={n:0,v:0}); gE.n++; gE.v+=_jx;
+          _juIt.push({conta:contaE, desc:'JUROS \u00b7 '+String(c.descricao||'').toUpperCase(), valor:_jx, data:String(c.pago_em||'').slice(0,10)});
+          _pgv-=_jx;
+        }
+        _cpPago+=_pgv; _cpPagoN++;
+      }
     });
     _juIt.sort(function(a,b){ return String(a.data)<String(b.data)?-1:1; });
     var dJur={n:_juN, tot:_juT,
@@ -14463,7 +14502,7 @@ function FM_load(){
     sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
     /* origem_tab, credor e descricao entram aqui porque o bloco JUROS PAGOS agrupa por banco:
        sem origem_tab a checagem de juros nunca era verdadeira e o valor caia em SAIDAS. */
-    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago,origem_tab,credor,descricao').limit(10000),
+    sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago,origem_tab,credor,descricao,juros').limit(10000),
     sb.from('parcela_prorroga').select('*').limit(10000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,valor_recebido,recebido_em').limit(20000),
     sb.from('mercadoria_custos').select('mercadoria_id,valor,data,descricao,cobrar').limit(20000),
@@ -19860,17 +19899,24 @@ function CTR_extInt(n){
     return s.join(' e ');
   }
   var grupos=[[1000000000,'Bilhão','Bilhões'],[1000000,'Milhão','Milhões'],[1000,'Mil','Mil'],[1,'','']];
-  var out=[];
+  var out=[], qs=[];
   grupos.forEach(function(g){
     var q=Math.floor(n/g[0]); n=n%g[0];
     if(!q) return;
+    qs.push(q);
     if(g[0]===1000 && q===1){ out.push('Mil'); return; }
     var t=tres(q);
     if(g[1]) t+=' '+(q===1?g[1]:g[2]);
     out.push(t.trim());
   });
-  // ligação final: "e" antes do último grupo quando ele é <100 ou centena redonda
-  if(out.length>1){ var last=out.pop(); return out.join(', ')+' e '+last; }
+  /* ligacao final: "e" antes do ultimo grupo SO quando ele e <100 ou centena redonda (Dois Mil e
+     Trezentos, Mil e Cinquenta); nos outros casos virgula (Dois Mil, Trezentos e Sessenta e Cinco).
+     O comentario sempre disse isso e o codigo punha "e" em tudo -- "Mil e Setecentos e Sessenta"
+     saiu em todo contrato ate a v1.300.53. */
+  if(out.length>1){
+    var last=out.pop(), ql=qs[qs.length-1];
+    return out.join(', ')+((ql<100 || ql%100===0)?' e ':', ')+last;
+  }
   return out[0];
 }
 function CTR_extensoReais(v){
@@ -20043,8 +20089,49 @@ function CTR_finCorpo(o){
   x+=ass(CTR_FIN_CREDOR);
   o.devs.forEach(function(d){ x+=ass(d.nome); });
   x+=P([['b','Testemunhas:']],{c:1})+V(1)+V(1);
-  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome: ________________________   CPF: ________________']],{c:1})+V(1)+V(1); });
+  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome:']],{c:1})+P([['','CPF:']],{c:1})+P([['','RG:']],{c:1})+V(1)+V(1); });
   return x;
+}
+/* Tabela de parcelas SO do contrato (v1.300.52): compacta, em duas colunas acima de 6 parcelas.
+   A foto do COMPARTILHAR tem uma parcela por linha e, com 24, nao cabia no resto da pagina: ia
+   inteira para a seguinte e deixava meia folha em branco. A foto do WhatsApp nao muda. */
+function CTR_finTabela(r, titulo){
+  var ps=CTR_finParcelas(r); if(!ps.length) return null;
+  var n=ps.length, cols=(n>6)?2:1, rows=Math.ceil(n/cols);
+  var W=560, esc=2, pad=10, gap=16, padV=6, altTit=20, altHead=16, altRow=16, altTot=18, fs=9.5;
+  var H=padV*2+altTit+altHead+rows*altRow+altTot;
+  var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=padV;
+  ctx.fillStyle='#111'; ctx.font='bold '+(fs+2)+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+  ctx.fillText(String(titulo||'').toUpperCase(), W/2, y+altTit*0.68);
+  y+=altTit;
+  var cw=(W-pad*2-gap*(cols-1))/cols;
+  function xs(c){ var x0=pad+c*(cw+gap); return [x0, x0+cw*0.16, x0+cw*0.52, x0+cw*0.84]; }
+  for(var c=0;c<cols;c++){
+    var X=xs(c);
+    ctx.fillStyle='#e8e8e8'; ctx.fillRect(X[0], y, cw, altHead);
+    ctx.fillStyle='#555'; ctx.font='600 '+(fs-0.5)+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Parcela', X[1], y+altHead*0.7); ctx.fillText('Valor', X[2], y+altHead*0.7); ctx.fillText('Data', X[3], y+altHead*0.7);
+  }
+  var y0=y+altHead;
+  ps.forEach(function(p,i){
+    var c=Math.floor(i/rows), k=i%rows, X=xs(c), yy=y0+k*altRow;
+    ctx.fillStyle=(k%2)?'#f5f5f5':'#fff'; ctx.fillRect(X[0], yy, cw, altRow);
+    var cy=yy+altRow*0.7;
+    ctx.textAlign='center';
+    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica, Arial, sans-serif'; ctx.fillText(String(i+1).padStart(2,'0'), X[1], cy);
+    ctx.fillStyle='#111'; ctx.font='600 '+fs+'px Helvetica, Arial, sans-serif'; ctx.fillText('R$ '+CTR_fmtV(p.v), X[2], cy);
+    ctx.fillStyle='#555'; ctx.font=fs+'px Helvetica, Arial, sans-serif'; ctx.fillText(p.d, X[3], cy);
+  });
+  y=y0+rows*altRow;
+  var tot=ps.reduce(function(a,p){ return a+p.v; },0);
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(pad, y, W-pad*2, altTot);
+  ctx.strokeStyle='#bbb'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.font='bold '+fs+'px Helvetica, Arial, sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Total · '+n+' parcelas · R$ '+CTR_fmtV(Math.round(tot*100)/100), W/2, y+altTot*0.68);
+  return cv;
 }
 function CTR_finAbrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
@@ -20186,19 +20273,14 @@ function CTR_finGerar(ov){
   }
   var veic={marca:g('ctrv-marca').toUpperCase(), modelo:g('ctrv-modelo').toUpperCase(), placa:g('ctrv-placa').toUpperCase().replace(/[^A-Z0-9]/g,''), chassi:g('ctrv-chassi').toUpperCase(), renavam:g('ctrv-renavam'), cor:g('ctrv-cor').toUpperCase(), ano:g('ctrv-ano')};
   if(!veic.marca || !veic.modelo || !veic.placa || !veic.renavam){ trava('PREENCHA MARCA, MODELO, PLACA E RENAVAM'); return; }
+  if(veic.marca.replace(/[^A-Z0-9]/g,'')===veic.placa){ trava('MARCA IGUAL \u00c0 PLACA'); return; }
   var parcelas=CTR_finParcelas(r);
   if(!parcelas.length){ trava('FINANCIAMENTO SEM PARCELAS'); return; }
   if(falta) falta.style.display='none';
   var total=Math.round(parcelas.reduce(function(a,p){ return a+p.v; },0)*100)/100;
   var btn=ov.querySelector('#ctr-gerar'); btn.textContent='GERANDO...'; btn.disabled=true;
-  /* tabela de parcelas: a mesma foto do COMPARTILHAR do financiamento, capturada em silencio */
-  CTR_canvas=null; CTR_capturando=true;
-  try{
-    if(VB_telaAtual!=='fin'){ HIST_voltaParaHist=(VB_telaAtual==='hist'); HIST_carregarFin(r); }
-    FIN_compartilharTabela();
-  }catch(e){}
-  CTR_capturando=false;
-  var cv=CTR_canvas;
+  /* tabela de parcelas propria do contrato: compacta, duas colunas (CTR_finTabela) */
+  var cv=null; try{ cv=CTR_finTabela(r, r.descricao||(veic.modelo+' '+veic.placa)); }catch(e){ cv=null; }
   var fotoP = cv ? new Promise(function(res){ cv.toBlob(function(b){ b.arrayBuffer().then(function(ab){ res(new Uint8Array(ab)); }); },'image/jpeg',0.92); }) : Promise.resolve(null);
   Promise.all([CTR_unzipBytes(CTR_b64bytes(CTR_TPL_B64)), fotoP]).then(function(rr){
     var parts=rr[0], foto=rr[1];
@@ -20527,6 +20609,23 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.55</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">JUROS DENTRO DA PARCELA na conta a pagar (EDITAR): para empréstimo pago em parcela fixa, como o mútuo do irmão. A ficha mostra JUROS e AMORTIZAÇÃO. No Fechamento, só a parte de juros entra em JUROS PAGOS e desce do lucro do mês em que a conta foi paga; SAÍDAS fica com a amortização. Requer SQL: alter table contas_pagar add column if not exists juros numeric;</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.54</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Card A PAGAR da Home mostra o que FALTA pagar, igual à aba SAÍDAS: o Vicente de hoje aparecia com 25.000 cheios, tendo 23.000 já pagos</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.53</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Valor por extenso corrigido nos contratos de venda e de financiamento: "Cinquenta e Seis Mil, Setecentos e Sessenta Reais" (saía "Mil e Setecentos e Sessenta"). O "e" antes do último grupo só fica quando ele é menor que cem ou centena redonda: "Dois Mil e Trezentos", "Mil e Cinquenta"</div>
+      <div class="cl-item">Testemunhas do contrato do financiamento como no modelo original: linha de assinatura, Nome, CPF e RG</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.52</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Contrato do financiamento com tabela própria: compacta e em duas colunas (acima de 6 parcelas), cabendo logo abaixo da Cláusula 4ª em vez de pular de página. A foto do COMPARTILHAR não muda. Marca igual à placa é recusada</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.51</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">Contrato do financiamento: veículo só com MARCA, MODELO, PLACA e RENAVAM, os quatro obrigatórios. Saíram chassi, cor e ano (o ano fica no modelo). Legenda da tabela com a descrição em negrito</div>
   </div>
