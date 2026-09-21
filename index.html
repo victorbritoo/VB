@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.44</title>
+<title>VB - v1.300.45</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -795,6 +795,10 @@ body{ text-transform:uppercase; }
     <div style="margin-bottom:10px;">
       <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">DESCRIÇÃO</div>
       <input id="fin-tabelaDesc" type="text" placeholder="TOYOTA SW4 2026 FKX5J04" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:15px;color:var(--tx);text-align:center;padding:4px 0;font-family:-apple-system,'Helvetica Neue',sans-serif;text-transform:uppercase;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:4px;text-align:center;">CLIENTE</div>
+      <input id="fin-cliente" type="text" placeholder="NOME DE QUEM FINANCIOU" onclick="if(!this.value)this.select()" style="width:100%;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:600;color:var(--tx);text-align:center;padding:3px 0;font-family:-apple-system,sans-serif;text-transform:uppercase;">
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;">
@@ -1642,6 +1646,7 @@ function HIST_carregarFin(r){
   FIN_simFlag=!!r.simulacao; try{FIN_paintSimChip();}catch(e){}
   // Set all fields before triggering recalc
   document.getElementById('fin-tabelaDesc').value = r.descricao || '';  /* sempre atribui: sem isso o campo fica com o registro anterior */
+  (function(){ var el=document.getElementById('fin-cliente'); if(el) el.value=r.cliente||''; })();
   if(r.valor_financiado){ document.getElementById('fin-valor').value = FIN_formatBR(Number(r.valor_financiado)); }
   if(r.qtd_parcelas){ document.getElementById('fin-prazo').value = String(r.qtd_parcelas); }
   if(r.taxa){ document.getElementById('fin-taxa').value = FIN_formatBR(Number(r.taxa)); }
@@ -2864,7 +2869,7 @@ function VB_fetchPag(tabela, cols){
 function VB_fetchTudo(onOk, onErr){
   /* baixas, pagamentos e repasse combinado sao dado operacional: sem eles a restauracao
      devolve as vendas com todas as parcelas em aberto de novo. */
-  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
+  var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos'];
   Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
@@ -3254,7 +3259,7 @@ function VB_restaurarStart(){
           var data=JSON.parse(rd.result);
           if(!data || data.app!=='VB' || !data.dados){ VB_toast('Arquivo não parece um backup do VB.'); inp.value=''; return; }
           var d=data.dados;
-          var cont={ parcela_baixas:(d.parcela_baixas||[]).length, parcela_pagamentos:(d.parcela_pagamentos||[]).length, parcela_notas:(d.parcela_notas||[]).length, repasse_previsto:(d.repasse_previsto||[]).length, contas_pagar:(d.contas_pagar||[]).length, parcela_prorroga:(d.parcela_prorroga||[]).length, antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length, socios:(d.socios||[]).length };
+          var cont={ parcela_baixas:(d.parcela_baixas||[]).length, parcela_pagamentos:(d.parcela_pagamentos||[]).length, parcela_notas:(d.parcela_notas||[]).length, repasse_previsto:(d.repasse_previsto||[]).length, contas_pagar:(d.contas_pagar||[]).length, conta_pagamentos:(d.conta_pagamentos||[]).length, parcela_prorroga:(d.parcela_prorroga||[]).length, antecipacoes:(d.antecipacoes||[]).length, financiamentos_hist:(d.financiamentos_hist||[]).length, vendas:(d.vendas||[]).length, pagamentos:(d.pagamentos||[]).length, mercadorias:(d.mercadorias||[]).length, listas:(d.listas||[]).length, recebimentos:(d.recebimentos||[]).length, socios:(d.socios||[]).length };
           var tot=cont.antecipacoes+cont.financiamentos_hist+cont.vendas+cont.pagamentos+cont.mercadorias+cont.listas+cont.recebimentos+cont.socios;
           if(!tot){ VB_toast('O backup está vazio.'); inp.value=''; return; }
           VB_restPayload={ data:data, cont:cont, tot:tot, diff:null };
@@ -3287,7 +3292,7 @@ function VB_diffCampos(a,b){
 }
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
-  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
+  var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos'];
   Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
@@ -3333,8 +3338,8 @@ function VB_restaurarModal(){
   document.body.appendChild(ov);
 }
 function VB_restaurarResumoHTML(P){
-  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos', contas_pagar:'Contas a Pagar', contas_receber:'Entradas Manuais', mercadoria_custos:'Custos da Pe\u00e7a'};
-  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos'];
+  var labels={antecipacoes:'Antecipações', financiamentos_hist:'Financiamentos', vendas:'Vendas', pagamentos:'Pagamentos', mercadorias:'Estoque', listas:'Listas (Receb.)', recebimentos:'Recebimentos', contas_pagar:'Contas a Pagar', contas_receber:'Entradas Manuais', mercadoria_custos:'Custos da Pe\u00e7a', conta_pagamentos:'Pagamentos das Contas'};
+  var keys=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos'];
   var h='';
   if(P.diff && P.diffOk){
     var tN=0,tA=0,tI=0, allAlt=[], allNovas=[];
@@ -3396,7 +3401,7 @@ function VB_restaurarExec(){
   if(!w || (w.value||'').trim().toUpperCase()!=='RESTAURAR'){ VB_toast('Digite RESTAURAR para confirmar.'); return; }
   var go=document.getElementById('vb-restore-go'); if(go){ go.disabled=true; go.textContent='RESTAURANDO...'; go.style.cursor='wait'; }
   var d=P.data.dados;
-  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]], ['parcela_baixas', d.parcela_baixas||[]], ['parcela_notas', d.parcela_notas||[]], ['contas_pagar', d.contas_pagar||[]], ['parcela_pagamentos', d.parcela_pagamentos||[]], ['repasse_previsto', d.repasse_previsto||[]], ['parcela_prorroga', d.parcela_prorroga||[]], ['contas_receber', d.contas_receber||[]], ['mercadoria_custos', d.mercadoria_custos||[]]];
+  var tabelas=[['antecipacoes', d.antecipacoes||[]], ['financiamentos_hist', d.financiamentos_hist||[]], ['vendas', d.vendas||[]], ['pagamentos', d.pagamentos||[]], ['mercadorias', d.mercadorias||[]], ['listas', d.listas||[]], ['recebimentos', d.recebimentos||[]], ['socios', d.socios||[]], ['clientes', d.clientes||[]], ['contratos', d.contratos||[]], ['parcela_baixas', d.parcela_baixas||[]], ['parcela_notas', d.parcela_notas||[]], ['contas_pagar', d.contas_pagar||[]], ['parcela_pagamentos', d.parcela_pagamentos||[]], ['repasse_previsto', d.repasse_previsto||[]], ['parcela_prorroga', d.parcela_prorroga||[]], ['contas_receber', d.contas_receber||[]], ['mercadoria_custos', d.mercadoria_custos||[]], ['conta_pagamentos', d.conta_pagamentos||[]]]; /* depois de contas_pagar: a chave estrangeira exige a conta antes */
   var i=0, okCount=0, erros=[];
   function next(){
     if(i>=tabelas.length){ done(); return; }
@@ -3889,7 +3894,7 @@ var HIST_exporting=false;
    ou pelo socio de uma venda nao achava nada. */
 function HIST_buscaCols(tab){
   if(tab==='ant') return ['nome','cliente'];
-  if(tab==='fin') return ['nome','descricao','investidor_nome'];
+  if(tab==='fin') return ['nome','descricao','cliente','investidor_nome'];
   if(tab==='ven') return ['nome','descricao','cliente','socio','identificacao','notas'];
   return ['nome'];
 }
@@ -4982,12 +4987,16 @@ function HIST_renderRows(tab, rows){
       if(r.valor_liquido) campos.push({l:'Líquido', v:HIST_fmtMoeda(r.valor_liquido)});
     } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
-      valor=HIST_fmtMoeda(r.valor_financiado);
+      valor=HIST_fmtMoeda(r.valor_financiado)+(Number(r.qtd_parcelas)>0?(' ('+Number(r.qtd_parcelas)+'X)'):'');
       var _lF=HIST_lucroRow('fin', r), _finV=Number(r.valor_financiado)||0;
+      var _l2F=[];
       if(_lF!=null){
         var _pF=(!r.tem_investidor && _finV>0)?(' <span style="color:var(--so);">('+Math.round(_lF/_finV*100)+'%)</span>'):'';
-        linha2='<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF;
+        _l2F.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF);
       }
+      if(r.cliente) _l2F.push(HIST_nomeFit(VB_nomeCurto(r.cliente)));
+      if(_l2F.length) linha2=_l2F.join('<span style="color:var(--mu);"> · </span>');
+      if(r.cliente) campos.push({l:'Cliente', v:VB_nomeCurto(r.cliente)});
       var _dopF=String(r.data_operacao||r.data_inicio||'').slice(0,10);
       if(_dopF) campos.push({l:'Data da operação', v:HIST_fmtData(_dopF)});
       if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
@@ -5392,7 +5401,7 @@ function VB_upper(el){
 }
 function VB_val(id){ var e=document.getElementById(id); return e?(e.value||''):''; }
 function FIN_assinatura(){
-  return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
+  return JSON.stringify([VB_val('fin-tabelaDesc'),VB_val('fin-cliente'),VB_val('fin-dataOp'),VB_val('fin-valor'),VB_val('fin-prazo'),
     VB_val('fin-taxa'),VB_val('fin-parcela'),VB_val('fin-tabelaData'),
     /* marca de simulacao e dados do investidor tambem sao alteracao */
     (typeof FIN_simFlag!=='undefined'?!!FIN_simFlag:false),
@@ -5651,7 +5660,7 @@ function showScreen(name){
   /* fornecedor tambem sai da lista de clientes: no negocio do VB quem vende relogio e quem
      compra relogio sao a mesma gente (o Emanuel e os dois). Nome novo vira cliente a completar. */
   if(name==='mer'){ VB_cliAttach('mer-socio'); VB_cliAttach('mer-fornecedor'); VB_cliCarregar(function(){}); }
-  if(name==='fin'){ VB_cliAttach('inv-nome'); VB_cliCarregar(function(){}); }
+  if(name==='fin'){ VB_cliAttach('inv-nome'); VB_cliAttach('fin-cliente'); VB_cliCarregar(function(){}); }
   if(name==='hist'){ VB_telaAnterior='home'; HIST_voltaParaHist=false;
     if(HIST_manterExp) HIST_manterExp=false; else HIST_expAbertos={};
     HIST_searchOpen=false; HIST_searchGlobal=false; HIST_searchTerm='';
@@ -6294,8 +6303,11 @@ function FIN_confirmarOperacao(btn){
   var _invD = (_invOn && typeof INV_getDados==='function') ? INV_getDados() : null;
   var _invPct = _invOn ? (FIN_parseBR(document.getElementById('inv-pctInv').value)||null) : null;
   var _dopV=(document.getElementById('fin-dataOp')||{}).value||'';
+  var _finCli=((document.getElementById('fin-cliente')||{}).value||'').trim().toUpperCase();
   var row={
     descricao: desc||null,
+    cliente: _finCli||null,
+    cliente_id: _finCli?VB_cliIdDe(_finCli):null,
     data_inicio: toISO(dataStr),
     data_operacao: toISO(_dopV) || (function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})(),
     valor_financiado: (!isNaN(valor)&&valor>0)?valor:null,
@@ -6338,6 +6350,8 @@ function FIN_confirmarOperacao(btn){
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
       VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      /* cliente novo vira cadastro A COMPLETAR, igual a venda; simulacao nao cria ninguem */
+      if(!FIN_simFlag && row.cliente) VB_cliGarantir(row.cliente);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -6359,7 +6373,7 @@ function FIN_limpar(){
   FIN_lastSolved='';
   FIN_degrau='centavo';
   ['fin-valor','fin-prazo','fin-taxa','fin-parcela',
-   'fin-tabelaDesc'].forEach(function(id){
+   'fin-tabelaDesc','fin-cliente'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
   (function(){ var el=document.getElementById('fin-dataOp'); if(el) el.value=MER_hojeBR(); })();
@@ -10214,7 +10228,7 @@ function GLB_buscar(){
   }
   Promise.all([
     sb.from('antecipacoes').select('*').or(_o(['nome'])).limit(8),
-    sb.from('financiamentos_hist').select('*').or(_o(['descricao','investidor_nome'])).limit(8),
+    sb.from('financiamentos_hist').select('*').or(_o(['descricao','cliente','investidor_nome'])).limit(8),
     sb.from('vendas').select('*').or(_o(['descricao','nome','socio','cliente'])).limit(8),
     sb.from('pagamentos').select('*').or(_o(['nome'])).limit(8),
     sb.from('mercadorias').select('*').or(_o(['descricao','fornecedor','socio','sn'])).limit(8),
@@ -10650,6 +10664,7 @@ function VB_cliGarantir(nome){
       if(hit.ativo===false){ sb.from('clientes').update({ativo:true}).eq('id',hit.id).then(function(res){ if(!res.error){ VB_cliBase=null; try{ VB_log('CLIENTES','ativou',hit.nome,'primeira operação'); }catch(e){} } }).catch(function(){}); }
       sb.from('vendas').update({cliente_id:hid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
       sb.from('antecipacoes').update({cliente_id:hid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+      sb.from('financiamentos_hist').update({cliente_id:hid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
       return;
     }
     sb.from('clientes').insert({nome:alvo.toUpperCase(), ativo:true}).select().then(function(res){
@@ -10658,6 +10673,7 @@ function VB_cliGarantir(nome){
       try{ VB_log('CLIENTES','criou',alvo.toUpperCase(),'automático · a completar'); }catch(e){}
       sb.from('vendas').update({cliente_id:nid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
       sb.from('antecipacoes').update({cliente_id:nid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
+      sb.from('financiamentos_hist').update({cliente_id:nid}).eq('cliente',alvo).is('cliente_id',null).then(function(){}).catch(function(){});
     }).catch(function(){});
   });
 }
@@ -11319,9 +11335,11 @@ function REN_coleta(ant, fin, ven){
     if(VB_ehSimulacao(r)) return; // simulação: fora do cronograma
     var n=Number(r.qtd_parcelas)||0, vp=Number(r.valor_parcela)||0;
     var d1=r.data_inicio?String(r.data_inicio).slice(0,10):null;
-    var cli=String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase();
+    var _dF=String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase();
+    /* cliente da operacao quando existe (v1.300.45); financiamento antigo segue pela descricao */
+    var cli=String(r.cliente||'').trim()?String(r.cliente).toUpperCase():_dF;
     var ops=[];
-    if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) ops.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:cli, tab:'fin', opId:String(r.id), idx:k});
+    if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) ops.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:_dF, tab:'fin', opId:String(r.id), idx:k});
     fecha(ops);
   });
   return out;
@@ -12856,7 +12874,7 @@ function REN_abrir(){
      esperar o REN_cache existir antes de montar o documento */
   return Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos,simulacao,data_operacao,created_at').limit(10000), /* data_operacao e created_at: o carimbo OP MM/AA do cronograma sai delas */
-    sb.from('financiamentos_hist').select('id,descricao,nome,qtd_parcelas,valor_parcela,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
+    sb.from('financiamentos_hist').select('id,descricao,nome,cliente,qtd_parcelas,valor_parcela,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total,custo,lucro_vb_pct,simulacao').limit(10000),
     sb.from('parcela_baixas').select('*').limit(20000),
     sb.from('repasse_previsto').select('*').limit(20000),
@@ -20115,6 +20133,11 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.45</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">FINANCIAMENTO com CLIENTE: campo novo embaixo da DESCRIÇÃO, com a mesma sugestão da Venda. Nome que não existe vira cadastro A COMPLETAR. Nas ENTRADAS a parcela passa a abrir pelo cliente, com a descrição (modelo e placa) na segunda linha; financiamento sem cliente continua pela descrição. No Histórico, o card mostra as parcelas ao lado do financiado, R$ 40.000,00 (24X), e o cliente na linha do lucro</div>
+      <div class="cl-item">BACKUP: os pagamentos parciais das contas a pagar (desde a 1.300.x da sessão 28) não entravam no arquivo. Agora entram, e a restauração grava depois das contas</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.44</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">SAÍDAS: o total de cada mês agora soma o que FALTA pagar, a mesma régua do TOTAL A PAGAR. Conta paga em parte entra só pelo resto (o Vicente de setembro contava 25.000 com 23.000 já pagos)</div>
   </div>
