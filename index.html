@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.52</title>
+<title>VB - v1.300.53</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -19860,17 +19860,24 @@ function CTR_extInt(n){
     return s.join(' e ');
   }
   var grupos=[[1000000000,'Bilhão','Bilhões'],[1000000,'Milhão','Milhões'],[1000,'Mil','Mil'],[1,'','']];
-  var out=[];
+  var out=[], qs=[];
   grupos.forEach(function(g){
     var q=Math.floor(n/g[0]); n=n%g[0];
     if(!q) return;
+    qs.push(q);
     if(g[0]===1000 && q===1){ out.push('Mil'); return; }
     var t=tres(q);
     if(g[1]) t+=' '+(q===1?g[1]:g[2]);
     out.push(t.trim());
   });
-  // ligação final: "e" antes do último grupo quando ele é <100 ou centena redonda
-  if(out.length>1){ var last=out.pop(); return out.join(', ')+' e '+last; }
+  /* ligacao final: "e" antes do ultimo grupo SO quando ele e <100 ou centena redonda (Dois Mil e
+     Trezentos, Mil e Cinquenta); nos outros casos virgula (Dois Mil, Trezentos e Sessenta e Cinco).
+     O comentario sempre disse isso e o codigo punha "e" em tudo -- "Mil e Setecentos e Sessenta"
+     saiu em todo contrato ate a v1.300.53. */
+  if(out.length>1){
+    var last=out.pop(), ql=qs[qs.length-1];
+    return out.join(', ')+((ql<100 || ql%100===0)?' e ':', ')+last;
+  }
   return out[0];
 }
 function CTR_extensoReais(v){
@@ -20043,7 +20050,7 @@ function CTR_finCorpo(o){
   x+=ass(CTR_FIN_CREDOR);
   o.devs.forEach(function(d){ x+=ass(d.nome); });
   x+=P([['b','Testemunhas:']],{c:1})+V(1)+V(1);
-  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome: ________________________   CPF: ________________']],{c:1})+V(1)+V(1); });
+  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome:']],{c:1})+P([['','CPF:']],{c:1})+P([['','RG:']],{c:1})+V(1)+V(1); });
   return x;
 }
 /* Tabela de parcelas SO do contrato (v1.300.52): compacta, em duas colunas acima de 6 parcelas.
@@ -20563,6 +20570,11 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.53</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Valor por extenso corrigido nos contratos de venda e de financiamento: "Cinquenta e Seis Mil, Setecentos e Sessenta Reais" (saía "Mil e Setecentos e Sessenta"). O "e" antes do último grupo só fica quando ele é menor que cem ou centena redonda: "Dois Mil e Trezentos", "Mil e Cinquenta"</div>
+      <div class="cl-item">Testemunhas do contrato do financiamento como no modelo original: linha de assinatura, Nome, CPF e RG</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.52</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">Contrato do financiamento com tabela própria: compacta e em duas colunas (acima de 6 parcelas), cabendo logo abaixo da Cláusula 4ª em vez de pular de página. A foto do COMPARTILHAR não muda. Marca igual à placa é recusada</div>
   </div>
