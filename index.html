@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.40</title>
+<title>VB - v1.300.41</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11892,7 +11892,7 @@ function REN_cpCard(c){
              :((dtv===hoje)?'<b>HOJE</b>':REN_dataCard(dtv));
   var _pgPar=REN_cpPagoTot(c);
   var val=pago?(Number(c.valor_pago!=null?c.valor_pago:c.valor)||0):(REN_cpParcial(c)?REN_cpFalta(c):(Number(c.valor)||0));
-  var tit=String(c.credor||c.descricao||'\u2014');
+  var tit=c.credor ? VB_nomeCurto(String(c.credor)) : (REN_rotCurto(c.descricao)||'\u2014');   /* descricao nao passa pelo encurtador de nome de gente */
   var sub=(c.credor&&c.descricao)?REN_rotCurto(c.descricao):'';
   var _nmCp=REN_cpNm(c); if(_nmCp) sub=_nmCp+(sub?(' \u00b7 '+sub):'');
   var cor=atr?'var(--red)':(pago?'var(--mu)':'var(--tx)');
@@ -11901,7 +11901,7 @@ function REN_cpCard(c){
   var selo=(c.origem_tab==='mercadorias')?GLB_badge('E'):'';
   var s='<div style="background:var(--sf);border:0.5px solid var(--ln'+(pago?'3':'2')+');border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;'+(pago?'opacity:0.75;':'')+'">'
     +'<div onclick="REN_cpFicha(\'' + id + '\')" style="flex:1;min-width:0;cursor:pointer;">'
-    +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(tit))+'</span>'+selo+'</span>'
+    +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:'+(pago?'var(--mu)':'var(--tx)')+';text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(tit)+'</span>'+selo+'</span>'
     +'<span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+cor+';">'+HIST_fmtMoeda(val)+'</span> \u00b7 <span style="font-weight:600;color:'+(atr?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>';
   if(sub) s+='<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(sub)+'</div>';
   if(REN_cpParcial(c)) s+='<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(_pgPar)+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_cpFalta(c))+'</div>';
@@ -12001,6 +12001,7 @@ function REN_cpDirty(){
     });
   }
   var ok=(!!cr && okP) && (REN_cpForm===null || REN_cpEstado()!==REN_cpForm);
+  var _fc=document.getElementById('rencp-falta'); if(_fc) _fc.style.display=(!cr && (REN_cpEditId || okP))?'block':'none';
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -12232,6 +12233,7 @@ function REN_cpSheet(id){
     /* DAR BAIXA saiu daqui: quem paga passa pela ficha, que e a porta do card. Aqui a acao e
        salvar a correcao, e o REN_cpDirty so acende o botao quando ha mudanca de verdade. */
     +'<button onclick="REN_cpSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencp-salvar">SALVAR</button>'
+    +'<div id="rencp-falta" style="display:none;text-align:center;font-size:9px;letter-spacing:1px;color:var(--red);font-weight:600;margin-top:5px;">FALTA O CREDOR</div>'
     +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
         +'<button onclick="REN_cpExcluir(this,\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
         +'<button onclick="REN_cpVoltarGuard(\'' + String(c.id) + '\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -12349,13 +12351,17 @@ function REN_cpSalvar(id){
   }
   if(!VB_gravando('REN_cpSalvar')) return;
   var nT = linhas ? linhas.length : 1;
-  var _ot = REN_cpJuros?'juros':null;
+  /* A ORIGEM SO MUDA PELO BOTAO DE JUROS (v1.300.41). Antes o salvar gravava null em toda conta
+     que nao fosse juros, e apagava o 'mercadorias' das parcelas da compra: a conta perdia o selo E,
+     o contador, a folha PARCELAS DA COMPRA da peca e o SEU DINHEIRO. */
+  var _otEra = String(((id && REN_cpDe(id)) || {}).origem_tab || '');
+  var _ot = REN_cpJuros ? 'juros' : ((_otEra && _otEra!=='juros') ? _otEra : null);
   /* JUROS DA CONTA ja saiu do banco no dia do vencimento -- deixar pendente era obrigar uma baixa
      manual de dinheiro que ja foi, e o Fechamento so conta juros depois de pago (pago_em). Entao
      a conta nasce paga, com pago_em na propria data do vencimento. Desmarcar NAO desfaz a baixa:
      apagar registro de pagamento e sempre um ato explicito. */
   function _cpJurosPago(o){
-    if(!_ot || o.pago_em) return o;
+    if(_ot!=='juros' || o.pago_em) return o;   /* so juros nasce pago; origem 'mercadorias' preservada nao pode baixar a conta */
     var dj=String(o.venc||'').slice(0,10); if(!dj) return o;
     o.pago_em=(dj===REN_hojeISO())?VB_carimbo():(dj+'T12:00:00.000Z');
     o.valor_pago=Math.round((Number(o.valor)||0)*100)/100;
@@ -12369,7 +12375,7 @@ function REN_cpSalvar(id){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
     try{ VB_log('CONTAS A PAGAR', id?'editou conta':('nova conta'+(nT>1?(' \u00b7 '+nT+' parcelas'):'')), cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
-    VB_toast(id?'Conta salva.':(_ot?(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
+    VB_toast(id?'Conta salva.':(_ot==='juros'?(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
@@ -15726,6 +15732,8 @@ function MER_cpRemove(i, btn){
 function MER_cpSalvar(){
   var id=MER_cpId; if(!id) return;
   var r=MER_rows.find(function(x){ return String(x.id)===String(id); }); if(!r) return;
+  /* credor e obrigatorio: sem DE QUEM COMPREI as contas nasciam sem dono (v1.300.41) */
+  if(!String(r.fornecedor||'').trim()){ VB_toast('Preencha DE QUEM COMPREI na pe\u00e7a antes.'); return; }
   var validas=MER_cpLinhas.filter(function(l){ return !l.pago && (Number(l.valor)>0 || l.venc); });
   var ruim=validas.filter(function(l){ return !(Number(l.valor)>0) || !l.venc; });
   if(ruim.length){ VB_toast('Preencha valor e vencimento.'); return; }
@@ -16192,6 +16200,23 @@ function MER_viewSalvar(){
     var _det=VB_logDiff(r, payload);
     VB_log('ESTOQUE','editou', desc, _det||VB_logDet({custo:custo||0}));
     MER_syncVenda(r, payload, desc);
+    /* PECA -> PARCELAS DA COMPRA (v1.300.41). O credor e a descricao das contas so eram gravados
+       pela folha PARCELAS DA COMPRA; editar DE QUEM COMPREI na peca nao chegava nelas. Vale so para
+       as nao pagas (a mesma regra da folha), e fornecedor vazio nunca apaga um credor existente. */
+    try{
+      var _cpUp={};
+      if(payload.fornecedor && payload.fornecedor!==String(r.fornecedor||'').toUpperCase()) _cpUp.credor=payload.fornecedor;
+      if(desc!==String(r.descricao||'').toUpperCase()) _cpUp.descricao=desc;
+      if(Object.keys(_cpUp).length){
+        sb.from('contas_pagar').update(_cpUp).eq('origem_tab','mercadorias').eq('origem_id', String(r.id)).is('pago_em', null)
+          .then(function(rc){ if(rc&&rc.error) VB_erro(rc.error.message,'N\u00e3o atualizou as parcelas da compra.'); }).catch(function(){});
+      }
+      /* contas que nasceram sem credor recebem o fornecedor mesmo sem mudanca na peca */
+      if(payload.fornecedor){
+        sb.from('contas_pagar').update({credor:payload.fornecedor}).eq('origem_tab','mercadorias').eq('origem_id', String(r.id)).is('pago_em', null).is('credor', null)
+          .then(function(){}).catch(function(){});
+      }
+    }catch(e){}
     Object.assign(r, payload);
     MER_viewEdit=false; MER_viewEditRow=null;
     VB_toast('Altera\u00e7\u00f5es salvas.');
@@ -20060,6 +20085,14 @@ function CTR_gerar(ov){
   <div id="changelog-sheet">
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
+
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.41</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Salvar o EDITAR de uma parcela da compra apagava a ligação dela com a peça: perdia o selo E, o contador, a folha PARCELAS DA COMPRA e o SEU DINHEIRO. A origem agora só muda pelo botão JUROS DA CONTA. (Defeito desde a 1.299.0; a conta afetada foi reparada por SQL em 21/09)</div>
+      <div class="cl-item">Salvar a peça leva DE QUEM COMPREI e a descrição para as parcelas da compra ainda não pagas, e preenche o credor das que nasceram sem dono</div>
+      <div class="cl-item">PARCELAS DA COMPRA não salva sem DE QUEM COMPREI na peça: credor é obrigatório</div>
+      <div class="cl-item">Conta sem credor mostra no card a descrição sem o SN, e não "ROLEX 8A057318"; o EDITAR avisa FALTA O CREDOR quando é isso que trava o SALVAR</div>
+    </div>
 
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.40</span><span class="cl-ver-date">19/09/2026</span></div>
