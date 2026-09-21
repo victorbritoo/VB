@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.42</title>
+<title>VB - v1.300.43</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11919,16 +11919,17 @@ function REN_cpLista(){
   var pagas=REN_cpFiltra(todas.filter(function(c){ return !!c.pago_em; }));
   var atr=abertas.filter(function(c){ return String(c.venc||'')<hoje; });
   var venc=abertas.filter(function(c){ return String(c.venc||'')>=hoje; });
-  var tot=0; abertas.forEach(function(c){ tot+=REN_cpFalta(c); });
+  var tot=0, totVB=0; abertas.forEach(function(c){ var f=REN_cpFalta(c); tot+=f; totVB+=REN_cpVBDe(c,f); });
   var tAtr=0; atr.forEach(function(c){ tAtr+=REN_cpFalta(c); });
   function sec(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   var hh='';
   if(REN_cache.cpErro) hh+='<div style="font-size:10px;color:var(--red);font-weight:600;text-align:center;margin-bottom:8px;">Contas a pagar indispon\u00edveis: '+CLIP_esc(REN_cache.cpErro)+'</div>';
   /* sub PAGAS: o que ja saiu. Mesma tabela, outra pergunta. */
   if(REN_aba==='cpp'){
-    var tp=0; pagas.forEach(function(c){ tp+=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; });
+    var tp=0, tpVB=0; pagas.forEach(function(c){ var pg=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0; tp+=pg; tpVB+=REN_cpVBDe(c,pg); });
     hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL PAGO</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tp)+'</span></div>'
+      +REN_cpVBLinha(tp, tpVB)
       +(pagas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+pagas.length+' CONTA'+(pagas.length===1?'':'S')+'</span></div>'):'')
       +'</div>';
     if(!pagas.length) return hh+'<div style="text-align:center;font-size:12px;color:var(--mu);margin:24px 0;">Nenhuma conta paga ainda.</div>';
@@ -11937,9 +11938,9 @@ function REN_cpLista(){
     ps0.forEach(function(c){
       var ym=String(c.pago_em||'').slice(0,7);
       if(ym!==gP){
-        gP=ym; var gt=0, gn=0;
-        ps0.forEach(function(y){ if(String(y.pago_em||'').slice(0,7)===ym){ gt+=Number(y.valor_pago!=null?y.valor_pago:y.valor)||0; gn++; } });
-        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        gP=ym; var gt=0, gn=0, gvb=0;
+        ps0.forEach(function(y){ if(String(y.pago_em||'').slice(0,7)===ym){ var pg=Number(y.valor_pago!=null?y.valor_pago:y.valor)||0; gt+=pg; gvb+=REN_cpVBDe(y,pg); gn++; } });
+        hh+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(FM_MESES[Number(ym.slice(5,7))-1]||'')+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+REN_cpVBTx(gt,gvb)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -11947,6 +11948,7 @@ function REN_cpLista(){
   }
   hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
+    +REN_cpVBLinha(tot, totVB)
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
     +'</div>';
   /* mesma faixa das ENTRADAS: acao a esquerda, travessia a direita */
@@ -11965,10 +11967,10 @@ function REN_cpLista(){
     venc.forEach(function(c){
       var ym=String(c.venc||'').slice(0,7);
       if(ym!==gAtu){
-        gAtu=ym; var gt=0, gn=0;
-        venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ gt+=Number(y.valor)||0; gn++; } });
+        gAtu=ym; var gt=0, gn=0, gvb=0;
+        venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ var vl=Number(y.valor)||0; gt+=vl; gvb+=REN_cpVBDe(y,vl); gn++; } });
         /* mesma porta das ENTRADAS: o nome do mes abre o PANORAMA MENSAL, que ja traz as duas colunas */
-        hh+='<div id="cpmes-'+ym+'" onclick="REN_painel(\'cp\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+'</span></div>';
+        hh+='<div id="cpmes-'+ym+'" onclick="REN_painel(\'cp\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+REN_cpVBTx(gt,gvb)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -12065,6 +12067,23 @@ function REN_cpFecharGuard(){
    Os totais (TOTAL A PAGAR, card da Home, Fechamento) continuam no valor CHEIO de proposito:
    e o que de fato sai da conta bancaria, e mexer neles mudaria todo numero que o VB ja conhece.
    A divisao e LEITURA na ficha. Quem cobra a parte do socio e outra conversa (conta a receber). */
+/* Quanto de um valor da conta e do VB: aplica a proporcao da divisao (VB / valor cheio) sobre
+   a base pedida -- o que falta, o valor ou o que foi pago. Sem divisao, 100% VB. */
+function REN_cpVBDe(c, base){
+  var b=Number(base)||0, pv=REN_cpParteVB(c), v=Number(c&&c.valor)||0;
+  if(pv===null || !(v>0)) return b;
+  return Math.round(b*(pv/v)*100)/100;
+}
+/* Rotulo "(R$ X VB)" dos cabecalhos de mes -- mesmo desenho das ENTRADAS; so aparece quando difere */
+function REN_cpVBTx(tot, vb){
+  return (Math.abs(tot-vb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(vb)+' VB)</span>'):'';
+}
+/* Linha VB (x%) do card preto -- espelho do TOTAL A RECEBER */
+function REN_cpVBLinha(tot, vb){
+  if(!(Math.abs(tot-vb)>0.005)) return '';
+  var pct=(tot>0)?(' <span style="opacity:0.6;font-weight:600;letter-spacing:0;">('+Math.round(vb/tot*100)+'%)</span>'):'';
+  return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">VB'+pct+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+HIST_fmtMoeda(vb)+'</span></div>';
+}
 function REN_cpParteVB(c){
   var v=Number(c&&c.valor)||0, s=Number(c&&c.socio_valor)||0;
   if(!(s>0)) return null;
@@ -20094,6 +20113,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.43</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">SAÍDAS com a parte do VB, igual às ENTRADAS: cada mês mostra ao lado do total (R$ X VB) quando tem conta dividida com sócio, e o card de cima (TOTAL A PAGAR e TOTAL PAGO) ganha a linha VB (x%). Conta paga em parte entra com a parte do VB proporcional ao que falta. Card das ENTRADAS, panorama, Home e Fechamento seguem no valor cheio</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.42</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">Ficha da conta com sócio: sai a linha SUA PARTE e entram dois blocos lado a lado, SÓCIO · NOME e VB, cada um com valor e % da parcela — mesmo desenho da ficha das ENTRADAS. Em PARCELAS DA COMPRA, as parcelas com divisão mostram VB: R$ ao lado. Totais continuam cheios</div>
   </div>
