@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.41</title>
+<title>VB - v1.300.42</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12139,8 +12139,14 @@ function REN_cpFicha(id){
     +(function(){
         /* leitura, nunca deducao: o valor da conta continua sendo o que sai da conta bancaria */
         var _pv=REN_cpParteVB(c); if(_pv===null) return '';
-        return '<div style="text-align:center;font-size:11px;color:var(--mu2);font-weight:600;margin-top:8px;text-transform:uppercase;">SUA PARTE: '
-          +HIST_fmtMoeda(_pv)+' \u00b7 '+CLIP_esc(VB_nomeCurto(String(c.socio_nome||'')))+': '+HIST_fmtMoeda(Number(c.socio_valor)||0)+'</div>';
+        /* SOCIO e VB em blocos irmaos, cada um com o proprio rotulo -- mesmo desenho da ficha da
+           parcela nas ENTRADAS. Custos da peca nao entram: sao do estoque, nao da conta. */
+        var _vt=Number(c.valor)||0, _sv=Number(c.socio_valor)||0;
+        function _pc(v){ return (_vt>0)?(' ('+(v/_vt*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):''; }
+        return '<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:4px 10px;margin-top:10px;">'
+          +cel('S\u00d3CIO \u00b7 '+CLIP_esc(String(c.socio_nome||'').toUpperCase()), HIST_fmtMoeda(_sv)+_pc(_sv), null, 1)
+          +cel('VB', HIST_fmtMoeda(_pv)+_pc(_pv), null, 1)
+          +'</div>';
       })();
   /* PARCELAS DA COMPRA: mesma linha do tempo da ficha das entradas, colunas de largura fixa */
   if(_nmF){
@@ -12158,7 +12164,8 @@ function REN_cpFicha(id){
       else { yst='A VENCER'; ystC='var(--so)'; }
       var yvl=yp?(Number(y.valor_pago!=null?y.valor_pago:y.valor)||0):(Number(y.valor)||0);
       s+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-        +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(yvl)+'</span>'+_sep+'<span style="'+_c2+'">'+yv.split('-').reverse().join('/')+'</span>'+_sep+'<span style="'+_c3+'">'+REN_cpNm(y,_irF)+'</span></span>'
+        +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(yvl)+'</span>'+_sep+'<span style="'+_c2+'">'+yv.split('-').reverse().join('/')+'</span>'+_sep+'<span style="'+_c3+'">'+REN_cpNm(y,_irF)+'</span>'
+        +((REN_cpParteVB(y)!==null)?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(REN_cpParteVB(y))+'</span>'):'')+'</span>'
         +'<span style="color:'+ystC+';font-size:10px;font-weight:600;white-space:nowrap;">'+yst+'</span></div>';
     });
     s+='</div>';
@@ -20087,6 +20094,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.42</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Ficha da conta com sócio: sai a linha SUA PARTE e entram dois blocos lado a lado, SÓCIO · NOME e VB, cada um com valor e % da parcela — mesmo desenho da ficha das ENTRADAS. Em PARCELAS DA COMPRA, as parcelas com divisão mostram VB: R$ ao lado. Totais continuam cheios</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.41</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">Salvar o EDITAR de uma parcela da compra apagava a ligação dela com a peça: perdia o selo E, o contador, a folha PARCELAS DA COMPRA e o SEU DINHEIRO. A origem agora só muda pelo botão JUROS DA CONTA. (Defeito desde a 1.299.0; a conta afetada foi reparada por SQL em 21/09)</div>
       <div class="cl-item">Salvar a peça leva DE QUEM COMPREI e a descrição para as parcelas da compra ainda não pagas, e preenche o credor das que nasceram sem dono</div>
