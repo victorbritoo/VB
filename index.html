@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.43</title>
+<title>VB - v1.300.44</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11968,7 +11968,9 @@ function REN_cpLista(){
       var ym=String(c.venc||'').slice(0,7);
       if(ym!==gAtu){
         gAtu=ym; var gt=0, gn=0, gvb=0;
-        venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ var vl=Number(y.valor)||0; gt+=vl; gvb+=REN_cpVBDe(y,vl); gn++; } });
+        /* mesma regua do TOTAL A PAGAR: soma o que FALTA, nao o valor cheio -- conta paga em parte
+           entra so pelo resto, senao o mes contava de novo o que ja saiu */
+        venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ var vl=REN_cpFalta(y); gt+=vl; gvb+=REN_cpVBDe(y,vl); gn++; } });
         /* mesma porta das ENTRADAS: o nome do mes abre o PANORAMA MENSAL, que ja traz as duas colunas */
         hh+='<div id="cpmes-'+ym+'" onclick="REN_painel(\'cp\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+REN_cpVBTx(gt,gvb)+'</span></div>';
       }
@@ -20113,6 +20115,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.44</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">SAÍDAS: o total de cada mês agora soma o que FALTA pagar, a mesma régua do TOTAL A PAGAR. Conta paga em parte entra só pelo resto (o Vicente de setembro contava 25.000 com 23.000 já pagos)</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.43</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">SAÍDAS com a parte do VB, igual às ENTRADAS: cada mês mostra ao lado do total (R$ X VB) quando tem conta dividida com sócio, e o card de cima (TOTAL A PAGAR e TOTAL PAGO) ganha a linha VB (x%). Conta paga em parte entra com a parte do VB proporcional ao que falta. Card das ENTRADAS, panorama, Home e Fechamento seguem no valor cheio</div>
   </div>
