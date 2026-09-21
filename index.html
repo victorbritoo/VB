@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.45</title>
+<title>VB - v1.300.46</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1653,7 +1653,21 @@ function HIST_carregarFin(r){
   if(r.valor_parcela){ document.getElementById('fin-parcela').value = FIN_formatBR(Number(r.valor_parcela)); }
   if(r.data_inicio){ var pp=r.data_inicio.split('-'); document.getElementById('fin-tabelaData').value=pp[2]+'/'+pp[1]+'/'+pp[0]; }
   (function(){ var el=document.getElementById('fin-dataOp'); if(!el) return; var v=r.data_operacao||r.data_inicio; if(v){ var q=String(v).slice(0,10).split('-'); el.value=q[2]+'/'+q[1]+'/'+q[0]; } else el.value=''; })();
-  FIN_lastEdited='valor'; FIN_lastSolved='parcela'; FIN_update();
+  /* Reabrir recalculava a prestacao no degrau padrao (centavo) e jogava fora a gravada:
+     2.365,00 em 5/0 voltava 2.361,90, e prestacao digitada a mao (Buick, 10.000) mudava junto.
+     Descobre o degrau que reproduz a prestacao gravada; se nenhum reproduz, ela foi digitada --
+     mantem a prestacao e deixa a taxa ser a derivada. */
+  (function(){
+    var pv=Number(r.valor_financiado)||0, pm=Number(r.valor_parcela)||0, nn=Number(r.qtd_parcelas)||0, tx=(Number(r.taxa)||0)/100;
+    FIN_degrau='centavo'; FIN_lastEdited='valor'; FIN_lastSolved='parcela';
+    if(pv>0 && pm>0 && nn>0 && tx>0){
+      var bruto=FIN_calcPrice(pv, tx, nn), achou=false;
+      ['centavo','real','cinco'].some(function(d){ if(Math.abs(FIN_ceilStep(bruto,d)-pm)<0.005){ FIN_degrau=d; achou=true; return true; } return false; });
+      if(!achou){ FIN_lastEdited='parcela'; FIN_lastSolved='taxa'; }
+    }
+    FIN_applyDegrauUI();
+  })();
+  FIN_update();
   if(r.tem_investidor){
     document.getElementById('inv-nome').value = r.investidor_nome || '';
     if(r.investidor_pct!=null) document.getElementById('inv-pctInv').value=FIN_formatBR(Number(r.investidor_pct));
@@ -10760,13 +10774,16 @@ function CLIP_abrir(nome, cliId, voltarK){
     sb.from('vendas').select('id,cliente,nome,descricao,cliente_id,valor_total,custo,socio,valor_socio,lucro_vb_pct,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,simulacao').limit(10000),
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em,valor_recebido').limit(20000),
-    sb.from('parcela_pagamentos').select('op_tab,op_id,parcela_idx,valor').limit(20000)
+    sb.from('parcela_pagamentos').select('op_tab,op_id,parcela_idx,valor').limit(20000),
+    sb.from('financiamentos_hist').select('id,cliente,cliente_id,descricao,nome,valor_financiado,valor_total,valor_parcela,qtd_parcelas,taxa,data_inicio,data_operacao,created_at,tem_investidor,investidor_parcela,vb_parcela,simulacao').limit(10000)
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
     var ant=VB_antReais(res[0].data).filter(function(r){ return casa(r, r.cliente||r.nome); });
     var ven=(res[1].data||[]).filter(function(r){ return casa(r, r.cliente||r.nome||r.descricao); });
     var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
+    /* financiamento so casa pelo CLIENTE (v1.300.45); o antigo, sem cliente, nao tem dono */
+    var fin=((res[5]&&res[5].data)||[]).filter(function(r){ return !VB_ehSimulacao(r) && (r.cliente_id!=null || String(r.cliente||'').trim()) && casa(r, r.cliente); });
     var hoje=REN_hojeISO();
     var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
     var antAtr=ant.filter(function(r){ return (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0); });
@@ -10779,7 +10796,7 @@ function CLIP_abrir(nome, cliId, voltarK){
        a baixa grava o TOTAL, nao a ultima entrada. */
     var _pgm={}; ((res[4]&&res[4].data)||[]).forEach(function(pg){ var k2=pg.op_tab+'|'+pg.op_id+'|'+pg.parcela_idx; _pgm[k2]=(_pgm[k2]||0)+(Number(pg.valor)||0); });
     function _pagoDe(k2){ var v2=_pgm[k2]||0; if(v2>0) return Math.round(v2*100)/100; var b2=_bx[k2]; return b2?(Math.round((Number(b2.valor_recebido)||0)*100)/100):0; }
-    var todas=REN_coleta(antOk, [], ven);
+    var todas=REN_coleta(antOk, fin, ven);
     /* JA PAGO = tudo que ja entrou nas operacoes dele, quitadas ou nao. */
     var jaPago=0, jaN=0, jaParc=0;
     todas.forEach(function(x){ var k3=REN_key(x), pv=_pagoDe(k3); if(pv<=0) return; jaPago+=pv; if(_bx[k3]) jaN++; else jaParc++; });
@@ -10818,16 +10835,26 @@ function CLIP_abrir(nome, cliId, voltarK){
       if(_dc && _dv){ var _g=Math.round((new Date(_dv+'T00:00:00')-new Date(_dc+'T00:00:00'))/86400000); if(isFinite(_g)&&_g>=0) _gir=_g; }
       venL.push({rot:REN_rotCurto(v.descricao||v.nome||'VENDA'), data:_dv||String(v.created_at||'').slice(0,10), total:t, luc:meu, lucT:((l!=null)?l:null), dias:_gir});
     });
-    var lucVB=antLuc+venLuc, lucTot=antLuc+venLucT;
+    var finTot=0, finLuc=0, finLucT=0, finL=[];
+    fin.forEach(function(f){
+      var fv=Number(f.valor_financiado)||0; finTot+=fv;
+      var lf=HIST_lucroRow('fin', f)||0; finLuc+=lf;
+      var lfT=((Number(f.valor_total)||0)>0 && fv>0)?((Number(f.valor_total)||0)-fv):lf; finLucT+=lfT;
+      var _nq=Number(f.qtd_parcelas)||0, _tx=Number(f.taxa)||0;
+      var _exF=[(_nq>0?(_nq+'X'):''), ((_tx>0 && !f.tem_investidor)?(_tx.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% A.M.'):'')].filter(Boolean).join(' \u00b7 ');
+      finL.push({rot:REN_rotCurto(f.descricao||f.nome||'FINANCIAMENTO'), data:String(f.data_operacao||f.data_inicio||f.created_at||'').slice(0,10), fin:fv, luc:lf, lucT:lfT, ex:_exF});
+    });
+    var lucVB=antLuc+venLuc+finLuc, lucTot=antLuc+venLucT+finLucT;
     /* Diferem so quando ha venda com socio (12 das 17 vendas hoje). Nesses casos o painel
        mostrava a parte do VB com o rotulo LUCRO TOTAL -- o numero certo com o nome errado. */
     var _temSoc=(Math.abs(lucTot-lucVB)>=0.005);
     /* Pontualidade: so parcelas com baixa, comparando o recebimento com o vencimento. */
-    var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; });
+    var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; }); fin.forEach(function(f){ _ops['fin|'+String(f.id)]=1; });
     var pgN=0, pgDia=0, pgAtr=0, pgDias=0, pgAtrL=[];
     /* de qual operacao veio cada baixa: sem isso o bloco diz "1 com atraso" e nao diz qual */
     var _opRot={}; ven.forEach(function(v){ _opRot['ven|'+String(v.id)]=String(v.descricao||v.nome||''); });
     antOk.forEach(function(r){ _opRot['ant|'+String(r.id)]=String(r.nome||r.cliente||'ANTECIPA\u00c7\u00c3O'); });
+    fin.forEach(function(f){ _opRot['fin|'+String(f.id)]=REN_rotCurto(String(f.descricao||f.nome||'FINANCIAMENTO')); });
     ((res[3]&&res[3].data)||[]).forEach(function(b3){
       if(!_ops[b3.op_tab+'|'+String(b3.op_id)]) return;
       if(!b3.venc || !b3.recebido_em) return;
@@ -10870,7 +10897,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     /* apelido e o padrao de exibicao no app inteiro; nome completo so em contrato,
        cadastro do cliente e relatorio -- onde ele e o nome legal, nao um rotulo */
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(alvo))+'</div>';
-    hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length)+' OPERA\u00c7\u00d5ES</div>';
+    hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length+fin.length)+' OPERA\u00c7\u00d5ES</div>';
     /* linha com valor a direita e o lucro logo abaixo, em cinza */
     /* Sem percentual: nao existe denominador honesto para as tres formas. Em peca propria a base
        e o seu custo, em sociedade e a sua parte dele, em consignacao e zero. O giro em dias, sim,
@@ -10892,9 +10919,10 @@ function CLIP_abrir(nome, cliId, voltarK){
       +'<span class="vb-tit" style="color:var(--so);">'+(_temSoc?'LUCRO VB':'LUCRO TOTAL')+'</span>'
       +'<span style="font-size:16px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(lucVB)+'</span></div>';
     if(_temSoc) innR+=ln('Lucro total', HIST_fmtMoeda(lucTot));
-    if(venL.length && antL.length){
-      innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
-      innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
+    if((venL.length?1:0)+(antL.length?1:0)+(finL.length?1:0)>=2){
+      if(venL.length) innR+=ln('Rel\u00f3gios', HIST_fmtMoeda(venLuc));
+      if(antL.length) innR+=ln('Antecipa\u00e7\u00f5es', HIST_fmtMoeda(antLuc));
+      if(finL.length) innR+=ln('Financiamentos', HIST_fmtMoeda(finLuc));
     }
     if(totFut>0 || totCob>0 || jaPago>0){
       innR+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>';
@@ -10930,6 +10958,17 @@ function CLIP_abrir(nome, cliId, voltarK){
         +(_przC?ln('Prazo m\u00e9dio', _przC):'')
         +(_tirC?ln('Rendimento', _tirC):'');
       hh+=bl('ANTECIPA\u00c7\u00d5ES \u00b7 '+antL.length, innA, HIST_fmtMoeda(antBruto), antL.length);
+    }
+    // FINANCIAMENTOS
+    if(finL.length){
+      var innF='';
+      finL.sort(function(a,b2){ return a.data<b2.data?1:-1; });
+      finL.forEach(function(f2){ innF+=lnLuc((f2.data?fdt(f2.data)+' \u00b7 ':'')+CLIP_esc(f2.rot), HIST_fmtMoeda(f2.fin), f2.luc, null, f2.lucT, f2.ex); });
+      var _difF=(Math.abs(finLucT-finLuc)>=0.005);
+      innF+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>Financiado</b>', HIST_fmtMoeda(finTot))
+        +ln('<b>'+(_difF?'Lucro VB':'Lucro')+'</b>', HIST_fmtMoeda(finLuc))
+        +(_difF?ln('Lucro total', HIST_fmtMoeda(finLucT)):'');
+      hh+=bl('FINANCIAMENTOS \u00b7 '+finL.length, innF, HIST_fmtMoeda(finTot), finL.length);
     }
     // EM ABERTO
     var inner='';
@@ -20133,6 +20172,11 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.46</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">PANORAMA do cliente com FINANCIAMENTOS: bloco próprio (data, descrição, valor financiado, lucro, parcelas e taxa), lucro somado no RESULTADO, parcelas no A VENCER e na pontualidade. Só entra financiamento com CLIENTE preenchido</div>
+      <div class="cl-item">Reabrir um financiamento não muda mais a prestação: o app recalculava no arredondamento padrão (¢) e 2.365,00 em 5/0 voltava 2.361,90. Agora ele reconhece o arredondamento gravado; prestação digitada à mão fica como está</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.45</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">FINANCIAMENTO com CLIENTE: campo novo embaixo da DESCRIÇÃO, com a mesma sugestão da Venda. Nome que não existe vira cadastro A COMPLETAR. Nas ENTRADAS a parcela passa a abrir pelo cliente, com a descrição (modelo e placa) na segunda linha; financiamento sem cliente continua pela descrição. No Histórico, o card mostra as parcelas ao lado do financiado, R$ 40.000,00 (24X), e o cliente na linha do lucro</div>
       <div class="cl-item">BACKUP: os pagamentos parciais das contas a pagar (desde a 1.300.x da sessão 28) não entravam no arquivo. Agora entram, e a restauração grava depois das contas</div>
