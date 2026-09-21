@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.48</title>
+<title>VB - v1.300.51</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5243,6 +5243,23 @@ function VB_legenda(desc, corpo, fecho){
 }
 function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
   if(prefix==='ANT'){ try{ ANT_copiaFrase(); }catch(e){} }
+  if(prefix==='FIN'){
+    /* legenda do financiamento, no texto do VB: descricao, inicio e fim, cenario */
+    try{
+      var _fd=((document.getElementById('fin-tabelaDesc')||{}).value||'').trim().toUpperCase();
+      var _fn=parseInt((document.getElementById('fin-prazo')||{}).value||'0');
+      var _fi=((document.getElementById('fin-tabelaData')||{}).value||'').trim();
+      var _fp=_fi.split('/');
+      if(_fn>0 && _fp.length===3 && navigator.clipboard && navigator.clipboard.writeText){
+        var _fy=_fp[2].length===2?('20'+_fp[2]):_fp[2];
+        var _fu=VB_mesData(new Date(+_fy, +_fp[1]-1, +_fp[0]), _fn-1);
+        var _ff=('0'+_fu.getDate()).slice(-2)+'/'+('0'+(_fu.getMonth()+1)).slice(-2)+'/'+_fu.getFullYear();
+        var _fini=('0'+_fp[0]).slice(-2)+'/'+('0'+_fp[1]).slice(-2)+'/'+_fy;
+        navigator.clipboard.writeText((_fd?('*'+_fd+'.*\n'):'')+'In\u00edcio: '+_fini+'. Fim: '+_ff+'.\nFicaremos nesse cen\u00e1rio.\nConfere?');
+        VB_toast('Legenda copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+      }
+    }catch(e){}
+  }
   if(prefix==='VEN'){
     try{
       var _el=document.getElementById(descId);
@@ -19189,6 +19206,14 @@ function CTR_paginas(doc){
     function ehLinhaAss(p){ return p && p.length && p._c && /^_{6,}/.test(String(p[0][1])); }
     var _iAss=-1;
     doc.paras.forEach(function(p,i){ if(_iAss<0 && ehLinhaAss(p)) _iAss=i; });
+    /* A data vai junto com as assinaturas (v1.300.50): o bloco comecava na primeira linha de
+       assinatura e a data "Fortaleza/CE, ..." ficava sozinha no pe da pagina anterior (contrato
+       do MOBI, pag. 5 -> 6). Sobe o inicio do bloco ate a data, pulando os vazios entre elas. */
+    if(_iAss>0){
+      var _kd=_iAss-1;
+      while(_kd>=0 && doc.paras[_kd]!=='IMG' && (!doc.paras[_kd] || !doc.paras[_kd].length)) _kd--;
+      if(_kd>=0 && doc.paras[_kd]!=='IMG' && doc.paras[_kd].length && /^Fortaleza\//.test(String(doc.paras[_kd][0][1]).trim())) _iAss=_kd;
+    }
     /* VAO ELASTICO DA ASSINATURA (v1.300.8). O bloco inteiro pesa 430px, quase um terco da
        folha, e 180 desses 430 sao os dois vaos em branco para a caneta. Quem empurra e a tabela
        de parcelas, que muda de tamanho a cada venda -- entao qualquer altura fixa cabe num
@@ -19470,7 +19495,7 @@ function CON_fichaObj(c, aoGerarNovo){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;">'
     +'<div style="grid-column:1/-1;">'+bloco('CLIENTE',c.cliente_nome)+'</div>'
     +bloco('CPF',c.cpf)+bloco('DATA',dt)
-    +'<div style="grid-column:1/-1;">'+bloco('RELÓGIO',c.descricao)+'</div>'
+    +'<div style="grid-column:1/-1;">'+bloco(c.fin_id?'VEÍCULO':'RELÓGIO',c.descricao)+'</div>'
     +bloco('VALOR',c.valor_total?('R$ '+CTR_fmtV(Number(c.valor_total))):'')+bloco('ARQUIVO',c.fname)
     +'</div>'
     +'<div style="border-top:0.5px solid var(--ln3);margin-top:6px;padding-top:8px;">'
@@ -19984,7 +20009,7 @@ function CTR_finCorpo(o){
   x+=P([['bu','Cláusula 1ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' confessa e assume',' confessam e assumem')+', em caráter irrevogável e irretratável, uma dívida de '],['bu','R$ '+CTR_fmtV(o.total)+' ('+CTR_extensoReais(o.total)+')'],['',', referente à venda do veículo:']]);
   var v=o.veic, vs=[];
   function vc(rot, val, fim){ if(!String(val||'').trim()) return; vs.push(['b',rot]); vs.push(['',': '+val+(fim||'. ')]); }
-  vc('Marca', v.marca); vc('Modelo', v.modelo, (v.placa?' — ':'. ')); vc('Placa', v.placa); vc('Chassi', v.chassi); vc('Renavam', v.renavam); vc('Cor', v.cor); vc('Ano fab./modelo', v.ano);
+  vc('Marca', v.marca); vc('Modelo', v.modelo, (v.placa?' — ':'. ')); vc('Placa', v.placa); vc('Renavam', v.renavam);
   x+=P(vs)+V();
   /* 2a */
   x+=P([['bu','Cláusula 2ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' assume',' assumem')+', a partir da data de assinatura deste instrumento, '],['b','todas as responsabilidades civis, administrativas e criminais'],['',' decorrentes do uso, posse, propriedade ou circulação do veículo descrito na Cláusula 1ª, '],['b','ainda que o referido veículo permaneça registrado em nome do CREDOR perante o órgão de trânsito competente'],['',', inclusive, mas não se limitando, a:']])+V();
@@ -20041,7 +20066,7 @@ function CTR_finAbrirForm(idx){
   var vg=(r.veiculo&&typeof r.veiculo==='object')?r.veiculo:{};
   var _placa=vg.placa||CTR_finPlaca(desc);
   var _anoM=desc.match(/\b(19|20)\d{2}(\/(19|20)\d{2})?\b/), _ano=vg.ano||(_anoM?_anoM[0]:'');
-  var _modelo=vg.modelo||desc.replace(_placa,'').replace(/\b(19|20)\d{2}(\/(19|20)\d{2})?\b/,'').replace(/\s{2,}/g,' ').trim();
+  var _modelo=vg.modelo||desc.replace(_placa,'').replace(/\s{2,}/g,' ').trim(); /* o ano fica no modelo: o VB quer so marca, modelo, placa e renavam */
   var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-transform:uppercase;';
   var SL='padding:9px 2px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:12px;margin-bottom:6px;font-family:-apple-system,sans-serif;text-align:center;text-align-last:center;width:100%;box-sizing:border-box;';
   var LB='display:block;font-size:8px;letter-spacing:1px;color:var(--mu2);font-weight:600;text-align:center;padding-left:1px;margin-bottom:3px;';
@@ -20078,9 +20103,7 @@ function CTR_finAbrirForm(idx){
     +'<div id="ctr2-info" style="font-size:10px;letter-spacing:0.5px;color:var(--mu);text-align:center;margin:-2px 0 6px;"></div>'
     +'<div style="'+SEC+'">VEÍCULO</div>'
     +'<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;">'+campo('ctrv-marca','MARCA',vg.marca||'')+campo('ctrv-modelo','MODELO',_modelo)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'+campo('ctrv-placa','PLACA',_placa)+campo('ctrv-ano','ANO FAB./MODELO',_ano,'','2022/2023')+'</div>'
-    +'<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:6px;">'+campo('ctrv-chassi','CHASSI',vg.chassi||'')+campo('ctrv-renavam','RENAVAM',vg.renavam||'','inputmode="numeric"')+'</div>'
-    +campo('ctrv-cor','COR',vg.cor||'')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'+campo('ctrv-placa','PLACA',_placa)+campo('ctrv-renavam','RENAVAM',vg.renavam||'','inputmode="numeric"')+'</div>'
     +'<div id="ctr-fin-falta" style="display:none;font-size:10px;letter-spacing:1px;color:var(--red);font-weight:700;text-align:center;margin-top:4px;"></div>'
     +'<button id="ctr-gerar" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR CONTRATO (.docx)</button>'
     +'<button id="ctr-cancel" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CANCELAR</button>'
@@ -20162,7 +20185,7 @@ function CTR_finGerar(ov){
     devs.push(CTR_finDev2);
   }
   var veic={marca:g('ctrv-marca').toUpperCase(), modelo:g('ctrv-modelo').toUpperCase(), placa:g('ctrv-placa').toUpperCase().replace(/[^A-Z0-9]/g,''), chassi:g('ctrv-chassi').toUpperCase(), renavam:g('ctrv-renavam'), cor:g('ctrv-cor').toUpperCase(), ano:g('ctrv-ano')};
-  if(!veic.modelo || !veic.placa){ trava('PREENCHA MODELO E PLACA'); return; }
+  if(!veic.marca || !veic.modelo || !veic.placa || !veic.renavam){ trava('PREENCHA MARCA, MODELO, PLACA E RENAVAM'); return; }
   var parcelas=CTR_finParcelas(r);
   if(!parcelas.length){ trava('FINANCIAMENTO SEM PARCELAS'); return; }
   if(falta) falta.style.display='none';
@@ -20504,6 +20527,19 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.51</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Contrato do financiamento: veículo só com MARCA, MODELO, PLACA e RENAVAM, os quatro obrigatórios. Saíram chassi, cor e ano (o ano fica no modelo). Legenda da tabela com a descrição em negrito</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.50</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Financiamento: o COMPARTILHAR da tabela copia a legenda — descrição, Início e Fim das parcelas, Ficaremos nesse cenário, Confere?</div>
+      <div class="cl-item">Contrato (venda e financiamento): a data "Fortaleza/CE, ..." anda junto com as assinaturas e não fica mais sozinha no pé da página</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.49</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">Ficha do contrato de financiamento diz VEÍCULO no lugar de RELÓGIO</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.48</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">CONTRATO DO FINANCIAMENTO: botão CONTRATO no card do Histórico, igual ao da venda. Texto do modelo da Pajero (confissão de dívida da VB FACTORING): devedor puxado do cliente da operação, 2º devedor opcional tirado do cadastro, veículo com marca, modelo, placa, chassi, RENAVAM, cor e ano. Valor, parcelas, vencimentos e tabela saem da operação. Um ou dois devedores muda o texto inteiro (O DEVEDOR confessa / Os DEVEDORES confessam). Veículo e 2º devedor ficam gravados no financiamento para gerar de novo sem redigitar</div>
   </div>
