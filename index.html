@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.55</title>
+<title>VB - v1.300.57</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -10406,8 +10406,10 @@ function LOG_abrir(){
     if(!rows.length){ l.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:14px;">Nenhum registro ainda.</div>'; return; }
     var html='';
     rows.forEach(function(r){
-      var d=new Date(r.created_at);
-      var ds=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+      /* hora de Fortaleza gravada pelo app: le ao pe da letra (VB_leCarimbo). O new Date convertia o
+         +00:00 e mostrava 3h a menos -- 20:35 aparecia 17:35 (v1.300.56). */
+      var _k=VB_leCarimbo(r.created_at)||{dt:'',hr:''};
+      var ds=String(_k.dt).slice(0,5)+(_k.hr?(' '+_k.hr):'');
       var det=r.detalhe||'';
       var temDiff=det.indexOf('→')>-1;
       var detHtml='';
@@ -12453,6 +12455,28 @@ function REN_cpJurosPinta(){
   e.style.borderColor=REN_cpJuros?'var(--ln3)':'var(--ln0)';
 }
 function REN_cpJurosToggle(){ REN_cpJuros=!REN_cpJuros; REN_cpJurosPinta(); try{ REN_cpDirty(); }catch(e){} }
+/* Apelido tambem vale: "QUELAU" nao pode virar um segundo cadastro de quem ja tem esse apelido. */
+function REN_cpCredorCad(nome){
+  var alvo=String(nome||'').trim(); if(!alvo) return;
+  VB_cliCarregar(function(lista){
+    var t=VB_cliNorm(alvo);
+    var ja=(lista||[]).some(function(c){ return VB_cliNorm(c.nome)===t || (c.apelido && VB_cliNorm(c.apelido)===t); });
+    if(!ja) VB_cliGarantir(alvo);
+  });
+}
+/* Uma vez por abertura do app: credores de contas ja lancadas que ainda nao estao no cadastro. */
+var REN_cpCredRetroOk=false;
+function REN_cpCredorRetro(){
+  if(REN_cpCredRetroOk) return; REN_cpCredRetroOk=true;
+  var vistos={}, fila=[];
+  ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){
+    if(String(c.origem_tab||'')==='juros') return;
+    var nm=String(c.credor||'').trim().toUpperCase(); if(!nm || vistos[nm]) return;
+    vistos[nm]=1; fila.push(nm);
+  });
+  /* um de cada vez: o VB_cliGarantir zera a lista a cada cadastro criado */
+  (function prox(i){ if(i>=fila.length) return; try{ REN_cpCredorCad(fila[i]); }catch(e){} setTimeout(function(){ prox(i+1); }, 700); })(0);
+}
 function REN_cpSalvar(id){
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
@@ -12507,10 +12531,33 @@ function REN_cpSalvar(id){
   if(linhas) linhas.forEach(function(l){ l.origem_tab=_ot; _cpJurosPago(l); });
   var reg = linhas ? linhas : _cpJurosPago({credor:(cr||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null), origem_tab:_ot, pago_em:((REN_cpDe(id)||{}).pago_em||null),
     socio_nome:(sn||null), socio_valor:(sv>0?sv:null), juros:(jv>0?jv:null)});
+  var _cpAntes = id ? JSON.parse(JSON.stringify(REN_cpDe(id)||{})) : null; /* foto de antes, para o log dizer o que mudou */
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
-    try{ VB_log('CONTAS A PAGAR', id?'editou conta':('nova conta'+(nT>1?(' \u00b7 '+nT+' parcelas'):'')), cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
+    try{
+      if(id){
+        /* o log dizia so valor e vencimento: 22 linhas iguais e nenhuma com o que mudou (v1.300.56) */
+        var _a=_cpAntes||{}, _dif=[];
+        function _fv(x){ return (x==null||x==='')?'\u2014':HIST_fmtMoeda(Number(x)); }
+        function _ft(x){ return (x==null||String(x).trim()==='')?'\u2014':String(x).toUpperCase(); }
+        function _fd(x){ return x?String(x).slice(0,10).split('-').reverse().join('/'):'\u2014'; }
+        if(_ft(_a.credor)!==_ft(reg.credor)) _dif.push('Credor: '+_ft(_a.credor)+' \u2192 '+_ft(reg.credor));
+        if(_ft(_a.descricao)!==_ft(reg.descricao)) _dif.push('Descri\u00e7\u00e3o: '+_ft(_a.descricao)+' \u2192 '+_ft(reg.descricao));
+        if(_fv(_a.valor)!==_fv(reg.valor)) _dif.push('Valor: '+_fv(_a.valor)+' \u2192 '+_fv(reg.valor));
+        if(_fd(_a.venc)!==_fd(reg.venc)) _dif.push('Vencimento: '+_fd(_a.venc)+' \u2192 '+_fd(reg.venc));
+        if(_fv(_a.juros)!==_fv(reg.juros)) _dif.push('Juros: '+_fv(_a.juros)+' \u2192 '+_fv(reg.juros));
+        if(_ft(_a.nota)!==_ft(reg.nota)) _dif.push('Nota: '+_ft(_a.nota)+' \u2192 '+_ft(reg.nota));
+        if(_ft(_a.socio_nome)!==_ft(reg.socio_nome) || _fv(_a.socio_valor)!==_fv(reg.socio_valor)) _dif.push('S\u00f3cio: '+_ft(_a.socio_nome)+' '+_fv(_a.socio_valor)+' \u2192 '+_ft(reg.socio_nome)+' '+_fv(reg.socio_valor));
+        if(String(_a.origem_tab||'')!==String(reg.origem_tab||'') && (_a.origem_tab==='juros' || reg.origem_tab==='juros')) _dif.push('Juros da conta: '+(_a.origem_tab==='juros'?'SIM':'N\u00c3O')+' \u2192 '+(reg.origem_tab==='juros'?'SIM':'N\u00c3O'));
+        VB_log('CONTAS A PAGAR','editou conta', (cr||ds)+' \u00b7 '+d.split('-').reverse().join('/'), _dif.length?_dif.join(' \u00b7 '):'sem mudan\u00e7as de valores');
+      } else {
+        VB_log('CONTAS A PAGAR', 'nova conta'+(nT>1?(' \u00b7 '+nT+' parcelas'):''), cr||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/'));
+      }
+    }catch(e){}
+    /* credor novo vira cadastro A COMPLETAR, como na venda -- menos JUROS DA CONTA, onde o credor e
+       o banco e viraria cliente falso (v1.300.57) */
+    try{ if(_ot!=='juros' && cr) REN_cpCredorCad(cr); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
     VB_toast(id?'Conta salva.':(_ot==='juros'?(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
@@ -13112,6 +13159,7 @@ function REN_abrir(){
       });
     })();
     REN_cache={itens:itens, bx:bx, map:map, semTabela:semTabela, opInfo:opInfo, prev:prev, pags:pags, notas:notas, cp:cp, cpPag:cpPag, cpErro:cpErro, pro:pro, cr:crRows, crErro:crErro, exVenda:exVenda, exNomes:exNomes};
+    try{ setTimeout(REN_cpCredorRetro, 1500); }catch(e){}
     REN_render();
     if(REN_fichaVoltar){ var _fk=REN_fichaVoltar; REN_fichaVoltar=null; if(map[_fk]) REN_ficha(_fk); }
     /* Vindo do aviso de repasse velho: abre a folha do combinado desta venda direto, na primeira
@@ -14327,6 +14375,23 @@ function REN_desfaz(btn, baixaId){
      De quebra, esta rota passa a avisar quando existe repasse pago. */
   REN_desfazDireto(baixaId);
 }
+/* JUROS PAGOS ACUMULADO (v1.300.57): tudo o que ja saiu em juros, por banco/credor, desde o
+   primeiro lancamento -- JUROS DA CONTA inteira e a parte de juros das parcelas com JUROS. So conta
+   pago (pago_em), a mesma regra do bloco do mes. */
+function FM_jurosAcum(rows){
+  var g={}, tot=0, desde='';
+  (rows||[]).forEach(function(c){
+    if(!c.pago_em) return;
+    var v=0;
+    if(String(c.origem_tab||'')==='juros') v=Number(c.valor_pago!=null?c.valor_pago:c.valor)||0;
+    else if(Number(c.juros)>0) v=Math.min(Number(c.juros), Number(c.valor_pago!=null?c.valor_pago:c.valor)||0);
+    if(!(v>0)) return;
+    var k=String(c.credor||'\u2014').trim().toUpperCase();
+    g[k]=(g[k]||0)+v; tot+=v;
+    var d=String(c.pago_em).slice(0,7); if(!desde || d<desde) desde=d;
+  });
+  return {tot:tot, desde:desde, grupos:Object.keys(g).map(function(k){ return {conta:k, v:g[k]}; }).sort(function(a,b){ return b.v-a.v; })};
+}
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
     var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin').filter(function(r){ return !VB_ehSimulacao(r); }), ven=filtra(res[2].data,'ven').filter(function(r){ return !VB_ehSimulacao(r); }), pag=filtra(res[3].data,'pag');
@@ -14515,7 +14580,8 @@ function FM_load(){
     var _pd=new Date(FM_ref.getFullYear(), FM_ref.getMonth()-1, 1);
     var _pym=_pd.getFullYear()+'-'+('0'+(_pd.getMonth()+1)).slice(-2);
     var _prev=FM_calcMes(_pym, res, _merMap);
-    FM_dados={ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:_c.pro, gas:_c.gas, jur:_c.jur, lucroBruto:_c.lucroBruto, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
+    var _jAc=FM_jurosAcum((res[6]&&res[6].data)||[]);
+    FM_dados={jac:_jAc, ym:ym, titulo:FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear(), ant:dAnt, fin:dFin, ven:dVen, pag:dPag, sai:dSai, pro:_c.pro, gas:_c.gas, jur:_c.jur, lucroBruto:_c.lucroBruto, lucroTotal:_c.lucroTotal, nOps:_c.nOps, rend:rendMes, rendDet:_c.rendDet, prevLucro:(_prev.nOps>0?_prev.lucroTotal:null), prevRend:(_prev.nOps>0?_prev.rend:null)};
     /* Mes sem nenhuma operacao daquele tipo vira uma pilha de zeros que empurra o que importa
        pra baixo. Recolhido, o bloco continua existindo -- a ausencia tambem e informacao -- mas
        ocupa uma linha, e a setinha abre pra conferir. */
@@ -14614,6 +14680,15 @@ function FM_load(){
         _jdet+=fmDet(it.conta, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''), HIST_fmtMoeda(it.valor));
       });
       hh+=bloco('JUROS PAGOS · '+_dJur.n, jlin, false, fmDetCaixa(_jdet));
+    }
+    /* acumulado: quanto ja foi em juros na vida, por banco. So leitura -- nao mexe no lucro do mes */
+    var _jAcR=(FM_dados&&FM_dados.jac)||null;
+    if(_jAcR && _jAcR.tot>0){
+      var jalin=[];
+      _jAcR.grupos.forEach(function(g){ jalin.push([g.conta, HIST_fmtMoeda(g.v)]); });
+      jalin.push(['\u2014div\u2014','']);
+      jalin.push(['Total desde '+(_jAcR.desde?(_jAcR.desde.slice(5,7)+'/'+_jAcR.desde.slice(0,4)):''), HIST_fmtMoeda(_jAcR.tot)]);
+      hh+=bloco('JUROS PAGOS \u00b7 ACUMULADO', jalin, false);
     }
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
@@ -20609,6 +20684,15 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.57</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">CREDOR da conta a pagar vira cadastro A COMPLETAR quando o nome é novo, como na venda. Conta marcada JUROS DA CONTA não cria (o credor ali é o banco). Nome que já existe como apelido não duplica. Os credores das contas já lançadas entram sozinhos na primeira abertura das ENTRADAS/SAÍDAS</div>
+      <div class="cl-item">FECHAMENTO: bloco JUROS PAGOS · ACUMULADO — o total por banco desde o primeiro juro lançado, contando JUROS DA CONTA e a parte de juros das parcelas. É leitura: não mexe no lucro do mês</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.56</span><span class="cl-ver-date">21/09/2026</span></div>
+      <div class="cl-item">LOG: hora certa (mostrava 3h a menos, 20:35 aparecia 17:35). Conta a pagar editada passa a registrar o que mudou — valor, vencimento, juros, nota, sócio, credor, descrição — com o vencimento da parcela junto do credor</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.55</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">JUROS DENTRO DA PARCELA na conta a pagar (EDITAR): para empréstimo pago em parcela fixa, como o mútuo do irmão. A ficha mostra JUROS e AMORTIZAÇÃO. No Fechamento, só a parte de juros entra em JUROS PAGOS e desce do lucro do mês em que a conta foi paga; SAÍDAS fica com a amortização. Requer SQL: alter table contas_pagar add column if not exists juros numeric;</div>
   </div>
