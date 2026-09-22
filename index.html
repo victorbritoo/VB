@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.65</title>
+<title>VB - v1.300.66</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1993,21 +1993,18 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
            '<div style="font-size:13px;color:var(--tx);font-weight:600;margin-top:1px;">'+HIST_esc(c.v)+'</div></div>';
     });
     h += '</div>';
-    var _nBtn = 1 + (temRelogio?1:0) + (temSocioBtn?1:0) + ((tab==='ven'||tab==='fin')?1:0);
+    var _nBtn = 1 + (temRelogio?1:0) + (temSocioBtn?1:0) + ((tab==='ven'||tab==='fin')?1:0) + ((tab==='fin')?2:0);
     h += '<div style="display:grid;grid-template-columns:repeat('+_nBtn+',1fr);gap:6px;margin-top:8px;margin-left:-23px;">';
-    var abrirLbl = (tab==='ven') ? 'ABRIR VENDA' : (tab==='pag') ? 'ABRIR PAGAMENTO' : 'ABRIR OPERAÇÃO';
+    var abrirLbl = (tab==='ven') ? 'ABRIR VENDA' : (tab==='pag') ? 'ABRIR PAGAMENTO' : (tab==='fin') ? 'ABRIR' : 'ABRIR OPERAÇÃO';
     var _btnCss = 'white-space:nowrap;overflow:hidden;padding:8px 2px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-size:10px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;text-align:center;';
     h += '<button onclick="event.stopPropagation();HIST_abrirOperacao('+idx+')" style="'+_btnCss+'">'+abrirLbl+'</button>';
     if(temRelogio){ h += '<button onclick="event.stopPropagation();HIST_abrirRelogio('+idx+')" style="'+_btnCss+'">RELÓGIO</button>'; }
     if(temSocioBtn){ h += '<button onclick="event.stopPropagation();HIST_resumoSocio('+idx+')" style="'+_btnCss+'">SÓCIO</button>'; }
     if(tab==='ven'){ h += '<button onclick="event.stopPropagation();CTR_abrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
-    if(tab==='fin'){ h += '<button onclick="event.stopPropagation();CTR_finAbrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
+    if(tab==='fin'){ h += '<button onclick="event.stopPropagation();CTR_finAbrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'
+      + '<button onclick="event.stopPropagation();FIN_priceAbrir('+idx+')" style="'+_btnCss+'">PRICE</button>'
+      + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button>'; }
     h += '</div>';
-    if(tab==='fin'){
-      h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px;margin-left:-23px;">'
-        + '<button onclick="event.stopPropagation();FIN_priceAbrir('+idx+')" style="'+_btnCss+'">PRICE</button>'
-        + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button></div>';
-    }
 
     h += '</div>';
   }
@@ -13071,7 +13068,7 @@ function REN_abrir(){
      esperar o REN_cache existir antes de montar o documento */
   return Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos,simulacao,data_operacao,created_at').limit(10000), /* data_operacao e created_at: o carimbo OP MM/AA do cronograma sai delas */
-    sb.from('financiamentos_hist').select('id,descricao,nome,cliente,qtd_parcelas,valor_parcela,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
+    sb.from('financiamentos_hist').select('id,descricao,nome,cliente,qtd_parcelas,valor_parcela,valor_financiado,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
     sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total,custo,lucro_vb_pct,simulacao').limit(10000),
     sb.from('parcela_baixas').select('*').limit(20000),
     sb.from('repasse_previsto').select('*').limit(20000),
@@ -13811,7 +13808,8 @@ function REN_ficha(k, exp){
   /* DAR BAIXA e o que voce faz em quase toda abertura e continua largo e sozinho. Estas tres
      sao raras: lado a lado, a folha encurta duas linhas sem achatar a acao principal. */
   /* parcela baixada e leitura: os tres botoes encolhem e se juntam, porque a acao ja aconteceu */
-  hh+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:'+(b?'4px':'6px')+';margin-top:'+(b?'4px':'6px')+';">'
+  var _qFin=(x.tab==='fin' && !b);
+  hh+='<div style="display:grid;grid-template-columns:'+(_qFin?'1fr 1fr 1fr 1fr':'1fr 1fr 1fr')+';gap:'+(b?'4px':'6px')+';margin-top:'+(b?'4px':'6px')+';">'
     /* a folha de nota nao fecha mais a ficha: ela abre POR CIMA (100025 sobre 100014), entao
        tocar fora volta pra ficha e nao pra lista. Na parcela baixada o botao passa a mexer na
        nota do RECEBIMENTO -- a que esta escrita na tela -- em vez da nota da parcela, que so
@@ -13821,6 +13819,7 @@ function REN_ficha(k, exp){
       ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+((x.cr&&x.cr.id)||x.opId)+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
       : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
+    +(_qFin?('<button onclick="REN_quitar(\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">QUITAR</button>'):'')
     +'</div>';
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
@@ -20349,15 +20348,22 @@ function FIN_priceSheet(r, P, pg){
 }
 /* QUITAR abre a QUITACAO ANTECIPADA ja preenchida: parcela, o que falta pagar, o primeiro
    vencimento em aberto, hoje e 2% (Clausula 9a do contrato). A conta e a mesma de sempre. */
-function FIN_quitarAbrir(idx){
-  var r=HIST_rowsCache[idx]; if(!r) return;
+function FIN_quitarAbrir(idx){ var r=HIST_rowsCache[idx]; if(r) FIN_quitarDe(r, 'hist'); }
+/* da ficha da parcela: fecha a ficha e, ao voltar pras ENTRADAS, ela reabre (REN_fichaVoltar) */
+function REN_quitar(opId, k){
+  var r=REN_finMap[String(opId)]; if(!r){ VB_toast('Financiamento não encontrado.'); return; }
+  var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
+  REN_fichaVoltar=k||null;
+  FIN_quitarDe(r, 'ren');
+}
+function FIN_quitarDe(r, volta){
   if(VB_ehSimulacao(r)){ VB_toast('Simulação não tem quitação.'); return; }
   var P=VB_finPrice(r); if(!P){ VB_toast('Faltam valor, parcela ou prazo.'); return; }
   FIN_pagasDe(r, function(pg){
     var ab=P.linhas.filter(function(L){ return !pg[L.k]; });
     if(!ab.length){ VB_toast('Todas as parcelas já foram pagas.'); return; }
     var br=function(iso){ var q=String(iso).slice(0,10).split('-'); return q[2]+'/'+q[1]+'/'+q[0]; };
-    VB_telaAnterior='hist';
+    VB_telaAnterior=volta||'hist';
     showScreen('fin'); FIN_setModo('quit');
     var sv=function(id,v){ var el=document.getElementById(id); if(el) el.value=v; };
     sv('quit-dataQuit', br(REN_hojeISO()));
@@ -20844,6 +20850,11 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.66</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">JUROS e AMORTIZA&Ccedil;&Atilde;O aparecem na ficha da parcela do financiamento (a lista das ENTRADAS n&atilde;o trazia o valor financiado)</div>
+      <div class="cl-item">Card do financiamento: ABRIR, CONTRATO, PRICE e QUITAR numa linha s&oacute;, como nas vendas. Ficha da parcela em aberto ganhou QUITAR, e ao voltar a ficha reabre</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.65</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">FECHAMENTO: o lucro do financiamento deixou de entrar inteiro no m&ecirc;s da opera&ccedil;&atilde;o. Entra o juro de cada parcela no m&ecirc;s em que ela vence, pela Tabela Price na taxa real &mdash; a regra do mercado. O m&ecirc;s da opera&ccedil;&atilde;o mostra s&oacute; quanto foi financiado. Somando os meses, fecha no lucro do card</div>
       <div class="cl-item">Ficha da parcela do financiamento mostra JUROS e AMORTIZA&Ccedil;&Atilde;O</div>
