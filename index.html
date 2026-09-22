@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.67</title>
+<title>VB - v1.300.68</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11124,6 +11124,78 @@ function VB_finPrice(r){
   return {taxa:i, linhas:L, juros:Math.round((pm*n-pv)*100)/100};
 }
 function VB_finTaxaTxt(i){ return (i*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* PRO RATA DIA (v1.300.68) -- regra fechada em 22/09 para antecipacao e financiamento: o juro nasce
+   um pouco a cada dia do intervalo (inicio, fim] -- o dia de inicio nao conta, o do fim conta -- e
+   cada mes fica com os dias que teve. E a regra do mercado (CPC 48 / Res. CMN 4.966, juro pro rata
+   pela taxa efetiva). Datas lidas como texto e contadas em UTC: sem fuso no meio. */
+function VB_isoUTC(iso){ var q=String(iso||'').slice(0,10).split('-'); return (q.length===3)?Date.UTC(+q[0],+q[1]-1,+q[2]):NaN; }
+function VB_proRataAdd(acc, ini, fim, valor){
+  var a=VB_isoUTC(ini), b=VB_isoUTC(fim), DAY=86400000;
+  if(isNaN(b)) return acc;
+  var n=isNaN(a)?0:Math.round((b-a)/DAY);
+  if(n<=0){ var ym0=String(fim).slice(0,7); acc[ym0]=(acc[ym0]||0)+valor; return acc; }
+  var t=a;   /* t = ultimo dia ja contado; o proximo dia define o mes do trecho */
+  while(t<b){
+    var d=new Date(t+DAY), y=d.getUTCFullYear(), m=d.getUTCMonth();
+    var ate=Math.min(b, Date.UTC(y, m+1, 1)-DAY);     /* ate o fim desse mes, ou o fim do intervalo */
+    var dias=Math.round((ate-t)/DAY);
+    var ym=y+'-'+('0'+(m+1)).slice(-2);
+    acc[ym]=(acc[ym]||0)+valor*dias/n;
+    t=ate;
+  }
+  return acc;
+}
+/* arredonda cada mes em centavos e joga a diferenca no ultimo mes: a soma fecha exata no total */
+function VB_proRataFecha(acc, total){
+  var ks=Object.keys(acc).sort(), soma=0, out={};
+  ks.forEach(function(k){ out[k]=Math.round(acc[k]*100)/100; soma+=out[k]; });
+  if(ks.length){ var u=ks[ks.length-1]; out[u]=Math.round((out[u]+(Math.round(total*100)/100-soma))*100)/100; }
+  return out;
+}
+/* antecipacao: o lucro do card (bruto - liquido, tarifa dentro) rateado entre os titulos por
+   valor x dias, e cada titulo corre de data_operacao ate o proprio vencimento. Titulo PG fica fora
+   (e abatimento); titulo que vence no dia da operacao nao recebe. Atrasada (liquido > bruto) nao
+   tem lucro e fica fora, como sempre. */
+function VB_antMeses(r){
+  var luc=HIST_lucroRow('ant', r); if(luc==null) return null;
+  var op=String(r.data_operacao||r.created_at||'').slice(0,10);
+  var tt=[], W=0, fim=op;
+  (r.titulos||[]).forEach(function(t){
+    if(!t) return;
+    var tp=String(t.tp||t.tipo||'').toLowerCase(); if(tp==='pg') return;
+    var ds=String(t.d||t.data||''), iso='';
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(ds)){ var q=ds.split('/'); iso=q[2]+'-'+q[1]+'-'+q[0]; }
+    else if(/^\d{4}-\d{2}-\d{2}/.test(ds)) iso=ds.slice(0,10);
+    if(!iso) return;
+    var v=REN_num(t.v!=null?t.v:t.valor); if(!(v>0)) return;
+    var n=Math.round((VB_isoUTC(iso)-VB_isoUTC(op))/86400000); if(!(n>0)) return;
+    tt.push({iso:iso, v:v, n:n}); W+=v*n; if(iso>fim) fim=iso;
+  });
+  var acc={};
+  if(W>0) tt.forEach(function(t){ VB_proRataAdd(acc, op, t.iso, luc*t.v*t.n/W); });
+  else { var ym=op.slice(0,7); acc[ym]=luc; }
+  var dias={}; if(fim>op) VB_proRataAdd(dias, op, fim, Math.round((VB_isoUTC(fim)-VB_isoUTC(op))/86400000));
+  return {meses:VB_proRataFecha(acc, luc), dias:dias};
+}
+/* financiamento: o juro de cada parcela corre do vencimento anterior (a 1a, da data da operacao)
+   ate o vencimento dela. Com investidor: o VB leva o spread fixo e o investidor o juro da Price dele,
+   os dois no mesmo intervalo. */
+function VB_finMeses(r){
+  var P=VB_finPrice(r); if(!P) return null;
+  var inv=!!r.tem_investidor && Number(r.investidor_parcela)>0;
+  var Pi=inv?VB_finPrice({valor_financiado:r.valor_financiado, valor_parcela:r.investidor_parcela, qtd_parcelas:r.qtd_parcelas, data_inicio:r.data_inicio}):null;
+  var spr=inv?((r.vb_parcela!=null)?Number(r.vb_parcela):(Number(r.valor_parcela)-Number(r.investidor_parcela))):0;
+  var op=String(r.data_operacao||'').slice(0,10);
+  var vb={}, iv={}, tVb=0, tIv=0, ini=op;
+  P.linhas.forEach(function(L, k){
+    var de=(k===0)?op:P.linhas[k-1].venc;
+    var j=inv?spr:L.juros; tVb+=j; VB_proRataAdd(vb, de, L.venc, j);
+    if(inv && Pi && Pi.linhas[k]){ tIv+=Pi.linhas[k].juros; VB_proRataAdd(iv, de, L.venc, Pi.linhas[k].juros); }
+  });
+  var fim=P.linhas[P.linhas.length-1].venc, dias={};
+  if(op && fim>op) VB_proRataAdd(dias, op, fim, Math.round((VB_isoUTC(fim)-VB_isoUTC(op))/86400000));
+  return {vb:VB_proRataFecha(vb, tVb), inv:(inv?VB_proRataFecha(iv, tIv):{}), invNome:(r.investidor_nome||'INVESTIDOR').toUpperCase(), dias:dias};
+}
 /* CARIMBO = RELOGIO DE PAREDE. O campo guarda a hora LOCAL rotulada como Z. Parece errado e e
    de proposito: o app le esses campos sempre como TEXTO (fatia o mes, fatia o dia, compara pra
    ordenar) e nunca como instante. Gravando UTC de verdade, uma baixa feita entre 21h e meia-noite
@@ -14463,7 +14535,14 @@ function FM_jurosAcum(rows){
   return {tot:tot, desde:desde, grupos:Object.keys(g).map(function(k){ return {conta:k, v:g[k]}; }).sort(function(a,b){ return b.v-a.v; })};
 }
 /* bloco FINANCIAMENTOS: tela e foto montam as mesmas linhas */
-function FM_finTitulo(f){ var n=(f&&f.n)||0; return 'FINANCIAMENTOS · '+n+(n===1?' PARCELA':' PARCELAS'); }
+/* titulo = quantas operacoes vivas renderam juro no mes */
+function FM_opTitulo(t, f){ return t+' · '+((f&&f.n)||0); }
+function FM_antLinhas(f){
+  f=f||{}; var l=[['Juros do mês', HIST_fmtMoeda(f.luc||0)]];
+  /* o antecipado no mes e leitura: o dinheiro que saiu, nunca entra no lucro */
+  if(f.novos>0){ l.push(['—div—','']); l.push(['Antecipado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); }
+  return l;
+}
 function FM_finLinhas(f){
   f=f||{}; var l=[['Juros do mês', HIST_fmtMoeda((f.luc||0)+(f.lucInv||0))]];
   if(f.lucInv>0){
@@ -14481,27 +14560,29 @@ function FM_calcMes(ym, res, _merMap){
     function soma(rows, f){ return rows.reduce(function(a,r){ return a+(f(r)||0); },0); }
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
-    var dAnt={n:antOp.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), luc:lucroDe(antOp,'ant')};
-    /* FINANCIAMENTO POR JUROS DO MES (v1.300.65). O lucro nao entra mais inteiro no mes da operacao:
-       entra o juro de cada parcela no mes em que ela VENCE, pela Price na taxa real -- a regra do
-       mercado (juro pro rata, Res. CMN 4.966). Com investidor, o VB leva o spread fixo da parcela e
-       o investidor o juro da Price dele. O mes da operacao so mostra quanto foi financiado. */
+    /* ANTECIPACAO PRO RATA DIA (v1.300.68): o lucro do mes e a parte dos dias deste mes de TODA
+       antecipacao viva; o mes da operacao so mostra quanto foi antecipado (leitura). */
+    var _aIt=[], _aLuc=0;
+    VB_antReais(res[0].data).forEach(function(r){
+      if((Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return;   /* atrasada: fora, como sempre */
+      var M=VB_antMeses(r); if(!M) return;
+      var v=M.meses[ym]||0; if(Math.abs(v)<0.005) return;
+      _aLuc+=v;
+      _aIt.push({cli:String(r.cliente||'').trim(), rot:String(r.nome||'ANTECIPAÇÃO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
+    });
+    _aIt.sort(function(a,b){ return b.v-a.v; });
+    var dAnt={n:_aIt.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), novos:antOp.length, luc:_aLuc, itens:_aIt};
+    /* FINANCIAMENTO PRO RATA DIA (v1.300.68; na .65 era o juro da parcela inteiro no mes do
+       vencimento). Mesma regua da antecipacao. O mes da operacao so mostra o financiado. */
     var _fpartes={}, _fIt=[], _fLuc=0;
     (res[1].data||[]).filter(function(r){ return !VB_ehSimulacao(r); }).forEach(function(r){
-      var P=VB_finPrice(r); if(!P) return;
-      var inv=!!r.tem_investidor && Number(r.investidor_parcela)>0;
-      var Pi=inv?VB_finPrice({valor_financiado:r.valor_financiado, valor_parcela:r.investidor_parcela, qtd_parcelas:r.qtd_parcelas, data_inicio:r.data_inicio}):null;
-      var spr=inv?((r.vb_parcela!=null)?Number(r.vb_parcela):(Number(r.valor_parcela)-Number(r.investidor_parcela))):0;
-      var nm=(r.investidor_nome||'INVESTIDOR').toUpperCase();
-      P.linhas.forEach(function(L){
-        if(String(L.venc).slice(0,7)!==ym) return;
-        var vb=inv?spr:L.juros; _fLuc+=vb;
-        if(inv && Pi && Pi.linhas[L.k]) _fpartes[nm]=(_fpartes[nm]||0)+Pi.linhas[L.k].juros;
-        _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), k:L.k, n:P.linhas.length, venc:L.venc, juros:vb});
-      });
+      var M=VB_finMeses(r); if(!M) return;
+      var v=M.vb[ym]||0, vi=M.inv[ym]||0;
+      if(Math.abs(v)<0.005 && Math.abs(vi)<0.005) return;
+      _fLuc+=v; if(vi) _fpartes[M.invNome]=(_fpartes[M.invNome]||0)+vi;
+      _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
     });
-    /* detalhe em ordem de vencimento: o mes lido como calendario */
-    _fIt.sort(function(a,b){ return a.venc<b.venc?-1:(a.venc>b.venc?1:0); });
+    _fIt.sort(function(a,b){ return b.v-a.v; });
     var dFin={n:_fIt.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), novos:fin.length, luc:_fLuc, itens:_fIt,
       lucInv: Object.keys(_fpartes).reduce(function(a,k){return a+_fpartes[k];},0),
       partesInv: Object.keys(_fpartes).map(function(k){ return [k,_fpartes[k]]; })};
@@ -14728,13 +14809,10 @@ function FM_load(){
        SAIDAS e CUSTOS ficam fora da ordenacao e sempre no fim -- sao caixa, nao resultado, e
        ranquear caixa junto com lucro misturaria duas coisas que o app separa em todo lugar. */
     var _ord=[];
-    _ord.push({luc:dAnt.luc, html:bloco('ANTECIPAÇÕES · '+dAnt.n, HIST_fmtMoeda(dAnt.luc), [['Disponibilizado (líquido)',HIST_fmtMoeda(dAnt.tot)],['Lucro',HIST_fmtMoeda(dAnt.luc)]], dAnt.n===0)});
-    var _flin=FM_finLinhas(dFin);
-    var _fdet='';
-    (dFin.itens||[]).forEach(function(it){
-      _fdet+=fmDet(it.cli?VB_nomeCurto(it.cli):it.rot, it.rot+' · '+('0'+(it.k+1)).slice(-2)+' DE '+('0'+it.n).slice(-2)+(it.venc?(' · '+it.venc.slice(8,10)+'/'+it.venc.slice(5,7)):''), HIST_fmtMoeda(it.juros));
-    });
-    _ord.push({luc:dFin.luc, html:bloco(FM_finTitulo(dFin), HIST_fmtMoeda(dFin.luc), _flin, dFin.n===0, _fdet?fmDetCaixa(_fdet):'')});
+    /* detalhe: uma linha por operacao viva, com os dias que ela teve no mes */
+    function _fmOpDet(its){ var h=''; (its||[]).forEach(function(it){ h+=fmDet(it.cli?VB_nomeCurto(it.cli):it.rot, it.rot+' · '+it.dias+(it.dias===1?' DIA':' DIAS'), HIST_fmtMoeda(it.v)); }); return h?fmDetCaixa(h):''; }
+    _ord.push({luc:dAnt.luc, html:bloco(FM_opTitulo('ANTECIPAÇÕES', dAnt), HIST_fmtMoeda(dAnt.luc), FM_antLinhas(dAnt), dAnt.n===0, _fmOpDet(dAnt.itens))});
+    _ord.push({luc:dFin.luc, html:bloco(FM_opTitulo('FINANCIAMENTOS', dFin), HIST_fmtMoeda(dFin.luc), FM_finLinhas(dFin), dFin.n===0, _fmOpDet(dFin.itens))});
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     _ord.push({luc:venLucVB, html:bloco('VENDAS · '+dVen.n, HIST_fmtMoeda(venLucVB), vlin, dVen.n===0)});
@@ -14859,7 +14937,7 @@ function FM_foto(){
   var d=FM_dados; if(!d){ VB_toast('Carregando ainda\u2026'); return; }
   var W=820, PAD=40, CW=W-PAD*2;
   // conteúdo primeiro, pra medir a altura real
-  var linAnt=[['Disponibilizado (líquido)',HIST_fmtMoeda(d.ant.tot)],['Lucro',HIST_fmtMoeda(d.ant.luc)]];
+  var linAnt=FM_antLinhas(d.ant);
   var linFin=FM_finLinhas(d.fin);
   var linVen=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
   (d.ven.partes||[]).forEach(function(pp){ linVen.push([pp[0], HIST_fmtMoeda(pp[1])]); });
@@ -14880,8 +14958,8 @@ function FM_foto(){
   function boxHv(l, vazio){ return vazio?46:boxH(l); }
   /* mesma ordem da tela: resultado por lucro, caixa no fim */
   var _fot=[
-    {luc:d.ant.luc, t:'ANTECIPAÇÕES · '+d.ant.n, l:linAnt, v:(d.ant.n===0)},
-    {luc:d.fin.luc, t:FM_finTitulo(d.fin), l:linFin, v:(d.fin.n===0)},
+    {luc:d.ant.luc, t:FM_opTitulo('ANTECIPAÇÕES', d.ant), l:linAnt, v:(d.ant.n===0)},
+    {luc:d.fin.luc, t:FM_opTitulo('FINANCIAMENTOS', d.fin), l:linFin, v:(d.fin.n===0)},
     {luc:(d.ven.partes&&d.ven.partes.length?(function(){ var s=0; d.ven.partes.forEach(function(pp){ if(/^Lucro VB$/i.test(pp[0])) s=VB_moedaNum(pp[1]); }); return s; })():d.ven.luc), t:'VENDAS · '+d.ven.n, l:linVen, v:(d.ven.n===0)}
   ];
   if(linPro.length) _fot.push({luc:d.pro.juros, t:'JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), l:linPro, v:false});
@@ -20852,6 +20930,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.68</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">FECHAMENTO pro rata dia, regra fechada em 22/09: o juro de ANTECIPA&Ccedil;&Otilde;ES e FINANCIAMENTOS nasce um pouco a cada dia, do dia seguinte ao da opera&ccedil;&atilde;o at&eacute; o vencimento, e cada m&ecirc;s fica com os dias que teve (regra do mercado, CPC 48 / Res. CMN 4.966). O m&ecirc;s da opera&ccedil;&atilde;o mostra s&oacute; o Antecipado/Financiado no m&ecirc;s, como leitura. Somando os meses, cada opera&ccedil;&atilde;o fecha no lucro do card. Antecipa&ccedil;&otilde;es atrasadas continuam fora. Card, Hist&oacute;rico e panorama n&atilde;o mudam</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.67</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">Fechamento: parcelas do bloco FINANCIAMENTOS em ordem de vencimento</div>
   </div>
