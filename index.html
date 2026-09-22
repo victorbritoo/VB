@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.57</title>
+<title>VB - v1.300.58</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14603,20 +14603,21 @@ function FM_load(){
     function fmDetCaixa(inner){
       return '<div style="border-top:0.5px solid var(--ln3);margin-top:8px;padding-top:4px;">'+inner+'</div>';
     }
-    function bloco(t,linhas,vazio,det){
-      var tem=(vazio||!!det), id=_blocoN;
-      if(tem) _blocoN++;
-      var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;'+(tem?'cursor:pointer;':'')+'"'
-        +(tem?(' onclick="FM_blocoToggle('+id+')"'):'')+'>'
-        +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;'+(vazio?'':'margin-bottom:6px;')+'">'+t
-        +(tem?(' <span id="fm-bchev-'+id+'" style="letter-spacing:0;">\u25b8</span>'):'')+'</div>';
+    /* v1.300.58: TODO bloco nasce fechado, numa linha, com o valor absoluto a direita. De cima ate o
+       card preto a tela vira uma conta que fecha no LUCRO DO MES; um toque abre o bloco ali mesmo
+       com tudo o que ele mostrava antes (o detalhe vem junto, sem segundo toque). */
+    function bloco(t,resumo,linhas,vazio,det){
+      var id=_blocoN++;
+      var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;" onclick="FM_blocoToggle('+id+')">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
+        +'<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;min-width:0;">'+t+' <span id="fm-bchev-'+id+'" style="letter-spacing:0;">\u25b8</span></span>'
+        +'<span style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;">'+(resumo||'')+'</span></div>';
       var c='';
       linhas.forEach(function(x){
-        if(x[0]==='—div—'){ c+='<div style="border-top:0.5px solid var(--ln3);margin:7px 0 4px;"></div>'; return; }
+        if(x[0]==='\u2014div\u2014'){ c+='<div style="border-top:0.5px solid var(--ln3);margin:7px 0 4px;"></div>'; return; }
         c+='<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:3px;"><span style="color:var(--mu);">'+x[0]+'</span><span style="font-weight:700;color:var(--tx);">'+x[1]+'</span></div>';
       });
-      if(vazio) s+='<div id="fm-bbody-'+id+'" style="display:none;padding-top:6px;">'+c+'</div>';
-      else { s+=c; if(det) s+='<div id="fm-bbody-'+id+'" style="display:none;">'+det+'</div>'; }
+      s+='<div id="fm-bbody-'+id+'" style="display:none;padding-top:6px;">'+c+(det||'')+'</div>';
       return s+'</div>';
     }
     var hh='';
@@ -14625,17 +14626,17 @@ function FM_load(){
        SAIDAS e CUSTOS ficam fora da ordenacao e sempre no fim -- sao caixa, nao resultado, e
        ranquear caixa junto com lucro misturaria duas coisas que o app separa em todo lugar. */
     var _ord=[];
-    _ord.push({luc:dAnt.luc, html:bloco('ANTECIPAÇÕES · '+dAnt.n, [['Disponibilizado (líquido)',HIST_fmtMoeda(dAnt.tot)],['Lucro',HIST_fmtMoeda(dAnt.luc)]], dAnt.n===0)});
+    _ord.push({luc:dAnt.luc, html:bloco('ANTECIPAÇÕES · '+dAnt.n, HIST_fmtMoeda(dAnt.luc), [['Disponibilizado (líquido)',HIST_fmtMoeda(dAnt.tot)],['Lucro',HIST_fmtMoeda(dAnt.luc)]], dAnt.n===0)});
     var _flin=[['Financiado',HIST_fmtMoeda(dFin.tot)],['Lucro Total',HIST_fmtMoeda(dFin.luc+(dFin.lucInv||0))]];
     if(dFin.lucInv>0){
       _flin.push(['—div—','']);
       _flin.push(['Lucro VB',HIST_fmtMoeda(dFin.luc)]);
       (dFin.partesInv||[]).forEach(function(pp){ _flin.push(['Lucro '+pp[0], HIST_fmtMoeda(pp[1])]); });
     }
-    _ord.push({luc:dFin.luc, html:bloco('FINANCIAMENTOS · '+dFin.n, _flin, dFin.n===0)});
+    _ord.push({luc:dFin.luc, html:bloco('FINANCIAMENTOS · '+dFin.n, HIST_fmtMoeda(dFin.luc), _flin, dFin.n===0)});
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
-    _ord.push({luc:venLucVB, html:bloco('VENDAS · '+dVen.n, vlin, dVen.n===0)});
+    _ord.push({luc:venLucVB, html:bloco('VENDAS · '+dVen.n, HIST_fmtMoeda(venLucVB), vlin, dVen.n===0)});
     /* so aparece no mes em que houve acordo: linha de zero todo mes seria ruido permanente */
     var _dPro=(FM_dados&&FM_dados.pro)||{n:0,juros:0};
     if(_dPro.n>0){
@@ -14645,28 +14646,10 @@ function FM_load(){
           REN_termo(it.tab,false,true)+' '+(it.idx+1)+' \u00b7 '+HIST_fmtMoeda(it.orig)+' \u2192 '+HIST_fmtMoeda(it.pago)+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''),
           HIST_fmtMoeda(it.juros));
       });
-      _ord.push({luc:_dPro.juros, html:bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), [['Juros', HIST_fmtMoeda(_dPro.juros)]], false, fmDetCaixa(_pdet))});
+      _ord.push({luc:_dPro.juros, html:bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), HIST_fmtMoeda(_dPro.juros), [['Juros', HIST_fmtMoeda(_dPro.juros)]], false, fmDetCaixa(_pdet))});
     }
     _ord.sort(function(a,b){ return (Number(b.luc)||0)-(Number(a.luc)||0); });
     _ord.forEach(function(o){ hh+=o.html; });
-    if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
-      var slin=[];
-      if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
-      if(dSai.pagoN>0) slin.push(['Pago no mês', HIST_fmtMoeda(dSai.pago)]);
-      hh+=bloco('SAÍDAS · '+Math.max(dSai.venceN, dSai.pagoN), slin);
-    }
-    /* ao lado das SAIDAS de proposito: as duas sao caixa, nenhuma e resultado */
-    var _dGas=_c.gas||{n:0};
-    if(_dGas.n>0){
-      var glin=[];
-      _dGas.grupos.forEach(function(g){ glin.push([g.desc+(g.n>1?' \u00b7 '+g.n+'\u00d7':''), HIST_fmtMoeda(g.v)]); });
-      if(_dGas.grupos.length>1){ glin.push(['—div—','']); glin.push(['Total', HIST_fmtMoeda(_dGas.tot)]); }
-      var _gdet='';
-      (_dGas.itens||[]).forEach(function(it){
-        _gdet+=fmDet(it.peca, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):'')+(it.cobrar?'':' \u00b7 N\u00c3O COBRADO'), HIST_fmtMoeda(it.valor));
-      });
-      hh+=bloco('CUSTOS COM PEÇAS · '+_dGas.n, glin, false, fmDetCaixa(_gdet));
-    }
     /* diferente do bloco acima: este DESCE do lucro, e por isso mostra o antes e o depois */
     var _dJur=(FM_dados&&FM_dados.jur)||{n:0};
     if(_dJur.n>0){
@@ -14679,16 +14662,13 @@ function FM_load(){
       (_dJur.itens||[]).forEach(function(it){
         _jdet+=fmDet(it.conta, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''), HIST_fmtMoeda(it.valor));
       });
-      hh+=bloco('JUROS PAGOS · '+_dJur.n, jlin, false, fmDetCaixa(_jdet));
-    }
-    /* acumulado: quanto ja foi em juros na vida, por banco. So leitura -- nao mexe no lucro do mes */
-    var _jAcR=(FM_dados&&FM_dados.jac)||null;
-    if(_jAcR && _jAcR.tot>0){
-      var jalin=[];
-      _jAcR.grupos.forEach(function(g){ jalin.push([g.conta, HIST_fmtMoeda(g.v)]); });
-      jalin.push(['\u2014div\u2014','']);
-      jalin.push(['Total desde '+(_jAcR.desde?(_jAcR.desde.slice(5,7)+'/'+_jAcR.desde.slice(0,4)):''), HIST_fmtMoeda(_jAcR.tot)]);
-      hh+=bloco('JUROS PAGOS \u00b7 ACUMULADO', jalin, false);
+      /* acumulado vira uma linha aqui dentro, e so quando difere do mes (com um mes lancado so repetia) */
+      var _jAcR=(FM_dados&&FM_dados.jac)||null;
+      if(_jAcR && _jAcR.tot-_dJur.tot>0.005){
+        jlin.push(['\u2014div\u2014','']);
+        jlin.push(['Acumulado desde '+(_jAcR.desde?(_jAcR.desde.slice(5,7)+'/'+_jAcR.desde.slice(0,4)):''), HIST_fmtMoeda(_jAcR.tot)]);
+      }
+      hh+=bloco('JUROS PAGOS · '+_dJur.n, '\u2212 '+HIST_fmtMoeda(_dJur.tot), jlin, false, fmDetCaixa(_jdet));
     }
     var _dl='';
     if(FM_dados.prevLucro!=null && FM_dados.nOps>0){
@@ -14731,6 +14711,26 @@ function FM_load(){
         +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">RENDIMENTO DO CAPITAL'+(_rdet?' <span id="fm-rend-chev" style="color:var(--so);letter-spacing:0;">▸</span>':'')+'</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'+_ra+'</span></div>'
         +(_rdet?'<div id="fm-rend-det" style="display:none;padding-top:6px;">'+_rdet+'</div>':'')
         +'</div>';
+    }
+    /* so consulta, depois do resultado: sao caixa, nao entram na conta de cima */
+    hh+='<div style="height:8px;"></div>';
+    if(dSai && (dSai.venceN>0 || dSai.pagoN>0)){
+      var slin=[];
+      if(dSai.venceN>0) slin.push(['Vence no mês', HIST_fmtMoeda(dSai.vence)]);
+      if(dSai.pagoN>0) slin.push(['Pago no mês', HIST_fmtMoeda(dSai.pago)]);
+      hh+=bloco('SAÍDAS · '+Math.max(dSai.venceN, dSai.pagoN), HIST_fmtMoeda(dSai.pagoN>0?dSai.pago:0)+(dSai.pagoN>0?' PAGO':''), slin);
+    }
+    /* ao lado das SAIDAS de proposito: as duas sao caixa, nenhuma e resultado */
+    var _dGas=_c.gas||{n:0};
+    if(_dGas.n>0){
+      var glin=[];
+      _dGas.grupos.forEach(function(g){ glin.push([g.desc+(g.n>1?' \u00b7 '+g.n+'\u00d7':''), HIST_fmtMoeda(g.v)]); });
+      if(_dGas.grupos.length>1){ glin.push(['—div—','']); glin.push(['Total', HIST_fmtMoeda(_dGas.tot)]); }
+      var _gdet='';
+      (_dGas.itens||[]).forEach(function(it){
+        _gdet+=fmDet(it.peca, it.desc+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):'')+(it.cobrar?'':' \u00b7 N\u00c3O COBRADO'), HIST_fmtMoeda(it.valor));
+      });
+      hh+=bloco('CUSTOS COM PEÇAS · '+_dGas.n, HIST_fmtMoeda(_dGas.tot), glin, false, fmDetCaixa(_gdet));
     }
     body.innerHTML=hh;
   });
@@ -20684,6 +20684,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.58</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">FECHAMENTO compacto: todo bloco abre fechado, numa linha, com o valor absoluto à direita; um toque abre ali mesmo. Ordem de demonstrativo: VENDAS, FINANCIAMENTOS e ANTECIPAÇÕES (pelo lucro), JUROS PAGOS com sinal de menos, LUCRO DO MÊS e RENDIMENTO; depois, só para consulta, SAÍDAS e CUSTOS COM PEÇAS. O ACUMULADO de juros virou uma linha dentro de JUROS PAGOS, e só aparece quando difere do mês</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.57</span><span class="cl-ver-date">21/09/2026</span></div>
       <div class="cl-item">CREDOR da conta a pagar vira cadastro A COMPLETAR quando o nome é novo, como na venda. Conta marcada JUROS DA CONTA não cria (o credor ali é o banco). Nome que já existe como apelido não duplica. Os credores das contas já lançadas entram sozinhos na primeira abertura das ENTRADAS/SAÍDAS</div>
       <div class="cl-item">FECHAMENTO: bloco JUROS PAGOS · ACUMULADO — o total por banco desde o primeiro juro lançado, contando JUROS DA CONTA e a parte de juros das parcelas. É leitura: não mexe no lucro do mês</div>
