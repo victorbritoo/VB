@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.69</title>
+<title>VB - v1.300.70</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14966,10 +14966,23 @@ function FM_foto(){
   ];
   if(linPro.length) _fot.push({luc:d.pro.juros, t:'JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), l:linPro, v:false});
   _fot.sort(function(a,b){ return (Number(b.luc)||0)-(Number(a.luc)||0); });
-  if(linSai.length) _fot.push({luc:0, t:'SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), l:linSai, v:false});
-  if(linGas.length) _fot.push({luc:0, t:'CUSTOS COM PEÇAS · '+d.gas.n, l:linGas, v:false});
-  var _hSum=0; _fot.forEach(function(b){ _hSum+=boxHv(b.l,b.v)+12; });
-  var H=176 + _hSum + 64 + 52;
+  /* v1.300.70: a foto segue a ORDEM DA TELA -- resultado, JUROS PAGOS (desce do lucro), card do
+     LUCRO DO MES, rendimento, e so depois o caixa. Sem o JUROS PAGOS a foto nao fechava: em setembro
+     os blocos somavam 81.169,12 e o card dizia 65.537,40. */
+  var _jr=d.jur||{n:0};
+  if(_jr.n>0){
+    var linJur=[];
+    (_jr.grupos||[]).forEach(function(g){ linJur.push([g.conta+(g.n>1?' · '+g.n+'×':''), HIST_fmtMoeda(g.v)]); });
+    linJur.push(['—div—','']);
+    linJur.push(['Lucro antes', HIST_fmtMoeda(d.lucroBruto)]);
+    linJur.push(['Juros pagos', '− '+HIST_fmtMoeda(_jr.tot)]);
+    _fot.push({luc:0, t:'JUROS PAGOS · '+_jr.n, l:linJur, v:false});
+  }
+  var _cx=[];
+  if(linSai.length) _cx.push({luc:0, t:'SAÍDAS · '+Math.max(d.sai.venceN, d.sai.pagoN), l:linSai, v:false});
+  if(linGas.length) _cx.push({luc:0, t:'CUSTOS COM PEÇAS · '+d.gas.n, l:linGas, v:false});
+  var _hSum=0; _fot.concat(_cx).forEach(function(b){ _hSum+=boxHv(b.l,b.v)+12; });
+  var H=176 + _hSum + 72 + (d.rend!=null?36:0) + 28;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -15001,12 +15014,15 @@ function FM_foto(){
   c.fillStyle='#bbb'; c.font='700 11px -apple-system, Helvetica, sans-serif'; c.fillText('LUCRO DO MÊS', PAD+22, y+38);
   c.fillStyle='#fff'; c.font='700 24px -apple-system, Helvetica, sans-serif'; c.textAlign='right';
   c.fillText(HIST_fmtMoeda(d.lucroTotal), PAD+CW-22, y+42); c.textAlign='left';
+  y+=72;
   if(d.rend!=null){
-    y+=72;
     c.fillStyle='#888'; c.font='600 11px -apple-system, Helvetica, sans-serif'; c.fillText('RENDIMENTO DO CAPITAL', PAD+22, y+8);
     c.font='700 14px -apple-system, Helvetica, sans-serif'; c.fillStyle='#111'; c.textAlign='right';
     c.fillText(d.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.', PAD+CW-22, y+10); c.textAlign='left';
+    y+=36;
   }
+  /* caixa por ultimo: saidas e custos nao fazem parte da conta do lucro */
+  _cx.forEach(function(b){ selo(b.t, b.v?[]:b.l, b.v); });
   VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb', agora:true});
   VB_fotoPreview(cv, 'VB - Fechamento '+d.titulo+'.jpg');
 }
@@ -20932,6 +20948,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.70</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">Foto do Fechamento completa: ganhou o bloco JUROS PAGOS (por conta, Lucro antes e Juros pagos) e segue a ordem da tela &mdash; resultado, juros pagos, LUCRO DO M&Ecirc;S, rendimento, e s&oacute; depois SA&Iacute;DAS e CUSTOS. Antes os blocos n&atilde;o fechavam com o lucro do m&ecirc;s</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.69</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">Fechamento: ANTECIPA&Ccedil;&Otilde;ES e FINANCIAMENTOS mostram o Lucro contratado no m&ecirc;s (o lucro inteiro das opera&ccedil;&otilde;es fechadas nele), como leitura &mdash; fora do LUCRO DO M&Ecirc;S. Tela e foto</div>
   </div>
