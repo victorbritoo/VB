@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.68</title>
+<title>VB - v1.300.69</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14540,7 +14540,7 @@ function FM_opTitulo(t, f){ return t+' · '+((f&&f.n)||0); }
 function FM_antLinhas(f){
   f=f||{}; var l=[['Juros do mês', HIST_fmtMoeda(f.luc||0)]];
   /* o antecipado no mes e leitura: o dinheiro que saiu, nunca entra no lucro */
-  if(f.novos>0){ l.push(['—div—','']); l.push(['Antecipado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); }
+  if(f.novos>0){ l.push(['—div—','']); l.push(['Antecipado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); l.push(['Lucro contratado', HIST_fmtMoeda(f.lucNovo||0)]); }
   return l;
 }
 function FM_finLinhas(f){
@@ -14551,7 +14551,9 @@ function FM_finLinhas(f){
     (f.partesInv||[]).forEach(function(pp){ l.push(['Lucro '+pp[0], HIST_fmtMoeda(pp[1])]); });
   }
   /* o financiado no mes e leitura: mostra o dinheiro que saiu, nunca entra no lucro */
-  if(f.novos>0){ l.push(['—div—','']); l.push(['Financiado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); }
+  /* lucro contratado: o lucro inteiro das operacoes fechadas no mes -- quanto negocio novo entrou.
+     Leitura, fora do LUCRO DO MES: ele vira lucro dia a dia, ate o ultimo vencimento. */
+  if(f.novos>0){ l.push(['—div—','']); l.push(['Financiado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); l.push(['Lucro contratado', HIST_fmtMoeda(f.lucNovo||0)]); }
   return l;
 }
 function FM_calcMes(ym, res, _merMap){
@@ -14571,7 +14573,7 @@ function FM_calcMes(ym, res, _merMap){
       _aIt.push({cli:String(r.cliente||'').trim(), rot:String(r.nome||'ANTECIPAÇÃO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
     });
     _aIt.sort(function(a,b){ return b.v-a.v; });
-    var dAnt={n:_aIt.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), novos:antOp.length, luc:_aLuc, itens:_aIt};
+    var dAnt={n:_aIt.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), novos:antOp.length, lucNovo:lucroDe(antOp,'ant'), luc:_aLuc, itens:_aIt};
     /* FINANCIAMENTO PRO RATA DIA (v1.300.68; na .65 era o juro da parcela inteiro no mes do
        vencimento). Mesma regua da antecipacao. O mes da operacao so mostra o financiado. */
     var _fpartes={}, _fIt=[], _fLuc=0;
@@ -14583,7 +14585,7 @@ function FM_calcMes(ym, res, _merMap){
       _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
     });
     _fIt.sort(function(a,b){ return b.v-a.v; });
-    var dFin={n:_fIt.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), novos:fin.length, luc:_fLuc, itens:_fIt,
+    var dFin={n:_fIt.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), novos:fin.length, lucNovo:lucroDe(fin,'fin'), luc:_fLuc, itens:_fIt,
       lucInv: Object.keys(_fpartes).reduce(function(a,k){return a+_fpartes[k];},0),
       partesInv: Object.keys(_fpartes).map(function(k){ return [k,_fpartes[k]]; })};
     var venLucVB=0, venPartes={};
@@ -20930,6 +20932,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.69</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">Fechamento: ANTECIPA&Ccedil;&Otilde;ES e FINANCIAMENTOS mostram o Lucro contratado no m&ecirc;s (o lucro inteiro das opera&ccedil;&otilde;es fechadas nele), como leitura &mdash; fora do LUCRO DO M&Ecirc;S. Tela e foto</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.68</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">FECHAMENTO pro rata dia, regra fechada em 22/09: o juro de ANTECIPA&Ccedil;&Otilde;ES e FINANCIAMENTOS nasce um pouco a cada dia, do dia seguinte ao da opera&ccedil;&atilde;o at&eacute; o vencimento, e cada m&ecirc;s fica com os dias que teve (regra do mercado, CPC 48 / Res. CMN 4.966). O m&ecirc;s da opera&ccedil;&atilde;o mostra s&oacute; o Antecipado/Financiado no m&ecirc;s, como leitura. Somando os meses, cada opera&ccedil;&atilde;o fecha no lucro do card. Antecipa&ccedil;&otilde;es atrasadas continuam fora. Card, Hist&oacute;rico e panorama n&atilde;o mudam</div>
   </div>
