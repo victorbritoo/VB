@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.64</title>
+<title>VB - v1.300.65</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2003,6 +2003,11 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
     if(tab==='ven'){ h += '<button onclick="event.stopPropagation();CTR_abrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
     if(tab==='fin'){ h += '<button onclick="event.stopPropagation();CTR_finAbrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
     h += '</div>';
+    if(tab==='fin'){
+      h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px;margin-left:-23px;">'
+        + '<button onclick="event.stopPropagation();FIN_priceAbrir('+idx+')" style="'+_btnCss+'">PRICE</button>'
+        + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button></div>';
+    }
 
     h += '</div>';
   }
@@ -5036,7 +5041,11 @@ function HIST_renderRows(tab, rows){
       if(dataOp && dataOp!=='--') campos.push({l:'1º vencimento', v:dataOp});
       if(r.qtd_parcelas) campos.push({l:'Parcelas', v:r.qtd_parcelas+'x'});
       if(r.valor_parcela) campos.push({l:'Valor parcela', v:HIST_fmtMoeda(r.valor_parcela)});
-      if(r.taxa) campos.push({l:'Taxa', v:r.taxa+'% a.m.'});
+      if(r.taxa) campos.push({l:'Taxa', v:(function(){
+        /* a prestacao arredondada muda a taxa: mostra a real ao lado quando ela difere */
+        var _P=VB_finPrice(r), t=r.taxa+'% a.m.';
+        if(_P && Math.abs(Math.round(_P.taxa*10000)/100-Number(r.taxa))>=0.005) t+=' · real '+VB_finTaxaTxt(_P.taxa)+'%';
+        return t; })()});
       if(r.valor_total) campos.push({l:'Total', v:HIST_fmtMoeda(r.valor_total)});
       if(r.simulacao) rowBadge='SIM';
       if(r.tem_investidor){
@@ -11092,6 +11101,32 @@ function CLIP_abrir(nome, cliId, voltarK){
 }
 /* === A RECEBER (Fase 1): cronograma derivado das operações — só leitura, sem tabela nova === */
 function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* TABELA PRICE DO FINANCIAMENTO (v1.300.65). A taxa usada e a REAL: a que faz as N prestacoes
+   gravadas zerarem o valor financiado. A prestacao arredondada (2.361,90 -> 2.365,00) muda a taxa
+   (3% -> 3,012%); com a taxa digitada o saldo terminaria negativo e parte do juro ficaria sem nome.
+   Centavos: cada juro arredondado, e a ultima parcela fecha o saldo -- a soma dos juros bate
+   exatamente com o lucro do card (valor_parcela x N - financiado). */
+var REN_finMap={};
+function VB_finTaxaReal(pv, pm, n){
+  if(!(pv>0 && pm>0 && n>0) || pm*n<=pv+0.005) return 0;
+  var lo=0.0000001, hi=1, m=0;
+  for(var t=0;t<200;t++){ m=(lo+hi)/2; var a=pm*(1-Math.pow(1+m,-n))/m; if(a>pv) lo=m; else hi=m; }
+  return m;
+}
+function VB_finPrice(r){
+  var pv=Number(r&&r.valor_financiado)||0, pm=Number(r&&r.valor_parcela)||0, n=Number(r&&r.qtd_parcelas)||0;
+  if(!(pv>0 && pm>0 && n>0)) return null;
+  var d1=(r&&r.data_inicio)?String(r.data_inicio).slice(0,10):'';
+  var i=VB_finTaxaReal(pv, pm, n), sd=pv, L=[];
+  for(var k=0;k<n;k++){
+    var j=Math.round(sd*i*100)/100, a=Math.round((pm-j)*100)/100;
+    if(k===n-1){ a=Math.round(sd*100)/100; j=Math.round((pm-a)*100)/100; }
+    sd=Math.round((sd-a)*100)/100;
+    L.push({k:k, venc:(d1?REN_addMesISO(d1,k):''), pmt:pm, juros:j, amort:a, saldo:Math.max(0,sd)});
+  }
+  return {taxa:i, linhas:L, juros:Math.round((pm*n-pv)*100)/100};
+}
+function VB_finTaxaTxt(i){ return (i*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 /* CARIMBO = RELOGIO DE PAREDE. O campo guarda a hora LOCAL rotulada como Z. Parece errado e e
    de proposito: o app le esses campos sempre como TEXTO (fatia o mes, fatia o dia, compara pra
    ordenar) e nunca como instante. Gravando UTC de verdade, uma baixa feita entre 21h e meia-noite
@@ -11138,7 +11173,7 @@ var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log
   /* criadas na hora: nao existem quando a pagina abre, mas o observador do body avisa quando
      entram. Sem elas na lista, a pagina rolava por baixo do contrato -- defeito da 1.300.12. */
   'vb-ctr-sh','vb-ctr-view','vb-ctr-vass','vb-ctr-prev','vb-ctr-sheet','vb-con-ficha',
-  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr'];
+  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr','vb-price-sheet'];
 function VB_folhaAjusta(ov){
   try{
     if(!ov || ov.style.display==='none' || ov.style.display==='') return;
@@ -13136,6 +13171,7 @@ function REN_abrir(){
       opInfo['ven|'+String(r.id)]={socio:VB_nomeCurto(r.socio), vs:Math.round(vsTot*100)/100, vt:vt2, lbl:(consigCap2?'CONSIG':'S\u00d3CIO'), consig:consig2, consigCap:consigCap2, pctVB:pctVB2};
     });
     (res[1].data||[]).forEach(function(r){
+      REN_finMap[String(r.id)]=r;
       if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:VB_nomeCurto(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
     });
     var prev={}; ((res[4]&&res[4].data)||[]).forEach(function(pv){ prev[pv.op_tab+'|'+pv.op_id+'|'+pv.parcela_idx]=Number(pv.valor); });
@@ -13613,6 +13649,14 @@ function REN_ficha(k, exp){
       +bloco('VALOR HOJE \u00b7 '+vh.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%',
              HIST_fmtMoeda(vh.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span>', true)
       +'</div></div>';
+  })();
+  /* financiamento: a parcela abre em juros e amortizacao, pela Price na taxa real -- o mesmo
+     numero que o Fechamento conta no mes do vencimento. Leitura; nada e gravado. */
+  (function(){
+    if(x.tab!=='fin') return;
+    var _fr=REN_finMap[String(x.opId)]; if(!_fr) return;
+    var _P=VB_finPrice(_fr); var _L=_P&&_P.linhas[x.idx]; if(!_L) return;
+    hh+='<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 8px;">'+bloco('JUROS',HIST_fmtMoeda(_L.juros))+bloco('AMORTIZAÇÃO',HIST_fmtMoeda(_L.amort))+'</div>';
   })();
   if(x.prorrogada && x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
   (function(){ var _nl=REN_notaLote(x); if(_nl) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DO LAN\u00c7AMENTO', CLIP_esc(_nl))+'</div>'; })();
@@ -14419,6 +14463,19 @@ function FM_jurosAcum(rows){
   });
   return {tot:tot, desde:desde, grupos:Object.keys(g).map(function(k){ return {conta:k, v:g[k]}; }).sort(function(a,b){ return b.v-a.v; })};
 }
+/* bloco FINANCIAMENTOS: tela e foto montam as mesmas linhas */
+function FM_finTitulo(f){ var n=(f&&f.n)||0; return 'FINANCIAMENTOS · '+n+(n===1?' PARCELA':' PARCELAS'); }
+function FM_finLinhas(f){
+  f=f||{}; var l=[['Juros do mês', HIST_fmtMoeda((f.luc||0)+(f.lucInv||0))]];
+  if(f.lucInv>0){
+    l.push(['—div—','']);
+    l.push(['Lucro VB', HIST_fmtMoeda(f.luc)]);
+    (f.partesInv||[]).forEach(function(pp){ l.push(['Lucro '+pp[0], HIST_fmtMoeda(pp[1])]); });
+  }
+  /* o financiado no mes e leitura: mostra o dinheiro que saiu, nunca entra no lucro */
+  if(f.novos>0){ l.push(['—div—','']); l.push(['Financiado no mês · '+f.novos, HIST_fmtMoeda(f.tot)]); }
+  return l;
+}
 function FM_calcMes(ym, res, _merMap){
     function filtra(rows, tab){ return (rows||[]).filter(function(r){ return FM_mesDe(r,tab)===ym; }); }
     var ant=VB_antReais(filtra(res[0].data,'ant')), fin=filtra(res[1].data,'fin').filter(function(r){ return !VB_ehSimulacao(r); }), ven=filtra(res[2].data,'ven').filter(function(r){ return !VB_ehSimulacao(r); }), pag=filtra(res[3].data,'pag');
@@ -14426,9 +14483,25 @@ function FM_calcMes(ym, res, _merMap){
     function lucroDe(rows, tab){ var t=0; rows.forEach(function(r){ var l=HIST_lucroRow(tab,r); if(l!=null) t+=l; }); return t; }
     var antOp=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); }); // atrasados fora
     var dAnt={n:antOp.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), luc:lucroDe(antOp,'ant')};
-    var _fpartes={};
-    fin.forEach(function(r){ if(!r.tem_investidor) return; var nf=Number(r.qtd_parcelas)||0; if(r.investidor_parcela==null||r.valor_financiado==null||!nf) return; var li=Number(r.investidor_parcela)*nf-Number(r.valor_financiado); if(!isFinite(li)) return; var nm=(r.investidor_nome||'INVESTIDOR').toUpperCase(); _fpartes[nm]=(_fpartes[nm]||0)+li; });
-    var dFin={n:fin.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), luc:lucroDe(fin,'fin'),
+    /* FINANCIAMENTO POR JUROS DO MES (v1.300.65). O lucro nao entra mais inteiro no mes da operacao:
+       entra o juro de cada parcela no mes em que ela VENCE, pela Price na taxa real -- a regra do
+       mercado (juro pro rata, Res. CMN 4.966). Com investidor, o VB leva o spread fixo da parcela e
+       o investidor o juro da Price dele. O mes da operacao so mostra quanto foi financiado. */
+    var _fpartes={}, _fIt=[], _fLuc=0;
+    (res[1].data||[]).filter(function(r){ return !VB_ehSimulacao(r); }).forEach(function(r){
+      var P=VB_finPrice(r); if(!P) return;
+      var inv=!!r.tem_investidor && Number(r.investidor_parcela)>0;
+      var Pi=inv?VB_finPrice({valor_financiado:r.valor_financiado, valor_parcela:r.investidor_parcela, qtd_parcelas:r.qtd_parcelas, data_inicio:r.data_inicio}):null;
+      var spr=inv?((r.vb_parcela!=null)?Number(r.vb_parcela):(Number(r.valor_parcela)-Number(r.investidor_parcela))):0;
+      var nm=(r.investidor_nome||'INVESTIDOR').toUpperCase();
+      P.linhas.forEach(function(L){
+        if(String(L.venc).slice(0,7)!==ym) return;
+        var vb=inv?spr:L.juros; _fLuc+=vb;
+        if(inv && Pi && Pi.linhas[L.k]) _fpartes[nm]=(_fpartes[nm]||0)+Pi.linhas[L.k].juros;
+        _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), k:L.k, n:P.linhas.length, venc:L.venc, juros:vb});
+      });
+    });
+    var dFin={n:_fIt.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), novos:fin.length, luc:_fLuc, itens:_fIt,
       lucInv: Object.keys(_fpartes).reduce(function(a,k){return a+_fpartes[k];},0),
       partesInv: Object.keys(_fpartes).map(function(k){ return [k,_fpartes[k]]; })};
     var venLucVB=0, venPartes={};
@@ -14655,13 +14728,12 @@ function FM_load(){
        ranquear caixa junto com lucro misturaria duas coisas que o app separa em todo lugar. */
     var _ord=[];
     _ord.push({luc:dAnt.luc, html:bloco('ANTECIPAÇÕES · '+dAnt.n, HIST_fmtMoeda(dAnt.luc), [['Disponibilizado (líquido)',HIST_fmtMoeda(dAnt.tot)],['Lucro',HIST_fmtMoeda(dAnt.luc)]], dAnt.n===0)});
-    var _flin=[['Financiado',HIST_fmtMoeda(dFin.tot)],['Lucro Total',HIST_fmtMoeda(dFin.luc+(dFin.lucInv||0))]];
-    if(dFin.lucInv>0){
-      _flin.push(['—div—','']);
-      _flin.push(['Lucro VB',HIST_fmtMoeda(dFin.luc)]);
-      (dFin.partesInv||[]).forEach(function(pp){ _flin.push(['Lucro '+pp[0], HIST_fmtMoeda(pp[1])]); });
-    }
-    _ord.push({luc:dFin.luc, html:bloco('FINANCIAMENTOS · '+dFin.n, HIST_fmtMoeda(dFin.luc), _flin, dFin.n===0)});
+    var _flin=FM_finLinhas(dFin);
+    var _fdet='';
+    (dFin.itens||[]).forEach(function(it){
+      _fdet+=fmDet(it.cli?VB_nomeCurto(it.cli):it.rot, it.rot+' · '+('0'+(it.k+1)).slice(-2)+' DE '+('0'+it.n).slice(-2)+(it.venc?(' · '+it.venc.slice(8,10)+'/'+it.venc.slice(5,7)):''), HIST_fmtMoeda(it.juros));
+    });
+    _ord.push({luc:dFin.luc, html:bloco(FM_finTitulo(dFin), HIST_fmtMoeda(dFin.luc), _flin, dFin.n===0, _fdet?fmDetCaixa(_fdet):'')});
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
     dVen.partes.forEach(function(pp){ vlin.push([pp[0], HIST_fmtMoeda(pp[1])]); });
     _ord.push({luc:venLucVB, html:bloco('VENDAS · '+dVen.n, HIST_fmtMoeda(venLucVB), vlin, dVen.n===0)});
@@ -14787,12 +14859,7 @@ function FM_foto(){
   var W=820, PAD=40, CW=W-PAD*2;
   // conteúdo primeiro, pra medir a altura real
   var linAnt=[['Disponibilizado (líquido)',HIST_fmtMoeda(d.ant.tot)],['Lucro',HIST_fmtMoeda(d.ant.luc)]];
-  var linFin=[['Financiado',HIST_fmtMoeda(d.fin.tot)],['Lucro Total',HIST_fmtMoeda(d.fin.luc+(d.fin.lucInv||0))]];
-  if(d.fin.lucInv>0){
-    linFin.push(['—div—','']);
-    linFin.push(['Lucro VB',HIST_fmtMoeda(d.fin.luc)]);
-    (d.fin.partesInv||[]).forEach(function(pp){ linFin.push(['Lucro '+pp[0], HIST_fmtMoeda(pp[1])]); });
-  }
+  var linFin=FM_finLinhas(d.fin);
   var linVen=[['Vendido',HIST_fmtMoeda(d.ven.tot)],['Lucro Total',HIST_fmtMoeda(d.ven.luc)],['—div—','']];
   (d.ven.partes||[]).forEach(function(pp){ linVen.push([pp[0], HIST_fmtMoeda(pp[1])]); });
   var linPro=[];
@@ -14813,7 +14880,7 @@ function FM_foto(){
   /* mesma ordem da tela: resultado por lucro, caixa no fim */
   var _fot=[
     {luc:d.ant.luc, t:'ANTECIPAÇÕES · '+d.ant.n, l:linAnt, v:(d.ant.n===0)},
-    {luc:d.fin.luc, t:'FINANCIAMENTOS · '+d.fin.n, l:linFin, v:(d.fin.n===0)},
+    {luc:d.fin.luc, t:FM_finTitulo(d.fin), l:linFin, v:(d.fin.n===0)},
     {luc:(d.ven.partes&&d.ven.partes.length?(function(){ var s=0; d.ven.partes.forEach(function(pp){ if(/^Lucro VB$/i.test(pp[0])) s=VB_moedaNum(pp[1]); }); return s; })():d.ven.luc), t:'VENDAS · '+d.ven.n, l:linVen, v:(d.ven.n===0)}
   ];
   if(linPro.length) _fot.push({luc:d.pro.juros, t:'JUROS RECEBIDOS · '+d.pro.n+(d.pro.n===1?' PARCELA':' PARCELAS'), l:linPro, v:false});
@@ -20236,6 +20303,71 @@ function CTR_finTabela(r, titulo){
   ctx.fillText('Total · '+n+' parcelas · R$ '+CTR_fmtV(Math.round(tot*100)/100), W/2, y+altTot*0.68);
   return cv;
 }
+/* PRICE e QUITAR no card do financiamento (v1.300.65). As duas leem as parcelas ja baixadas. */
+function FIN_pagasDe(r, cb){
+  sb.from('parcela_baixas').select('parcela_idx').eq('op_tab','fin').eq('op_id',String(r.id)).then(function(res){
+    var pg={}; ((res&&res.data)||[]).forEach(function(b){ pg[Number(b.parcela_idx)]=1; }); cb(pg);
+  }).catch(function(){ cb({}); });
+}
+function FIN_priceAbrir(idx){
+  var r=HIST_rowsCache[idx]; if(!r) return;
+  var P=VB_finPrice(r); if(!P){ VB_toast('Faltam valor, parcela ou prazo.'); return; }
+  FIN_pagasDe(r, function(pg){ FIN_priceSheet(r, P, pg); });
+}
+function FIN_priceSheet(r, P, pg){
+  var old=document.getElementById('vb-price-sheet'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='vb-price-sheet';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100030;display:flex;align-items:flex-end;justify-content:center;';
+  var f=function(v){ return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var G='display:grid;grid-template-columns:22px 40px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:0 6px;align-items:baseline;font-variant-numeric:tabular-nums;';
+  var prox=-1; P.linhas.some(function(L){ if(!pg[L.k]){ prox=L.k; return true; } return false; });
+  var rows='';
+  P.linhas.forEach(function(L){
+    var paga=!!pg[L.k], atual=(L.k===prox);
+    var cor=paga?'var(--so)':'var(--tx)', pes=atual?'700':'500';
+    rows+='<div style="'+G+'padding:4px 0;border-top:0.5px solid var(--ln3);font-size:11px;color:'+cor+';font-weight:'+pes+';">'
+      +'<span>'+('0'+(L.k+1)).slice(-2)+'</span>'
+      +'<span>'+(L.venc?(L.venc.slice(5,7)+'/'+L.venc.slice(2,4)):'')+'</span>'
+      +'<span style="text-align:right;">'+f(L.juros)+'</span>'
+      +'<span style="text-align:right;">'+f(L.amort)+'</span>'
+      +'<span style="text-align:right;">'+(paga?'✓ ':'')+f(L.saldo)+'</span></div>';
+  });
+  var H='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;';
+  ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;">TABELA PRICE</div>'
+    +'<div style="text-align:center;font-size:10px;color:var(--mu);font-weight:600;margin-top:3px;text-transform:uppercase;">'+CLIP_esc(String(r.descricao||''))+'</div>'
+    +'<div style="text-align:center;font-size:10px;color:var(--mu);margin-top:2px;">'+HIST_fmtMoeda(r.valor_financiado)+' · '+P.linhas.length+'× '+HIST_fmtMoeda(r.valor_parcela)+' · TAXA REAL '+VB_finTaxaTxt(P.taxa)+'% A.M.</div>'
+    +'<div style="'+G+'margin-top:10px;padding-bottom:3px;"><span style="'+H+'">Nº</span><span style="'+H+'">VENC.</span><span style="'+H+'text-align:right;">JUROS</span><span style="'+H+'text-align:right;">AMORT.</span><span style="'+H+'text-align:right;">SALDO</span></div>'
+    +rows
+    +'<div style="'+G+'padding:6px 0 0;border-top:0.5px solid var(--ln);font-size:11px;font-weight:700;color:var(--tx);"><span></span><span>TOTAL</span><span style="text-align:right;">'+f(P.juros)+'</span><span style="text-align:right;">'+f(r.valor_financiado)+'</span><span></span></div>'
+    +'<button id="vb-price-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">FECHAR</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  var fecha=function(){ var o=document.getElementById('vb-price-sheet'); if(o) o.remove(); };
+  ov.addEventListener('click', function(e){ if(e.target===ov) fecha(); });
+  document.getElementById('vb-price-fechar').addEventListener('click', fecha);
+}
+/* QUITAR abre a QUITACAO ANTECIPADA ja preenchida: parcela, o que falta pagar, o primeiro
+   vencimento em aberto, hoje e 2% (Clausula 9a do contrato). A conta e a mesma de sempre. */
+function FIN_quitarAbrir(idx){
+  var r=HIST_rowsCache[idx]; if(!r) return;
+  if(VB_ehSimulacao(r)){ VB_toast('Simulação não tem quitação.'); return; }
+  var P=VB_finPrice(r); if(!P){ VB_toast('Faltam valor, parcela ou prazo.'); return; }
+  FIN_pagasDe(r, function(pg){
+    var ab=P.linhas.filter(function(L){ return !pg[L.k]; });
+    if(!ab.length){ VB_toast('Todas as parcelas já foram pagas.'); return; }
+    var br=function(iso){ var q=String(iso).slice(0,10).split('-'); return q[2]+'/'+q[1]+'/'+q[0]; };
+    VB_telaAnterior='hist';
+    showScreen('fin'); FIN_setModo('quit');
+    var sv=function(id,v){ var el=document.getElementById(id); if(el) el.value=v; };
+    sv('quit-dataQuit', br(REN_hojeISO()));
+    sv('quit-dataProx', br(ab[0].venc));
+    sv('quit-qtd', String(ab.length));
+    sv('quit-parcela', QUIT_formatBR(Number(r.valor_parcela)));
+    sv('quit-taxa', '2,00');
+    try{ QUIT_update(); }catch(e){}
+  });
+}
 function CTR_finAbrir(idx){
   var r0=HIST_rowsCache[idx]; if(!r0){ VB_toast('Linha não encontrada.'); return; }
   sb.from('contratos').select('id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path').eq('fin_id',String(r0.id)).order('created_at',{ascending:false}).then(function(res){
@@ -20712,6 +20844,12 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.65</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">FECHAMENTO: o lucro do financiamento deixou de entrar inteiro no m&ecirc;s da opera&ccedil;&atilde;o. Entra o juro de cada parcela no m&ecirc;s em que ela vence, pela Tabela Price na taxa real &mdash; a regra do mercado. O m&ecirc;s da opera&ccedil;&atilde;o mostra s&oacute; quanto foi financiado. Somando os meses, fecha no lucro do card</div>
+      <div class="cl-item">Ficha da parcela do financiamento mostra JUROS e AMORTIZA&Ccedil;&Atilde;O</div>
+      <div class="cl-item">Card do financiamento no Hist&oacute;rico: TAXA mostra a real ao lado quando a presta&ccedil;&atilde;o arredondada muda a taxa (3% a.m. &middot; real 3,01%). Bot&otilde;es PRICE (tabela com juros, amortiza&ccedil;&atilde;o e saldo, parcelas pagas marcadas) e QUITAR (abre a Quita&ccedil;&atilde;o Antecipada preenchida: parcela, o que falta, pr&oacute;ximo vencimento, hoje e 2%)</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.64</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">Frase do documento de PAGAMENTOS sem data: Saldo: R$ 26.500,00. A foto j&aacute; leva o carimbo</div>
   </div>
