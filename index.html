@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.62</title>
+<title>VB - v1.300.64</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5256,6 +5256,7 @@ function VB_legenda(desc, corpo, fecho){
 }
 function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
   if(prefix==='ANT'){ try{ ANT_copiaFrase(); }catch(e){} }
+  if(prefix==='PAG'){ try{ PAG_copiaFrase(); }catch(e){} }
   if(prefix==='FIN'){
     /* legenda do financiamento, no texto do VB: descricao, inicio e fim, cenario */
     try{
@@ -9453,6 +9454,17 @@ function PAG_salvar(btn){
    click sintetico da regra e a linha entrava duas vezes. */
 VB_onTap(document.getElementById('pag-add-btn'), function(){ PAG_addLinha(); });
 
+/* frase do documento de PAGAMENTOS -- montada ao gerar a foto, copiada ao gerar e ao compartilhar */
+var PAG_frase='';
+function PAG_copiaFrase(){
+  try{
+    if(!PAG_frase) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(PAG_frase);
+      VB_toast('Frase copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+    }
+  }catch(e){}
+}
 function PAG_compartilhar(){
   var total=PAG_parseBR(document.getElementById('pag-total').value)||0;
   var soma=0;
@@ -9528,6 +9540,18 @@ function PAG_compartilhar(){
   ctx.fillText('R$ '+(saldo===0?'-':PAG_formatBR(saldo)),W-pad,y+secSaldoH*0.7); y+=secSaldoH;
   }
   VB_drawWatermark(ctx,W,H);
+
+  /* Frase pronta pro WhatsApp, texto puro. SEM data: a foto ja leva o carimbo e a conversa
+     tem a data da mensagem -- diferente do VALOR HOJE, que vai sozinho e muda todo dia.
+     Encontro de contas (sem VALOR TOTAL) nao tem saldo -- vai o total das linhas. */
+  (function(){
+    var _n=function(v){ return PAG_formatBR(Math.abs(v)); };
+    PAG_frase = modoEC ? ('Total: R$ '+_n(soma)+'.')
+      : (Math.abs(saldo)<0.005 ? 'Quitado.'
+      : (saldo<0 ? ('Cr\u00e9dito: R$ '+_n(saldo)+'.')
+                 : ('Saldo: R$ '+_n(saldo)+'.')));
+    if(!VB_silentGen) PAG_copiaFrase();
+  })();
 
   var img=document.getElementById('pag-tabelaImagem');
   VB_carimboData(ctx, W);
@@ -20688,6 +20712,14 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.64</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">Frase do documento de PAGAMENTOS sem data: Saldo: R$ 26.500,00. A foto j&aacute; leva o carimbo</div>
+  </div>
+  <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.63</span><span class="cl-ver-date">22/09/2026</span></div>
+      <div class="cl-item">Documento de PAGAMENTOS copia a frase pronta pro WhatsApp, ao gerar e ao compartilhar: Saldo: R$ 26.500,00 dia 22/09. Quitado vira Quitado em 22/09.; encontro de contas (sem VALOR TOTAL) vira Total: R$ X dia 22/09.; saldo negativo vira Cr&eacute;dito: R$ X dia 22/09.</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.62</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">Frase do VALOR HOJE sem o ano: O valor fica R$ 3.206,70 dia 22/09.</div>
   </div>
