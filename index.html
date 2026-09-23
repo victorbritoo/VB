@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.73</title>
+<title>VB - v1.300.74</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -7729,12 +7729,21 @@ function ANT_addMonth(dateStr,n,ancora){
   var d=ANT_parseDate(dateStr); if(!d) return '';
   return ANT_dateStr(VB_mesData(d, n||1, ancora));
 }
-/* dia contratual do vencimento = dia do 1o titulo; mantem 31 depois de passar por fevereiro */
-function ANT_ancoraDia(){
-  var t0=(ANT_titulos&&ANT_titulos.length)?ANT_titulos[0]:null;
-  if(!t0||!t0.data) return null;
-  var d=ANT_parseDate(t0.data);
-  return d?d.getDate():null;
+/* v1.300.74: o dia do +1 mes vem do titulo que esta sendo repetido, nao do 1o -- a serie pode
+   mudar de dia no meio (10k dia 06, 26k dia 10) e ancorar no 1o devolvia 06/11 para o 10/10.
+   Mesma regra das vendas (VEN_repetirParcela): se o titulo caiu no ultimo dia do mes, pode ter
+   sido truncado (31/01 -> 28/02), entao o anterior recupera o dia cheio. */
+function ANT_ancoraDia(i){
+  if(!ANT_titulos||!ANT_titulos.length) return null;
+  if(i==null||i<0||i>=ANT_titulos.length) i=ANT_titulos.length-1;
+  var d=ANT_titulos[i].data?ANT_parseDate(ANT_titulos[i].data):null;
+  if(!d) return null;
+  var anc=d.getDate(), fimMes=new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  if(anc===fimMes && i>0){
+    var p=ANT_titulos[i-1].data?ANT_parseDate(ANT_titulos[i-1].data):null;
+    if(p && p.getDate()>anc) anc=p.getDate();
+  }
+  return anc;
 }
 function ANT_maskDate(el,cb){
   el.addEventListener('input',function(){
@@ -9046,7 +9055,7 @@ function ANT_duplicarTitulo(id){
   if(i<0) return;
   var base=ANT_titulos[i];
   ANT_tituloCounter++;
-  var nd=base.data?ANT_addMonth(base.data,1,ANT_ancoraDia()):'';
+  var nd=base.data?ANT_addMonth(base.data,1,ANT_ancoraDia(i)):'';
   ANT_titulos.splice(i+1,0,{id:ANT_tituloCounter, valor:(base.valor||''), data:nd});
   ANT_renderTitulos(); ANT_recalcPersonalizado();
 }
@@ -20998,6 +21007,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.74</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">Antecipa&ccedil;&atilde;o: REPETIR e duplicar t&iacute;tulo somam o m&ecirc;s pelo dia do t&iacute;tulo repetido, n&atilde;o do 1&ordm;. 10/10 repetido virava 06/11 quando o 1&ordm; t&iacute;tulo era dia 06; agora vira 10/11. Mesma regra das vendas: t&iacute;tulo no fim do m&ecirc;s recupera o dia cheio do anterior</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.73</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">Ficha da parcela: a data da opera&ccedil;&atilde;o saiu do nome e foi para o r&oacute;tulo &mdash; OPERA&Ccedil;&Atilde;O (17/07/26). O nome volta a ser s&oacute; o da opera&ccedil;&atilde;o</div>
   </div>
