@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.72</title>
+<title>VB - v1.300.73</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13114,12 +13114,12 @@ var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_cicloSort(){ var o=['data','valor','cliente']; REN_sort=o[(o.indexOf(REN_sort)+1)%o.length]; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
-/* v1.300.72: a ficha mostra a data da operacao entre parenteses ao lado do nome. Na
-   antecipacao ela substitui o #MM/AA, que diria o mesmo pela metade. */
-function REN_opFicha(x){
-  var r=REN_rotCurto(x.rot)||x.rot||'', d=String(x.dOp||'');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return r;
-  return r.replace(/\s*·\s*#\d{2}\/\d{2}$/,'')+' ('+d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4)+')';
+/* v1.300.73: a data da operacao vai no ROTULO da ficha -- OPERACAO (17/07/26) --, o nome
+   fica como sempre foi (decisao do VB; na .72 ela entrou no nome e alongava a linha). */
+function REN_opRotulo(x){
+  var d=String(x.dOp||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return 'OPERAÇÃO';
+  return 'OPERAÇÃO ('+d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(2,4)+')';
 }
 /* FILTRO POR TIPO (v1.300.72) no lugar do DATA/VALOR/CLIENTE, que nunca foi usado (decisao do VB).
    Vale so em A RECEBER sem busca; o card preto acompanha. Cicla so pelos tipos que tem parcela
@@ -13739,7 +13739,7 @@ function REN_ficha(k, exp){
   var _ehRep=false;
   try{ _ehRep=!!(b && oi && (REN_repDe(x,b)>0 || b.repassado_em)); }catch(e){}
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+(_ehRep?'REPASSE':REN_termo(x.tab,false,true))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_opFicha(x)))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco(REN_opRotulo(x),CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
   /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
   /* prorrogada: a data velha e a nova na MESMA linha, com a seta -- a gramatica que o card
      da lista ja usa. Bloco proprio pra ERA quebrava a grade e nao pertencia a coluna nenhuma. */
@@ -20998,6 +20998,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.73</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">Ficha da parcela: a data da opera&ccedil;&atilde;o saiu do nome e foi para o r&oacute;tulo &mdash; OPERA&Ccedil;&Atilde;O (17/07/26). O nome volta a ser s&oacute; o da opera&ccedil;&atilde;o</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.72</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">Ficha da parcela: a data da opera&ccedil;&atilde;o entre par&ecirc;nteses ao lado do nome &mdash; GMT BATMAN 2022 (19/07/2026). Na antecipa&ccedil;&atilde;o ela substitui o #MM/AA. ENTRADAS: o chip DATA virou filtro por tipo &mdash; TUDO &middot; VENDAS &middot; ANTECIPA&Ccedil;&Otilde;ES &middot; FINANCIAMENTOS &middot; MANUAL, cada toque passa para o pr&oacute;ximo (s&oacute; os tipos com parcela em aberto), e o card preto soma s&oacute; o tipo escolhido. Chip escuro = filtro ligado. Volta a TUDO ao sair da tela</div>
   </div>
