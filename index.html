@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.75</title>
+<title>VB - v1.300.76</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -15025,14 +15025,19 @@ function FM_panorama(){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA DO LUCRO</div>'
     +'<div style="'+G+'padding:0 2px 4px;"><span style="'+RT+'">MÊS</span><span style="'+RTd+'">RESULTADO</span><span style="'+RTd+'">JUROS PAGOS</span><span style="'+RTd+'">LUCRO</span></div>';
   var totF=0, sep=false;
+  /* v1.300.76: do passado so os 6 ultimos meses; o resto abre por VER ANTERIORES, ali mesmo.
+     O futuro fica inteiro -- ele e limitado pelos contratos, nao cresce com o tempo. */
+  var _pas=L.filter(function(x){ return x.ym<hojeYM; }).length, _esc=Math.max(0,_pas-6), _ix=0;
+  if(_esc) hh+='<div id="fm-pan-ant" onclick="FM_panAnteriores()" style="cursor:pointer;text-align:center;padding:8px 0;border-top:0.5px solid var(--ln3);font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">VER ANTERIORES ('+_esc+')</div>';
   L.forEach(function(x){
+    var _oc=(_ix++<_esc);
     if(x.fut && !sep){ sep=true;
       hh+='<div style="border-top:0.5px solid var(--ln);margin-top:6px;padding:8px 2px 2px;'+RT+'">GARANTIDO · SEM VENDA NOVA</div>'; }
     if(x.fut) totF+=x.luc;
     var agora=(x.ym===hojeYM), vaz=(Math.abs(x.resu)<0.005 && Math.abs(x.jur)<0.005);
     var lbl=(FM_MESES[Number(x.ym.slice(5,7))-1]||'').slice(0,3)+'/'+x.ym.slice(2,4);
     var neg=(x.luc<-0.005);
-    hh+='<div onclick="FM_panIr(\''+x.ym+'\')" style="cursor:pointer;'+G+'align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+    hh+='<div '+(_oc?'data-fmant="1" ':'')+'onclick="FM_panIr(\''+x.ym+'\')" style="cursor:pointer;'+G+'align-items:baseline;'+(_oc?'display:none;':'')+'padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
       +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:var(--tx);white-space:nowrap;">'+lbl+'</span>'
       +'<span style="font-size:11px;font-weight:600;color:var(--mu);text-align:right;white-space:nowrap;">'+(Math.abs(x.resu)>=0.005?VB_kFmt(x.resu):'—')+'</span>'
       +'<span style="font-size:11px;font-weight:600;color:var(--mu);text-align:right;white-space:nowrap;">'+(Math.abs(x.jur)>=0.005?('−'+VB_kFmt(x.jur)):'—')+'</span>'
@@ -15049,6 +15054,11 @@ function FM_panorama(){
   ov.style.display='flex';
   /* abre com o mes corrente a vista: a lista comeca no passado */
   setTimeout(function(){ try{ var box=ov.firstChild, rows=box.querySelectorAll('[onclick^="FM_panIr"]'); for(var i=0;i<rows.length;i++){ if(rows[i].getAttribute('onclick').indexOf(hojeYM)>=0){ box.scrollTop=Math.max(0, rows[i].offsetTop-box.offsetTop-120); break; } } }catch(_){} }, 30);
+}
+function FM_panAnteriores(){
+  var ov=document.getElementById('fm-pan-ov'); if(!ov) return;
+  ov.querySelectorAll('[data-fmant]').forEach(function(el){ el.style.display='grid'; });
+  var b=document.getElementById('fm-pan-ant'); if(b) b.remove();
 }
 /* o Fechamento continua aberto por baixo: a trava do fundo fica com ele */
 function FM_panFechar(){ var o=document.getElementById('fm-pan-ov'); if(o) o.style.display='none'; }
@@ -21084,6 +21094,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.76</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">PANORAMA DO LUCRO: do passado aparecem s&oacute; os 6 &uacute;ltimos meses; os anteriores abrem em VER ANTERIORES, ali mesmo. O futuro continua inteiro</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.75</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">PANORAMA DO LUCRO: tocar no card preto LUCRO DO M&Ecirc;S do Fechamento abre todos os meses numa tabela &mdash; RESULTADO &middot; JUROS PAGOS &middot; LUCRO. Passado e m&ecirc;s corrente s&atilde;o o pr&oacute;prio Fechamento. Os meses futuros, abaixo de GARANTIDO &middot; SEM VENDA NOVA, mostram s&oacute; o que j&aacute; est&aacute; contratado: o juro pro rata das antecipa&ccedil;&otilde;es e financiamentos vivos menos os juros das contas que vencem no m&ecirc;s. Negativo em vermelho; no fim, o GARANTIDO &Agrave; FRENTE. Tocar num m&ecirc;s leva o Fechamento para ele</div>
