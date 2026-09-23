@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.70</title>
+<title>VB - v1.300.71</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5507,6 +5507,33 @@ function VB_temAlteracaoManual(tela){
   if(!c.getId()) return false;          // só op carregada do Histórico
   if(c.getSnap()===null) return false;  // sem foto de referência
   return c.sig() !== c.getSnap();
+}
+/* ATALHOS DA NOTA (v1.300.71): a nota de baixa quase sempre diz em que conta o dinheiro caiu.
+   Toque escreve a conta; se a nota ja tem outra conta da lista, troca (uma conta por nota);
+   o resto do texto fica. Cursor no fim, para completar (ITAU PJ 11K). Dispara 'input' para a
+   guarda de alteracao das folhas enxergar. Lista fixa, decisao do VB -- nao aprende do historico. */
+var VB_NOTA_CONTAS=['ITAU PJ','BRADESCO PJ','INTER PJ','ITAU PF','CASH'];
+function VB_notaAtalhos(id){
+  return '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px;">'
+    +VB_NOTA_CONTAS.map(function(t){
+      return '<button type="button" data-keepkb onpointerdown="event.preventDefault()" onclick="VB_notaAtalho(\''+id+'\',\''+t+'\')" style="padding:6px 11px;border:0.5px solid var(--ln3);border-radius:20px;background:transparent;color:var(--mu);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:-apple-system,sans-serif;">'+t+'</button>';
+    }).join('')+'</div>';
+}
+function VB_notaAtalho(id, t){
+  var el=document.getElementById(id); if(!el) return;
+  var v=String(el.value||'').toUpperCase();
+  var tem=VB_NOTA_CONTAS.some(function(c){ return v.indexOf(c)>=0; });
+  if(tem){   /* troca no lugar: ITAU PJ 11K -> BRADESCO PJ 11K */
+    var pos=1e9; VB_NOTA_CONTAS.forEach(function(c){ var i=v.indexOf(c); if(i>=0&&i<pos) pos=i; });
+    VB_NOTA_CONTAS.forEach(function(c){ v=v.split(c).join('\u0001'); });
+    v=v.slice(0,pos)+t+v.slice(pos+1).split('\u0001').join(' ');
+    el.value=v.replace(/\s+/g,' ').trim()+' ';
+  } else {
+    v=v.replace(/\s+/g,' ').trim();
+    el.value=(v?v+' ':'')+t+' ';
+  }
+  try{ el.focus(); var n=el.value.length; el.setSelectionRange(n,n); }catch(_){}
+  try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){}
 }
 var VB_dirtyBtn={fin:'fin-btnConfirmar', ant:'ant-btnConfirmar', ven:'ven-btnConfirmar', pag:'pag-btnConfirmar'};
 /* === TECLADO ABERTO: um toque fecha o teclado E aciona o botão (regra global) ===
@@ -12788,7 +12815,7 @@ function REN_cpBaixaSheet(id){
     +'<div><div style="'+RT+'">DATA DO PAGAMENTO</div><input data-selall id="rencpb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" oninput="REC_maskData(this)" value="'+REN_hojeISO().split('-').reverse().join('/')+'" style="'+IN+'"></div>'
     +'</div>'
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
-    +'<input id="rencpb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'
+    +'<input id="rencpb-nota" placeholder="PIX \u00b7 BANCO INTER" style="'+IN+'">'+VB_notaAtalhos('rencpb-nota')
     +'<button onclick="REN_cpBaixaSalvar(\'' + String(c.id) + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">CONFIRMAR BAIXA</button>'
     +'<button onclick="document.getElementById(\'ren-cpb-ov\').style.display=\'none\'" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -13927,7 +13954,7 @@ function REN_editRec(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(b.valor_recebido||x.valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO RECEBIMENTO</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" value="'+CLIP_esc(b.nota||'').replace(/"/g,'&quot;')+'" style="'+IN+'">'+VB_notaAtalhos('renb-nota')+'</div>'
     +'<button id="renb-salvar" onclick="REN_salvaRec(\''+k+'\')" style="width:100%;padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">SALVAR</button>'
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
     +'</div>';
@@ -14319,7 +14346,7 @@ function REN_repassar(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">'+(b.repassado_em?'TOTAL REPASSADO':'VALOR PAGO AGORA')+'</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renr-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(rv||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA DO REPASSE</div><input data-selall id="renr-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+dBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+(b.repassado_em?CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;'):'')+'" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renr-nota" placeholder="PIX \u00b7 3 PARCELAS JUNTAS" value="'+(b.repassado_em?CLIP_esc(b.repasse_nota||'').replace(/"/g,'&quot;'):'')+'" style="'+IN+'">'+VB_notaAtalhos('renr-nota')+'</div>'
     +'<button onclick="REN_salvaRepasse(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(b.repassado_em?'SALVAR':'CONFIRMAR REPASSE')+'</button>'
     +(b.repassado_em?'<button onclick="REN_desfazRepasse(this,\''+k+'\')" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">DESFAZER REPASSE</button>':'')
     +'<button onclick="REN_folhaVoltar(\''+k+'\')" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
@@ -14493,7 +14520,7 @@ function REN_editBaixa(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+(_ja>0?'':Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
-    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" style="'+IN+'"></div>'
+    +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" style="'+IN+'">'+VB_notaAtalhos('renb-nota')+'</div>'
     /* com parcial em aberto o botao nao da baixa nenhuma: ele lanca mais um pagamento, e a
        parcela so fecha quando a soma alcanca o valor. O titulo ja dizia isso; o botao, nao. */
     +'<button onclick="REN_confirmaBaixa(\''+k+'\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(_ja>0?'REGISTRAR PAGAMENTO':'CONFIRMAR BAIXA')+'</button>'
@@ -20948,6 +20975,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.71</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">Atalhos na NOTA das baixas: ITAU PJ &middot; BRADESCO PJ &middot; INTER PJ &middot; ITAU PF &middot; CASH. O toque escreve a conta e deixa o cursor no fim para completar; se a nota j&aacute; tem outra conta da lista, troca, e o resto do texto fica. Vale no recebimento (baixa, parcial e EDITAR RECEBIMENTO), na baixa da conta a pagar e no repasse ao s&oacute;cio</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.70</span><span class="cl-ver-date">22/09/2026</span></div>
       <div class="cl-item">Foto do Fechamento completa: ganhou o bloco JUROS PAGOS (por conta, Lucro antes e Juros pagos) e segue a ordem da tela &mdash; resultado, juros pagos, LUCRO DO M&Ecirc;S, rendimento, e s&oacute; depois SA&Iacute;DAS e CUSTOS. Antes os blocos n&atilde;o fechavam com o lucro do m&ecirc;s</div>
   </div>
