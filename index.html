@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.76</title>
+<title>VB - v1.300.77</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12688,6 +12688,10 @@ function REN_cpSalvar(id){
   function _cpJurosPago(o){
     if(_ot!=='juros' || o.pago_em) return o;   /* so juros nasce pago; origem 'mercadorias' preservada nao pode baixar a conta */
     var dj=String(o.venc||'').slice(0,10); if(!dj) return o;
+    /* v1.300.77: parcela FUTURA nao saiu do banco -- baixar 18/08/2027 hoje era registrar pagamento
+       que nao aconteceu (caso do mutuo do Andre). Nasce em aberto como conta comum com juros = valor:
+       agrupa com contador, entra no A PAGAR e no panorama, e na baixa vai para JUROS PAGOS. */
+    if(dj>REN_hojeISO()){ o.origem_tab=null; o.juros=Math.round((Number(o.valor)||0)*100)/100; return o; }
     o.pago_em=(dj===REN_hojeISO())?VB_carimbo():(dj+'T12:00:00.000Z');
     o.valor_pago=Math.round((Number(o.valor)||0)*100)/100;
     return o;
@@ -12723,7 +12727,8 @@ function REN_cpSalvar(id){
        o banco e viraria cliente falso (v1.300.57) */
     try{ if(_ot!=='juros' && cr) REN_cpCredorCad(cr); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
-    VB_toast(id?'Conta salva.':(_ot==='juros'?(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
+    var _nPg=(linhas||[reg]).filter(function(x){ return !!x.pago_em; }).length, _nAb=nT-_nPg;
+    VB_toast(id?'Conta salva.':(_ot==='juros'?((_nAb&&_nPg)?(_nPg+' baixado'+(_nPg>1?'s':'')+' \u00b7 '+_nAb+' em aberto.'):(_nAb?(nT>1?(nT+' juros em aberto.'):'Juros lan\u00e7ado em aberto.'):(nT>1?(nT+' juros lan\u00e7ados e baixados.'):'Juros lan\u00e7ado e j\u00e1 baixado.'))):(nT>1?(nT+' parcelas lan\u00e7adas.'):'Conta lan\u00e7ada.')));
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
   }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
 }
@@ -21094,6 +21099,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.77</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">JUROS DA CONTA com parcelas futuras: s&oacute; nasce paga a parcela que vence at&eacute; hoje. As futuras nascem em aberto, como conta comum com juros igual ao valor &mdash; entram no A PAGAR e no Panorama do Lucro, agrupam com contador e, na baixa, v&atilde;o para JUROS PAGOS. Antes o app baixava at&eacute; parcelas de 2027</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.76</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">PANORAMA DO LUCRO: do passado aparecem s&oacute; os 6 &uacute;ltimos meses; os anteriores abrem em VER ANTERIORES, ali mesmo. O futuro continua inteiro</div>
