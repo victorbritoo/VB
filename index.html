@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.71</title>
+<title>VB - v1.300.72</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5770,7 +5770,7 @@ function showScreen(name){
   if(name==='ges'){ VB_telaAnterior='home'; var _bm=document.getElementById('ges-btn-mig'); if(_bm) _bm.style.display=(Number(localStorage.getItem('vb_mig_duv')||0)>0)?'flex':'none'; }
   if(name==='con'){ CON_load(); VB_telaAnterior='ges'; }
   /* abrir a tela e sempre comecar em ENTRADAS: sem isso REN_aba ficava com o ultimo valor em memoria */
-  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_aba=(HOME_pagarIr?'cp':'aberto'); HOME_pagarIr=false; REN_abrir(); VB_telaAnterior='home'; }
+  if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_tipo=''; REN_sort='data'; REN_aba=(HOME_pagarIr?'cp':'aberto'); HOME_pagarIr=false; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
   VB_screenTs = Date.now();
@@ -11540,7 +11540,7 @@ function VB_antReais(rows){ return (rows||[]).filter(function(r){ return !VB_ehS
 function REN_vfa(tab){ return GLB_badge(tab==='ven'?'V':(tab==='fin'?'F':(tab==='cr'?'M':'A'))); }
 function REN_coleta(ant, fin, ven){
   var out=[];
-  function fecha(ops){ ops.forEach(function(p){ p.tot=ops.length; out.push(p); }); }
+  function fecha(ops, dOp){ var _d=String(dOp||'').slice(0,10); ops.forEach(function(p){ p.tot=ops.length; p.dOp=_d; out.push(p); }); }   /* dOp: data da operacao, para a ficha (v1.300.72) */
   (ven||[]).forEach(function(r){
     if(VB_ehSimulacao(r)) return; // simulação: fora do cronograma
     var cli=String(r.cliente||r.nome||r.descricao||'\u2014').toUpperCase();
@@ -11553,7 +11553,7 @@ function REN_coleta(ant, fin, ven){
       var d1=r.data_primeira_parcela?String(r.data_primeira_parcela).slice(0,10):null;
       if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) ops.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:k});
     }
-    fecha(ops);
+    fecha(ops, r.data_venda||r.created_at);
   });
   (ant||[]).forEach(function(r){
     if(VB_ehSimulacao(r)) return; // simulação: fora do cronograma
@@ -11565,7 +11565,7 @@ function REN_coleta(ant, fin, ven){
        Mes e ano bastam para quem opera a cada dois meses e nao repetem virando o ano. */
     var _rotAnt=(r.nome||'ANTECIPA\u00c7\u00c3O')+REN_opCarimbo(r.data_operacao||r.created_at);
     (r.titulos||[]).forEach(function(t,ix){ var v=REN_num(t.v), d=REN_brToISO(t.d); if(v>0&&d) ops.push({venc:d, valor:v, cliente:cli, rot:_rotAnt, tab:'ant', opId:String(r.id), idx:ix}); });
-    fecha(ops);
+    fecha(ops, r.data_operacao||r.created_at);
   });
   (fin||[]).forEach(function(r){
     if(VB_ehSimulacao(r)) return; // simulação: fora do cronograma
@@ -11576,7 +11576,7 @@ function REN_coleta(ant, fin, ven){
     var cli=String(r.cliente||'').trim()?String(r.cliente).toUpperCase():_dF;
     var ops=[];
     if(n>0&&vp>0&&d1) for(var k=0;k<n;k++) ops.push({venc:REN_addMesISO(d1,k), valor:vp, cliente:cli, rot:_dF, tab:'fin', opId:String(r.id), idx:k});
-    fecha(ops);
+    fecha(ops, r.data_operacao||r.created_at);
   });
   return out;
 }
@@ -13114,6 +13114,28 @@ var REN_sort='data', REN_aba='aberto', REN_bset='', REN_cache=null, REN_erroBx='
 function REN_setSort(s){ REN_sort=s; REN_render(); }
 function REN_cicloSort(){ var o=['data','valor','cliente']; REN_sort=o[(o.indexOf(REN_sort)+1)%o.length]; REN_render(); }
 function REN_setAba(a){ REN_aba=a; REN_render(); }
+/* v1.300.72: a ficha mostra a data da operacao entre parenteses ao lado do nome. Na
+   antecipacao ela substitui o #MM/AA, que diria o mesmo pela metade. */
+function REN_opFicha(x){
+  var r=REN_rotCurto(x.rot)||x.rot||'', d=String(x.dOp||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return r;
+  return r.replace(/\s*·\s*#\d{2}\/\d{2}$/,'')+' ('+d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4)+')';
+}
+/* FILTRO POR TIPO (v1.300.72) no lugar do DATA/VALOR/CLIENTE, que nunca foi usado (decisao do VB).
+   Vale so em A RECEBER sem busca; o card preto acompanha. Cicla so pelos tipos que tem parcela
+   em aberto. Zera ao entrar na tela. */
+var REN_tipo='';
+var REN_TIPOS=[['','TUDO'],['ven','VENDAS'],['ant','ANTECIPAÇÕES'],['fin','FINANCIAMENTOS'],['cr','MANUAL']];
+function REN_tipoF(arr){
+  if(!REN_tipo || REN_aba!=='aberto' || REN_busca) return arr;
+  return arr.filter(function(x){ return x.tab===REN_tipo; });
+}
+function REN_cicloTipo(){
+  var bx=(REN_cache&&REN_cache.bx)||{}, tem={};
+  ((REN_cache&&REN_cache.itens)||[]).forEach(function(x){ if(!bx[REN_key(x)]) tem[x.tab]=1; });
+  var o=REN_TIPOS.filter(function(t){ return !t[0] || tem[t[0]]; }).map(function(t){ return t[0]; });
+  var i=o.indexOf(REN_tipo); REN_tipo=o[(i+1)%o.length]; REN_render();
+}
 function REN_setBset(s){ REN_bset=s; REN_render(); }
 /* a aba do setor sem resultado fica apagada: nao adianta poder tocar e nao ter nada */
 function REN_bsetTem(lado){
@@ -13167,8 +13189,8 @@ function REN_abrir(){
      esperar o REN_cache existir antes de montar o documento */
   return Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,valor_bruto,valor_liquido,titulos,simulacao,data_operacao,created_at').limit(10000), /* data_operacao e created_at: o carimbo OP MM/AA do cronograma sai delas */
-    sb.from('financiamentos_hist').select('id,descricao,nome,cliente,qtd_parcelas,valor_parcela,valor_financiado,data_inicio,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
-    sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,socio,valor_socio,valor_total,custo,lucro_vb_pct,simulacao').limit(10000),
+    sb.from('financiamentos_hist').select('id,descricao,nome,cliente,qtd_parcelas,valor_parcela,valor_financiado,data_inicio,data_operacao,created_at,tem_investidor,investidor_nome,investidor_parcela,simulacao').limit(10000),
+    sb.from('vendas').select('id,cliente,nome,descricao,parcelas,quantidade_parcelas,valor_parcela,data_primeira_parcela,data_venda,created_at,socio,valor_socio,valor_total,custo,lucro_vb_pct,simulacao').limit(10000),
     sb.from('parcela_baixas').select('*').limit(20000),
     sb.from('repasse_previsto').select('*').limit(20000),
     sb.from('parcela_pagamentos').select('*').limit(20000),
@@ -13211,7 +13233,7 @@ function REN_abrir(){
         itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
           cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
           rot:String(c.descricao||'ENTRADA MANUAL'),
-          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:i, cr:c});
+          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:i, cr:c, dOp:String(c.created_at||'').slice(0,10)});
       });
     });
     /* PRORROGACAO: mora em tabela lateral, como a nota e o repasse. A data e o valor ORIGINAIS
@@ -13335,8 +13357,8 @@ function REN_abrir(){
 function REN_render(){
   var body=document.getElementById('ren-body'); if(!body||!REN_cache) return;
   var itens=REN_cache.itens, bx=REN_cache.bx, hoje=REN_hojeISO();
-  var abertas=REN_filtra(itens.filter(function(x){ return !bx[REN_key(x)]; }));
-  var receb=REN_filtra(itens.filter(function(x){ return !!bx[REN_key(x)]; }));
+  var abertas=REN_tipoF(REN_filtra(itens.filter(function(x){ return !bx[REN_key(x)]; })));
+  var receb=REN_tipoF(REN_filtra(itens.filter(function(x){ return !!bx[REN_key(x)]; })));
   var atr=abertas.filter(function(x){ return x.venc<hoje; });
   var venc=abertas.filter(function(x){ return x.venc>=hoje; });
   function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repAlvo(oiX,x):0); }
@@ -13344,6 +13366,7 @@ function REN_render(){
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
   /* tres chips permanentes para uma escolha que quase nao muda: virou um so, que cicla e
      mostra o criterio atual */
+  function chipTipo(){ var L=''; REN_TIPOS.forEach(function(t){ if(t[0]===REN_tipo) L=t[1]; }); var on=!!REN_tipo; return '<span onclick="REN_cicloTipo()" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--acc);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+L+'</span>'; }
   function chipOrd(){ var L={data:'DATA',valor:'VALOR',cliente:'CLIENTE'}; return '<span onclick="REN_cicloSort()" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">'+(L[REN_sort]||'DATA')+'</span>'; }
   function secHdr(esq, dir, red){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 4px 2px;"><span style="font-size:9px;letter-spacing:2px;color:'+(red?'var(--red)':'var(--so)')+';font-weight:700;">'+esq+'</span>'+(dir?('<span style="font-size:11px;font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';">'+dir+'</span>'):'')+'</div>'; }
   function card(x, atrasada, dataCurta){
@@ -13554,7 +13577,7 @@ function REN_render(){
   }
   hh+='<div onclick="REN_painel()" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
   /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
-  hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipOrd()
+  hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipTipo()
     +'<span onclick="REN_crSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);margin-left:6px;margin-right:auto;">+</span>'
     +'<span onclick="REN_setAba(\'rec\')" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);">RECEBIDAS \u2192</span></div>';
   var repPend=receb.filter(function(x){ var b2=bx[REN_key(x)]; return b2 && REN_repFalta(x, b2)>0; });
@@ -13716,7 +13739,7 @@ function REN_ficha(k, exp){
   var _ehRep=false;
   try{ _ehRep=!!(b && oi && (REN_repDe(x,b)>0 || b.repassado_em)); }catch(e){}
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+(_ehRep?'REPASSE':REN_termo(x.tab,false,true))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco('OPERA\u00c7\u00c3O',CLIP_esc(REN_opFicha(x)))+'</div>';
   /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
   /* prorrogada: a data velha e a nova na MESMA linha, com a seta -- a gramatica que o card
      da lista ja usa. Bloco proprio pra ERA quebrava a grade e nao pertencia a coluna nenhuma. */
@@ -20975,6 +20998,10 @@ function CTR_gerar(ov){
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
     <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.72</span><span class="cl-ver-date">23/09/2026</span></div>
+      <div class="cl-item">Ficha da parcela: a data da opera&ccedil;&atilde;o entre par&ecirc;nteses ao lado do nome &mdash; GMT BATMAN 2022 (19/07/2026). Na antecipa&ccedil;&atilde;o ela substitui o #MM/AA. ENTRADAS: o chip DATA virou filtro por tipo &mdash; TUDO &middot; VENDAS &middot; ANTECIPA&Ccedil;&Otilde;ES &middot; FINANCIAMENTOS &middot; MANUAL, cada toque passa para o pr&oacute;ximo (s&oacute; os tipos com parcela em aberto), e o card preto soma s&oacute; o tipo escolhido. Chip escuro = filtro ligado. Volta a TUDO ao sair da tela</div>
+  </div>
+  <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.71</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">Atalhos na NOTA das baixas: ITAU PJ &middot; BRADESCO PJ &middot; INTER PJ &middot; ITAU PF &middot; CASH. O toque escreve a conta e deixa o cursor no fim para completar; se a nota j&aacute; tem outra conta da lista, troca, e o resto do texto fica. Vale no recebimento (baixa, parcial e EDITAR RECEBIMENTO), na baixa da conta a pagar e no repasse ao s&oacute;cio</div>
   </div>
