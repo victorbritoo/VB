@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.77</title>
+<title>VB - v1.300.78</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -16810,7 +16810,7 @@ function MER_venderItem(id){
   if(cx.sn) descVen+=(descVen?' ':'')+'SN: '+cx.sn;
   if(!descVen) descVen=(r.descricao||'');
   document.getElementById('ven-tabelaDesc').value=descVen.toUpperCase();
-  document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_custoDaPeca(r);
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
   VEN_lucroVBpct = (r.socio && Number(r.valor_socio)>0) ? 50 : null;
@@ -17484,9 +17484,18 @@ function VEN_cronoTir(){
        comprador paga o vendedor e voce nao emprega capital nenhum: rendimento sobre zero nao
        existe e nao ha numero honesto pra mostrar -- mas ha o que dizer. Qualquer outro motivo
        segue calado, como antes. */
-    var _o=cf.slice().sort(function(a,b){ return a.d-b.d; }), _ac=0, _min=0;
-    for(var _i=0;_i<_o.length;_i++){ _ac+=_o[_i].v; if(_ac<_min) _min=_ac; }
+    var _o=cf.slice().sort(function(a,b){ return a.d-b.d; }), _ac=0, _min=0, _dMin=null;
+    for(var _i=0;_i<_o.length;_i++){
+      _ac+=_o[_i].v;
+      /* fluxos do mesmo dia se somam antes de medir o saldo */
+      if(_i+1<_o.length && _o[_i+1].d===_o[_i].d) continue;
+      if(_ac<_min-0.005){ _min=_ac; _dMin=(_i+1<_o.length)?(_o[_i+1].d-_o[_i].d):null; }
+    }
     if(_min>-0.005) return {semCapital:true};
+    /* v1.300.78: ha parcelas e ha capital seu, mas pouco e por pouco tempo -- nenhuma taxa mensal
+       descreve isso (a TIR passa do teto). Antes caia no SEM PARCELAS, que era mentira. O que
+       e verdade: o maior saldo negativo seu e quantos dias ele durou. */
+    if(_dMin!=null && _dMin>0) return {pico:-_min, dias:Math.round(_dMin)};
     return null;
   }
   /* Sobra pequena nao e entrada: e gasto COBRAR somado depois da compra. Chamar de mais uma
@@ -17505,6 +17514,11 @@ function VEN_seuDinPinta(){
   var r=VEN_cronoTir();
   if(!r){
     el.innerHTML='<span style="color:var(--so);">SEU DINHEIRO \u00b7 SEM PARCELAS</span>'
+      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+    el.style.display='block'; return;
+  }
+  if(r.pico){
+    el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u00b7 PICO R$ '+Math.round(r.pico).toLocaleString('pt-BR')+' \u00b7 '+r.dias+(r.dias===1?' DIA':' DIAS')+'</span>'
       +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
     el.style.display='block'; return;
   }
@@ -17885,6 +17899,31 @@ function VEN_dataVendaHoje(){
   el.value=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
 }
 setTimeout(function(){ try{ VEN_dataVendaHoje(); }catch(e){} }, 300);
+/* v1.300.78: CUSTO da venda = compra + gastos COBRAR (a regua de sempre, a mesma do CUSTO TOTAL
+   da ficha). Vender pelo estoque levava so a compra: o gasto lancado ANTES da venda ficava de
+   fora -- o lucro subia e, com socio, a divisao saia torta (Azzuro: Renan +125, VB -125).
+   Gasto lancado DEPOIS ja entrava pelo MER_gastoSyncVenda. Preenche na hora pelo cache do
+   Estoque e confirma no banco: a tela de Vendas pode abrir sem o Estoque ter carregado gastos.
+   So corrige se o campo ainda tiver o valor que este codigo pos (o VB pode ter digitado). */
+function VEN_custoDaPeca(r){
+  var el=document.getElementById('ven-custo'); if(!el||!r) return;
+  var base=Number(r.custo)||0, v0=base;
+  try{ v0=MER_custoCheio(r); }catch(e){}
+  el.value=MER_fmtBR(v0);
+  var posto=el.value;
+  try{
+    sb.from('mercadoria_custos').select('valor,cobrar').eq('mercadoria_id', r.id).then(function(rg){
+      if(!rg || rg.error) return;
+      var ex=0; ((rg.data)||[]).forEach(function(g){ if(g.cobrar) ex+=Number(g.valor)||0; });
+      var v1=Math.round((base+ex)*100)/100;
+      if(Math.abs(v1-v0)<0.005) return;
+      var e2=document.getElementById('ven-custo'); if(!e2 || e2.value!==posto) return;
+      e2.value=MER_fmtBR(v1);
+      try{ VEN_updateLucro(); }catch(e){}
+      try{ VEN_seuDinPinta(); }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+}
 function VEN_pegarEstoque(id){
   var r=VEN_estoqueCache.find(function(x){ return String(x.id)===String(id); });
   if(!r) return;
@@ -17896,7 +17935,7 @@ function VEN_pegarEstoque(id){
   if(cx.sn) descVen+=(descVen?' ':'')+'SN: '+cx.sn;
   if(!descVen) descVen=(r.descricao||'');
   document.getElementById('ven-tabelaDesc').value=descVen.toUpperCase();
-  document.getElementById('ven-custo').value=MER_fmtBR(r.custo||0);
+  VEN_custoDaPeca(r);
   VEN_socioNome = r.socio||null;
   VEN_socioValor = Number(r.valor_socio)||0;
   VEN_lucroVBpct = (r.socio && Number(r.valor_socio)>0) ? 50 : null;
@@ -21099,6 +21138,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.78</span><span class="cl-ver-date">24/09/2026</span></div>
+      <div class="cl-item">VENDER pelo estoque passou a levar o CUSTO TOTAL da peça: compra mais os gastos marcados COBRAR. Antes levava só a compra, e gasto lançado antes da venda ficava de fora &mdash; o lucro subia e, com sócio, a divisão saía torta (no Azzuro o Renan levaria 125 a mais). Gasto NÃO COBRAR continua fora</div>
+      <div class="cl-item">SEU DINHEIRO não diz mais SEM PARCELAS quando as parcelas estão lançadas mas nenhuma taxa mensal descreve o negócio &mdash; quando o seu dinheiro fica exposto pouco e por poucos dias. Agora mostra o pico: SEU DINHEIRO &middot; PICO R$ 6.223 &middot; 6 DIAS</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.77</span><span class="cl-ver-date">23/09/2026</span></div>
       <div class="cl-item">JUROS DA CONTA com parcelas futuras: s&oacute; nasce paga a parcela que vence at&eacute; hoje. As futuras nascem em aberto, como conta comum com juros igual ao valor &mdash; entram no A PAGAR e no Panorama do Lucro, agrupam com contador e, na baixa, v&atilde;o para JUROS PAGOS. Antes o app baixava at&eacute; parcelas de 2027</div>
