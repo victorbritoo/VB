@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.83</title>
+<title>VB - v1.300.84</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5197,8 +5197,12 @@ function _dataURLtoBlob(durl){
 // Quando true, os geradores de imagem montam o canvas mas NÃO abrem o overlay (usado no compartilhar do histórico)
 var VB_silentGen=false;
 var VB_fotoNome='';
+/* v1.300.84: frase que o COMPARTILHAR copia de novo, logo antes da folha de compartilhar --
+   so o COBRAR preenche; qualquer outra foto zera ao abrir. */
+var VB_fotoFrase='';
 function VB_fotoPreview(canvas, fname, comPDF){
   VB_fotoNome=fname||'VB.jpg';
+  VB_fotoFrase='';
   var img=document.getElementById('vb-foto-img');
   img.src=canvas.toDataURL('image/jpeg', 0.92);
   /* PDF so faz sentido no documento longo, que como imagem vira tira altissima e o WhatsApp
@@ -5233,6 +5237,7 @@ function VB_fotoPDF(){
 function VB_fotoFechar(){ var ov=document.getElementById('vb-foto-overlay'); ov.style.display='none'; var img=document.getElementById('vb-foto-img'); if(img) img.src=''; }
 function VB_fotoShare(){
   var img=document.getElementById('vb-foto-img'); if(!img||!img.src) return;
+  if(VB_fotoFrase){ try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(VB_fotoFrase).catch(function(){}); }catch(e){} }
   fetch(img.src).then(function(r){ return r.blob(); }).then(function(blob){
     var file=new File([blob], VB_fotoNome, {type:'image/jpeg'});
     if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
@@ -14023,7 +14028,12 @@ function REN_cobrarCanvas(k){
   var tit=String((x.tab==='ant')?(REN_rotCurto(x.rot)||x.rot||''):(x.rot||'')).toUpperCase();
   var sec=(x.tab==='ant')?'ANTECIPAÇÃO':(x.tab==='fin')?'FINANCIAMENTO':(x.tab==='cr')?'ENTRADAS':'VENDAS';
   var W=390, esc=3, padH=18, padV=12, altVB=34, altTit=28, altHead=22, altTot=24, altRow=24, altSub=11;
-  var H=padV*2+altVB+altTit+altHead+altTot+8;
+  /* v1.300.84: a data do NEGOCIO embaixo do titulo. O carimbo do canto e de quando a foto saiu
+     (prova que o extrato e de hoje); esta linha diz quando o negocio foi feito. */
+  var _dOp=String(x.dOp||'').slice(0,10), dtLin='';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(_dOp)) dtLin=((x.tab==='fin')?'FINANCIAMENTO DE ':(x.tab==='cr')?'LAN\u00c7ADO EM ':(x.tab==='ant')?'OPERA\u00c7\u00c3O DE ':'VENDA DE ')+dBR(_dOp);
+  var altDt=dtLin?14:0;
+  var H=padV*2+altVB+altTit+altDt+altHead+altTot+8;
   linhas.forEach(function(L){ H+=altRow+((L.sub||L.obs)?altSub:0); });
   var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
   var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
@@ -14036,6 +14046,7 @@ function REN_cobrarCanvas(k){
   while(fsT>9 && ctx.measureText(tit).width>W-padH*2){ fsT--; ctx.font='bold '+fsT+'px Helvetica,Arial,sans-serif'; }
   ctx.fillStyle='#111'; ctx.textAlign='center'; ctx.fillText(tit, W/2, y+18);
   y+=altTit;
+  if(dtLin){ ctx.fillStyle='#999'; ctx.font='600 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText(dtLin, W/2, y+4); y+=altDt; }
   var cN=padH+28, cV=padH+118, cD=padH+222, cS=W-padH-8;
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altHead);
   ctx.fillStyle='#555'; ctx.font='600 10px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
@@ -14075,6 +14086,7 @@ function REN_cobrar(k){
   if(!r){ VB_toast('Não consegui gerar a foto.'); return; }
   var nome='VB - '+(r.tit||'COBRANCA').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
   VB_fotoPreview(r.cv, nome, false);
+  VB_fotoFrase=fr||'';   /* depois do preview, que zera: o COMPARTILHAR copia de novo */
 }
 function REN_abrirOp(tab, opId, k){
   var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':'vendas';
@@ -21253,6 +21265,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.84</span><span class="cl-ver-date">25/09/2026</span></div>
+      <div class="cl-item">Foto do COBRAR ganhou a data do negócio embaixo do título &mdash; VENDA DE 18/08/2026, FINANCIAMENTO DE, LANÇADO EM. O carimbo do canto continua dizendo quando a foto saiu. E o COMPARTILHAR copia a frase de novo, logo antes de abrir a folha, para ela estar fresca na hora de colar a legenda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.83</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">Foto do COBRAR com o título igual ao da tabela que o cliente recebeu: na venda sai com o SN, no financiamento e na entrada manual sai a descrição. A observação da parcela voltou para baixo do valor, como na original &mdash; (A VISTA), (DAYTONA)</div>
