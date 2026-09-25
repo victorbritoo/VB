@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.85</title>
+<title>VB - v1.300.86</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -9312,7 +9312,10 @@ function PAG_saveSession(){
     var t=(document.getElementById('pag-total').value||'');
     var nm=(document.getElementById('pag-nome').value||'');
     var itens=PAG_pagamentos.map(function(p){ return {d:(p.desc||''), v:(p.valor||''), c:(p.cr?1:0)}; });
-    localStorage.setItem(PAG_LS_KEY, JSON.stringify({t:t,n:nm,p:itens}));
+    /* v1.300.86: o id do documento vai junto. Sem ele, recarregar o app (versao nova, Safari
+       fechando em segundo plano) trazia as linhas de volta mas esquecia de QUAL documento eram,
+       e o salvar criava outro -- o CEZAR INVEST existiu 3 vezes (21/09, 22/09 e 25/09). */
+    localStorage.setItem(PAG_LS_KEY, JSON.stringify({t:t,n:nm,p:itens,o:(PAG_currentOperationId||null),ts:(VB_carimboTS||null)}));
   }catch(e){}
 }
 function PAG_restoreSession(){
@@ -9328,6 +9331,9 @@ function PAG_restoreSession(){
     PAG_pagamentos=[]; PAG_counter=0;
     obj.p.forEach(function(it){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:(it.d||''),valor:(it.v||''),cr:!!it.c}); });
     if(PAG_pagamentos.length===0){ PAG_setLinhasIniciais(); }
+    PAG_currentOperationId=obj.o||null;
+    if(obj.o && obj.ts) VB_carimboTS=obj.ts;
+    try{ PAG_updateConfirmarBtnLabel(); }catch(e){}
     PAG_render();
     PAG_update();
     return true;
@@ -9428,7 +9434,17 @@ function PAG_confirmarOperacao(btn){
       VB_toast('Não salvou (sem conexão?). Tente de novo.');
       return;
     }
+    /* v1.300.86: atualizar um documento que nao existe mais (apagado no Historico) devolvia zero
+       linhas sem erro, e o app dizia "atualizada" sem ter gravado nada. Agora cria de novo e avisa. */
+    if(ehAtualizacao && !(res.data && res.data.length)){
+      PAG_currentOperationId=null; VB_carimboTS=null;
+      try{ PAG_saveSession(); }catch(e){}
+      PAG_updateConfirmarBtnLabel();
+      VB_toast('O documento tinha sido apagado \u2014 toque de novo para salvar como novo.');
+      return;
+    }
     if(!ehAtualizacao && res.data && res.data[0]){ PAG_currentOperationId = res.data[0].id; }
+    try{ PAG_saveSession(); }catch(e){}
     PAG_updateConfirmarBtnLabel();
     PAG_snapshot = PAG_assinatura(); VB_dirtyPaintTela('pag'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
@@ -21265,6 +21281,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.86</span><span class="cl-ver-date">25/09/2026</span></div>
+      <div class="cl-item">PAGAMENTOS não duplica mais o documento. Quando o app recarregava (versão nova, iPhone fechando o Safari), a tela trazia as linhas de volta mas esquecia de qual documento eram, e o salvar criava outro &mdash; o CEZAR INVEST existiu 3 vezes. Agora ela lembra e o botão continua ATUALIZAR OPERAÇÃO. Se o documento tiver sido apagado no Histórico, o app avisa em vez de dizer que atualizou sem gravar nada</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.85</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">Data do negócio na foto do COBRAR mais curta: VENDA: 18/08/2026 na venda e OPERAÇÃO: 21/09/2026 no financiamento, na entrada manual e na antecipação</div>
