@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.80</title>
+<title>VB - v1.300.81</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13780,9 +13780,10 @@ function REN_ficha(k, exp){
   if(!b){
     var _falta=Math.round((x.valor-(REN_pagoTot(x)||0))*100)/100;
     if(_falta>0.004){
-      var _dRef=(x.venc<hoje)?hoje:x.venc;
-      var _dm=String(_dRef).slice(8,10)+'/'+String(_dRef).slice(5,7);
-      var _l1=(_dRef===hoje)?'Ficamos para hoje, confere?':('Ficamos para dia '+_dm+', confere?');
+      /* v1.300.81: a data e SEMPRE a do vencimento (na prorrogada, a nova). Na atrasada a frase
+         diz "hoje" e a data mostra ao cliente para quando era -- o sabado cobrado na segunda. */
+      var _dm=String(x.venc).slice(8,10)+'/'+String(x.venc).slice(5,7);
+      var _l1=(x.venc<=hoje)?'Ficamos para hoje, confere?':('Ficamos para dia '+_dm+', confere?');
       var _fr=_l1+'\\n'+'R$ '+_falta.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dia '+_dm+'.';
       _vCel='<span onclick="event.stopPropagation();REN_copia(\''+_fr+'\',\'Frase de cobran\u00e7a copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.\')" style="cursor:pointer;">'+HIST_fmtMoeda(x.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span></span>';
     }
@@ -21157,6 +21158,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.81</span><span class="cl-ver-date">25/09/2026</span></div>
+      <div class="cl-item">Frase de cobrança da parcela atrasada: continua Ficamos para hoje, confere?, mas a data agora é a do vencimento &mdash; R$ 10.000,00 dia 20/09. O cliente vê para quando era: o sábado cobrado na segunda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.80</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">A frase de cobrança do VALOR passou a valer também na parcela atrasada: sem juros e com a data de hoje &mdash; Ficamos para hoje, confere? e R$ 10.000,00 dia 25/09. É o vencido do fim de semana cobrado na segunda pelo valor da parcela. O VALOR HOJE continua copiando a frase com juros; na atrasada aparecem os dois e você escolhe</div>
