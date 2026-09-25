@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.81</title>
+<title>VB - v1.300.82</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13778,13 +13778,12 @@ function REN_ficha(k, exp){
      semana o VB cobra na segunda pelo valor da parcela. O VALOR HOJE segue copiando com juros;
      na atrasada de verdade aparecem os dois e ele escolhe. */
   if(!b){
-    var _falta=Math.round((x.valor-(REN_pagoTot(x)||0))*100)/100;
-    if(_falta>0.004){
-      /* v1.300.81: a data e SEMPRE a do vencimento (na prorrogada, a nova). Na atrasada a frase
-         diz "hoje" e a data mostra ao cliente para quando era -- o sabado cobrado na segunda. */
-      var _dm=String(x.venc).slice(8,10)+'/'+String(x.venc).slice(5,7);
-      var _l1=(x.venc<=hoje)?'Ficamos para hoje, confere?':('Ficamos para dia '+_dm+', confere?');
-      var _fr=_l1+'\\n'+'R$ '+_falta.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dia '+_dm+'.';
+    /* v1.300.81: a data e SEMPRE a do vencimento (na prorrogada, a nova). Na atrasada a frase
+       diz "hoje" e a data mostra ao cliente para quando era -- o sabado cobrado na segunda.
+       v1.300.82: a frase mora no REN_fraseCob, que o COBRAR tambem usa. */
+    var _frC=REN_fraseCob(x);
+    if(_frC){
+      var _fr=_frC.replace(/\n/g,'\\n');
       _vCel='<span onclick="event.stopPropagation();REN_copia(\''+_fr+'\',\'Frase de cobran\u00e7a copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.\')" style="cursor:pointer;">'+HIST_fmtMoeda(x.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span></span>';
     }
   }
@@ -13959,6 +13958,7 @@ function REN_ficha(k, exp){
   if(b&&b.repassado_em) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_S+'">EDITAR REPASSE</button>';
   if(b) hh+='<button onclick="REN_desfazFicha(this,\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'">DAR BAIXA</button>';
+  if(!b && REN_fraseCob(x)) hh+='<button onclick="REN_cobrar(\''+k+'\')" style="'+BTN_S+'">COBRAR</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
   if(!b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_proSheet(\''+k+'\');" style="'+BTN_S+'">'+(x.prorrogada?'EDITAR PRORROGA\u00c7\u00c3O':'PRORROGAR')+'</button>';
   /* DAR BAIXA e o que voce faz em quase toda abertura e continua largo e sozinho. Estas tres
@@ -13980,6 +13980,95 @@ function REN_ficha(k, exp){
   hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\'" style="width:100%;padding:11px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>';
   hh+='</div>';
   ov.innerHTML=hh; ov.style.display='flex';
+}
+/* ===== COBRAR (v1.300.82) ==============================================================
+   A cobranca do dia era garimpo: achar no grupo a mensagem do dia da venda, marcar a foto da
+   tabela e colar a frase. Agora um toque: copia a frase (a mesma do VALOR) e gera a foto do
+   negocio COMO ESTA HOJE -- pagas com check e data, a cobrada em destaque, parcial com PAGO e
+   RESTA, saldo no rodape. Mesmo cabecalho da tabela do cliente (nome do negocio, sem nome do
+   cliente, sem lucro/socio/repasse), marca d'agua e carimbo de AGORA (e extrato do momento).
+   Abre no visualizador: o COMPARTILHAR de la e um toque novo, e o iOS so abre a folha de
+   compartilhar com gesto fresco -- depois de montar a imagem ele recusaria. */
+function REN_fraseCob(x){
+  if(!x) return null;
+  var hoje=REN_hojeISO();
+  var falta=Math.round(((Number(x.valor)||0)-(REN_pagoTot(x)||0))*100)/100;
+  if(!(falta>0.004)) return null;
+  var dm=String(x.venc).slice(8,10)+'/'+String(x.venc).slice(5,7);
+  var l1=(x.venc<=hoje)?'Ficamos para hoje, confere?':('Ficamos para dia '+dm+', confere?');
+  return l1+'\n'+'R$ '+falta.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' dia '+dm+'.';
+}
+function REN_cobrarCanvas(k){
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return null;
+  var hoje=REN_hojeISO();
+  var irmas=REN_cache.itens.filter(function(y){ return y.tab===x.tab && y.opId===x.opId; });
+  irmas.sort(function(a,b){ return a.idx-b.idx; });
+  var fmt=function(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var dBR=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4); };
+  var dCur=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7); };
+  var linhas=irmas.map(function(y){
+    var kb=REN_key(y), yb=REN_cache.bx[kb], pago=REN_pagoTot(y)||0;
+    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:''};
+    if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='✓ PAGO '+dCur(yb.recebido_em||y.venc); L.pago=true; L.resta=0; }
+    else {
+      L.valor=y.valor; L.resta=Math.round((y.valor-pago)*100)/100;
+      if(pago>0.004) L.sub='PAGO '+fmt(pago)+' · RESTA '+fmt(L.resta);
+      L.st=(kb===k)?'EM COBRANÇA':(y.venc<hoje?'EM ABERTO':'A VENCER');
+    }
+    return L;
+  });
+  var saldo=0; linhas.forEach(function(L){ if(!L.pago) saldo+=L.resta; }); saldo=Math.round(saldo*100)/100;
+  var tit=String(REN_rotCurto(x.rot)||x.rot||'').toUpperCase();
+  var sec=(x.tab==='ant')?'ANTECIPAÇÃO':(x.tab==='fin')?'FINANCIAMENTO':(x.tab==='cr')?'ENTRADAS':'VENDAS';
+  var W=390, esc=3, padH=18, padV=12, altVB=34, altTit=28, altHead=22, altTot=24, altRow=24, altSub=11;
+  var H=padV*2+altVB+altTit+altHead+altTot+8;
+  linhas.forEach(function(L){ H+=altRow+(L.sub?altSub:0); });
+  var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
+  var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  var y=padV;
+  ctx.fillStyle='#111'; ctx.font='400 24px Georgia,"Times New Roman",serif'; ctx.textAlign='left'; ctx.fillText('VB', padH, y+21);
+  ctx.fillStyle='#999'; ctx.font='500 8px Helvetica,Arial,sans-serif'; ctx.fillText(sec, padH, y+31);
+  y+=altVB;
+  var fsT=15; ctx.font='bold '+fsT+'px Helvetica,Arial,sans-serif';
+  while(fsT>9 && ctx.measureText(tit).width>W-padH*2){ fsT--; ctx.font='bold '+fsT+'px Helvetica,Arial,sans-serif'; }
+  ctx.fillStyle='#111'; ctx.textAlign='center'; ctx.fillText(tit, W/2, y+18);
+  y+=altTit;
+  var cN=padH+28, cV=padH+118, cD=padH+222, cS=W-padH-8;
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altHead);
+  ctx.fillStyle='#555'; ctx.font='600 10px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(REN_termo(x.tab,false,true), cN, y+15); ctx.fillText('VALOR', cV, y+15); ctx.fillText('VENCIMENTO', cD, y+15);
+  ctx.textAlign='right'; ctx.fillText('SITUAÇÃO', cS, y+15);
+  y+=altHead;
+  linhas.forEach(function(L,i){
+    var h=altRow+(L.sub?altSub:0);
+    ctx.fillStyle=L.atual?'#111':(i%2===0?'#fff':'#f7f7f7'); ctx.fillRect(padH,y,W-padH*2,h);
+    var cT=L.atual?'#fff':(L.pago?'#999':'#111');
+    ctx.fillStyle=cT; ctx.font=(L.atual?'700 ':'500 ')+'11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(L.num, cN, y+16);
+    ctx.font=(L.atual?'700 ':'600 ')+'11px Helvetica,Arial,sans-serif'; ctx.fillText(fmt(L.valor), cV, y+16);
+    ctx.font=(L.atual?'700 ':'500 ')+'11px Helvetica,Arial,sans-serif'; ctx.fillText(L.venc, cD, y+16);
+    ctx.textAlign='right'; ctx.font=(L.atual?'700 ':'600 ')+'9px Helvetica,Arial,sans-serif';
+    ctx.fillStyle=L.atual?'#fff':(L.pago?'#999':(L.st==='EM ABERTO'?'#b3261e':'#777'));
+    ctx.fillText(L.st, cS, y+16);
+    if(L.sub){ ctx.fillStyle=L.atual?'#ddd':'#888'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText(L.sub, (cV+cD)/2, y+altRow+6); }
+    y+=h;
+  });
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altTot);
+  ctx.fillStyle='#555'; ctx.font='600 10px Helvetica,Arial,sans-serif'; ctx.textAlign='left'; ctx.fillText('SALDO A PAGAR', padH+10, y+16);
+  ctx.fillStyle='#111'; ctx.font='bold 12px Helvetica,Arial,sans-serif'; ctx.textAlign='right'; ctx.fillText(fmt(saldo), W-padH-10, y+16);
+  try{ VB_drawWatermark(ctx, W, H); }catch(e){}
+  try{ VB_carimboData(ctx, W, {agora:true}); }catch(e){}
+  return {cv:cv, tit:tit};
+}
+function REN_cobrar(k){
+  var x=REN_cache&&REN_cache.map[k]; if(!x) return;
+  var fr=REN_fraseCob(x);
+  if(fr){ try{ REN_copia(fr, 'Frase copiada — compartilhe a foto e cole na legenda.'); }catch(e){} }
+  var r=null; try{ r=REN_cobrarCanvas(k); }catch(e){ r=null; }
+  if(!r){ VB_toast('Não consegui gerar a foto.'); return; }
+  var nome='VB - '+(r.tit||'COBRANCA').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
+  VB_fotoPreview(r.cv, nome, false);
 }
 function REN_abrirOp(tab, opId, k){
   var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':'vendas';
@@ -21158,6 +21247,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.82</span><span class="cl-ver-date">25/09/2026</span></div>
+      <div class="cl-item">Botão COBRAR na ficha da parcela, logo abaixo do DAR BAIXA. Um toque copia a frase de cobrança e gera a foto do negócio como está hoje: o nome do negócio no topo, as parcelas pagas com &#10003; e a data, a cobrada em destaque, pagamento parcial com PAGO e RESTA, e o SALDO A PAGAR no rodapé. Sem nome do cliente, sem lucro nem sócio. A foto abre no visualizador: COMPARTILHAR, escolhe o grupo, cola a frase na legenda. Não precisa mais achar a mensagem do dia da venda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.81</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">Frase de cobrança da parcela atrasada: continua Ficamos para hoje, confere?, mas a data agora é a do vencimento &mdash; R$ 10.000,00 dia 20/09. O cliente vê para quando era: o sábado cobrado na segunda</div>
