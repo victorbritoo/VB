@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.82</title>
+<title>VB - v1.300.83</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11556,7 +11556,7 @@ function REN_coleta(ant, fin, ven){
     var rot=(r.descricao||r.nome||'VENDA');
     var ops=[];
     if(Array.isArray(r.parcelas)&&r.parcelas.length){
-      var _dn=0; r.parcelas.forEach(function(p,ix){ if(p.t) return; var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d){ ops.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:ix, dnum:_dn}); _dn++; } });
+      var _dn=0; r.parcelas.forEach(function(p,ix){ if(p.t) return; var v=REN_num(p.v), d=REN_brToISO(p.d); if(v>0&&d){ ops.push({venc:d, valor:v, cliente:cli, rot:rot, tab:'ven', opId:String(r.id), idx:ix, dnum:_dn, obs:String(p.o||'').trim()}); _dn++; } });
     } else {
       var n=Number(r.quantidade_parcelas)||0, vp=Number(r.valor_parcela)||0;
       var d1=r.data_primeira_parcela?String(r.data_primeira_parcela).slice(0,10):null;
@@ -14008,7 +14008,7 @@ function REN_cobrarCanvas(k){
   var dCur=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7); };
   var linhas=irmas.map(function(y){
     var kb=REN_key(y), yb=REN_cache.bx[kb], pago=REN_pagoTot(y)||0;
-    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:''};
+    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(y.obs?('('+String(y.obs).toUpperCase()+')'):'')};
     if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='✓ PAGO '+dCur(yb.recebido_em||y.venc); L.pago=true; L.resta=0; }
     else {
       L.valor=y.valor; L.resta=Math.round((y.valor-pago)*100)/100;
@@ -14018,11 +14018,13 @@ function REN_cobrarCanvas(k){
     return L;
   });
   var saldo=0; linhas.forEach(function(L){ if(!L.pago) saldo+=L.resta; }); saldo=Math.round(saldo*100)/100;
-  var tit=String(REN_rotCurto(x.rot)||x.rot||'').toUpperCase();
+  /* v1.300.83: titulo IGUAL ao da tabela que o cliente recebeu (venda com SN, financiamento e
+     manual pela descricao). So a antecipacao segue com o rotulo curto da lista. */
+  var tit=String((x.tab==='ant')?(REN_rotCurto(x.rot)||x.rot||''):(x.rot||'')).toUpperCase();
   var sec=(x.tab==='ant')?'ANTECIPAÇÃO':(x.tab==='fin')?'FINANCIAMENTO':(x.tab==='cr')?'ENTRADAS':'VENDAS';
   var W=390, esc=3, padH=18, padV=12, altVB=34, altTit=28, altHead=22, altTot=24, altRow=24, altSub=11;
   var H=padV*2+altVB+altTit+altHead+altTot+8;
-  linhas.forEach(function(L){ H+=altRow+(L.sub?altSub:0); });
+  linhas.forEach(function(L){ H+=altRow+((L.sub||L.obs)?altSub:0); });
   var cv=document.createElement('canvas'); cv.width=W*esc; cv.height=H*esc;
   var ctx=cv.getContext('2d'); ctx.scale(esc,esc);
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
@@ -14041,7 +14043,7 @@ function REN_cobrarCanvas(k){
   ctx.textAlign='right'; ctx.fillText('SITUAÇÃO', cS, y+15);
   y+=altHead;
   linhas.forEach(function(L,i){
-    var h=altRow+(L.sub?altSub:0);
+    var h=altRow+((L.sub||L.obs)?altSub:0);
     ctx.fillStyle=L.atual?'#111':(i%2===0?'#fff':'#f7f7f7'); ctx.fillRect(padH,y,W-padH*2,h);
     var cT=L.atual?'#fff':(L.pago?'#999':'#111');
     ctx.fillStyle=cT; ctx.font=(L.atual?'700 ':'500 ')+'11px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
@@ -14051,7 +14053,11 @@ function REN_cobrarCanvas(k){
     ctx.textAlign='right'; ctx.font=(L.atual?'700 ':'600 ')+'9px Helvetica,Arial,sans-serif';
     ctx.fillStyle=L.atual?'#fff':(L.pago?'#999':(L.st==='EM ABERTO'?'#b3261e':'#777'));
     ctx.fillText(L.st, cS, y+16);
-    if(L.sub){ ctx.fillStyle=L.atual?'#ddd':'#888'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText(L.sub, (cV+cD)/2, y+altRow+6); }
+    if(L.sub||L.obs){
+      ctx.fillStyle=L.atual?'#ddd':'#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
+      if(L.sub) ctx.fillText((L.obs?L.obs+' \u00b7 ':'')+L.sub, (cV+cD)/2, y+altRow+6);
+      else ctx.fillText(L.obs, cV, y+altRow+6);
+    }
     y+=h;
   });
   ctx.fillStyle='#e8e8e8'; ctx.fillRect(padH,y,W-padH*2,altTot);
@@ -21247,6 +21253,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.83</span><span class="cl-ver-date">25/09/2026</span></div>
+      <div class="cl-item">Foto do COBRAR com o título igual ao da tabela que o cliente recebeu: na venda sai com o SN, no financiamento e na entrada manual sai a descrição. A observação da parcela voltou para baixo do valor, como na original &mdash; (A VISTA), (DAYTONA)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.82</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">Botão COBRAR na ficha da parcela, logo abaixo do DAR BAIXA. Um toque copia a frase de cobrança e gera a foto do negócio como está hoje: o nome do negócio no topo, as parcelas pagas com &#10003; e a data, a cobrada em destaque, pagamento parcial com PAGO e RESTA, e o SALDO A PAGAR no rodapé. Sem nome do cliente, sem lucro nem sócio. A foto abre no visualizador: COMPARTILHAR, escolhe o grupo, cola a frase na legenda. Não precisa mais achar a mensagem do dia da venda</div>
