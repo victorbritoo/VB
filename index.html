@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.87</title>
+<title>VB - v1.300.89</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -369,7 +369,9 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
 </div>
 <div id="fm-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)FM_fechar()">
   <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:85vh;overflow:auto;font-family:-apple-system,sans-serif;">
-    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px;position:relative;">
+      <!-- v1.300.88: PANORAMA DO LUCRO com botao proprio; o toque no card preto continua valendo -->
+      <button onclick="FM_panorama()" title="PANORAMA DO LUCRO" aria-label="PANORAMA DO LUCRO" style="position:absolute;right:0;top:0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);width:34px;height:34px;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:var(--tx);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="13" x2="3" y2="8"/><line x1="8" y1="13" x2="8" y2="4"/><line x1="13" y1="13" x2="13" y2="6"/><line x1="1.5" y1="14.5" x2="14.5" y2="14.5"/></svg></button>
       <button onclick="FM_nav(-1)" style="border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);width:34px;height:34px;font-size:16px;color:var(--tx);cursor:pointer;padding:0;">‹</button>
       <div id="fm-titulo" style="font-size:14px;font-weight:700;color:var(--ink);letter-spacing:1px;min-width:150px;text-align:center;"></div>
       <button onclick="FM_nav(1)" style="border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);width:34px;height:34px;font-size:16px;color:var(--tx);cursor:pointer;padding:0;">›</button>
@@ -12262,8 +12264,9 @@ function REN_cpLista(){
     });
     return hh;
   }
-  hh+='<div style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
+  /* v1.300.88: o card preto abre o PANORAMA MENSAL, como nas ENTRADAS */
+  hh+='<div onclick="REN_painel(\'cp\')" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A PAGAR<span style="font-size:13px;color:var(--so);margin-left:6px;font-weight:400;letter-spacing:0;">›</span></span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(tot)+'</span></div>'
     +REN_cpVBLinha(tot, totVB)
     +(abertas.length?('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+abertas.length+' CONTA'+(abertas.length===1?'':'S')+'</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">'+(atr.length?('ATRASADO '+HIST_fmtMoeda(tAtr)):'EM DIA')+'</span></div>'):'')
     +'</div>';
@@ -12288,7 +12291,7 @@ function REN_cpLista(){
            entra so pelo resto, senao o mes contava de novo o que ja saiu */
         venc.forEach(function(y){ if(String(y.venc||'').slice(0,7)===ym){ var vl=REN_cpFalta(y); gt+=vl; gvb+=REN_cpVBDe(y,vl); gn++; } });
         /* mesma porta das ENTRADAS: o nome do mes abre o PANORAMA MENSAL, que ja traz as duas colunas */
-        hh+='<div id="cpmes-'+ym+'" onclick="REN_painel(\'cp\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+REN_cpVBTx(gt,gvb)+'</span></div>';
+        hh+='<div id="cpmes-'+ym+'" onclick="REN_painel(\'cp\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+' \u203a</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gt)+REN_cpVBTx(gt,gvb)+'</span></div>';
       }
       hh+=REN_cpCard(c);
     });
@@ -13642,7 +13645,7 @@ function REN_render(){
     var _RH='font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;';
     _heroCP='<div style="'+_LH+'"><span style="'+_RH+'">A PAGAR</span><span style="font-size:11px;font-weight:700;color:var(--acc-tx);opacity:0.8;">\u2212 '+HIST_fmtMoeda(_cpAb)+'</span></div>';
   }
-  hh+='<div onclick="REN_painel()" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER</span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
+  hh+='<div onclick="REN_painel()" style="background:var(--acc);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">TOTAL A RECEBER<span style="font-size:13px;color:var(--so);margin-left:6px;font-weight:400;letter-spacing:0;">›</span></span><span style="font-size:17px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(totAb)+'</span></div>'+_heroVB+_heroCP+'</div>';
   /* uma faixa de acao so: o criterio a esquerda, a travessia a direita. SAIDAS repete o formato. */
   hh+='<div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:2px;">'+chipTipo()
     +'<span onclick="REN_crSheet(\'\')" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);margin-left:6px;margin-right:auto;">+</span>'
@@ -13718,7 +13721,7 @@ function REN_render(){
            Combinado e decisao do VB; rateio e o palpite do app quando nao ha decisao. */
         vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?(Number(REN_repAlvo(oiY,y))||0):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
-        hh+='<div id="renmes-'+ym+'" onclick="REN_painel()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
+        hh+='<div id="renmes-'+ym+'" onclick="REN_painel()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+' \u203a</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'</span></div>';
       }
       hh+=card(x,false,true);
     });
@@ -15109,7 +15112,7 @@ function FM_load(){
       }
       if(_txt) _dl='<div style="font-size:10px;font-weight:600;color:var(--acc-tx);opacity:0.65;margin-top:3px;text-align:right;">'+_txt+'</div>';
     }
-    hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;cursor:pointer;" onclick="FM_panorama()"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS</span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>'+_dl+'</div>';
+    hh+='<div style="background:var(--acc);border-radius:12px;padding:12px 14px;cursor:pointer;" onclick="FM_panorama()"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LUCRO DO MÊS<span style="font-size:13px;color:var(--so);margin-left:6px;font-weight:400;letter-spacing:0;">›</span></span><span style="font-size:16px;font-weight:700;color:var(--acc-tx);">'+HIST_fmtMoeda(FM_dados.lucroTotal)+'</span></div>'+_dl+'</div>';
     if(FM_dados.rend!=null){
       var _rd=FM_dados.rendDet||{};
       var _ra='';
@@ -21313,6 +21316,15 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.89</span><span class="cl-ver-date">27/09/2026</span></div>
+      <div class="cl-item">O Fechamento ganhou um botão para o PANORAMA DO LUCRO, no canto superior direito, na linha do mês (o ícone de barras). O toque no card preto continua funcionando</div>
+      <div class="cl-item">Cards e linhas que abrem alguma coisa ganharam a setinha &rsaquo;: LUCRO DO MÊS, TOTAL A RECEBER, TOTAL A PAGAR e o nome de cada mês nas listas de ENTRADAS e SAÍDAS. Nada mudou de lugar; agora dá para ver que são botões</div>
+  </div>
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.88</span><span class="cl-ver-date">27/09/2026</span></div>
+      <div class="cl-item">O card preto das SAÍDAS (TOTAL A PAGAR) abre o PANORAMA MENSAL, como o das ENTRADAS. Tocar num mês lá dentro volta para as saídas naquele mês</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.87</span><span class="cl-ver-date">27/09/2026</span></div>
       <div class="cl-item">FINANCIAMENTO também não duplica mais. Recarregar o app trazia de volta só os números (valor, parcela, prazo, taxa): descrição, cliente, datas e investidor voltavam em branco e o app esquecia de qual financiamento eram &mdash; salvar criava outro, com as parcelas duas vezes no A RECEBER. Agora a tela volta inteira e o botão continua ATUALIZAR OPERAÇÃO. Financiamento apagado no Histórico avisa em vez de dizer que atualizou</div>
