@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.86</title>
+<title>VB - v1.300.87</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1675,6 +1675,7 @@ function HIST_carregarFin(r){
   } else { FIN_disableInvestidor(); }
   FIN_updateConfirmarBtnLabel();
   FIN_snapshot = FIN_assinatura(); VB_dirtyPaintTela('fin');
+  try{ FIN_saveSession(); }catch(e){}
   VB_telaAnterior = 'hist';
   showScreen('fin');
 }
@@ -6329,7 +6330,17 @@ function FIN_saveSession(){
       parcela:(document.getElementById('fin-parcela').value||''),
       prazo:(document.getElementById('fin-prazo').value||''),
       taxa:(document.getElementById('fin-taxa').value||''),
-      degrau:FIN_degrau, ls:FIN_lastSolved, le:FIN_lastEdited
+      degrau:FIN_degrau, ls:FIN_lastSolved, le:FIN_lastEdited,
+      /* v1.300.87: a operacao inteira vai junto -- de qual financiamento e (o), descricao,
+         cliente, datas, simulacao e investidor. Antes so os numeros voltavam: recarregar o app
+         esquecia de qual financiamento eram e o salvar criava outro (mesmo defeito do PAGAMENTOS).
+         Voltar o id sem voltar o resto seria pior: o ATUALIZAR gravaria descricao e cliente vazios. */
+      o:(FIN_currentOperationId||null), ts:(VB_carimboTS||null), sim:!!FIN_simFlag,
+      desc:((document.getElementById('fin-tabelaDesc')||{}).value||''),
+      cli:((document.getElementById('fin-cliente')||{}).value||''),
+      dt:((document.getElementById('fin-tabelaData')||{}).value||''),
+      dop:((document.getElementById('fin-dataOp')||{}).value||''),
+      inv:(FIN_invOn?{n:((document.getElementById('inv-nome')||{}).value||''), p:((document.getElementById('inv-pctInv')||{}).value||'')}:null)
     }));
   }catch(e){}
 }
@@ -6345,6 +6356,15 @@ function FIN_restoreSession(){
     document.getElementById('fin-taxa').value=o.taxa||'';
     if(o.degrau){ FIN_degrau=o.degrau; }
     FIN_lastSolved=o.ls||''; FIN_lastEdited=o.le||'';
+    if(o.desc!=null){ var _e1=document.getElementById('fin-tabelaDesc'); if(_e1) _e1.value=o.desc; }
+    if(o.cli!=null){ var _e2=document.getElementById('fin-cliente'); if(_e2) _e2.value=o.cli; }
+    if(o.dt){ var _e3=document.getElementById('fin-tabelaData'); if(_e3) _e3.value=o.dt; }
+    if(o.dop){ var _e4=document.getElementById('fin-dataOp'); if(_e4) _e4.value=o.dop; }
+    FIN_simFlag=!!o.sim; try{ FIN_paintSimChip(); }catch(e){}
+    FIN_currentOperationId=o.o||null;
+    if(o.o && o.ts) VB_carimboTS=o.ts;
+    if(o.inv){ try{ document.getElementById('inv-nome').value=o.inv.n||''; document.getElementById('inv-pctInv').value=o.inv.p||''; FIN_enableInvestidor(); }catch(e){} }
+    try{ FIN_updateConfirmarBtnLabel(); }catch(e){}
     FIN_applyDegrauUI();
     FIN_updateTotal();
     return true;
@@ -6361,7 +6381,7 @@ function FIN_updateConfirmarBtnLabel(){
 function FIN_paintSimChip(){ var c=document.getElementById('fin-chipSim'); if(!c) return;
   if(FIN_simFlag){ c.style.borderStyle='solid'; c.style.borderColor='var(--lnk)'; c.style.color='var(--tx)'; c.style.background='var(--sf)'; c.style.fontWeight='700'; }
   else { c.style.borderStyle='dashed'; c.style.borderColor='var(--ln)'; c.style.color='var(--mu2)'; c.style.background='transparent'; c.style.fontWeight='500'; } }
-function FIN_toggleSim(){ FIN_simFlag=!FIN_simFlag; FIN_paintSimChip(); FIN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('fin'); }
+function FIN_toggleSim(){ FIN_simFlag=!FIN_simFlag; FIN_paintSimChip(); FIN_updateConfirmarBtnLabel(); VB_dirtyPaintTela('fin'); try{ FIN_saveSession(); }catch(e){} }
 var FIN_nomeChecked=false;
 function FIN_confirmarOperacao(btn){
   VB_carimboTS = null;
@@ -6432,7 +6452,15 @@ function FIN_confirmarOperacao(btn){
       VB_toast('Não salvou (sem conexão?). Tente de novo.');
       return;
     }
+    if(ehAtualizacao && !(res.data && res.data.length)){
+      FIN_currentOperationId=null; VB_carimboTS=null;
+      try{ FIN_saveSession(); }catch(e){}
+      FIN_updateConfirmarBtnLabel();
+      VB_toast('O financiamento tinha sido apagado \u2014 toque de novo para salvar como novo.');
+      return;
+    }
     if(!ehAtualizacao && res.data && res.data[0]){ FIN_currentOperationId = res.data[0].id; }
+    try{ FIN_saveSession(); }catch(e){}
     FIN_updateConfirmarBtnLabel();
     FIN_snapshot = FIN_assinatura(); VB_dirtyPaintTela('fin'); // foto atualizada: sem falso alarme ao voltar depois de salvar
     try{
@@ -6526,6 +6554,10 @@ document.getElementById('fin-parcela').addEventListener('input',function(){
 FIN_initTabela();
 FIN_applyDegrauUI();
 FIN_restoreSession();
+/* v1.300.87: os campos de texto tambem entram na sessao, senao voltariam vazios */
+['fin-tabelaDesc','fin-cliente','fin-tabelaData','fin-dataOp','inv-nome','inv-pctInv'].forEach(function(id){
+  var el=document.getElementById(id); if(el) el.addEventListener('input', function(){ try{ FIN_saveSession(); }catch(e){} });
+});
 (function(){
   function _vbMaskDate(el){ if(!el) return; el.addEventListener('input',function(){ var raw=this.value.replace(/[^0-9]/g,''); var v=''; if(raw.length>0)v+=raw.substring(0,2); if(raw.length>2)v+='/'+raw.substring(2,4); if(raw.length>4)v+='/'+raw.substring(4,8); this.value=v; }); }
   _vbMaskDate(document.getElementById('hist-fdt-de'));
@@ -21281,6 +21313,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.87</span><span class="cl-ver-date">27/09/2026</span></div>
+      <div class="cl-item">FINANCIAMENTO também não duplica mais. Recarregar o app trazia de volta só os números (valor, parcela, prazo, taxa): descrição, cliente, datas e investidor voltavam em branco e o app esquecia de qual financiamento eram &mdash; salvar criava outro, com as parcelas duas vezes no A RECEBER. Agora a tela volta inteira e o botão continua ATUALIZAR OPERAÇÃO. Financiamento apagado no Histórico avisa em vez de dizer que atualizou</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.86</span><span class="cl-ver-date">25/09/2026</span></div>
       <div class="cl-item">PAGAMENTOS não duplica mais o documento. Quando o app recarregava (versão nova, iPhone fechando o Safari), a tela trazia as linhas de volta mas esquecia de qual documento eram, e o salvar criava outro &mdash; o CEZAR INVEST existiu 3 vezes. Agora ela lembra e o botão continua ATUALIZAR OPERAÇÃO. Se o documento tiver sido apagado no Histórico, o app avisa em vez de dizer que atualizou sem gravar nada</div>
