@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.93</title>
+<title>VB - v1.300.94</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -996,10 +996,10 @@ body{ text-transform:uppercase; }
         <span id="ven-lucro" style="font-size:16px;font-weight:700;color:var(--tx);">---</span>
       </div>
     </div>
-    <div id="ven-margem" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
+    <div id="ven-margem" onclick="void 0" style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
     <div id="ven-rend" onclick="VEN_rendToggle()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;cursor:pointer;"></div>
     <div id="ven-seudin" onclick="VEN_cronoSheet()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:4px;cursor:pointer;"></div>
-    <div id="ven-alvo" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
+    <div id="ven-alvo" onclick="void 0" style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
     <div id="ven-rend-box" style="display:none;margin-top:6px;padding:8px 10px;border:0.5px dashed var(--ln);border-radius:12px;text-align:center;font-family:-apple-system,sans-serif;">
       <span id="ven-rend-lbl" style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
@@ -11296,8 +11296,10 @@ function VB_finMeses(r){
    ficam certos. Data retroativa continua no meio-dia: hora daquele dia ninguem sabe. */
 /* SETINHA DE ABRIR ALI MESMO (v1.300.93): uma so no app inteiro. \u203a antes do nome, gira 90 graus
    quando abre. A de ir para outra tela e a mesma \u203a, no fim da linha, e nao gira. */
-function VB_seta(aberto, id, px){
-  return '<span'+(id?' id="'+id+'"':'')+' class="vb-seta" style="font-size:'+(px||9)+'px;color:var(--so);font-weight:700;letter-spacing:0;margin-right:4px;display:inline-block;transition:transform 0.2s;'+(aberto?'transform:rotate(90deg);':'')+'">\u203a</span>';
+function VB_seta(aberto, id, px, semMargem){
+  /* mesmo desenho da seta dos cards do Historico (svg 10px, traco 3) -- e o tamanho padrao do app */
+  return '<span'+(id?' id="'+id+'"':'')+' class="vb-seta" style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;vertical-align:-1px;letter-spacing:0;'+(semMargem?'':'margin-right:6px;')+'transition:transform 0.2s;'+(aberto?'transform:rotate(90deg);':'')+'">'
+    +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M9 6l6 6-6 6"/></svg></span>';
 }
 function VB_setaGira(el, aberto){ if(el) el.style.transform=aberto?'rotate(90deg)':''; }
 function VB_carimbo(){
@@ -16156,7 +16158,7 @@ function MER_abrir(id){
       det+=lin('De Quem Comprei', o.fornecedor||'');
       hh+='<div onclick="MER_passToggle(this,event)" style="cursor:pointer;'+(oi?'margin-top:6px;':'margin-top:2px;')+'">'
         +'<div style="display:flex;align-items:center;gap:5px;">'
-        +VB_seta(false).replace('class="vb-seta"','class="vb-seta mer-pass-chev"').replace('margin-right:4px;','margin-right:0;')
+        +VB_seta(false,null,null,true).replace('class="vb-seta"','class="vb-seta mer-pass-chev"')
         +'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+resumo+'</span>'
         +'</div>'
         +'<div class="mer-pass-det" style="display:none;padding:2px 0 4px 14px;">'+det+'</div>'
@@ -21326,6 +21328,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.94</span><span class="cl-ver-date">27/09/2026</span></div>
+      <div class="cl-item">A setinha de abrir ali mesmo passou a ter o tamanho padrão do app, o mesmo da seta dos cards do Histórico, em todo lugar: meses do Histórico, blocos do Fechamento, panorama do cliente, A REPASSAR, passagens da peça, RENDIMENTO da venda</div>
+      <div class="cl-item">Vendas: tocar na linha ALVO/FEITO/PARADO ou na MARGEM não abre mais as parcelas da compra por engano. O iPhone empurrava o toque para a linha SEU DINHEIRO, logo acima</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.93</span><span class="cl-ver-date">27/09/2026</span></div>
       <div class="cl-item">Uma setinha só para abrir ali mesmo, no app inteiro: › antes do nome, girando para baixo quando abre. Entrou nos grupos do A REPASSAR, nos blocos do panorama do cliente (antes a seta ficava depois do nome e apontava para cima quando aberto), nas passagens da peça no Estoque, na linha RENDIMENTO/MARGEM da venda e no Log de alterações do restaurar</div>
