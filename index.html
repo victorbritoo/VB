@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.94</title>
+<title>VB - v1.300.95</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -996,16 +996,16 @@ body{ text-transform:uppercase; }
         <span id="ven-lucro" style="font-size:16px;font-weight:700;color:var(--tx);">---</span>
       </div>
     </div>
-    <div id="ven-margem" onclick="void 0" style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
+    <div id="ven-margem" onclick="void 0" data-nopress style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;line-height:1.5;"></div>
     <div id="ven-rend" onclick="VEN_rendToggle()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:6px;cursor:pointer;"></div>
-    <div id="ven-seudin" onclick="VEN_cronoSheet()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:4px;cursor:pointer;"></div>
-    <div id="ven-alvo" onclick="void 0" style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
     <div id="ven-rend-box" style="display:none;margin-top:6px;padding:8px 10px;border:0.5px dashed var(--ln);border-radius:12px;text-align:center;font-family:-apple-system,sans-serif;">
       <span id="ven-rend-lbl" style="font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;">MANTER</span>
       <input id="ven-rend-alvo" type="text" inputmode="numeric" placeholder="0,00" oninput="VEN_rendMask(this)" onblur="VEN_rendBlur()" style="width:52px;border:none;border-bottom:0.5px solid var(--ln);background:transparent;outline:none;font-size:13px;font-weight:700;color:var(--ink);text-align:center;padding:1px 0;font-family:-apple-system,sans-serif;">
       <span id="ven-rend-un" style="font-size:9px;letter-spacing:1px;color:var(--mu2);font-weight:600;">% A.M.</span>
       <div id="ven-rend-out" style="margin-top:5px;font-size:11px;color:var(--tx);font-weight:600;"></div>
     </div>
+    <div id="ven-seudin" onclick="VEN_cronoSheet()" style="display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:4px;cursor:pointer;"></div>
+    <div id="ven-alvo" onclick="void 0" data-nopress style="-webkit-tap-highlight-color:transparent;display:none;text-align:center;font-size:10px;color:var(--tx);font-weight:600;margin-top:5px;"></div>
     <div id="ven-divlucro" style="display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);">
       <div id="ven-divlucro-lbl" style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:3px;text-align:center;">DIVISÃO DO LUCRO — PARTE DO SÓCIO (%)</div>
       <div data-campo="1" style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
@@ -11504,6 +11504,7 @@ var VB_pressEl=null, VB_pressT=0, VB_pressX=0, VB_pressY=0;
 function VB_pressAlvo(el){
   for(var i=0; el && el.nodeType===1 && i<6; i++, el=el.parentElement){
     var st=el.style||{};
+    if(el.hasAttribute && el.hasAttribute('data-nopress')) return null;   /* linha de leitura: segura o toque sem acender */
     if(st.position==='fixed') return null;
     if(el.disabled) return null;
     if(st.pointerEvents==='none') return null;
@@ -17860,7 +17861,7 @@ function VEN_rendCalc(){
   if(totalNec==null){ out.innerHTML='<span style="color:var(--so);">Este parcelamento nao fecha nesse alvo</span>'; return; }
   var lucroTotNec = totalNec - d.c;
   out.innerHTML='<span style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-    +'<span style="flex:1;min-width:0;">Venda: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(Lucro: R$ '+VEN_formatBR(lucroTotNec)+')</span></span>'
+    +'<span style="flex:1;min-width:0;">Venda: <b>R$ '+VEN_formatBR(totalNec)+'</b> <span style="color:var(--so);">(L: R$ '+VEN_formatBR(lucroTotNec)+')</span></span>'
     +'<span onclick="VEN_rendAplicar()" style="flex:none;padding:2px 9px;border:0.5px solid var(--ln);border-radius:7px;font-size:8px;letter-spacing:1.2px;color:var(--tx2);background:var(--sf);cursor:pointer;">APLICAR</span>'
     +'</span>';
 }
@@ -21328,6 +21329,12 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.95</span><span class="cl-ver-date">28/09/2026</span></div>
+      <div class="cl-item">Vendas: o simulador do RENDIMENTO (MANTER % A.M.) abre logo embaixo da linha RENDIMENTO e empurra o resto para baixo. Antes abria depois do ALVO</div>
+      <div class="cl-item">Vendas: tocar no ALVO e na MARGEM não acende mais a faixa cinza. As linhas só seguram o toque, sem ação</div>
+      <div class="cl-item">Simulador: a resposta mostra (L: R$ X) no lugar de (Lucro: R$ X), como no Histórico, e cabe numa linha</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.94</span><span class="cl-ver-date">27/09/2026</span></div>
       <div class="cl-item">A setinha de abrir ali mesmo passou a ter o tamanho padrão do app, o mesmo da seta dos cards do Histórico, em todo lugar: meses do Histórico, blocos do Fechamento, panorama do cliente, A REPASSAR, passagens da peça, RENDIMENTO da venda</div>
