@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.96</title>
+<title>VB - v1.300.97</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1154,7 +1154,7 @@ button{ text-transform:inherit; }
         <div class="cl">QUANTIDADE</div>
         <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
           <input id="ant-qtd" type="text" inputmode="numeric" placeholder="0" onclick="this.select()" style="font-size:20px;font-weight:400;text-align:center;width:44px;">
-          <span class="cs" style="text-transform:lowercase;letter-spacing:1px;">títulos</span>
+          <span class="cs" style="letter-spacing:1px;">títulos</span>
         </div>
       </div>
       <div class="ch">
@@ -1198,7 +1198,7 @@ button{ text-transform:inherit; }
       <div class="ml">PRAZO MÉDIO</div>
       <div style="display:flex;align-items:baseline;justify-content:center;gap:3px;">
         <span id="ant-prazoMedio" class="mv">—</span>
-        <span style="font-size:9px;color:var(--so);font-weight:500;">dias</span>
+        <span id="ant-prazoUn" style="display:none;font-size:9px;color:var(--so);font-weight:500;">dias</span>
       </div>
       <div id="ant-pisoPz" style="display:none;font-size:9px;letter-spacing:0.5px;color:var(--so);font-weight:600;margin-top:1px;"></div>
       <div id="ant-pisoBt" onclick="ANT_pisoToggle()" style="display:none;margin:3px auto 0;padding:2px 8px;border:0.5px solid var(--ln3);border-radius:9px;font-size:8px;letter-spacing:1px;font-weight:700;cursor:pointer;width:fit-content;"></div>
@@ -7721,6 +7721,8 @@ function VEN_codeB32(){ return 'VBVEN2:'+_b32enc(JSON.stringify(VEN_serializar()
 /* === ANTECIPAÇÃO JS === */
 
 function ANT_parseBR(s){ return VB_dinheiroRaw(s); }
+/* unidade DIAS so aparece com numero; vazio e so o travessao */
+function ANT_pzUn(){ var v=document.getElementById('ant-prazoMedio'), u=document.getElementById('ant-prazoUn'); if(v&&u) u.style.display=(String(v.textContent).trim()==='\u2014')?'none':''; }
 var ANT_fraseAtraso='';
 /* Sem frase de atraso, COMPARTILHAR e GERAR TABELA copiam a legenda curta da antecipacao.
    Cada linha leva seu par de asteriscos porque o negrito do WhatsApp nao atravessa a quebra.
@@ -8055,6 +8057,7 @@ function ANT_recalc(){
   var pm   = ANT_getPrazoMedio();
 
   if(!isNaN(pm)) document.getElementById('ant-prazoMedio').textContent=pm.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  ANT_pzUn();
 
   var vbOk=!isNaN(VB)&&VB>0, vpOk=!isNaN(VP)&&VP>0, vlOk=!isNaN(VL)&&VL>0;
   var nOk=n>0, tOk=!isNaN(taxa)&&taxa>0, pmOk=!isNaN(pm);
@@ -8154,7 +8157,7 @@ function ANT_limpar(){
   ['ant-valorBruto','ant-valorParcela','ant-valorLiquido','ant-qtd','ant-taxa'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('ant-prazoMedio').textContent='—';
+  document.getElementById('ant-prazoMedio').textContent='—'; ANT_pzUn();
   document.getElementById('ant-totJuros').textContent='—';
   document.getElementById('ant-totDesc').textContent='—';
   ANT_pisoAgiu=false; ANT_pisoUltFator=1; ANT_pisoJurosSem=0; ANT_pisoLigado=true;
@@ -9216,7 +9219,7 @@ function ANT_recalcPersonalizado(){
   if(prazos.length>0){
     var pesoTotal=prazos.reduce(function(a,x){return a+x.valor;},0);
     var pmNum=prazos.reduce(function(a,x){return a+x.prazo*x.valor;},0)/pesoTotal;
-    document.getElementById('ant-prazoMedio').textContent=pmNum.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('ant-prazoMedio').textContent=pmNum.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); ANT_pzUn();
   }
   if(totalVB>0){ document.getElementById('ant-valorBruto').value=ANT_formatBR(totalVB); document.getElementById('ant-valorParcela').value=n>0?ANT_formatBR(totalVB/n):''; }
   document.getElementById('ant-qtd').value=n>0?n:'';
@@ -9272,7 +9275,7 @@ function ANT_resetOnEnter(){
       var el=document.getElementById(id); if(el) el.value='';
     });
     var tar=document.getElementById('ant-tarifa'); if(tar) tar.value='11,65';
-    var pm=document.getElementById('ant-prazoMedio'); if(pm) pm.textContent='—';
+    var pm=document.getElementById('ant-prazoMedio'); if(pm) pm.textContent='—'; ANT_pzUn();
     var tj=document.getElementById('ant-totJuros'); if(tj) tj.textContent='—';
     var td=document.getElementById('ant-totDesc'); if(td) td.textContent='—';
     if(ANT_userFields) ANT_userFields.clear();
@@ -21332,6 +21335,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.97</span><span class="cl-ver-date">28/09/2026</span></div>
+      <div class="cl-item">Antecipação: TÍTULOS ao lado da quantidade em maiúsculo, como o resto da tela; PRAZO MÉDIO vazio mostra só o travessão, e o DIAS aparece junto com o número</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.96</span><span class="cl-ver-date">28/09/2026</span></div>
       <div class="cl-item">Valor vazio aparece sempre como — (travessão), igual ao Fechamento. Antes as telas de operação mostravam ---</div>
