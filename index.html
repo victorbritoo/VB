@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.92</title>
+<title>VB - v1.300.93</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1973,8 +1973,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
   h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>';
   h += '<button data-ren-tab="'+tab+'" data-ren-idx="'+idx+'" onclick="HIST_clickRename(this,event)" style="border:0.5px solid var(--ln);background:var(--sf);border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
   h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
-  h += '<button data-del-tab="'+tab+'" data-del-idx="'+idx+'" onclick="HIST_clickDelete(this,event)" style="border:none;background:var(--acc);border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
-  h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  h += '<button data-del-tab="'+tab+'" data-del-idx="'+idx+'" onclick="HIST_clickDelete(this,event)" style="border:0.5px solid var(--ln);background:var(--sf);border-radius:8px;width:22px;height:22px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;">';
+  h += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   h += '</div>';
   // linha resumo (sempre): valor + data (+ extra). Alinhada sob o nome (pula a setinha).
   var valLabel = tab==='ant'?'Bruto: ':tab==='fin'?'Financiado: ':tab==='ven'?'Venda: ':'';
@@ -2111,7 +2111,7 @@ function HIST_clickDelete(el, event){
   }
   if(tab==='ven'){
     VEN_checaContrato(r.id, function(info){
-      var msg = info ? ('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será excluída; o contrato fica em GESTÃO › CONTRATOS.\nExcluir mesmo assim?') : 'Excluir esta operação do histórico?';
+      var msg = info ? ('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será excluída; o contrato fica em GESTÃO › CADASTROS › CONTRATOS.\nExcluir mesmo assim?') : 'Excluir esta operação do histórico?';
       if(confirm(msg)) HDEL_exec();
     });
   } else {
@@ -3350,6 +3350,7 @@ function VB_restaurarDiff(cb){
 function VB_restaurarVerAlt(){
   var el=document.getElementById('vb-restore-altbox'); if(!el) return;
   el.style.display = (el.style.display==='none') ? 'block' : 'none';
+  VB_setaGira(document.getElementById('vb-restore-altchev'), el.style.display==='block');
 }
 function VB_restaurarModal(){
   var P=VB_restPayload; if(!P) return;
@@ -3393,7 +3394,7 @@ function VB_restaurarResumoHTML(P){
     h+='<div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--ln3);color:var(--tx2);">Total no backup <b>'+P.tot+'</b> · novas <b>'+tN+'</b> · alteradas <b>'+tA+'</b> · iguais <b>'+tI+'</b></div>';
     h+='</div>';
     if(tN+tA>0){
-      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:12px;color:var(--tx);font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none;">Log de alterações ('+(tN+tA)+') ▾</div>';
+      h+='<div onclick="VB_restaurarVerAlt()" style="font-size:12px;color:var(--tx);font-weight:600;cursor:pointer;margin-bottom:8px;user-select:none;">'+VB_seta(false,'vb-restore-altchev',11)+'Log de alterações ('+(tN+tA)+')</div>';
       h+='<div id="vb-restore-altbox" style="display:none;max-height:200px;overflow-y:auto;border:0.5px solid var(--ln3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--tx2);line-height:1.55;">';
       if(allNovas.length){
         h+='<div style="font-weight:700;color:var(--tx);margin-bottom:4px;">NOVAS ('+allNovas.length+')</div>';
@@ -4178,7 +4179,7 @@ function HIST_sectionHeader(label, first, count, met, fech, clic){
   }
   /* Mes recolhivel: o cabecalho inteiro vira alvo de toque e ganha a setinha. Quem nao passa
      'clic' (Recebimentos, Vendidos) recebe exatamente o cabecalho de antes. */
-  var _seta = clic ? ('<span style="font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transform:rotate('+(fech?'0':'90')+'deg);">\u203a</span>') : '';
+  var _seta = clic ? VB_seta(!fech) : '';
   var _atr = clic ? (' onclick="HIST_mesToggle(\''+_chave.replace(/'/g,"\\'")+'\','+(fech?'true':'false')+')" style="cursor:pointer;-webkit-tap-highlight-color:transparent;') : ' style="';
   return '<div'+_atr+'display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:'+(first?'0':'12px')+' 4px 4px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;text-transform:uppercase;white-space:nowrap;">'+_seta+HIST_esc(label)+'</span>'+dir+'</div>';
 }
@@ -6800,12 +6801,12 @@ function VEN_updateLucro(){
     var _curto=(_cic!=null && _cic<0.5);
     if(_tm!=null && _curto){
       var _mg=(_meuC>0)?(_meuL/_meuC*100):null;
-      rd.innerHTML='<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
-        +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+      rd.innerHTML=VB_seta(VEN_rendAberto(),null,11)+'<span style="color:var(--mu);">MARGEM</span> <span>'+(_mg!=null?_mg.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}):'--')+'%</span> <span style="color:var(--so);">\u00b7 \u00e0 vista.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+        ;
       rd.style.display='block';
     } else if(_tm!=null){
-      rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_tm)+'</span> <span style="color:var(--so);">\u00b7 Prazo m\u00e9dio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
-        +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+      rd.innerHTML=VB_seta(VEN_rendAberto(),null,11)+'<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_tm<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_tm)+'</span> <span style="color:var(--so);">\u00b7 Prazo m\u00e9dio '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+        ;
       rd.style.display='block';
     } else if(_ok && c>0 && !(_meuC>0)){
       /* consignado: capital do VB e zero. Mostra a taxa que o dinheiro empregado rende no parcelamento. */
@@ -6824,11 +6825,11 @@ function VEN_updateLucro(){
           /* Ciclo curto tambem mente aqui: taxa mensal de 10 dias nao significa nada.
              Na peca propria o app troca por MARGEM; sem capital da VB nao existe margem
              pra mostrar, entao a taxa some e fica so o que e verdade. */
-          rd.innerHTML='<span style="color:var(--mu);">CICLO CURTO</span> <span style="color:var(--so);">\u00b7 '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m \u00b7 capital do consignante.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
-            +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+          rd.innerHTML=VB_seta(VEN_rendAberto(),null,11)+'<span style="color:var(--mu);">CICLO CURTO</span> <span style="color:var(--so);">\u00b7 '+_cic.toLocaleString('pt-BR',{maximumFractionDigits:1})+'m \u00b7 capital do consignante.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+            ;
         } else {
-        rd.innerHTML='<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_ti)+'</span> <span style="color:var(--so);">\u00b7 capital do consignante'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
-          +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+        rd.innerHTML=VB_seta(VEN_rendAberto(),null,11)+'<span style="color:var(--mu);">RENDIMENTO</span> <span style="'+(_ti<3.5?'color:var(--red);font-weight:700;':'')+'">\u2248 '+VB_tirTxt(_ti)+'</span> <span style="color:var(--so);">\u00b7 capital do consignante'+(VEN_merDataCompra?'':' \u00b7 venda direta')+'.</span>'+((VEN_parcelas||[]).some(function(p){return p && p.troca;})?' <span style="color:var(--so);" title="Com troca">\u21c4</span>':'')
+          ;
         }
         rd.style.display='block';
       } else { rd.style.display='none'; rd.innerHTML=''; }
@@ -10907,7 +10908,7 @@ function CLIP_tog(id){
   var b=document.getElementById(id); if(!b) return;
   var aberto=(b.style.display!=='none');
   b.style.display=aberto?'none':'block';
-  var c=document.getElementById(id+'-c'); if(c) c.textContent=aberto?'\u2304':'\u2303';
+  VB_setaGira(document.getElementById(id+'-c'), !aberto);
 }
 /* empurra sabado/domingo pra segunda */
 function CLIP_diaUtil(iso){
@@ -11044,12 +11045,12 @@ function CLIP_abrir(nome, cliId, voltarK){
       var id='clipb-'+CLIP_blN;
       var recolhivel=(nLin!=null);
       var aberto=(!recolhivel) || (nLin<=4);
-      var chev=recolhivel?('<span id="'+id+'-c" style="color:var(--mu);margin-left:5px;">'+(aberto?'\u2303':'\u2304')+'</span>'):'';
+      var chev=recolhivel?VB_seta(aberto, id+'-c'):'';
       /* fechado nao precisa da folga de bloco aberto, e o resumo tem que pesar mais que o rotulo */
       var pad=(recolhivel&&!aberto)?'8px 14px':'10px 14px';
       return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:'+pad+';margin-bottom:8px;">'
         +'<div '+(recolhivel?('onclick="CLIP_tog(\''+id+'\')" style="cursor:pointer;'):'style="')+'display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
-          +'<span class="vb-rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t+chev+'</span>'
+          +'<span class="vb-rot" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+chev+t+'</span>'
           +(resumo?('<span class="vb-val" style="font-weight:700;color:var(--tx);white-space:nowrap;">'+resumo+'</span>'):'')
         +'</div>'
         +'<div id="'+id+'"'+(aberto?'':' style="display:none;"')+'>'+inner+'</div>'
@@ -11293,6 +11294,12 @@ function VB_finMeses(r){
    do ultimo dia do mes (Fortaleza, UTC-3) caia no mes seguinte. Gravando meio-dia fixo, o mes
    ficava certo mas a hora sumia e duas baixas do mesmo dia empatavam na ordenacao. Assim os dois
    ficam certos. Data retroativa continua no meio-dia: hora daquele dia ninguem sabe. */
+/* SETINHA DE ABRIR ALI MESMO (v1.300.93): uma so no app inteiro. \u203a antes do nome, gira 90 graus
+   quando abre. A de ir para outra tela e a mesma \u203a, no fim da linha, e nao gira. */
+function VB_seta(aberto, id, px){
+  return '<span'+(id?' id="'+id+'"':'')+' class="vb-seta" style="font-size:'+(px||9)+'px;color:var(--so);font-weight:700;letter-spacing:0;margin-right:4px;display:inline-block;transition:transform 0.2s;'+(aberto?'transform:rotate(90deg);':'')+'">\u203a</span>';
+}
+function VB_setaGira(el, aberto){ if(el) el.style.transform=aberto?'rotate(90deg)':''; }
 function VB_carimbo(){
   var d=new Date(), p2=function(n){ return ('0'+n).slice(-2); };
   return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())
@@ -13684,7 +13691,7 @@ function REN_render(){
       REN_repNomes[gi]=g.nome;
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;">'
         +'<div onclick="REN_repTog('+gi+')" style="cursor:pointer;display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);">'
-        +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(g.nome)+' \u00b7 '+g.itens.length+'<span id="'+gid+'-c" style="color:var(--mu);margin-left:5px;font-weight:600;">'+(_ab?'\u2303':'\u2304')+'</span></span>'
+        +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+VB_seta(_ab, gid+'-c', 11)+CLIP_esc(g.nome)+' \u00b7 '+g.itens.length+'</span>'
         +'<span style="white-space:nowrap;flex:none;padding-left:8px;'+(g.red?'color:var(--red);':'')+'">'+HIST_fmtMoeda(g.tot)+'</span>'
         +'</div></div>';
       hh+='<div id="'+gid+'" style="display:'+(_ab?'block':'none')+';padding-left:10px;">';
@@ -14232,7 +14239,7 @@ function REN_repTog(gi){
   var aberto=(el.style.display!=='none');
   el.style.display=aberto?'none':'block';
   REN_repAberto[nome]=!aberto;
-  var c=document.getElementById('renrep-'+gi+'-c'); if(c) c.textContent=aberto?'\u2304':'\u2303';
+  VB_setaGira(document.getElementById('renrep-'+gi+'-c'), !aberto);
 }
 function REN_repQuick(btn, k){
   REN_repassar(k);
@@ -15037,7 +15044,7 @@ function FM_load(){
       var id=_blocoN++;
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;" onclick="FM_blocoToggle('+id+')">'
         +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">'
-        +'<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;min-width:0;"><span id="fm-bchev-'+id+'" style="letter-spacing:0;font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transition:transform 0.2s;">\u203a</span>'+t+'</span>'
+        +'<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:600;min-width:0;">'+VB_seta(false,'fm-bchev-'+id)+t+'</span>'
         /* bloco sem movimento no mes: travessao cinza no lugar de R$ 0,00 -- nao parece parcela da conta */
         +(vazio?'<span style="font-size:13px;font-weight:600;color:var(--so);white-space:nowrap;">\u2014</span>':'<span style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;">'+(resumo||'')+'</span>')+'</div>';
       var c='';
@@ -15132,7 +15139,7 @@ function FM_load(){
         _rdet+=_rlin('Com estoque parado', _rpct(_rd.rendTot), _rd.rendTot<3.5);
       }
       hh+='<div'+(_rdet?' onclick="FM_rendToggle()"':'')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;'+(_rdet?'cursor:pointer;':'')+'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">'+(_rdet?'<span id="fm-rend-chev" style="letter-spacing:0;font-size:9px;color:var(--so);font-weight:700;margin-right:4px;display:inline-block;transition:transform 0.2s;">\u203a</span>':'')+'RENDIMENTO DO CAPITAL</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'+_ra+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;">'+(_rdet?VB_seta(false,'fm-rend-chev'):'')+'RENDIMENTO DO CAPITAL</span><span style="font-size:14px;font-weight:700;color:var(--ink);">'+FM_dados.rend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.'+_ra+'</span></div>'
         +(_rdet?'<div id="fm-rend-det" style="display:none;padding-top:6px;">'+_rdet+'</div>':'')
         +'</div>';
     }
@@ -16149,7 +16156,7 @@ function MER_abrir(id){
       det+=lin('De Quem Comprei', o.fornecedor||'');
       hh+='<div onclick="MER_passToggle(this,event)" style="cursor:pointer;'+(oi?'margin-top:6px;':'margin-top:2px;')+'">'
         +'<div style="display:flex;align-items:center;gap:5px;">'
-        +'<span class="mer-pass-chev" style="font-size:9px;color:var(--mu2);transition:transform .15s ease;display:inline-block;">\u25B8</span>'
+        +VB_seta(false).replace('class="vb-seta"','class="vb-seta mer-pass-chev"').replace('margin-right:4px;','margin-right:0;')
         +'<span style="font-size:11px;font-weight:700;color:var(--tx);">'+resumo+'</span>'
         +'</div>'
         +'<div class="mer-pass-det" style="display:none;padding:2px 0 4px 14px;">'+det+'</div>'
@@ -17146,7 +17153,7 @@ function MER_voltarExec(merId, apagarVenda, vendaId){
   }
   if(apagarVenda && vendaId){
     VEN_checaContrato(vendaId, function(info){
-      if(info && !confirm('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será apagada; o contrato fica em GESTÃO › CONTRATOS.\nApagar mesmo assim?')) return;
+      if(info && !confirm('Esta venda tem contrato '+(info.ass?'ASSINADO':'gerado')+'.\nA venda será apagada; o contrato fica em GESTÃO › CADASTROS › CONTRATOS.\nApagar mesmo assim?')) return;
       sb.from('vendas').select('*').eq('id', vendaId).limit(1).then(function(rv){
        var _rv=(rv && !rv.error && rv.data && rv.data[0])||null;
        sb.from('vendas').delete().eq('id', vendaId).then(function(res){
@@ -17499,6 +17506,8 @@ function VEN_rendAplicar(){
   VEN_updateLucro();
   VB_toast('Parcelas ajustadas pro alvo de '+alvo.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.');
 }
+function VEN_rendAberto(){ var b=document.getElementById('ven-rend-box'); return !!(b && b.style.display==='block'); }
+function VEN_rendGira(){ var rd=document.getElementById('ven-rend'); VB_setaGira(rd && rd.querySelector('.vb-seta'), VEN_rendAberto()); }
 function VEN_rendToggle(){
   try{ VEN_rendLabels(); }catch(e){}
   var box=document.getElementById('ven-rend-box'); if(!box) return;
@@ -17510,6 +17519,7 @@ function VEN_rendToggle(){
     }
     box.style.display='block'; VEN_rendCalc();
   } else { box.style.display='none'; var _i=document.getElementById('ven-rend-alvo'); if(_i) _i.value=''; } // fechou, zera: reabrir nasce na realidade
+  VEN_rendGira();
 }
 /* CONSIGNADO: o capital do VB e zero, entao "% do meu capital" nao existe.
    A taxa que a linha mostra e a do CAPITAL EMPREGADO (o do consignante), e e por ela
@@ -17692,12 +17702,12 @@ function VEN_seuDinPinta(){
   var r=VEN_cronoTir();
   if(!r){
     el.innerHTML='<span style="color:var(--so);">SEU DINHEIRO \u00b7 SEM PARCELAS</span>'
-      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+      +' <span style="color:var(--so);font-size:12px;">\u203a</span>';
     el.style.display='block'; return;
   }
   if(r.pico){
     el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u00b7 PICO R$ '+Math.round(r.pico).toLocaleString('pt-BR')+' \u00b7 '+r.dias+(r.dias===1?' DIA':' DIAS')+'</span>'
-      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+      +' <span style="color:var(--so);font-size:12px;">\u203a</span>';
     el.style.display='block'; return;
   }
   if(r.semCapital){
@@ -17705,12 +17715,12 @@ function VEN_seuDinPinta(){
        Dizer SEM PARCELAS aqui seria mentira -- elas estao la, e o resultado e a melhor noticia
        possivel num negocio. */
     el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u00b7 SEM CAPITAL SEU</span>'
-      +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+      +' <span style="color:var(--so);font-size:12px;">\u203a</span>';
     el.style.display='block'; return;
   }
   el.innerHTML='<span style="color:var(--mu);">SEU DINHEIRO</span> <span>\u2248 '+VB_tirTxt(r.tir)+'</span>'
     +' <span style="color:var(--so);">\u00b7 COMPRA '+r.qtd+'X \u00b7 simula\u00e7\u00e3o</span>'
-    +' <span style="color:var(--so);font-size:11px;">\u2304</span>';
+    +' <span style="color:var(--so);font-size:12px;">\u203a</span>';
   el.style.display='block';
 }
 /* ----- a folha: irma da PARCELAS DA COMPRA do Estoque, sem salvar ----------------------- */
@@ -20309,7 +20319,7 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
           /* rascunho nao assinado da mesma venda sai: um contrato por venda. Assinado nunca e apagado. */
           sb.from('contratos').delete().eq('venda_id',vendaId).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
         }
-        VB_toast('Contrato salvo em Gestão \u203a Contratos.');
+        VB_toast('Contrato salvo em Gestão \u203a Cadastros \u203a Contratos.');
 
       });
     };
@@ -21062,7 +21072,7 @@ function CTR_finSalvarRegistro(blob, fname, nome, cpf, desc, total, finId){
           /* um contrato por financiamento: rascunho nao assinado sai. Assinado nunca e apagado. */
           sb.from('contratos').delete().eq('fin_id',String(finId)).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
         }
-        VB_toast('Contrato salvo em Gestão › Contratos.');
+        VB_toast('Contrato salvo em Gestão › Cadastros › Contratos.');
       });
     };
     fr.readAsDataURL(blob);
@@ -21316,6 +21326,13 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.93</span><span class="cl-ver-date">27/09/2026</span></div>
+      <div class="cl-item">Uma setinha só para abrir ali mesmo, no app inteiro: › antes do nome, girando para baixo quando abre. Entrou nos grupos do A REPASSAR, nos blocos do panorama do cliente (antes a seta ficava depois do nome e apontava para cima quando aberto), nas passagens da peça no Estoque, na linha RENDIMENTO/MARGEM da venda e no Log de alterações do restaurar</div>
+      <div class="cl-item">Vendas: a linha SEU DINHEIRO, que abre a folha do cronograma, terminava em ⌄; agora termina em ›, como tudo que abre outra tela</div>
+      <div class="cl-item">Os avisos e mensagens de contrato apontam para GESTÃO › CADASTROS › CONTRATOS (faltava o CADASTROS)</div>
+      <div class="cl-item">Histórico: o ✕ de excluir saiu do preto e ficou no cinza claro dos botões de remover, igual ao olho e ao lápis ao lado</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.92</span><span class="cl-ver-date">27/09/2026</span></div>
       <div class="cl-item">Fechamento: a setinha dos blocos e do RENDIMENTO DO CAPITAL passou a ser a mesma do Histórico (tamanho e espaço iguais), e os nomes voltaram para perto da borda</div>
