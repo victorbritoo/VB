@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.99</title>
+<title>VB - v1.300.100</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -4128,8 +4128,10 @@ function HIST_periodoRange(){
   if(f.periodo==='mespassado'){ return {ini:new Date(now.getFullYear(),now.getMonth()-1,1), fim:eod(new Date(now.getFullYear(),now.getMonth(),0))}; }
   return null;
 }
-function _ymOf(ca){ if(!ca) return ''; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
-function _localYMD(ca){ if(!ca) return ''; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* v1.300.100: carimbo do app e relogio da parede com 'Z' (ver VB_leCarimbo) -- le ao pe da letra.
+   Converter fuso jogava o salvo as 22:57 na Italia para 01/10 (A INICIAR). */
+function _localYMD(ca){ if(!ca) return ''; var m=String(ca).match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+'-'+m[2]+'-'+m[3]; var d=new Date(ca); if(isNaN(d.getTime())) return ''; return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function _ymOf(ca){ var y=_localYMD(ca); return y?y.slice(0,7):''; }
 function _brToYMD(s){ if(!s) return ''; var p=String(s).trim().split('/'); if(p.length!==3) return ''; if(p[0].length<2||p[1].length<2||p[2].length<4) return ''; return p[2]+'-'+p[1]+'-'+p[0]; }
 function HIST_mesLabel(ym){ if(!ym) return ''; var pp=ym.split('-'); var M=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return (M[parseInt(pp[1],10)-1]||'?')+' '+pp[0]; }
 function HIST_filterRows(tab, rows){
@@ -21390,6 +21392,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.100</span><span class="cl-ver-date">30/09/2026</span></div>
+      <div class="cl-item">Histórico: data do card e mês do pagamento leem o carimbo como foi gravado, sem converter fuso. Salvo às 22:57 na Itália não vai mais para o dia seguinte nem para A INICIAR</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.99</span><span class="cl-ver-date">29/09/2026</span></div>
       <div class="cl-item">Histórico › PAGAMENTOS ganhou EM ABERTO e ENCERRADOS, igual OPERAÇÕES e ATRASADOS da antecipação</div>
