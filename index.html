@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.101</title>
+<title>VB - v1.300.102</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14086,6 +14086,7 @@ function REN_ficha(k, exp){
   if(b) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editRec(\''+k+'\');" style="'+(_pend?BTN_S:BTN_P)+'">EDITAR RECEBIMENTO</button>';
   if(b&&b.repassado_em) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_repassar(\''+k+'\');" style="'+BTN_S+'">EDITAR REPASSE</button>';
   if(b) hh+='<button onclick="REN_desfazFicha(this,\''+k+'\')" style="'+BTN_S+'color:var(--tx);">DESFAZER BAIXA</button>';
+  if(b) hh+='<button onclick="REN_extrato(\''+k+'\')" style="'+BTN_S+'">EXTRATO</button>';   /* v1.300.102: a foto do COBRAR com esta parcela ja paga */
   else hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_editBaixa(\''+k+'\');" style="'+BTN_P+'">DAR BAIXA</button>';
   if(!b && REN_fraseCob(x)) hh+='<button onclick="REN_cobrar(\''+k+'\')" style="'+BTN_S+'">COBRAR</button>';
   if(!b && oi) hh+='<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_prevSheet(\''+k+'\');" style="'+BTN_S+'">REPASSE COMBINADO</button>';
@@ -14211,6 +14212,15 @@ function REN_cobrar(k){
   var nome='VB - '+(r.tit||'COBRANCA').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
   VB_fotoPreview(r.cv, nome, false);
   VB_fotoFrase=fr||'';   /* depois do preview, que zera: o COMPARTILHAR copia de novo */
+}
+/* EXTRATO (v1.300.102): mesma foto do COBRAR, aberta numa parcela ja baixada -- ela vai na faixa
+   preta como PAGO dd/mm e o saldo sai sem ela. Sem frase: 'Ficamos para hoje' nao cabe depois de pago. */
+function REN_extrato(k){
+  var r=null; try{ r=REN_cobrarCanvas(k); }catch(e){ r=null; }
+  if(!r){ VB_toast('N\u00e3o consegui gerar a foto.'); return; }
+  var nome='VB - '+(r.tit||'EXTRATO').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
+  VB_fotoPreview(r.cv, nome, false);
+  VB_fotoFrase='';
 }
 function REN_abrirOp(tab, opId, k){
   var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':'vendas';
@@ -21392,6 +21402,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.102</span><span class="cl-ver-date">01/10/2026</span></div>
+      <div class="cl-item">Parcela recebida ganhou EXTRATO (abaixo de DESFAZER BAIXA): a mesma foto do COBRAR, com a parcela na faixa preta como PAGO 01/10 ✓ e o saldo já sem ela. Não copia frase</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.101</span><span class="cl-ver-date">01/10/2026</span></div>
       <div class="cl-item">Foto do COBRAR: a coluna SITUAÇÃO usa só VENCE HOJE, VENCIDA (vermelho fora da faixa) e A VENCER; saiu EM COBRANÇA e EM ABERTO</div>
