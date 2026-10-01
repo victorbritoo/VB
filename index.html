@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.100</title>
+<title>VB - v1.300.101</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14138,11 +14138,11 @@ function REN_cobrarCanvas(k){
   var linhas=irmas.map(function(y){
     var kb=REN_key(y), yb=REN_cache.bx[kb], pago=REN_pagoTot(y)||0;
     var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(y.obs?('('+String(y.obs).toUpperCase()+')'):'')};
-    if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='✓ PAGO '+dCur(yb.recebido_em||y.venc); L.pago=true; L.resta=0; }
+    if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='PAGO '+dCur(yb.recebido_em||y.venc)+' ✓'; L.pago=true; L.resta=0; }
     else {
       L.valor=y.valor; L.resta=Math.round((y.valor-pago)*100)/100;
       if(pago>0.004) L.sub='PAGO '+fmt(pago)+' · RESTA '+fmt(L.resta);
-      L.st=(kb===k)?'EM COBRANÇA':(y.venc<hoje?'EM ABERTO':'A VENCER');
+      var _vy=String(y.venc||'').slice(0,10); L.st=(_vy===hoje)?'VENCE HOJE':(_vy<hoje?'VENCIDA':'A VENCER'); /* v1.300.101: tres palavras so; a faixa preta ja diz qual e a cobrada */
     }
     return L;
   });
@@ -14186,7 +14186,7 @@ function REN_cobrarCanvas(k){
     ctx.font=(L.atual?'700 ':'600 ')+'11px Helvetica,Arial,sans-serif'; ctx.fillText(fmt(L.valor), cV, y+16);
     ctx.font=(L.atual?'700 ':'500 ')+'11px Helvetica,Arial,sans-serif'; ctx.fillText(L.venc, cD, y+16);
     ctx.textAlign='right'; ctx.font=(L.atual?'700 ':'600 ')+'9px Helvetica,Arial,sans-serif';
-    ctx.fillStyle=L.atual?'#fff':(L.pago?'#999':(L.st==='EM ABERTO'?'#b3261e':'#777'));
+    ctx.fillStyle=L.atual?'#fff':(L.pago?'#999':(L.st==='VENCIDA'?'#b3261e':'#777'));
     ctx.fillText(L.st, cS, y+16);
     if(L.sub||L.obs){
       ctx.fillStyle=L.atual?'#ddd':'#999'; ctx.font='500 9px Helvetica,Arial,sans-serif'; ctx.textAlign='center';
@@ -21392,6 +21392,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.101</span><span class="cl-ver-date">01/10/2026</span></div>
+      <div class="cl-item">Foto do COBRAR: a coluna SITUAÇÃO usa só VENCE HOJE, VENCIDA (vermelho fora da faixa) e A VENCER; saiu EM COBRANÇA e EM ABERTO</div>
+      <div class="cl-item">Parcela paga: o check foi para o fim, PAGO 01/09 ✓, e os checks ficam alinhados na borda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.100</span><span class="cl-ver-date">30/09/2026</span></div>
       <div class="cl-item">Histórico: data do card e mês do pagamento leem o carimbo como foi gravado, sem converter fuso. Salvo às 22:57 na Itália não vai mais para o dia seguinte nem para A INICIAR</div>
