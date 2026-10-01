@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.102</title>
+<title>VB - v1.300.103</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11747,11 +11747,28 @@ function REN_diasAtraso(venc, hoje){
   var n=Math.round((d2-d1)/86400000);
   return n>0?n:0;
 }
-function REN_valorHoje(x){
-  var dias=REN_diasAtraso(x&&x.venc);
-  var base=Math.round(((Number(x&&x.valor)||0)-REN_pagoTot(x))*100)/100;
-  if(!(base>0) || !dias) return null;
-  return {dias:dias, pct:dias*REN_JUROD*100, valor:Math.round(base*(1+dias*REN_JUROD)*100)/100};
+/* v1.300.103: pagamento parcial abate PRIMEIRO os juros ja corridos e depois a parcela (CC art. 354).
+   O que sobra e so parcela e passa a correr juros da data do pagamento. Sem parcial nada muda:
+   juro simples sobre o valor da parcela. Ex.: 25.000 venc 30/09, pago 12.500 em 01/10:
+   01/10 = 25.050 - 12.500 = 12.550; 02/10 = 12.550 + 0,2% = 12.575,10.
+   Pagamento que nao cobre os juros deixa a parcela igual; o juro que faltou fica devido sem correr juro. */
+function REN_valorHoje(x, hojeISO){
+  var hoje=hojeISO||REN_hojeISO();
+  var dias=REN_diasAtraso(x&&x.venc, hoje);
+  if(!dias) return null;
+  var P=Number(x&&x.valor)||0, J=0, aAnt=0;
+  var pgs=REN_pagsDe(x).slice().sort(function(a,b){ var da=String(a.data||''), db=String(b.data||''); return da<db?-1:da>db?1:0; });
+  pgs.forEach(function(pg){
+    var a=REN_diasAtraso(x.venc, String(pg.data||hoje).slice(0,10));
+    if(a>dias) a=dias; if(a<aAnt) a=aAnt;
+    J+=P*REN_JUROD*(a-aAnt); aAnt=a;
+    var v=Number(pg.valor)||0;
+    if(v>=J){ P-=(v-J); J=0; } else { J-=v; }
+  });
+  J+=P*REN_JUROD*(dias-aAnt);
+  var tot=Math.round((P+J)*100)/100;
+  if(!(tot>0.004)) return null;
+  return {dias:dias, pct:dias*REN_JUROD*100, valor:tot};
 }
 function REN_copia(txt, msg){
   try{
@@ -21402,6 +21419,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.103</span><span class="cl-ver-date">01/10/2026</span></div>
+      <div class="cl-item">VALOR HOJE com pagamento parcial: o pagamento abate primeiro os juros já corridos e depois a parcela; o que sobra corre 0,2% ao dia a partir da data do pagamento. Ex.: 25.000 vencida em 30/09, pago 12.500 em 01/10 = 12.550 hoje e 12.575,10 amanhã (antes dava 12.525)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.102</span><span class="cl-ver-date">01/10/2026</span></div>
       <div class="cl-item">Parcela recebida ganhou EXTRATO (abaixo de DESFAZER BAIXA): a mesma foto do COBRAR, com a parcela na faixa preta como PAGO 01/10 ✓ e o saldo já sem ela. Não copia frase</div>
