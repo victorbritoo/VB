@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.103</title>
+<title>VB - v1.300.104</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12648,6 +12648,7 @@ function REN_cpSheet(id){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA')+'</div>'
     +'<div style="'+RT+'">CREDOR</div>'
     +'<input id="rencp-credor" oninput="REN_cpDirty()" placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
+    +'<div id="rencp-jcred"></div>'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencp-desc" oninput="REN_cpDirty()" placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
@@ -12763,8 +12764,48 @@ function REN_cpJurosPinta(){
   e.style.background=REN_cpJuros?'var(--sf2)':'transparent';
   e.style.color=REN_cpJuros?'var(--tx)':'var(--mu2)';
   e.style.borderColor=REN_cpJuros?'var(--ln3)':'var(--ln0)';
+  try{ REN_cpJCredPinta(); }catch(err){}
 }
-function REN_cpJurosToggle(){ REN_cpJuros=!REN_cpJuros; REN_cpJurosPinta(); try{ REN_cpDirty(); }catch(e){} }
+/* v1.300.104: com JUROS DA CONTA marcado, atalhos dos credores ja usados em juros (mais usado
+   primeiro). Sai das contas lancadas -- nada vai pro cadastro de clientes (v1.300.57). */
+function REN_cpJurosCredores(){
+  var n={};
+  ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){
+    var ehJ=String(c.origem_tab||'')==='juros' || (Number(c.juros)>0 && Math.abs((Number(c.juros)||0)-(Number(c.valor)||0))<0.01);
+    var nm=String(c.credor||'').trim().toUpperCase(); if(!ehJ || !nm) return;
+    n[nm]=(n[nm]||0)+1;
+  });
+  return Object.keys(n).sort(function(a,b){ return (n[b]-n[a]) || (a<b?-1:1); }).slice(0,6);
+}
+function REN_cpJCredPinta(){
+  var box=document.getElementById('rencp-jcred'); if(!box) return;
+  var L=REN_cpJuros?REN_cpJurosCredores():[];
+  box.innerHTML=L.length?('<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px;">'
+    +L.map(function(t){ var tt=CLIP_esc(t).replace(/'/g,"\\'");
+      return '<button type="button" data-keepkb onpointerdown="event.preventDefault()" onclick="REN_cpJCredUsa(\''+tt+'\')" style="padding:6px 7px;border:0.5px solid var(--ln3);border-radius:20px;background:transparent;color:var(--mu);font-size:10px;letter-spacing:0.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:-apple-system,sans-serif;">'+CLIP_esc(t)+'</button>'; }).join('')
+    +'</div>'):'';
+}
+function REN_cpJCredUsa(t){ var el=document.getElementById('rencp-credor'); if(!el) return; el.value=t; try{ REN_cpDirty(); }catch(e){} }
+/* Data vazia vira HOJE ao marcar (a vista, pra conferir); desmarcar tira so a que o app pos. */
+function REN_cpHojeBR(){ return REN_hojeISO().split('-').reverse().join('/'); }
+function REN_cpJurosData(on){
+  var hj=REN_cpHojeBR();
+  var ev=document.getElementById('rencp-venc');
+  if(ev){
+    if(on && !String(ev.value||'').trim()){ ev.value=hj; ev.dataset.auto='1'; }
+    else if(!on && ev.dataset.auto==='1'){ if(ev.value===hj) ev.value=''; ev.dataset.auto=''; }
+    return;
+  }
+  if(!document.getElementById('rencp-parc')) return;
+  REN_cpParcLe();
+  var mud=false;
+  (REN_cpParc||[]).forEach(function(pp){
+    if(on && !String(pp.data||'').trim()){ pp.data=hj; pp._auto=1; mud=true; }
+    else if(!on && pp._auto){ if(pp.data===hj) pp.data=''; delete pp._auto; mud=true; }
+  });
+  if(mud) REN_cpPinta();
+}
+function REN_cpJurosToggle(){ REN_cpJuros=!REN_cpJuros; REN_cpJurosPinta(); try{ REN_cpJurosData(REN_cpJuros); }catch(e){} try{ REN_cpDirty(); }catch(e){} }
 /* Apelido tambem vale: "QUELAU" nao pode virar um segundo cadastro de quem ja tem esse apelido. */
 function REN_cpCredorCad(nome){
   var alvo=String(nome||'').trim(); if(!alvo) return;
@@ -12796,6 +12837,7 @@ function REN_cpSalvar(id){
   if(id){
     v=REN_num((document.getElementById('rencp-valor')||{}).value);
     d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
+    if(!d && REN_cpJuros && !String((document.getElementById('rencp-venc')||{}).value||'').trim()) d=REN_hojeISO();   /* juros sem data = hoje */
     if(!(v>0)){ VB_toast('Informe o valor.'); return; }
     if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
     sn=((document.getElementById('rencp-socio')||{}).value||'').trim().toUpperCase();
@@ -12814,6 +12856,7 @@ function REN_cpSalvar(id){
     linhas=[]; var ruim=false;
     (REN_cpParc||[]).forEach(function(pp){
       var vv=REN_num(pp.valor), dd=REN_brToISO(pp.data);
+      if(!dd && REN_cpJuros && !String(pp.data||'').trim()) dd=REN_hojeISO();   /* juros sem data = hoje */
       if(!(vv>0) || !dd){ ruim=true; return; }
       linhas.push({credor:(cr||null), descricao:(ds||null), valor:vv, venc:dd, nota:(nt||null)});
     });
@@ -21419,6 +21462,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.104</span><span class="cl-ver-date">02/10/2026</span></div>
+      <div class="cl-item">NOVA CONTA com JUROS DA CONTA: aparecem atalhos com os credores já usados em juros (mais usado primeiro); um toque preenche o CREDOR. Nenhum cliente é criado</div>
+      <div class="cl-item">Ao marcar JUROS DA CONTA, vencimento vazio vira a data de hoje, à vista; desmarcar tira só a data que o app pôs. Salvar juros sem data também grava hoje</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.103</span><span class="cl-ver-date">01/10/2026</span></div>
       <div class="cl-item">VALOR HOJE com pagamento parcial: o pagamento abate primeiro os juros já corridos e depois a parcela; o que sobra corre 0,2% ao dia a partir da data do pagamento. Ex.: 25.000 vencida em 30/09, pago 12.500 em 01/10 = 12.550 hoje e 12.575,10 amanhã (antes dava 12.525)</div>
