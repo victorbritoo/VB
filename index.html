@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.104</title>
+<title>VB - v1.300.105</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -10848,7 +10848,7 @@ function VB_cliSugBox(){
   return b;
 }
 function VB_cliSugFechar(){ var b=document.getElementById('vb-cli-sug'); if(b) b.style.display='none'; }
-function VB_cliAttach(inputId){
+function VB_cliAttach(inputId, extras){
   var el=document.getElementById(inputId); if(!el||el._cliOn) return; el._cliOn=true;
   function render(){
     var termo=VB_cliNorm(el.value);
@@ -10858,7 +10858,10 @@ function VB_cliAttach(inputId){
       if(document.activeElement!==el) return;
       /* digitar o apelido tem que achar a pessoa: o campo guarda o nome completo, mas
          ninguem lembra dele na hora de lancar */
-      var hits=(lista||[]).filter(function(c){
+      /* v1.300.105: nomes extras (bancos de JUROS DA CONTA) entram na sugestao sem virar cliente */
+      var _ex=[]; try{ if(extras){ var _vist={}; (lista||[]).forEach(function(c){ _vist[VB_cliNorm(c.nome)]=1; });
+        (extras()||[]).forEach(function(nm){ var k=VB_cliNorm(nm); if(k && !_vist[k]){ _vist[k]=1; _ex.push({nome:nm}); } }); } }catch(e){}
+      var hits=_ex.concat(lista||[]).filter(function(c){
         var n=VB_cliNorm(c.nome);
         if(n.indexOf(termo)>=0 && n!==termo) return true;
         var a=VB_cliNorm(c.apelido||'');
@@ -12648,7 +12651,6 @@ function REN_cpSheet(id){
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">'+(c?'EDITAR CONTA':'NOVA CONTA')+'</div>'
     +'<div style="'+RT+'">CREDOR</div>'
     +'<input id="rencp-credor" oninput="REN_cpDirty()" placeholder="QUEM VOC\u00ca VAI PAGAR" value="'+esc(c&&c.credor)+'" style="'+IN+'">'
-    +'<div id="rencp-jcred"></div>'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencp-desc" oninput="REN_cpDirty()" placeholder="DAYTONA CER\u00c2MICA PRETO" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
@@ -12696,7 +12698,7 @@ function REN_cpSheet(id){
   else { REN_cpParc=[]; }
   REN_cpForm = c ? REN_cpEstado() : null;   /* null = conta nova, nao ha o que comparar */
   REN_cpDirty();
-  try{ VB_cliAttach('rencp-credor'); }catch(e){}
+  try{ VB_cliAttach('rencp-credor', REN_cpJurosCredores); }catch(e){}
   try{ VB_cliAttach('rencp-socio'); }catch(e){}   /* socio sai da mesma lista de CLIENTES */
   try{ REN_cpSugPinta(c); }catch(e){}
 }
@@ -12764,10 +12766,9 @@ function REN_cpJurosPinta(){
   e.style.background=REN_cpJuros?'var(--sf2)':'transparent';
   e.style.color=REN_cpJuros?'var(--tx)':'var(--mu2)';
   e.style.borderColor=REN_cpJuros?'var(--ln3)':'var(--ln0)';
-  try{ REN_cpJCredPinta(); }catch(err){}
 }
-/* v1.300.104: com JUROS DA CONTA marcado, atalhos dos credores ja usados em juros (mais usado
-   primeiro). Sai das contas lancadas -- nada vai pro cadastro de clientes (v1.300.57). */
+/* Credores ja usados em JUROS DA CONTA (mais usado primeiro). v1.300.105: alimentam o autocompletar
+   do CREDOR -- nada vai pro cadastro de clientes (v1.300.57). */
 function REN_cpJurosCredores(){
   var n={};
   ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){
@@ -12775,17 +12776,8 @@ function REN_cpJurosCredores(){
     var nm=String(c.credor||'').trim().toUpperCase(); if(!ehJ || !nm) return;
     n[nm]=(n[nm]||0)+1;
   });
-  return Object.keys(n).sort(function(a,b){ return (n[b]-n[a]) || (a<b?-1:1); }).slice(0,6);
+  return Object.keys(n).sort(function(a,b){ return (n[b]-n[a]) || (a<b?-1:1); });
 }
-function REN_cpJCredPinta(){
-  var box=document.getElementById('rencp-jcred'); if(!box) return;
-  var L=REN_cpJuros?REN_cpJurosCredores():[];
-  box.innerHTML=L.length?('<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px;">'
-    +L.map(function(t){ var tt=CLIP_esc(t).replace(/'/g,"\\'");
-      return '<button type="button" data-keepkb onpointerdown="event.preventDefault()" onclick="REN_cpJCredUsa(\''+tt+'\')" style="padding:6px 7px;border:0.5px solid var(--ln3);border-radius:20px;background:transparent;color:var(--mu);font-size:10px;letter-spacing:0.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:-apple-system,sans-serif;">'+CLIP_esc(t)+'</button>'; }).join('')
-    +'</div>'):'';
-}
-function REN_cpJCredUsa(t){ var el=document.getElementById('rencp-credor'); if(!el) return; el.value=t; try{ REN_cpDirty(); }catch(e){} }
 /* Data vazia vira HOJE ao marcar (a vista, pra conferir); desmarcar tira so a que o app pos. */
 function REN_cpHojeBR(){ return REN_hojeISO().split('-').reverse().join('/'); }
 function REN_cpJurosData(on){
@@ -21462,6 +21454,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.105</span><span class="cl-ver-date">02/10/2026</span></div>
+      <div class="cl-item">CREDOR da conta: digitar IT já sugere ITAU PJ e ITAU PF. Os credores das contas de JUROS DA CONTA entram no autocompletar, junto com os clientes, sem virar cadastro. Saíram os atalhos embaixo do CREDOR</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.104</span><span class="cl-ver-date">02/10/2026</span></div>
       <div class="cl-item">NOVA CONTA com JUROS DA CONTA: aparecem atalhos com os credores já usados em juros (mais usado primeiro); um toque preenche o CREDOR. Nenhum cliente é criado</div>
