@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.105</title>
+<title>VB - v1.300.106</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13577,7 +13577,15 @@ function REN_render(){
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
       +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+(_al?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(_al?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +(REN_parcial(x)?('<div style="font-size:10px;color:var(--mu2);font-weight:600;margin-top:1px;white-space:nowrap;">PAGO: '+HIST_fmtMoeda(REN_pagoTot(x))+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_falta(x))+'</div>'):'')
-      +(function(){ var _nm=REN_nm(x), _rc=rc?CLIP_esc(rc):''; var _t=_nm+((_nm&&_rc)?' \u00b7 ':'')+_rc; return _t?('<div style="font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_t+'</div>'):''; })()
+      +(function(){ var _nm=REN_nm(x), _rc=rc?CLIP_esc(rc):''; var _t=_nm+((_nm&&_rc)?' \u00b7 ':'')+_rc;
+        /* v1.300.106: parcela com socio mostra a parte VB no canto direito, junto do check. Espaco
+           reservado (flex:none); quem encolhe e a descricao, que ja corta com reticencias. */
+        var _vb=null; try{ var _oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(_oi){ var _rp=REN_repAlvo(_oi,x); if(_rp>0.004) _vb=Math.round(((Number(x.valor)||0)-_rp)*100)/100; } }catch(e){}
+        if(!_t && _vb==null) return '';
+        return '<div style="display:flex;align-items:baseline;gap:8px;font-size:10px;letter-spacing:0.3px;color:var(--so);margin-top:2px;text-transform:uppercase;">'
+          +'<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_t+'</span>'
+          +(_vb!=null?('<span style="flex:none;white-space:nowrap;font-weight:600;color:var(--mu2);">VB '+HIST_fmtMoeda(_vb)+'</span>'):'')
+          +'</div>'; })()
       +(function(){ var _nt=REN_notaDe(x); return _nt?('<div style="font-size:10px;color:var(--tx2);font-weight:600;margin-top:2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(_nt)+'</div>'):''; })()
       +'</div>'
       +'<button onclick="REN_quick(this,\''+k+'\')" style="width:24px;height:24px;border:0.5px solid var(--ln);border-radius:6px;background:var(--sf2);color:var(--tx);font-size:13px;cursor:pointer;padding:0;line-height:1;flex:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">\u2713</button>'
@@ -21454,6 +21462,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.106</span><span class="cl-ver-date">07/10/2026</span></div>
+      <div class="cl-item">A RECEBER: parcela com sócio mostra a parte VB no canto direito da segunda linha, junto do check (ex.: VB R$ 12.500,00). A descrição encolhe com reticências; parcela toda sua fica igual; consignação mostra VB R$ 0,00</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.105</span><span class="cl-ver-date">02/10/2026</span></div>
       <div class="cl-item">CREDOR da conta: digitar IT já sugere ITAU PJ e ITAU PF. Os credores das contas de JUROS DA CONTA entram no autocompletar, junto com os clientes, sem virar cadastro. Saíram os atalhos embaixo do CREDOR</div>
