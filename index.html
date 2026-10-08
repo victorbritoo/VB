@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.109</title>
+<title>VB - v1.300.110</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2121,7 +2121,7 @@ function HIST_clickDelete(el, event){
   var tabela=tab==='ant'?'antecipacoes':tab==='fin'?'financiamentos_hist':tab==='ven'?'vendas':'pagamentos';
   function HDEL_exec(){
   sb.from(tabela).delete().eq('id',r.id).then(function(res){
-    if(res.error){ VB_toast('Não conseguiu excluir.'); return; }
+    if(res.error){ VB_toast('Não consegui excluir.'); return; }
     VB_toast('Excluído.');
     try{ var _map={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDA',pag:'PAGAMENTO'}; VB_log(_map[tab]||tab.toUpperCase(), 'apagou', r.nome||r.descricao||r.investidor_nome||'(sem nome)', VB_logDet(r)); }catch(e){}
     if(tab==='ven'){ VB_marcaVendaDesfeita(r.id, r); }
@@ -2889,7 +2889,7 @@ function VB_exportarZip(){
       }catch(e){ VB_toast('Não consegui montar o ZIP.'); }
     }
     next();
-  }, function(){ VB_toast('Não consegui ler as operações (sem conexão?).'); });
+  }, function(){ VB_toast('Não consegui ler as operações.'); });
 }
 
 /* Busca a tabela inteira em paginas de 1000, sem teto. Devolve null se qualquer pagina falhar,
@@ -3189,7 +3189,7 @@ function VB_backupJSON(){
         VB_shareJSON(dados, total, function(){ VB_toast(total+' operações no backup. O histórico não entrou.'); });
       }
     });
-  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+  }, function(){ VB_toast('Não consegui ler tudo.'); });
 }
 
 function VB_backupPDF(){
@@ -3210,7 +3210,7 @@ function VB_backupPDF(){
       }
       VB_toast(total+' operações no relatório.');
     }catch(e){ VB_toast('Não consegui gerar o relatório.'); }
-  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+  }, function(){ VB_toast('Não consegui ler tudo.'); });
 }
 
 // Folha divisória de seção no Relatório completo (nome do tipo + contagem + subtotal)
@@ -3294,7 +3294,7 @@ function VB_backupCompleto(){
       }catch(e){ VB_toast('Não consegui gerar o relatório completo.'); }
     }
     next();
-  }, function(){ VB_toast('Não consegui ler tudo (sem conexão?). Tente de novo.'); });
+  }, function(){ VB_toast('Não consegui ler tudo.'); });
 }
 
 // ===== Restaurar backup (importar JSON de volta ao Supabase) =====
@@ -4564,7 +4564,7 @@ function VB_ehEntrada(r){
   return dd>=0 && dd<=5;
 }
 /* ERRO (constituicao de avisos): usuario ve frase humana; detalhe tecnico vai pro console. */
-function VB_erro(det, msg){ try{ console.error('VB:', det); }catch(e){} VB_toast(msg||'N\u00e3o deu certo. Tente de novo.'); }
+function VB_erro(det, msg){ try{ console.error('VB:', det); }catch(e){} VB_toast(msg||'Não consegui concluir.'); }
 /* Taxa implicita: saldo a cobrir hoje virando N parcelas iguais. */
 function VB_taxaImplicita(saldo, parcela, n){
   saldo=Number(saldo); parcela=Number(parcela); n=Number(n);
@@ -5345,7 +5345,7 @@ function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
         var _ff=('0'+_fu.getDate()).slice(-2)+'/'+('0'+(_fu.getMonth()+1)).slice(-2)+'/'+_fu.getFullYear();
         var _fini=('0'+_fp[0]).slice(-2)+'/'+('0'+_fp[1]).slice(-2)+'/'+_fy;
         navigator.clipboard.writeText((_fd?('*'+_fd+'.*\n'):'')+'In\u00edcio: '+_fini+'. Fim: '+_ff+'.\nFicaremos nesse cen\u00e1rio.\nConfere?');
-        VB_toast('Legenda copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+        VB_toast('Legenda copiada — é só colar.');
       }
     }catch(e){}
   }
@@ -5355,13 +5355,13 @@ function VB_compartilharImg(imgId, prefix, descId, nomeArquivo){
       if(VB_fotoSocioDados && typeof VEN_resumoSocioTexto==='function'){
         if(navigator.clipboard && navigator.clipboard.writeText){
           navigator.clipboard.writeText(VEN_resumoSocioTexto(VB_fotoSocioDados));
-          VB_toast('Resumo do s\u00f3cio copiado \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+          VB_toast('Resumo do sócio copiado — é só colar.');
         }
       } else {
         var _t=(_el?(_el.value||_el.textContent||''):'');
         if(_t && navigator.clipboard && navigator.clipboard.writeText){
           navigator.clipboard.writeText(VB_legenda(_t, 'Ficaremos nesse cenário.', 'Confere?'));
-          VB_toast('Legenda copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+          VB_toast('Legenda copiada — é só colar.');
         }
       }
     }catch(e){}
@@ -6512,7 +6512,7 @@ function FIN_confirmarOperacao(btn){
     if(res.error){
       console.log('Supabase save error:', res.error);
       FIN_updateConfirmarBtnLabel();
-      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      VB_toast('Não consegui salvar.');
       return;
     }
     if(ehAtualizacao && !(res.data && res.data.length)){
@@ -6541,7 +6541,7 @@ function FIN_confirmarOperacao(btn){
   }).catch(function(e){
     if(btn) btn.disabled=false;
     FIN_updateConfirmarBtnLabel();
-    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+    VB_toast('Sem conexão — nada gravado.');
   });
 }
 
@@ -7581,7 +7581,7 @@ function VEN_confirmarOperacao(btn){
     if(res.error){
       console.log('Supabase save error:', res.error);
       VEN_updateConfirmarBtnLabel();
-      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      VB_toast('Não consegui salvar.');
       return;
     }
     if(!ehAtualizacao && res.data && res.data[0]){ VEN_currentOperationId = res.data[0].id; }
@@ -7756,7 +7756,7 @@ function VEN_confirmarOperacao(btn){
     if(btn) btn.disabled=false;
     VEN_updateConfirmarBtnLabel();
     console.log('Supabase save exception:', e);
-    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+    VB_toast('Não consegui salvar.');
   });
 }
 
@@ -7790,11 +7790,11 @@ function ANT_copiaFrase(){
     if(!(navigator.clipboard && navigator.clipboard.writeText)) return;
     if(ANT_fraseAtraso){
       navigator.clipboard.writeText(ANT_fraseAtraso);
-      VB_toast('Frase do atraso copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+      VB_toast('Frase do atraso copiada — é só colar.');
       return;
     }
     navigator.clipboard.writeText(ANT_LEGENDA);
-    VB_toast('Legenda copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+    VB_toast('Legenda copiada — é só colar.');
   }catch(e){}
 }
 function ANT_formatBR(n){return isNaN(n)?'0,00':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -8472,7 +8472,7 @@ function ANT_gerarTabela(){
     var prazos=ANT_calcPrazos();
     if(!VB||!n||!taxa||!prazos){VB_toast('Preencha todos os campos.');return;}
     var ds=document.getElementById('ant-tabelaData').value;
-    var base=ANT_parseDate(ds); if(!base){VB_toast('Data de vencimento inválida.');return;}
+    var base=ANT_parseDate(ds); if(!base){VB_toast('Data inválida.');return;}
     var vpt=ANT_ceilStep(VB/n, ANT_degrau); rows=[]; tj=0; var tl=0;
     for(var i=0;i<n;i++){
       var v=VB_mesData(base,i);
@@ -8765,7 +8765,7 @@ function ANT_confirmarOperacao(btn){
     if(res.error){
       console.log('Supabase save error:', res.error);
       ANT_updateConfirmarBtnLabel();
-      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      VB_toast('Não consegui salvar.');
       return;
     }
     if(!ehAtualizacao && res.data && res.data[0]){ ANT_currentOperationId = res.data[0].id; }
@@ -8786,7 +8786,7 @@ function ANT_confirmarOperacao(btn){
     if(btn) btn.disabled=false;
     ANT_updateConfirmarBtnLabel();
     console.log('Supabase save exception:', e);
-    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+    VB_toast('Não consegui salvar.');
   });
 }
 
@@ -9529,7 +9529,7 @@ function PAG_confirmarOperacao(btn){
     if(res.error){
       console.log('Supabase save error:', res.error);
       PAG_updateConfirmarBtnLabel();
-      VB_toast('Não salvou (sem conexão?). Tente de novo.');
+      VB_toast('Não consegui salvar.');
       return;
     }
     /* v1.300.86: atualizar um documento que nao existe mais (apagado no Historico) devolvia zero
@@ -9559,7 +9559,7 @@ function PAG_confirmarOperacao(btn){
     if(btn) btn.disabled=false;
     PAG_updateConfirmarBtnLabel();
     console.log('Supabase save exception:', e);
-    VB_toast('Não salvou (sem conexão?). Tente de novo.');
+    VB_toast('Não consegui salvar.');
   });
 }
 
@@ -9622,7 +9622,7 @@ function PAG_copiaFrase(){
     if(!PAG_frase) return;
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(PAG_frase);
-      VB_toast('Frase copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.');
+      VB_toast('Frase copiada — é só colar.');
     }
   }catch(e){}
 }
@@ -10157,7 +10157,7 @@ function SOC_pickFechar(){
 function SOC_pickAddNovo(){
   var n=document.getElementById('soc-pick-novo');
   var nome=((n&&n.value)||'').trim().toUpperCase();
-  if(!nome){ VB_toast('Digite o nome.'); return; }
+  if(!nome){ VB_toast('Preencha o nome.'); return; }
   sb.from('clientes').insert({nome:nome}).select().then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
     VB_toast('Sócio cadastrado.');
@@ -10249,7 +10249,7 @@ function SOC_pillSalvar(ev){
   var r=SOC_rows.find(function(x){return String(x.id)===String(SOC_viewId);}); if(!r){ SOC_pillCancel(); return; }
   var inp=document.getElementById('soc-pill-inp'); var novo=((inp&&inp.value)||'').trim();
   if(campo==='nome'){
-    if(!novo){ VB_toast('Informe o nome.'); return; }
+    if(!novo){ VB_toast('Preencha o nome.'); return; }
     var colide=SOC_rows.some(function(x){ return String(x.id)!==String(r.id) && String(x.nome||'').trim().toUpperCase()===novo.toUpperCase(); });
     if(colide){ VB_toast('J\u00e1 existe s\u00f3cio com esse nome.'); return; }
   }
@@ -10951,19 +10951,19 @@ function VB_cliOferecerCadastro(nome){
     document.getElementById('vb-cli-novo-comp').onclick=function(){
       ov.style.display='none';
       sb.from('clientes').insert({nome:alvo.toUpperCase()}).select().then(function(res){
-        if(res.error||!res.data||!res.data[0]){ VB_toast('Não cadastrou (sem conexão?).'); return; }
+        if(res.error||!res.data||!res.data[0]){ VB_toast('Não consegui cadastrar.'); return; }
         VB_cliBase=null; VB_log('CLIENTES','criou', alvo.toUpperCase(), 'cadastro rápido');
         CLI_pendFichaId=res.data[0].id;
         showScreen('cli');
-      }).catch(function(){ VB_toast('Sem conexão.'); });
+      }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
     };
     document.getElementById('vb-cli-novo-sim').onclick=function(){
       ov.style.display='none';
       sb.from('clientes').insert({nome:alvo.toUpperCase()}).then(function(res){
-        if(res.error){ VB_toast('Não cadastrou (sem conexão?).'); return; }
+        if(res.error){ VB_toast('Não consegui cadastrar.'); return; }
         VB_cliBase=null; VB_toast('Cliente cadastrado. Complete a ficha.');
         VB_log('CLIENTES','criou', alvo.toUpperCase(), 'cadastro rápido');
-      }).catch(function(){ VB_toast('Sem conexão.'); });
+      }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
     };
   });
 }
@@ -12181,13 +12181,13 @@ function REN_crSalvar(id){
   var dv=((document.getElementById('rencr-dev')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencr-desc')||{}).value||'').trim().toUpperCase();
   var nt=((document.getElementById('rencr-nota')||{}).value||'').trim().toUpperCase();
-  if(!dv){ VB_toast('Diga quem vai te pagar.'); return; }
+  if(!dv){ VB_toast('Preencha quem vai te pagar.'); return; }
   var v, d, reg, q, nT=1;
   if(id){
     v=REN_num((document.getElementById('rencr-valor')||{}).value);
     d=REN_brToISO((document.getElementById('rencr-venc')||{}).value);
-    if(!(v>0)){ VB_toast('Informe o valor.'); return; }
-    if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+    if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
+    if(!d){ VB_toast('Data inválida.'); return; }
     reg={devedor:(dv||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
   } else {
     REN_crParcLe();
@@ -12210,23 +12210,23 @@ function REN_crSalvar(id){
   if(!VB_gravando('REN_crSalvar')) return;
   q=id?sb.from('contas_receber').update(reg).eq('id',id):sb.from('contas_receber').insert(reg);
   q.then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a entrada.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui salvar a entrada.'); return; }
     try{ VB_log('ENTRADA MANUAL', id?'editou entrada':('nova entrada'+(nT>1?(' \u00b7 '+nT+' t\u00edtulos'):'')), dv||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast(id?'Entrada salva.':(nT>1?(nT+' t\u00edtulos lan\u00e7ados.'):'Entrada lan\u00e7ada.'));
     REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_crExcluir(btn, id){
   var _cX=REN_crDe(id)||{};
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--so2)'; } },2500); return; }
   sb.from('contas_receber').delete().eq('id',id).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui excluir.'); return; }
     try{ VB_log('ENTRADA MANUAL','excluiu entrada', _cX.devedor||_cX.descricao||'', HIST_fmtMoeda(Number(_cX.valor)||0)+(_cX.venc?(' \u00b7 VENCIA '+String(_cX.venc).split('-').reverse().join('/')):'')+(_cX.recebido_em?' \u00b7 ESTAVA RECEBIDA':'')); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast('Entrada exclu\u00edda.');
     REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Espelho de REN_pagsDe/REN_falta do lado das entradas: quem ja pagou, quanto falta, e se a
    conta esta pela metade. Conta antiga, paga antes desta versao, nao tem linha de pagamento --
@@ -12824,21 +12824,21 @@ function REN_cpSalvar(id){
   var cr=((document.getElementById('rencp-credor')||{}).value||'').trim().toUpperCase();
   var ds=((document.getElementById('rencp-desc')||{}).value||'').trim().toUpperCase();
   var nt=((document.getElementById('rencp-nota')||{}).value||'').trim().toUpperCase();
-  if(!cr){ VB_toast('Diga a quem voc\u00ea deve.'); return; }
+  if(!cr){ VB_toast('Preencha o credor.'); return; }
   var v, d, linhas=null, sn='', sv=0, jv=0;
   if(id){
     v=REN_num((document.getElementById('rencp-valor')||{}).value);
     d=REN_brToISO((document.getElementById('rencp-venc')||{}).value);
     if(!d && REN_cpJuros && !String((document.getElementById('rencp-venc')||{}).value||'').trim()) d=REN_hojeISO();   /* juros sem data = hoje */
-    if(!(v>0)){ VB_toast('Informe o valor.'); return; }
-    if(!d){ VB_toast('Vencimento inv\u00e1lido.'); return; }
+    if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
+    if(!d){ VB_toast('Data inválida.'); return; }
     sn=((document.getElementById('rencp-socio')||{}).value||'').trim().toUpperCase();
     sv=REN_num((document.getElementById('rencp-socval')||{}).value||'');
     if(!(sv>0)) sv=0;
     /* nome sem valor (ou o contrario) e dado que nao diz nada -- o app ja aprendeu isso com o
        socio de valor zerado na peca, que ninguem soube explicar depois. Exige os dois ou nenhum. */
-    if(sn && !(sv>0)){ VB_toast('Diga quanto da conta \u00e9 do s\u00f3cio.'); return; }
-    if(!sn && sv>0){ VB_toast('Diga de quem \u00e9 essa parte.'); return; }
+    if(sn && !(sv>0)){ VB_toast('Preencha a parte do sócio.'); return; }
+    if(!sn && sv>0){ VB_toast('Preencha o nome do sócio.'); return; }
     if(sv>0 && sv>v+0.005){ VB_toast('A parte do s\u00f3cio n\u00e3o cabe no valor da conta.'); return; }
     jv=REN_num((document.getElementById('rencp-jurv')||{}).value||''); if(!(jv>0)) jv=0;
     if(jv>0 && jv>v+0.005){ VB_toast('Os juros n\u00e3o cabem no valor da parcela.'); return; }
@@ -12883,7 +12883,7 @@ function REN_cpSalvar(id){
   var _cpAntes = id ? JSON.parse(JSON.stringify(REN_cpDe(id)||{})) : null; /* foto de antes, para o log dizer o que mudou */
   var q = id ? sb.from('contas_pagar').update(reg).eq('id',id) : sb.from('contas_pagar').insert(reg);
   q.then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou a conta.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui salvar a conta.'); return; }
     try{
       if(id){
         /* o log dizia so valor e vencimento: 22 linhas iguais e nenhuma com o que mudou (v1.300.56) */
@@ -12917,12 +12917,12 @@ function REN_cpExcluir(btn, id){
   var _cX=REN_cpDe(id)||{};
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--mu)'; } },2500); return; }
   sb.from('contas_pagar').delete().eq('id',id).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui excluir.'); return; }
     try{ VB_log('CONTAS A PAGAR','excluiu conta', _cX.credor||_cX.descricao||'', HIST_fmtMoeda(Number(_cX.valor)||0)+(_cX.venc?(' \u00b7 VENCIA '+String(_cX.venc).split('-').reverse().join('/')):'')+(_cX.pago_em?' \u00b7 ESTAVA PAGA':'')); }catch(e){}
     var o=document.getElementById('ren-cp-ov'); if(o) o.style.display='none';
     VB_toast('Conta exclu\u00edda.');
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Mesma decisao do check do A RECEBER: ele abre a folha em vez de gravar. Com pagamento parcial
    a conta quase nunca sai pelo valor cheio, e o atalho que gravava tudo de uma vez so servia
@@ -12938,7 +12938,7 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
   var v=Math.round((Number(valor)||0)*100)/100;
   sb.from('conta_pagamentos').insert({conta_id:c.id, valor:v, data:dataISO, nota:(nota||null)}).then(function(res){
     REN_cpGravando=false;
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui salvar.'); return; }
     try{ VB_log('CONTAS A PAGAR','pagou', c.credor||c.descricao||'', HIST_fmtMoeda(v)+' \u00b7 '+dataISO.split('-').reverse().join('/')+(nota?(' \u00b7 '+nota):'')); }catch(e){}
     /* A SOMA VEM DO BANCO (v1.300.27). Ela vinha do cache da tela, e o cache so se atualiza
        depois. Dois toques seguidos no confirmar gravavam dois pagamentos e os dois liam zero
@@ -12963,9 +12963,9 @@ function REN_cpGravaPag(c, valor, dataISO, nota){
         ['ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
         VB_toast('Conta paga.');
         REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
-      }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
-    }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+      }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
+    }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Apaga um pagamento. Se a conta estava fechada, ela reabre com o que sobrou. */
 function REN_cpPagDel(contaId, pagId){
@@ -12981,7 +12981,7 @@ function REN_cpPagDel(contaId, pagId){
     } else if(c.pago_em){
       sb.from('contas_pagar').update({valor_pago:resto}).eq('id', c.id).then(fim).catch(fim);
     } else fim();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_cpDesfaz(btn, id){
   var _cD=REN_cpDe(id)||{};
@@ -12991,7 +12991,7 @@ function REN_cpDesfaz(btn, id){
     try{ VB_log('CONTAS A PAGAR','desfez pagamento', _cD.credor||_cD.descricao||'', HIST_fmtMoeda(Number(_cD.valor_pago!=null?_cD.valor_pago:_cD.valor)||0)+(_cD.pago_em?(' \u00b7 PAGA EM '+String(_cD.pago_em).slice(0,10).split('-').reverse().join('/')):'')+(_cD.nota_baixa?(' \u00b7 '+_cD.nota_baixa):'')); }catch(e){}
     VB_toast('Pagamento desfeito.');
     REN_abrir();   /* fica na lista de onde a acao saiu: PAGAS nao pula pra A PAGAR */
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_cpBaixaSheet(id){
   var c=REN_cpDe(id); if(!c) return;
@@ -13025,7 +13025,7 @@ function REN_cpBaixaSalvar(id){
   var v=REN_num((document.getElementById('rencpb-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('rencpb-data')||{}).value);
   var nt=((document.getElementById('rencpb-nota')||{}).value||'').trim().toUpperCase();
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   /* JUROS DA CONTA fica na folha de EDITAR, e DAR BAIXA sai de la sem passar pelo SALVAR:
      acender o marcador e tocar baixar gravava a baixa e jogava fora a marcacao, calada. */
@@ -13033,7 +13033,7 @@ function REN_cpBaixaSalvar(id){
   if(_jOn!==_jEra && document.getElementById('rencp-juros')){
     c.origem_tab=_jOn?'juros':null;
     sb.from('contas_pagar').update({origem_tab:c.origem_tab}).eq('id', c.id).then(function(r){
-      if(r.error) VB_erro(r.error.message,'N\u00e3o gravou a marca\u00e7\u00e3o de juros.');
+      if(r.error) VB_erro(r.error.message,'Não consegui salvar a marcação de juros.');
     }).catch(function(){});
   }
   REN_cpGravando=true; setTimeout(function(){ REN_cpGravando=false; }, 4000);
@@ -13076,7 +13076,7 @@ function REN_notaBxSalvar(k){
     VB_toast('Nota salva.');
     document.getElementById('ren-nota-ov').style.display='none';
     REN_fichaVoltar=k; REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_notaSheet(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -13237,7 +13237,7 @@ function REN_proSalvar(){
     var o=document.getElementById('ren-pro-ov'); if(o) o.style.display='none';
     VB_travaFundo(false); VB_toast('Prorrogada.');
     REN_fichaVoltar=k; REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_proDesfazer(btn){
   var k=REN_proK, x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -13254,7 +13254,7 @@ function REN_proDesfazer(btn){
     var o=document.getElementById('ren-pro-ov'); if(o) o.style.display='none';
     VB_travaFundo(false); VB_toast('Prorroga\u00e7\u00e3o desfeita.');
     REN_fichaVoltar=k; REN_abrir();
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_ntDirty(){
   var b=document.getElementById('rennt-salvar'); if(!b) return;
@@ -13276,9 +13276,9 @@ function REN_notaSalvar(k){
     VB_toast(t?'Nota salva.':'Nota apagada.');
     REN_fichaVoltar=k; REN_abrir();
   };
-  if(!t){ sb.from('parcela_notas').delete().match(alvo).then(fim).catch(function(){ VB_toast('Sem conex\u00e3o.'); }); return; }
+  if(!t){ sb.from('parcela_notas').delete().match(alvo).then(fim).catch(function(){ VB_toast('Sem conexão — nada gravado.'); }); return; }
   var reg={op_tab:alvo.op_tab, op_id:alvo.op_id, parcela_idx:alvo.parcela_idx, nota:t};
-  sb.from('parcela_notas').upsert(reg, {onConflict:'op_tab,op_id,parcela_idx'}).then(fim).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  sb.from('parcela_notas').upsert(reg, {onConflict:'op_tab,op_id,parcela_idx'}).then(fim).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Rateio de REFERENCIA para a leitura, nunca para o calculo. O REN_repDef divide pela media da
    operacao inteira -- e essa media envelhece: quando a 1a parcela absorve um custo, ela puxa a
@@ -14266,7 +14266,7 @@ function REN_cobrarCanvas(k){
 function REN_cobrar(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var fr=REN_fraseCob(x);
-  if(fr){ try{ REN_copia(fr, 'Frase copiada — compartilhe a foto e cole na legenda.'); }catch(e){} }
+  if(fr){ try{ REN_copia(fr, 'Frase copiada — é só colar na legenda da foto.'); }catch(e){} }
   var r=null; try{ r=REN_cobrarCanvas(k); }catch(e){ r=null; }
   if(!r){ VB_toast('Não consegui gerar a foto.'); return; }
   var nome='VB - '+(r.tit||'COBRANCA').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
@@ -14337,7 +14337,7 @@ function REN_salvaRec(k){
   var v=REN_num((document.getElementById('renb-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('renb-data')||{}).value);
   var nt=((document.getElementById('renb-nota')||{}).value||'').trim().toUpperCase();
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   var rem=(d===String(b.recebido_em||'').slice(0,10)) ? b.recebido_em : (d+'T12:00:00.000Z');
   sb.from('parcela_baixas').update({valor_recebido:v, recebido_em:rem, nota:(nt||null)}).eq('id', b.id).then(function(res){
@@ -14346,7 +14346,7 @@ function REN_salvaRec(k){
     VB_toast('Recebimento atualizado.');
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     REN_fichaVoltar=k; REN_abrir();
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* TOQUE DE NOVO em vez do confirm do iOS: e o padrao do app (17 lugares contra 8), e a caixa
    do sistema tira o VB da tela pra dizer o que o proprio botao pode dizer. O recado do repasse
@@ -14664,10 +14664,10 @@ function REN_prevSalvar(){
   });
   if(!VB_gravando('REN_prevSalvar')) return;
   sb.from('repasse_previsto').delete().eq('op_tab', c.tab).eq('op_id', String(c.opId)).then(function(r1){
-    if(r1.error){ VB_erro(r1.error.message,'N\u00e3o salvou. Tente de novo.'); return; }
+    if(r1.error){ VB_erro(r1.error.message,'Não consegui salvar.'); return; }
     if(!linhas.length){ VB_toast('Combinado limpo.'); document.getElementById('ren-prev-ov').style.display='none'; REN_fichaVoltar=c.voltar; REN_abrir(); return; }
     sb.from('repasse_previsto').insert(linhas).then(function(r2){
-      if(r2.error){ VB_erro(r2.error.message,'N\u00e3o salvou. Tente de novo.'); return; }
+      if(r2.error){ VB_erro(r2.error.message,'Não consegui salvar.'); return; }
       try{ VB_log('RECEB\u00cdVEIS','combinou repasse', '', linhas.length+' parcelas'); }catch(e){}
       VB_toast('Repasse combinado.');
       document.getElementById('ren-prev-ov').style.display='none';
@@ -14717,7 +14717,7 @@ function REN_salvaRepasse(k){
   var v=REN_num((document.getElementById('renr-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('renr-data')||{}).value);
   var nt=((document.getElementById('renr-nota')||{}).value||'').trim().toUpperCase();
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   var ts=(d===REN_hojeISO())?VB_carimbo():(d+'T12:00:00.000Z');
   if(b.repassado_em && d===String(b.repassado_em).slice(0,10)) ts=b.repassado_em;
@@ -14736,14 +14736,14 @@ function REN_salvaRepasse(k){
     VB_toast(_quita?'Repasse registrado.':('Parcial. Faltam '+HIST_fmtMoeda(Math.round((_dev-_novo)*100)/100)+'.'));
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     REN_abrir();   /* volta pra lista, nao pro card da parcela */
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Da pra refazer: a parcela volta pra A REPASSAR e o VB marca de novo. Regra da casa --
    se da pra refazer, TOQUE DE NOVO; se apaga algo que nao volta, caixa do sistema. */
 function REN_desfazRepasse(btn, k){
   var b=REN_cache&&REN_cache.bx[k]; if(!b) return;
   if(!VB_podeExec(btn)){
-    VB_toast('Toque de novo. A parcela volta pra A REPASSAR.');
+    VB_toast('Toque de novo para desfazer o repasse.');
     if(btn){ btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)';
       setTimeout(function(){ try{ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='DESFAZER REPASSE'; VB_desarma(btn); } }catch(e){} },2500); }
     return;
@@ -14753,7 +14753,7 @@ function REN_desfazRepasse(btn, k){
     VB_toast('Repasse desfeito.');
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
     REN_fichaVoltar=k; REN_abrir();
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function REN_desfazDireto(baixaId){
   var _bD=null, _kD=null; if(REN_cache&&REN_cache.bx){ Object.keys(REN_cache.bx).forEach(function(kk){ if(String(REN_cache.bx[kk].id)===String(baixaId)){ _bD=REN_cache.bx[kk]; _kD=kk; } }); }
@@ -14771,7 +14771,7 @@ function REN_desfazDireto(baixaId){
       return;
     }
     VB_toast('Baixa desfeita.'); REN_abrir();
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* O CHECK ABRE A FOLHA, NAO GRAVA (v1.300.2). Antes ele lancava a baixa cheia de uma vez, e por
    isso pedia toque duplo -- a trava existia porque a acao gravava dinheiro sem ninguem ver.
@@ -14792,7 +14792,7 @@ function REN_gravaBaixa(x, valor, dataISO, nota){
   var jaTinha=REN_pagoTot(x);
   var _pg={op_tab:x.tab, op_id:String(x.opId), parcela_idx:x.idx, valor:Math.round((Number(valor)||0)*100)/100, data:dataISO, nota:(nota||null)};
   sb.from('parcela_pagamentos').insert(_pg).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o gravou. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui salvar.'); return; }
     var total=Math.round((jaTinha+_pg.valor)*100)/100;
     try{ VB_log('RECEB\u00cdVEIS','pagamento', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(_pg.valor)+' \u00b7 '+dataISO.split('-').reverse().join('/')); }catch(e){}
     var bo=document.getElementById('ren-baixa-ov'); if(bo) bo.style.display='none';
@@ -14825,7 +14825,7 @@ function REN_fechaParcela(x, total, dataISO, nota){
     try{ VB_log('RECEB\u00cdVEIS','baixa', x.cliente, x.rot+' \u00b7 '+HIST_fmtMoeda(total)); }catch(e){}
     VB_toast('Parcela quitada.');
     REN_abrir();   /* volta pra lista, nao pro card da parcela */
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o \u2014 baixa n\u00e3o gravada.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Apaga um pagamento. Se a parcela estava quitada, ela reabre. */
 function REN_apagaPag(el, pagId, k){
@@ -14835,7 +14835,7 @@ function REN_apagaPag(el, pagId, k){
      pelo gesto do app. Num x nao cabe "TOQUE DE NOVO", entao ele fica vermelho, igual ao x
      das parcelas da compra. */
   if(b&&b.repassado_em&&!VB_podeExec(el)){
-    VB_toast('Toque de novo. Isso desfaz a baixa e o repasse.');
+    VB_toast('Toque de novo para desfazer a baixa e o repasse.');
     if(el){ el.dataset.armed='1'; el.style.color='var(--red)';
       setTimeout(function(){ try{ if(el&&el.dataset.armed==='1'){ el.dataset.armed=''; VB_desarma(el); } }catch(e){} },2500); }
     return;
@@ -14849,7 +14849,7 @@ function REN_apagaPag(el, pagId, k){
       VB_toast('Pagamento apagado.');
       REN_fichaVoltar=k; REN_abrir();
     });
-  }).catch(function(e){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(e){ VB_toast('Sem conexão — nada gravado.'); });
 }
 /* Estas tres folhas so abrem a partir da ficha da parcela, entao sair delas e voltar pra ela. */
 function REN_folhaVoltar(k){
@@ -14890,7 +14890,7 @@ function REN_confirmaBaixa(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
   var v=REN_num((document.getElementById('renb-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('renb-data')||{}).value);
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   var nt=((document.getElementById('renb-nota')||{}).value||'').trim().toUpperCase();
   REN_gravaBaixa(x, v, d, nt||null);
@@ -15822,7 +15822,7 @@ function SOC_toggleForm(force){
 function SOC_salvar(btn){
   var nome=(document.getElementById('soc-nome').value||'').trim();
   var tel=(document.getElementById('soc-tel').value||'').trim();
-  if(!nome){ VB_toast('Informe o nome.'); return; }
+  if(!nome){ VB_toast('Preencha o nome.'); return; }
   if(SOC_editId){ var _pvSg=(SOC_rows||[]).find(function(x){return String(x.id)===String(SOC_editId);}); if(_pvSg && String(_pvSg.nome||'').trim()===nome && String(_pvSg.telefone||'').trim()===tel){ VB_toast('Nada alterado.'); return; } }
   if(!VB_gravando('SOC_salvar')) return;
   var payload={nome:nome, telefone:tel||null};
@@ -16644,7 +16644,7 @@ function MER_cpSalvar(){
   if(!tarefas.length){ MER_cpFechar(); return; }
   Promise.all(tarefas).then(function(res){
     var err=(res||[]).filter(function(x){ return x&&x.error; })[0];
-    if(err){ VB_erro(err.error.message,'N\u00e3o salvou as parcelas.'); return; }
+    if(err){ VB_erro(err.error.message,'Não consegui salvar as parcelas.'); return; }
     try{ VB_log('CONTAS A PAGAR','parcelas da compra', r.descricao||'', validas.length+' parcela'+(validas.length===1?'':'s')); }catch(e){}
     MER_cpFechar();
     VB_toast('Parcelas salvas.');
@@ -16652,7 +16652,7 @@ function MER_cpSalvar(){
        Sem isto, o numero na tela ficava o antigo ate fechar e reabrir a peca. */
     if(MER_viewEdit){ try{ MER_ePintaParc(String(id)); }catch(e){} }
     else if(String(MER_viewId)===String(id)){ try{ MER_abrir(id); }catch(e){} }
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function MER_resumoParcelas(v){
   var ps=[];
@@ -16764,14 +16764,14 @@ function MER_gastoSalvar(pecaId, gastoId){
   var v=REN_num((document.getElementById('merg-valor')||{}).value);
   var d=REN_brToISO((document.getElementById('merg-data')||{}).value);
   var cob=((document.getElementById('merg-cob')||{}).getAttribute?document.getElementById('merg-cob').getAttribute('data-on'):'1')==='1';
-  if(!ds){ VB_toast('Diga o que foi o gasto.'); return; }
-  if(!(v>0)){ VB_toast('Informe o valor.'); return; }
+  if(!ds){ VB_toast('Preencha a descrição do gasto.'); return; }
+  if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
   if(!d){ VB_toast('Data inv\u00e1lida.'); return; }
   if(!VB_gravando('MER_gastoSalvar')) return;
   var reg={mercadoria_id:pecaId, descricao:ds, valor:v, data:d, cobrar:cob};
   var q=gastoId?sb.from('mercadoria_custos').update(reg).eq('id',gastoId):sb.from('mercadoria_custos').insert(reg);
   q.then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o salvou o gasto.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui salvar o gasto.'); return; }
     try{ VB_log('GASTO DA PE\u00c7A', gastoId?'editou gasto':'novo gasto', ds, HIST_fmtMoeda(v)+(cob?' \u00b7 COBRAR':' \u00b7 N\u00c3O COBRAR')); }catch(e){}
     var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
     VB_toast('Gasto salvo.');
@@ -16780,14 +16780,14 @@ function MER_gastoSalvar(pecaId, gastoId){
         try{ MER_abrir(pecaId); }catch(e){} try{ MER_render(); }catch(e){} try{ MER_load(); }catch(e){}
       });
     });
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function MER_gastoExcluir(btn, gastoId){
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; } },2500); return; }
   var pid=null;
   Object.keys(MER_gastos).forEach(function(k){ MER_gastos[k].forEach(function(g){ if(String(g.id)===String(gastoId)) pid=k; }); });
   sb.from('mercadoria_custos').delete().eq('id',gastoId).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui excluir.'); return; }
     var o=document.getElementById('mer-gasto-ov'); if(o) o.style.display='none';
     VB_toast('Gasto exclu\u00eddo.');
     MER_gastosCarrega(function(){
@@ -16795,7 +16795,7 @@ function MER_gastoExcluir(btn, gastoId){
         try{ if(pid) MER_abrir(pid); }catch(e){} try{ MER_render(); }catch(e){} try{ MER_load(); }catch(e){}
       });
     });
-  }).catch(function(){ VB_toast('Sem conex\u00e3o.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function MER_possibilidades(r){
   MER_possDados=null;
@@ -17087,7 +17087,7 @@ function MER_viewSalvar(){
   try{ if(payload.fornecedor) VB_cliGarantir(payload.fornecedor); }catch(e){}
   sb.from('mercadorias').update(payload).eq('id', r.id).select().then(function(res){
     if(b){ b.disabled=false; b.textContent='SALVAR ALTERA\u00c7\u00d5ES'; }
-    if(res.error){ VB_erro(res.error.message||res.error.code,'N\u00e3o salvou. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message||res.error.code,'Não consegui salvar.'); return; }
     var _det=VB_logDiff(r, payload);
     VB_log('ESTOQUE','editou', desc, _det||VB_logDet({custo:custo||0}));
     MER_syncVenda(r, payload, desc);
@@ -17499,7 +17499,7 @@ function MER_add(btn){
     : sb.from('mercadorias').insert(Object.assign({status:'estoque'}, payload)).select();
   q.then(function(res){
     if(btn){ btn.disabled=false; }
-    if(res.error){ MER_updateAddBtn(); VB_erro(res.error.message||res.error.code,'Não salvou. Tente de novo.'); console.log('MER_add error:', res.error); return; }
+    if(res.error){ MER_updateAddBtn(); VB_erro(res.error.message||res.error.code,'Não consegui salvar.'); console.log('MER_add error:', res.error); return; }
     var editava=!!MER_editId;
     var _mid=MER_editId;
     var _r0=editava?((MER_rows||[]).filter(function(x){ return String(x.id)===String(_mid); })[0]||null):null;
@@ -17527,7 +17527,7 @@ function MER_arm(btn, rotulo, aviso, exec){
 }
 function MER_delExec(id){
   sb.from('mercadorias').delete().eq('id',id).then(function(res){
-    if(res.error){ VB_erro(res.error.message,'N\u00e3o excluiu. Tente de novo.'); return; }
+    if(res.error){ VB_erro(res.error.message,'Não consegui excluir.'); return; }
     try{ var _md=MER_rows.find(function(x){return String(x.id)===String(id);}); VB_log('ESTOQUE','apagou', (_md&&_md.descricao)||'', VB_logDet(_md)); }catch(e){}
     VB_toast('Exclu\u00edda.');
     MER_load();
@@ -17537,7 +17537,7 @@ function MER_del(btn){
   if(!VB_podeExec(btn)){ btn.dataset.armed='1'; btn.textContent='✓'; btn.style.color='var(--tx)'; VB_toast('Toque de novo para excluir.'); setTimeout(function(){ btn.dataset.armed=''; btn.textContent='×'; btn.style.color='var(--mu)'; },2500); return; }
   var id=btn.dataset.merdel;
   sb.from('mercadorias').delete().eq('id',id).then(function(res){
-    if(res.error){ VB_toast('Não excluiu.'); return; }
+    if(res.error){ VB_toast('Não consegui excluir.'); return; }
     try{ var _md=MER_rows.find(function(x){return String(x.id)===String(id);}); VB_log('ESTOQUE','apagou', (_md&&_md.descricao)||'', VB_logDet(_md)); }catch(e){}
     VB_toast('Excluída.');
     MER_load();
@@ -18134,12 +18134,12 @@ function VEN_resumoSocioCopiar(d){
       ta.style.cssText='position:fixed;top:-1000px;opacity:0;';
       document.body.appendChild(ta); ta.focus(); ta.select();
       var ok=document.execCommand('copy'); ta.remove();
-      VB_toast(ok?'Texto copiado.':'N\u00e3o consegui copiar o texto.');
+      VB_toast(ok?'Texto copiado — é só colar.':'N\u00e3o consegui copiar o texto.');
     }catch(e){ VB_toast('N\u00e3o consegui copiar o texto.'); }
   }
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(function(){ VB_toast('Texto copiado.'); }, fallback);
+      navigator.clipboard.writeText(txt).then(function(){ VB_toast('Texto copiado — é só colar.'); }, fallback);
     } else fallback();
   }catch(e){ fallback(); }
 }
@@ -18171,7 +18171,7 @@ function VEN_resumoSocioSheet(r, dcHint){
     try{
       var _t=VEN_resumoSocioTexto(VEN_resumoAtual);
       if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(_t).then(function(){ VB_toast('Texto copiado \u2014 cola junto da foto.'); }, function(){});
+        navigator.clipboard.writeText(_t).then(function(){ VB_toast('Texto copiado — é só colar junto da foto.'); }, function(){});
       }
     }catch(e){}
     VEN_socioExtra=VEN_resumoAtual; VB_fotoSocioDados=VEN_resumoAtual;
@@ -18912,14 +18912,14 @@ function REC_load(){
     }
     if(!REC_listaAtual || !REC_listaById(REC_listaAtual)) REC_listaAtual=REC_listas[0].id;
     REC_loadItems();
-  }).catch(function(e){ console.log('REC listas ex',e); VB_toast('Sem conexão para carregar listas.'); });
+  }).catch(function(e){ console.log('REC listas ex',e); VB_toast('Sem conexão.'); });
 }
 function REC_loadItems(){
   sb.from('recebimentos').select('*').order('created_at',{ascending:false}).then(function(res){
     if(res.error){ console.log('REC load error',res.error); VB_toast('Não consegui carregar os recebimentos.'); return; }
     REC_acordos=(res.data||[]).filter(function(a){ return !a.arquivado; }).map(REC_normalize);
     REC_render();
-  }).catch(function(e){ console.log('REC load ex',e); VB_toast('Sem conexão para carregar recebimentos.'); });
+  }).catch(function(e){ console.log('REC load ex',e); VB_toast('Sem conexão.'); });
 }
 function REC_naListaAtual(ac){
   if(ac.lista_id!=null) return ac.lista_id===REC_listaAtual;
@@ -19096,7 +19096,7 @@ function REC_toggleItem(acId,idx,ev){
   var ac=REC_acordoById(acId); if(!ac) return; var p=ac.parcelas[idx]; if(!p) return;
   p.recebido=!p.recebido; p.recebido_em=p.recebido?VB_carimbo():null;
   REC_render();
-  sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não salvou (sem conexão?).'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão.'); REC_load(); });
+  sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não consegui salvar.'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão — nada gravado.'); REC_load(); });
 }
 
 /* ----- Editor ----- */
@@ -19223,9 +19223,9 @@ function REC_genIguais(){
   var qtd=parseInt((document.getElementById('rec-g-qtd')||{}).value||'0',10);
   var d1el=document.getElementById('rec-g-data1'); if(d1el&&typeof autoCompleteDate==='function') autoCompleteDate(d1el);
   var data1=REC_brToIso(d1el?d1el.value:'');
-  if(!(val>0)){ VB_toast('Informe o valor da parcela.'); return; }
-  if(!qtd||qtd<1){ VB_toast('Informe o nº de vezes.'); return; }
-  if(!data1){ VB_toast('Informe a data da 1ª parcela.'); return; }
+  if(!(val>0)){ VB_toast('Preencha o valor da parcela.'); return; }
+  if(!qtd||qtd<1){ VB_toast('Preencha o nº de vezes.'); return; }
+  if(!data1){ VB_toast('Preencha a data da 1ª parcela.'); return; }
   var arr=[]; for(var k=0;k<qtd;k++){ arr.push({valor:val, venc:REC_addMonthsISO(data1,k), recebido:false, recebido_em:null, rateio:REC_defRateio(), pagamentos:[]}); }
   REC_editParc=arr; REC_renderParcEditor();
   var b=document.getElementById('rec-gen-box'); if(b) b.style.display='none';
@@ -19268,11 +19268,11 @@ function REC_pagData(idx,j,el){ if(typeof autoCompleteDate==='function') autoCom
 
 function REC_salvar(btn){
   var cli=((document.getElementById('rec-f-cli')||{}).value||'').trim();
-  if(!cli){ VB_toast('Informe o nome/cliente.'); return; }
+  if(!cli){ VB_toast('Preencha o nome do cliente.'); return; }
   var desc=((document.getElementById('rec-f-desc')||{}).value||'').trim()||null;
   var nota=((document.getElementById('rec-f-nota')||{}).value||'').trim()||null;
   var defR=REC_defRateio();
-  if(!REC_editParc.length){ VB_toast('Informe ao menos uma data.'); return; }
+  if(!REC_editParc.length){ VB_toast('Preencha ao menos uma data.'); return; }
   var parc=REC_editParc.map(function(p){
     var pr=REC_rateioOn?REC_cleanRateioP(p.rateio||[]):[];
     if(REC_rateioOn && !pr.length) pr=defR.slice();
@@ -19290,9 +19290,9 @@ function REC_salvar(btn){
   if(!VB_gravando('REC_salvar')) return;
   var q=REC_editId?sb.from('recebimentos').update(row).eq('id',REC_editId).select():sb.from('recebimentos').insert(row).select();
   q.then(function(res){
-    if(res.error){ console.log('REC save error',res.error); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Não salvou (sem conexão?).'); return; }
+    if(res.error){ console.log('REC save error',res.error); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Não consegui salvar.'); return; }
     REC_closeEditor(); VB_toast(REC_editId?'Atualizado.':'Adicionado.'); REC_load();
-  }).catch(function(e){ console.log('REC save ex',e); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Sem conexão para salvar.'); });
+  }).catch(function(e){ console.log('REC save ex',e); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Sem conexão — nada gravado.'); });
 }
 
 function REC_closeEditor(){ var ov=document.getElementById('rec-editor'); if(ov) ov.style.display='none'; REC_delArmed=false; }
@@ -19331,7 +19331,7 @@ function REC_novaLista(){
     if(res.error){ console.log('REC nova lista error',res.error); VB_toast('Não criou a lista.'); return; }
     if(res.data&&res.data[0]) REC_listas.push(res.data[0]);
     REC_renderListasMgr(); REC_renderListas();
-  }).catch(function(e){ console.log('REC nova lista ex',e); VB_toast('Sem conexão.'); });
+  }).catch(function(e){ console.log('REC nova lista ex',e); VB_toast('Sem conexão — nada gravado.'); });
 }
 function REC_renomearLista(id,val){
   val=(''+val).trim()||'Lista'; var l=REC_listaById(id); if(l) l.nome=val;
@@ -19339,7 +19339,7 @@ function REC_renomearLista(id,val){
 }
 function REC_setDirLista(id,dir){
   var l=REC_listaById(id); if(l) l.direcao=dir;
-  sb.from('listas').update({direcao:dir}).eq('id',id).then(function(res){ if(res.error){ console.log('REC dir error',res.error); VB_toast('Não salvou a direção.'); } REC_renderListasMgr(); REC_render(); }).catch(function(e){ console.log('REC dir ex',e); });
+  sb.from('listas').update({direcao:dir}).eq('id',id).then(function(res){ if(res.error){ console.log('REC dir error',res.error); VB_toast('Não consegui salvar a direção.'); } REC_renderListasMgr(); REC_render(); }).catch(function(e){ console.log('REC dir ex',e); });
 }
 function REC_arquivarLista(id,btn){
   if(REC_listas.length<=1){ VB_toast('Deixe ao menos uma lista.'); return; }
@@ -19349,12 +19349,12 @@ function REC_arquivarLista(id,btn){
     REC_listas=REC_listas.filter(function(l){ return l.id!==id; });
     if(REC_listaAtual===id) REC_listaAtual=REC_listas.length?REC_listas[0].id:null;
     REC_renderListasMgr(); REC_render();
-  }).catch(function(e){ console.log('REC arquivar ex',e); VB_toast('Sem conexão.'); });
+  }).catch(function(e){ console.log('REC arquivar ex',e); VB_toast('Sem conexão — nada gravado.'); });
 }
 function REC_excluir(btn){
   if(!REC_editId) return;
   if(!REC_delArmed){ REC_delArmed=true; if(btn){ btn.textContent='Tocar de novo para excluir'; btn.style.background='var(--red)'; btn.style.color='var(--acc-tx)'; } setTimeout(function(){ REC_delArmed=false; if(btn){ btn.textContent='Excluir'; btn.style.background='var(--sf)'; btn.style.color='var(--tx)'; } },3000); return; }
-  sb.from('recebimentos').delete().eq('id',REC_editId).then(function(res){ if(res.error){ console.log('REC del error',res.error); VB_toast('Não excluiu (sem conexão?).'); return; } REC_closeEditor(); VB_toast('Excluído.'); REC_load(); }).catch(function(e){ console.log('REC del ex',e); VB_toast('Sem conexão.'); });
+  sb.from('recebimentos').delete().eq('id',REC_editId).then(function(res){ if(res.error){ console.log('REC del error',res.error); VB_toast('Não consegui excluir.'); return; } REC_closeEditor(); VB_toast('Excluído.'); REC_load(); }).catch(function(e){ console.log('REC del ex',e); VB_toast('Sem conexão — nada gravado.'); });
 }
 
 
@@ -19546,7 +19546,7 @@ var CLI_resFichaAtual=null;
 function CLI_resAtivarAtual(){
   var c=CLI_resFichaAtual; if(!c) return;
   sb.from('clientes').update({ativo:true}).eq('id',c.id).then(function(res){
-    if(res.error){ VB_toast('Não ativou (sem conexão?).'); return; }
+    if(res.error){ VB_toast('Não consegui ativar.'); return; }
     c.ativo=true; VB_cliBase=null;
     if(CLI_resRows){ for(var k=0;k<CLI_resRows.length;k++){ if(String(CLI_resRows[k].id)===String(c.id)){ CLI_resRows.splice(k,1); break; } }
       var bR=document.getElementById('cli-aba-res'); if(bR) bR.textContent='RESERVATÓRIO · '+CLI_resRows.length; }
@@ -19554,7 +19554,7 @@ function CLI_resAtivarAtual(){
     VB_log('CLIENTES','ativou', c.nome, 'manual (reservatório)');
     VB_toast('Cliente ativado no cadastro.');
     if(VB_telaAtual==='cli'){ CLI_load(); }
-  }).catch(function(){ VB_toast('Sem conexão.'); });
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
 function CLI_load(){
   sb.from('clientes').select('*').or('ativo.is.null,ativo.eq.true').order('nome',{ascending:true}).then(function(res){
@@ -19821,7 +19821,7 @@ function CLI_montar(g){
 function CLI_fichaSalvar(ov){
   var g=function(k){ var el=document.getElementById('clif-'+k); return el?(el.value||'').trim():''; };
   var pay=CLI_montar(g);
-  if(!pay.nome){ VB_toast('Informe o nome.'); return; }
+  if(!pay.nome){ VB_toast('Preencha o nome.'); return; }
   if(!VB_gravando('CLI_fichaSalvar')) return;
   if(CLI_fichaNovoMode){
     sb.from('clientes').insert(pay).select().then(function(res){
@@ -19867,7 +19867,7 @@ function CLI_salvar(btn){
     end1:'cli-end1',numero:'cli-num',end2:'cli-end2',bairro:'cli-bairro',cidade:'cli-cidade',uf:'cli-uf',cep:'cli-cep',nacionalidade:null};
   var g=function(k){ var id=map[k]; if(!id) return ''; var el=document.getElementById(id); return el?(el.value||'').trim():''; };
   var pay=CLI_montar(g);
-  if(!pay.nome){ VB_toast('Informe o nome.'); return; }
+  if(!pay.nome){ VB_toast('Preencha o nome.'); return; }
   if(!VB_gravando('CLI_salvar')) return;
   sb.from('clientes').insert(pay).select().then(function(res){
     if(res.error){ VB_erro(res.error.message); return; }
@@ -20196,7 +20196,7 @@ function CTR_shareEscolha(docxBlob, fname, desc){
     try{
       if(desc && navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(VB_legenda(desc, 'Segue contrato para conferência e assinatura via gov br.', 'Fico no aguardo.'))
-          .then(function(){ VB_toast('Legenda copiada \u2014 cola junto do PDF.'); }, function(){});
+          .then(function(){ VB_toast('Legenda copiada — é só colar junto do PDF.'); }, function(){});
       }
     }catch(e){}
     docxBlob.arrayBuffer().then(function(ab){ return CTR_docxParse(new Uint8Array(ab)); })
@@ -20923,7 +20923,7 @@ function FIN_pagasDe(r, cb){
 }
 function FIN_priceAbrir(idx){
   var r=HIST_rowsCache[idx]; if(!r) return;
-  var P=VB_finPrice(r); if(!P){ VB_toast('Faltam valor, parcela ou prazo.'); return; }
+  var P=VB_finPrice(r); if(!P){ VB_toast('Preencha valor, parcela e prazo.'); return; }
   FIN_pagasDe(r, function(pg){ FIN_priceSheet(r, P, pg); });
 }
 function FIN_priceSheet(r, P, pg){
@@ -20971,7 +20971,7 @@ function REN_quitar(opId, k){
 }
 function FIN_quitarDe(r, volta){
   if(VB_ehSimulacao(r)){ VB_toast('Simulação não tem quitação.'); return; }
-  var P=VB_finPrice(r); if(!P){ VB_toast('Faltam valor, parcela ou prazo.'); return; }
+  var P=VB_finPrice(r); if(!P){ VB_toast('Preencha valor, parcela e prazo.'); return; }
   FIN_pagasDe(r, function(pg){
     var ab=P.linhas.filter(function(L){ return !pg[L.k]; });
     if(!ab.length){ VB_toast('Todas as parcelas já foram pagas.'); return; }
@@ -21462,6 +21462,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.110</span><span class="cl-ver-date">08/10/2026</span></div>
+      <div class="cl-item">Avisos padronizados (109 frases): sem internet ao gravar = "Sem conexão — nada gravado." e ao ler = "Sem conexão."; falha = "Não consegui [ação]."; campo vazio = "Preencha [campo]."; data errada = "Data inválida."; copiar = "[O que] copiado — é só colar."; confirmação = "Toque de novo para [ação]."</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.109</span><span class="cl-ver-date">07/10/2026</span></div>
       <div class="cl-item">Foto do COBRAR e do EXTRATO: a SITUAÇÃO tem também a mesma espessura de letra do VENCIMENTO (na faixa preta, as duas em negrito)</div>
