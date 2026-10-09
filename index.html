@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.110</title>
+<title>VB - v1.300.111</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20794,6 +20794,12 @@ function CTR_parcelasDaVenda(r){
    de numero (O DEVEDOR confessa / Os DEVEDORES confessam), e remendar singular/plural dentro do
    XML do Word e pedir para errar concordancia em documento executivo. */
 var CTR_FIN_CREDOR='VB FACTORING E FOMENTO MERCANTIL LTDA';
+/* v1.300.111: duas empresas podem ser o CREDOR do contrato do financiamento. A escolha fica no
+   financiamento (veiculo.credor), entao gerar de novo repete a mesma. */
+var CTR_FIN_CREDORES={
+  fact:{nome:'VB FACTORING E FOMENTO MERCANTIL LTDA', cnpj:'54.870.933/0001-69', end:'AV. Santos Dumont Nº 2626, Comp. 113, Aldeota, CEP 60.150-162', pix:'54870933000169'},
+  com:{nome:'VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME', cnpj:'24.505.024/0001-60', end:'AV. Santos Dumont Nº 3131, Sala 816, Aldeota, CEP 60.150-162', pix:'24.505.024/0001-60'}
+};
 var CTR_finRow=null, CTR_finDev2=null;
 function CTR_finRpr(f){
   var b=(f==='b'||f==='bu'), u=(f==='bu');
@@ -20824,7 +20830,8 @@ function CTR_finCorpo(o){
   var DEV=S('DEVEDOR','DEVEDORES');
   var P=CTR_finP, V=CTR_finVazio, x='';
   /* partes */
-  var sp=[[ '', 'De um lado, '],['bu',CTR_FIN_CREDOR],['', ', pessoa jurídica de direito privado inscrita no CNPJ sob o Nº 54.870.933/0001-69, estabelecida em Fortaleza/CE, na AV. Santos Dumont Nº 2626, Comp. 113, Aldeota, CEP 60.150-162, representada por seu sócio-administrador '],['bu','VICTOR FERNANDES BRITO'],['', ', brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente '],['bu','CREDOR'],['', ', e, de outro lado, ']];
+  var CR=o.cred||CTR_FIN_CREDORES.fact;
+  var sp=[[ '', 'De um lado, '],['bu',CR.nome],['', ', pessoa jurídica de direito privado inscrita no CNPJ sob o Nº '+CR.cnpj+', estabelecida em Fortaleza/CE, na '+CR.end+', representada por seu sócio-administrador '],['bu','VICTOR FERNANDES BRITO'],['', ', brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente '],['bu','CREDOR'],['', ', e, de outro lado, ']];
   o.devs.forEach(function(d,i){
     if(i>0) sp.push(['', ', e ']);
     sp.push(['bu', d.nome]);
@@ -20847,7 +20854,7 @@ function CTR_finCorpo(o){
   /* 3a */
   x+=P([['bu','Cláusula 3ª'],['b','. '],['',S('O ','Os ')],['bu',DEV],['',S(' confessa e assume a quantia acima referida, e se propõe',' confessam e assumem a quantia acima referida, e se propõem')+' a pagá-la nos termos e condições previstas no presente contrato, desde já aceitas pelo '],['bu','CREDOR'],['','.']])+V();
   /* 4a */
-  x+=P([['bu','Cláusula 4ª'],['b','. '],['','Pelo presente instrumento, a dívida reconhecida e novada acima referida, a qual '+S('o ','os ')],['bu',DEV],['',S(' confessa e assume',' confessam e assumem')+' de forma solidária e integral, em caráter irrevogável e irretratável, e '+S('se compromete','se comprometem')+' a pagá-la, mediante transferência via PIX: 54870933000169, de titularidade do '],['bu','CREDOR'],['',', valendo o comprovante de transferência como recibo, da seguinte forma:']])+V();
+  x+=P([['bu','Cláusula 4ª'],['b','. '],['','Pelo presente instrumento, a dívida reconhecida e novada acima referida, a qual '+S('o ','os ')],['bu',DEV],['',S(' confessa e assume',' confessam e assumem')+' de forma solidária e integral, em caráter irrevogável e irretratável, e '+S('se compromete','se comprometem')+' a pagá-la, mediante transferência via PIX: '+CR.pix+', de titularidade do '],['bu','CREDOR'],['',', valendo o comprovante de transferência como recibo, da seguinte forma:']])+V();
   x+=o.itens+V();
   x+=o.imgPara+V();
   /* 5a em diante */
@@ -20866,12 +20873,16 @@ function CTR_finCorpo(o){
   cl.forEach(function(segs,i){ x+=P([['bu','Cláusula '+(5+i)+'ª'],['b','. ']].concat(segs))+V(); });
   x+=P([['','E, por estarem assim justos e contratados, as partes acima qualificadas firmam o presente instrumento, em duas vias de igual teor e forma.']])+V()+V();
   /* data e assinaturas: o marcador {{DATA_EXTENSO}} e o gancho do CTR_xmlAssinaturaJunta */
-  x+=P([['','Fortaleza/CE, {{DATA_EXTENSO}}.']],{c:1})+V(1)+V(1)+V(1);
-  function ass(nome){ return P([['','___________________________________________________________']],{c:1})+P([['b',nome]],{c:1})+V(1)+V(1)+V(1); }
-  x+=ass(CTR_FIN_CREDOR);
+  /* v1.300.111: bloco de assinaturas mais curto -- 2 linhas em branco por assinatura (eram 3) e as
+     duas testemunhas lado a lado. Com dois devedores o bloco passava de meia folha e, como ele
+     nao pode quebrar (CTR_xmlAssinaturaJunta), descia inteiro e deixava a pagina anterior vazia. */
+  x+=P([['','Fortaleza/CE, {{DATA_EXTENSO}}.']],{c:1})+V(1)+V(1);
+  function ass(nome){ return P([['','___________________________________________________________']],{c:1})+P([['b',nome]],{c:1})+V(1)+V(1); }
+  x+=ass(CR.nome);
   o.devs.forEach(function(d){ x+=ass(d.nome); });
   x+=P([['b','Testemunhas:']],{c:1})+V(1)+V(1);
-  [1,2].forEach(function(){ x+=P([['','___________________________________________________________']],{c:1})+P([['','Nome:']],{c:1})+P([['','CPF:']],{c:1})+P([['','RG:']],{c:1})+V(1)+V(1); });
+  function cel(){ return '<w:tc><w:tcPr><w:tcW w:w="2500" w:type="pct"/></w:tcPr>'+P([['','______________________________']],{c:1})+P([['','Nome:']],{c:1})+P([['','CPF:']],{c:1})+P([['','RG:']],{c:1})+'</w:tc>'; }
+  x+='<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>'+cel()+cel()+'</w:tr></w:tbl>'+V(1);
   return x;
 }
 /* Tabela de parcelas SO do contrato (v1.300.52): compacta, em duas colunas acima de 6 parcelas.
@@ -21019,7 +21030,9 @@ function CTR_finAbrirForm(idx){
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO</div>'
-    +'<div style="'+SEC+'margin-top:2px;">DEVEDOR</div>'
+    +'<div style="'+SEC+'margin-top:2px;">CREDOR</div>'
+    +'<select id="ctr-credor" style="'+SL+'"><option value="fact"'+(vg.credor==='com'?'':' selected')+'>VB FACTORING E FOMENTO MERCANTIL LTDA</option><option value="com"'+(vg.credor==='com'?' selected':'')+'>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</option></select>'
+    +'<div style="'+SEC+'">DEVEDOR</div>'
     +'<div style="position:relative;">'
     +campo('ctr-nome','NOME COMPLETO','','oninput="CTR_buscaCli(this)"','DIGITE PARA BUSCAR')
     +'<div id="ctr-cli-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
@@ -21128,6 +21141,7 @@ function CTR_finGerar(ov){
   var veic={marca:g('ctrv-marca').toUpperCase(), modelo:g('ctrv-modelo').toUpperCase(), placa:g('ctrv-placa').toUpperCase().replace(/[^A-Z0-9]/g,''), chassi:g('ctrv-chassi').toUpperCase(), renavam:g('ctrv-renavam'), cor:g('ctrv-cor').toUpperCase(), ano:g('ctrv-ano')};
   if(!veic.marca || !veic.modelo || !veic.placa || !veic.renavam){ trava('PREENCHA MARCA, MODELO, PLACA E RENAVAM'); return; }
   if(veic.marca.replace(/[^A-Z0-9]/g,'')===veic.placa){ trava('MARCA IGUAL \u00c0 PLACA'); return; }
+  var _credK=((document.getElementById('ctr-credor')||{}).value==='com')?'com':'fact', _cred=CTR_FIN_CREDORES[_credK];
   var parcelas=CTR_finParcelas(r);
   if(!parcelas.length){ trava('FINANCIAMENTO SEM PARCELAS'); return; }
   if(falta) falta.style.display='none';
@@ -21144,13 +21158,13 @@ function CTR_finGerar(ov){
     var mImg=base.match(/<w:p[ >](?:(?!<\/w:p>)[\s\S])*?<w:drawing[\s\S]*?<\/w:p>/);
     var imgPara=(mImg&&foto)?mImg[0]:'';
     var dvBR=HIST_fmtData(String(r.data_operacao||r.data_inicio||'').slice(0,10));
-    var corpo=CTR_finCorpo({devs:devs, total:total, veic:veic, itens:CTR_itensClausula(parcelas, dvBR), imgPara:imgPara});
+    var corpo=CTR_finCorpo({devs:devs, total:total, veic:veic, cred:_cred, itens:CTR_itensClausula(parcelas, dvBR), imgPara:imgPara});
     var doc=base.slice(0,ib)+corpo+base.slice(is);
     doc=CTR_xmlAssinaturaJunta(doc);
     doc=doc.split('{{DATA_EXTENSO}}').join(CTR_esc(CTR_hoje()));
     doc=doc.split('{{IMG_CX}}').join(String(5200000)).split('{{IMG_CY}}').join(String(cv?Math.round(5200000*cv.height/cv.width):3666666));
     var hd=dec.decode(parts['word/header1.xml']);
-    hd=hd.split('VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME').join(CTR_FIN_CREDOR);
+    hd=hd.split('VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME').join(_cred.nome);
     hd=hd.split('{{DEVEDOR_NOME}}').join(CTR_esc(devs.map(function(d){ return d.nome; }).join(' e ')));
     if(devs.length>1) hd=hd.split('<w:t>DEVEDOR</w:t>').join('<w:t>DEVEDORES</w:t>');
     parts['word/document.xml']=enc.encode(doc);
@@ -21168,7 +21182,7 @@ function CTR_finGerar(ov){
     }, r.descricao||veic.modelo);
     CTR_finSalvarRegistro(blob, fname, devs.map(function(d){ return d.nome; }).join(' E '), cpf, String(r.descricao||(veic.modelo+' '+veic.placa)).toUpperCase(), total, r.id);
     /* veiculo e 2o devedor ficam no financiamento: gerar de novo nao pede para redigitar */
-    var _vg={marca:veic.marca, modelo:veic.modelo, placa:veic.placa, chassi:veic.chassi, renavam:veic.renavam, cor:veic.cor, ano:veic.ano, dev2_id:(devs[1]?devs[1].id:null)};
+    var _vg={marca:veic.marca, modelo:veic.modelo, placa:veic.placa, chassi:veic.chassi, renavam:veic.renavam, cor:veic.cor, ano:veic.ano, dev2_id:(devs[1]?devs[1].id:null), credor:_credK};
     sb.from('financiamentos_hist').update({veiculo:_vg}).eq('id', r.id).then(function(rs){ if(!rs.error) r.veiculo=_vg; });
     VB_log('FINANCIAMENTO','gerou contrato', r.descricao||nome, devs.map(function(d){ return d.nome; }).join(' e ')+' · '+CTR_fmtV(total));
     /* devedor 1: o cadastro acompanha o que foi corrigido na folha, como no contrato de venda */
@@ -21462,6 +21476,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.111</span><span class="cl-ver-date">09/10/2026</span></div>
+      <div class="cl-item">Contrato do financiamento: seletor de CREDOR no topo da folha — VB FACTORING (padrão) ou VB COMÉRCIO. Muda nome, CNPJ, endereço, PIX, cabeçalho e assinatura. A escolha fica guardada no financiamento</div>
+      <div class="cl-item">Assinaturas mais compactas: 2 linhas em branco por assinatura (eram 3) e as duas testemunhas lado a lado. Com dois devedores o bloco descia inteiro para uma página nova e deixava meia folha em branco antes</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.110</span><span class="cl-ver-date">08/10/2026</span></div>
       <div class="cl-item">Avisos padronizados (109 frases): sem internet ao gravar = "Sem conexão — nada gravado." e ao ler = "Sem conexão."; falha = "Não consegui [ação]."; campo vazio = "Preencha [campo]."; data errada = "Data inválida."; copiar = "[O que] copiado — é só colar."; confirmação = "Toque de novo para [ação]."</div>
