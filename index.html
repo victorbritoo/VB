@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.114</title>
+<title>VB - v1.300.115</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -15358,7 +15358,25 @@ function FM_panorama(){
   var totF=0, sep=false;
   /* v1.300.76: do passado so os 6 ultimos meses; o resto abre por VER ANTERIORES, ali mesmo.
      O futuro fica inteiro -- ele e limitado pelos contratos, nao cresce com o tempo. */
-  var _pas=L.filter(function(x){ return x.ym<hojeYM; }).length, _esc=Math.max(0,_pas-6), _ix=0;
+  /* v1.300.115: o ano corrente aparece inteiro (em dezembro, os 11 anteriores); nunca menos que 6. */
+  var _visPas=Math.max(6, (+hojeYM.slice(5,7))-1);
+  var _pas=L.filter(function(x){ return x.ym<hojeYM; }).length, _esc=Math.max(0,_pas-_visPas), _ix=0;
+  /* TOTAL DO ANO: ano passado = realizado; ano corrente = realizado + garantido; ano que vem =
+     GARANTIDO (sem venda nova -- e o piso, nao uma previsao). Escondido junto se o ano todo estiver. */
+  var _anoAt=hojeYM.slice(0,4);
+  function _totAno(ano, oculto){
+    var ms=L.filter(function(z){ return z.ym.slice(0,4)===ano; });
+    var sr=0, sj=0, sl=0, temFut=false, temPas=false;
+    ms.forEach(function(z){ sr+=z.resu; sj+=z.jur; sl+=z.luc; if(z.fut) temFut=true; else temPas=true; });
+    var rot=(ano>_anoAt)?('GARANTIDO '+ano):('TOTAL '+ano+((temFut&&temPas)?' \u00b7 REALIZADO + GARANTIDO':''));
+    var ng=(sl<-0.005);
+    return '<div '+(oculto?'data-fmant="1" ':'')+'style="'+(oculto?'display:none;':'')+'border-top:0.5px solid var(--ln);margin-top:2px;padding:8px 2px 6px;">'
+      +'<div style="'+RT+'">'+rot+'</div>'
+      +'<div style="'+G+'align-items:baseline;margin-top:3px;"><span></span>'
+      +'<span style="font-size:11px;font-weight:700;color:var(--mu);text-align:right;white-space:nowrap;">'+(Math.abs(sr)>=0.005?VB_kFmt(sr):'\u2014')+'</span>'
+      +'<span style="font-size:11px;font-weight:700;color:var(--mu);text-align:right;white-space:nowrap;">'+(Math.abs(sj)>=0.005?('\u2212'+VB_kFmt(sj)):'\u2014')+'</span>'
+      +'<span style="font-size:12px;font-weight:800;color:'+(ng?'var(--red)':'var(--tx)')+';text-align:right;white-space:nowrap;">'+VB_kFmt(sl)+'</span></div></div>';
+  }
   if(_esc) hh+='<div id="fm-pan-ant" onclick="FM_panAnteriores()" style="cursor:pointer;text-align:center;padding:8px 0;border-top:0.5px solid var(--ln3);font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">VER ANTERIORES ('+_esc+')</div>';
   L.forEach(function(x){
     var _oc=(_ix++<_esc);
@@ -15374,6 +15392,12 @@ function FM_panorama(){
       +'<span style="font-size:11px;font-weight:600;color:var(--mu);text-align:right;white-space:nowrap;">'+(Math.abs(x.jur)>=0.005?('−'+VB_kFmt(x.jur)):'—')+'</span>'
       +'<span style="font-size:11px;font-weight:700;color:'+(neg?'var(--red)':(vaz?'var(--so)':'var(--tx)'))+';text-align:right;white-space:nowrap;">'+(vaz?'—':VB_kFmt(x.luc))+'</span>'
       +'</div>';
+    var _ixL=L.indexOf(x), _prox=L[_ixL+1];
+    if(!_prox || _prox.ym.slice(0,4)!==x.ym.slice(0,4)){
+      var _anoX=x.ym.slice(0,4), _todosOc=true;
+      L.forEach(function(z,zi){ if(z.ym.slice(0,4)===_anoX && zi>=_esc) _todosOc=false; });
+      hh+=_totAno(_anoX, _todosOc);
+    }
   });
   if(sep){
     hh+='<div style="border-top:0.5px solid var(--ln);margin-top:6px;padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;">'
@@ -21556,6 +21580,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.115</span><span class="cl-ver-date">13/10/2026</span></div>
+      <div class="cl-item">Panorama do lucro: o ano corrente aparece inteiro (em dezembro, janeiro a dezembro), nunca menos que os 6 últimos meses; o resto segue em VER ANTERIORES</div>
+      <div class="cl-item">Total por ano no fim de cada ano: TOTAL 2026 · REALIZADO + GARANTIDO (meses passados + o garantido até dezembro) e GARANTIDO 2027 (só o que já está contratado, sem venda nova — é o mínimo, não previsão)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.114</span><span class="cl-ver-date">13/10/2026</span></div>
       <div class="cl-item">Fechamento: cada antecipação e financiamento mostra a data da operação entre parênteses, depois da descrição — ex.: OP LEOZIM 10K 10X (25/05/2026) · 31 DIAS. Descrição longa encolhe com reticências; data e dias nunca são cortados</div>
