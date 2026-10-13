@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.300.113</title>
+<title>VB - v1.300.114</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14955,7 +14955,7 @@ function FM_calcMes(ym, res, _merMap){
       var M=VB_antMeses(r); if(!M) return;
       var v=M.meses[ym]||0; if(Math.abs(v)<0.005) return;
       _aLuc+=v;
-      _aIt.push({cli:String(r.cliente||'').trim(), rot:String(r.nome||'ANTECIPAÇÃO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
+      _aIt.push({cli:String(r.cliente||'').trim(), rot:String(r.nome||'ANTECIPAÇÃO').toUpperCase(), dt:HIST_dataNeg('ant',r), dias:Math.round(M.dias[ym]||0), v:v});
     });
     _aIt.sort(function(a,b){ return b.v-a.v; });
     var dAnt={n:_aIt.length, tot:soma(antOp,function(r){return Number(r.valor_liquido);}), novos:antOp.length, lucNovo:lucroDe(antOp,'ant'), luc:_aLuc, itens:_aIt};
@@ -14967,7 +14967,7 @@ function FM_calcMes(ym, res, _merMap){
       var v=M.vb[ym]||0, vi=M.inv[ym]||0;
       if(Math.abs(v)<0.005 && Math.abs(vi)<0.005) return;
       _fLuc+=v; if(vi) _fpartes[M.invNome]=(_fpartes[M.invNome]||0)+vi;
-      _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), dias:Math.round(M.dias[ym]||0), v:v});
+      _fIt.push({cli:String(r.cliente||'').trim(), rot:String(r.descricao||r.nome||'FINANCIAMENTO').toUpperCase(), dt:HIST_dataNeg('fin',r), dias:Math.round(M.dias[ym]||0), v:v});
     });
     _fIt.sort(function(a,b){ return b.v-a.v; });
     var dFin={n:_fIt.length, tot:soma(fin,function(r){return Number(r.valor_financiado);}), novos:fin.length, lucNovo:lucroDe(fin,'fin'), luc:_fLuc, itens:_fIt,
@@ -15160,12 +15160,15 @@ function FM_load(){
        -- ou porque o mes nao teve nada (recolhido inteiro, pra nao empilhar zeros), ou porque
        ha detalhe embaixo do resumo. Bloco sem nada escondido nao ganha setinha. */
     var _blocoN=0;
-    function fmDet(titulo, sub, valor){
+    function fmDet(titulo, sub, valor, fixo){
       return '<div style="padding:5px 0;">'
         +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">'
         +'<span style="font-size:11px;font-weight:600;color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;">'+CLIP_esc(titulo)+'</span>'
         +'<span style="font-size:11px;font-weight:700;color:var(--tx2);flex:none;">'+valor+'</span></div>'
-        +'<div style="font-size:9px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+CLIP_esc(sub)+'</div></div>';
+        +(fixo
+          ? ('<div style="display:flex;font-size:9px;color:var(--so);margin-top:1px;text-transform:uppercase;white-space:nowrap;"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;">'+CLIP_esc(sub)+'</span><span style="flex:none;white-space:pre;">'+CLIP_esc(fixo)+'</span></div>')
+          : ('<div style="font-size:9px;color:var(--so);margin-top:1px;text-transform:uppercase;">'+CLIP_esc(sub)+'</div>'))
+        +'</div>';
     }
     /* Uma faixa recuada, nao um card novo: o card do detalhe nao teria titulo, e com sete linhas
        o VB rolaria a tela, perderia o cabecalho de vista e ficaria olhando uma lista solta.
@@ -15198,7 +15201,9 @@ function FM_load(){
        ranquear caixa junto com lucro misturaria duas coisas que o app separa em todo lugar. */
     var _ord=[];
     /* detalhe: uma linha por operacao viva, com os dias que ela teve no mes */
-    function _fmOpDet(its){ var h=''; (its||[]).forEach(function(it){ h+=fmDet(it.cli?VB_nomeCurto(it.cli):it.rot, it.rot+' · '+it.dias+(it.dias===1?' DIA':' DIAS'), HIST_fmtMoeda(it.v)); }); return h?fmDetCaixa(h):''; }
+    /* v1.300.114: data da operacao entre parenteses, logo depois da descricao. Descricao longa
+       encolhe com reticencias; data e dias nunca sao cortados (fmDet com 4o argumento). */
+    function _fmOpDet(its){ var h=''; (its||[]).forEach(function(it){ var _d=String(it.dt||'').slice(0,10).split('-'); var _ds=(_d.length===3)?(' ('+_d[2]+'/'+_d[1]+'/'+_d[0]+')'):''; h+=fmDet(it.cli?VB_nomeCurto(it.cli):it.rot, it.rot, HIST_fmtMoeda(it.v), _ds+' · '+it.dias+(it.dias===1?' DIA':' DIAS')); }); return h?fmDetCaixa(h):''; }
     _ord.push({luc:dAnt.luc, html:bloco(FM_opTitulo('ANTECIPAÇÕES', dAnt), HIST_fmtMoeda(dAnt.luc), FM_antLinhas(dAnt), dAnt.n===0, _fmOpDet(dAnt.itens))});
     _ord.push({luc:dFin.luc, html:bloco(FM_opTitulo('FINANCIAMENTOS', dFin), HIST_fmtMoeda(dFin.luc), FM_finLinhas(dFin), dFin.n===0, _fmOpDet(dFin.itens))});
     var vlin=[['Vendido',HIST_fmtMoeda(dVen.tot)],['Lucro Total',HIST_fmtMoeda(dVen.luc)],['—div—','']];
@@ -21551,6 +21556,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.114</span><span class="cl-ver-date">13/10/2026</span></div>
+      <div class="cl-item">Fechamento: cada antecipação e financiamento mostra a data da operação entre parênteses, depois da descrição — ex.: OP LEOZIM 10K 10X (25/05/2026) · 31 DIAS. Descrição longa encolhe com reticências; data e dias nunca são cortados</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.300.113</span><span class="cl-ver-date">09/10/2026</span></div>
       <div class="cl-item">Cadastro aceita CNPJ: o campo virou CPF / CNPJ. Até 11 números é CPF; com 14 vira CNPJ (00.000.000/0000-00) e confere os dígitos. O aviso de número inválido sai ao terminar de digitar, não no meio do CNPJ</div>
