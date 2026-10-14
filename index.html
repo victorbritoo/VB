@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.302.1</title>
+<title>VB - v1.302.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12061,7 +12061,7 @@ function REN_parcTot(pre, n){
   var el=document.getElementById(pre+'-ptot'); if(!el) return;
   var t=0, q=0;
   for(var i=0;i<n;i++){ var e=document.getElementById(pre+'-pv-'+i); var v=REN_num(e?e.value:((pre==='rencr'&&REN_crParc&&REN_crParc[i]&&REN_crParc[i].trav)?REN_crParc[i].valor:'')); if(v>0){ t+=v; q++; } }
-  el.innerHTML='<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">TOTAL · '+q+' '+(q===1?'PARCELA':'PARCELAS')+'</span><span style="font-size:13px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(t)+'</span>';
+  el.innerHTML='<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">TOTAL ('+q+')</span><span style="font-size:13px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(t)+'</span>';
 }
 function REN_crParcLe(){
   (REN_crParc||[]).forEach(function(pp, i){
@@ -12091,7 +12091,7 @@ function REN_crParcHTML(){
       +'<input data-selall id="rencr-pv-'+i+'" inputmode="decimal" oninput="REC_maskVal(this);REN_crDirty()" value="'+String(pp.valor||'')+'" placeholder="0,00" style="'+IN+'">'
       +'<input data-selall id="rencr-pd-'+i+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_crDirty()" oninput="REC_maskData(this);REN_crDirty()" value="'+String(pp.data||'')+'" style="'+IN+'">'
       /* v1.302.0: nota da parcela ja na criacao -- a mesma que o card grava depois */
-      +'<span id="rencr-pi-'+i+'" data-fast="1" onpointerdown="event.preventDefault();REN_crNotaTog('+i+')" style="width:18px;height:18px;border-radius:50%;border:0.5px solid '+(_tn?'var(--acc)':'var(--ln)')+';background:'+(_tn?'var(--acc)':'transparent')+';color:'+(_tn?'var(--acc-tx)':'var(--mu2)')+';font-size:10px;font-weight:700;font-family:Georgia,serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;">i</span>'
+      +'<span id="rencr-pi-'+i+'" data-fast="1" onpointerdown="event.preventDefault();REN_crNotaTog('+i+')" style="font-size:12px;color:var(--so);cursor:pointer;line-height:1;text-align:center;" title="Nota">\u24d8</span>'
       +((REN_crParc.length>1)?('<span onclick="REN_crDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">×</span>'):'<span></span>')
       +'</div>';
     if(pp._nAb || _tn) s+='<div style="padding:2px 24px 4px 32px;"><input id="rencr-pn-'+i+'" oninput="REN_crDirty();REN_crNotaIco('+i+',this)" placeholder="NOTA DESTA PARCELA" value="'+CLIP_esc(String(pp.nota||'')).replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid var(--ln3);border-radius:8px;background:var(--sf2);color:var(--tx);font-size:11px;text-align:center;text-transform:uppercase;outline:none;font-family:-apple-system,sans-serif;"></div>';
@@ -12118,7 +12118,7 @@ function REN_crLoteParc(c){
 }
 function REN_crNotaIco(i, el){
   var e=document.getElementById('rencr-pi-'+i); if(!e) return; var on=!!String(el.value||'').trim();
-  e.style.background=on?'var(--acc)':'transparent'; e.style.color=on?'var(--acc-tx)':'var(--mu2)'; e.style.borderColor=on?'var(--acc)':'var(--ln)';
+  /* v1.302.2: icone igual ao das vendas, sempre cinza -- a caixa da nota embaixo ja mostra que tem nota */
 }
 function REN_crNotaTog(i){
   REN_crParcLe(); var pp=REN_crParc[i]; if(!pp) return;
@@ -12212,7 +12212,7 @@ function REN_crSheet(id){
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencr-desc" oninput="REN_crDirty()" placeholder="ALUGUEL \u00b7 EMPR\u00c9STIMO \u00b7 COMISS\u00c3O" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +'<div id="rencr-parc"></div>'   /* v1.302.1: editar abre o lancamento inteiro */
-    +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
+    +'<div style="'+RT+'margin-top:8px;">NOTA INTERNA \u00b7 S\u00d3 NO APP</div>'   /* v1.302.2: a da parcela vai na foto do cobrar; esta nunca sai */
     +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
     +(c?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
@@ -12705,7 +12705,7 @@ function REN_cpFicha(id){
   /* PARCELAS DA COMPRA: mesma linha do tempo da ficha das entradas, colunas de largura fixa */
   if(_nmF){
     var _NUM='font-variant-numeric:tabular-nums;';
-    var _c1='display:inline-block;width:84px;text-align:right;'+_NUM, _c2='display:inline-block;width:72px;'+_NUM, _c3='display:inline-block;width:54px;'+_NUM;
+    var _c1='display:inline-flex;justify-content:space-between;width:84px;'+_NUM, _c2='display:inline-block;width:72px;'+_NUM, _c3='display:inline-block;width:54px;'+_NUM;
     var _sep='<span style="display:inline-block;margin:0 6px;">\u00b7</span>';
     var _hj=REN_hojeISO();
     s+='<div style="border-top:0.5px solid var(--ln3);margin-top:10px;padding-top:8px;"><div style="'+RT+'">'+((String(c.origem_tab||'')==='mercadorias')?'PARCELAS DA COMPRA':'PARCELAS DA CONTA')+'</div>';
@@ -12718,7 +12718,7 @@ function REN_cpFicha(id){
       else { yst='A VENCER'; ystC='var(--so)'; }
       var yvl=yp?(Number(y.valor_pago!=null?y.valor_pago:y.valor)||0):(Number(y.valor)||0);
       s+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-        +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(yvl)+'</span>'+_sep+'<span style="'+_c2+'">'+yv.split('-').reverse().join('/')+'</span>'+_sep+'<span style="'+_c3+'">'+REN_cpNm(y,_irF)+'</span>'
+        +'<span style="color:'+(atual?'var(--tx)':'var(--mu)')+';white-space:nowrap;"><span style="'+_c1+'"><span>R$</span><span>'+String(HIST_fmtMoeda(yvl)).replace(/^R\$\s*/,'')+'</span></span>'+_sep+'<span style="'+_c2+'">'+yv.split('-').reverse().join('/')+'</span>'+_sep+'<span style="'+_c3+'">'+REN_cpNm(y,_irF)+'</span>'
         +((REN_cpParteVB(y)!==null)?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(REN_cpParteVB(y))+'</span>'):'')+'</span>'
         +'<span style="color:'+ystC+';font-size:10px;font-weight:600;white-space:nowrap;">'+yst+'</span></div>';
     });
@@ -14051,10 +14051,10 @@ function REN_ficha(k, exp){
     /* width fixo, nao min-width: na linha atual o texto e negrito e mede uns 2px a mais; com
        largura minima ele empurrava o separador so naquela linha, e o ponto saia da coluna.
        Travada, a sobra do negrito vaza na folga e o ponto fica cravado no mesmo x em todas. */
-    var _c1='display:inline-block;width:84px;text-align:right;'+_NUM, _c2='display:inline-block;width:72px;'+_NUM, _c3='display:inline-block;width:54px;'+_NUM;
+    var _c1='display:inline-flex;justify-content:space-between;width:84px;'+_NUM, _c2='display:inline-block;width:72px;'+_NUM, _c3='display:inline-block;width:54px;'+_NUM;
     var _sep='<span style="display:inline-block;margin:0 6px;">\u00b7</span>';
     tl+='<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:3px;'+(atual?'font-weight:700;':'')+'">'
-      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'">'+HIST_fmtMoeda(_vl)+'</span>'+_sep+'<span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span>'+_sep+'<span style="'+_c3+'">'+REN_nm(y)+'</span>'
+      +'<span style="color:'+_cor+';white-space:nowrap;"><span style="'+_c1+'"><span>R$</span><span>'+String(HIST_fmtMoeda(_vl)).replace(/^R\$\s*/,'')+'</span></span>'+_sep+'<span style="'+_c2+'">'+HIST_fmtData(y.venc)+'</span>'+_sep+'<span style="'+_c3+'">'+REN_nm(y)+'</span>'
         +(_seu!=null?('<span style="font-size:9px;color:var(--mu);font-weight:600;margin-left:6px;">VB: '+HIST_fmtMoeda(_seu)+'</span>'):'')+'</span>'
       +'<span style="color:'+stC+';font-size:10px;font-weight:600;white-space:nowrap;">'+st+'</span></div>';
   });
@@ -14328,7 +14328,8 @@ function REN_cobrarCanvas(k){
   var dCur=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7); };
   var linhas=irmas.map(function(y){
     var kb=REN_key(y), yb=REN_cache.bx[kb], pago=REN_pagoTot(y)||0;
-    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(y.obs?('('+String(y.obs).toUpperCase()+')'):'')};
+    var _ob=y.obs||((y.tab==='cr'&&REN_cache.notas)?REN_cache.notas[kb]:'');   /* v1.302.2: na entrada manual a nota da parcela vai na foto */
+    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(_ob?('('+String(_ob).toUpperCase()+')'):'')};
     if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='PAGO '+dCur(yb.recebido_em||y.venc)+' ✓'; L.pago=true; L.resta=0; }
     else {
       L.valor=y.valor; L.resta=Math.round((y.valor-pago)*100)/100;
@@ -21730,6 +21731,12 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.2</span><span class="cl-ver-date">14/10/2026</span></div>
+      <div class="cl-item">Lista de parcelas da entrada: o botão de nota virou o mesmo ⓘ cinza das vendas, e o total ficou TOTAL (6)</div>
+      <div class="cl-item">A nota de cada parcela da entrada manual aparece na foto do COBRAR, entre parênteses embaixo do valor. A nota do lançamento virou NOTA INTERNA e nunca sai do app</div>
+      <div class="cl-item">PARCELAS DA OPERAÇÃO no card: o R$ fica alinhado à esquerda e o número à direita, então valores curtos como R$ 600,00 não entram mais para dentro</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.1</span><span class="cl-ver-date">14/10/2026</span></div>
       <div class="cl-item">Entrada manual: o número da parcela (01 DE 06) segue a data em todo lugar, inclusive nos lançamentos já salvos — sem apagar nada</div>
