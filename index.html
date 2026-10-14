@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.301.3</title>
+<title>VB - v1.302.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12046,11 +12046,29 @@ var REN_crForm=null, REN_crEditId='', REN_crParc=[];
    REPETIR ULTIMA copia o valor e soma um mes com VB_mesData, que trava no ultimo dia
    do mes -- 31/01 + 1 = 28/02, nunca 03/03.
    Na EDICAO nao aparece: la a folha edita UM titulo, que e o que aquela linha e. */
+/* v1.302.0: data digitada sem ano (14/10) ganha o ano corrente ANTES de repetir -- o teclado
+   continua aberto no REPETIR, entao o autoCompleteDate do blur ainda nao rodou. */
+function REN_parcProx(txt){
+  var iso=REN_brToISO(String(txt||'').trim());
+  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return {cheia:'', prox:''};
+  var p=iso.split('-'), d=new Date(+p[0],+p[1]-1,+p[2]);
+  if(isNaN(d.getTime()) || d.getMonth()!==(+p[1]-1)) return {cheia:'', prox:''};
+  var d2=VB_mesData(d,1,null);
+  return {cheia:p[2]+'/'+p[1]+'/'+p[0], prox:('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear()};
+}
+/* Total da lista enquanto digita (ENTRADAS e SAIDAS). */
+function REN_parcTot(pre, n){
+  var el=document.getElementById(pre+'-ptot'); if(!el) return;
+  var t=0, q=0;
+  for(var i=0;i<n;i++){ var e=document.getElementById(pre+'-pv-'+i); var v=REN_num(e?e.value:((pre==='rencr'&&REN_crParc&&REN_crParc[i]&&REN_crParc[i].trav)?REN_crParc[i].valor:'')); if(v>0){ t+=v; q++; } }
+  el.innerHTML='<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">TOTAL · '+q+' '+(q===1?'PARCELA':'PARCELAS')+'</span><span style="font-size:13px;font-weight:700;color:var(--tx);">'+HIST_fmtMoeda(t)+'</span>';
+}
 function REN_crParcLe(){
   (REN_crParc||[]).forEach(function(pp, i){
     var ev=document.getElementById('rencr-pv-'+i), ed=document.getElementById('rencr-pd-'+i);
     if(ev) pp.valor=String(ev.value||'');
     if(ed) pp.data=String(ed.value||'');
+    var en=document.getElementById('rencr-pn-'+i); if(en) pp.nota=String(en.value||'');
   });
 }
 function REN_crParcHTML(){
@@ -12058,15 +12076,61 @@ function REN_crParcHTML(){
   var s='<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:10px;margin-top:8px;">'
     +'<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 22px;gap:6px;align-items:center;font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;text-align:center;margin-bottom:2px;"><span></span><span>VALOR</span><span>VENCIMENTO</span><span></span></div>';
   (REN_crParc||[]).forEach(function(pp,i){
-    s+='<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 22px;gap:6px;align-items:center;">'
+    var _tn=!!String(pp.nota||'').trim();
+    if(pp.trav){   /* v1.302.1: recebida/parcial/prorrogada nao muda -- baixa e nota estao presas a ela */
+      var _T='font-size:13px;font-weight:600;color:var(--mu);text-align:center;padding:8px 0;border-bottom:0.5px solid var(--ln3);';
+      s+='<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 44px;gap:6px;align-items:center;opacity:0.75;">'
+        +'<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;">'+String(i+1).padStart(2,'0')+'</span>'
+        +'<span style="'+_T+'">'+CLIP_esc(String(pp.valor||''))+'</span><span style="'+_T+'">'+CLIP_esc(String(pp.data||''))+'</span>'
+        +'<span style="font-size:7px;letter-spacing:0.5px;color:var(--so);font-weight:700;text-align:center;">'+pp.trav+'</span></div>';
+      if(_tn) s+='<div style="padding:2px 24px 4px 32px;font-size:10px;color:var(--so);font-weight:600;text-align:center;">'+CLIP_esc(String(pp.nota))+'</div>';
+      return;
+    }
+    s+='<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 20px 18px;gap:6px;align-items:center;">'
       +'<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;">'+String(i+1).padStart(2,'0')+'</span>'
       +'<input data-selall id="rencr-pv-'+i+'" inputmode="decimal" oninput="REC_maskVal(this);REN_crDirty()" value="'+String(pp.valor||'')+'" placeholder="0,00" style="'+IN+'">'
       +'<input data-selall id="rencr-pd-'+i+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_crDirty()" oninput="REC_maskData(this);REN_crDirty()" value="'+String(pp.data||'')+'" style="'+IN+'">'
-      +((REN_crParc.length>1)?('<span onclick="REN_crDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">\u00d7</span>'):'<span></span>')
+      /* v1.302.0: nota da parcela ja na criacao -- a mesma que o card grava depois */
+      +'<span id="rencr-pi-'+i+'" data-fast="1" onpointerdown="event.preventDefault();REN_crNotaTog('+i+')" style="width:18px;height:18px;border-radius:50%;border:0.5px solid '+(_tn?'var(--acc)':'var(--ln)')+';background:'+(_tn?'var(--acc)':'transparent')+';color:'+(_tn?'var(--acc-tx)':'var(--mu2)')+';font-size:10px;font-weight:700;font-family:Georgia,serif;font-style:italic;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;">i</span>'
+      +((REN_crParc.length>1)?('<span onclick="REN_crDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">×</span>'):'<span></span>')
       +'</div>';
+    if(pp._nAb || _tn) s+='<div style="padding:2px 24px 4px 32px;"><input id="rencr-pn-'+i+'" oninput="REN_crDirty();REN_crNotaIco('+i+',this)" placeholder="NOTA DESTA PARCELA" value="'+CLIP_esc(String(pp.nota||'')).replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid var(--ln3);border-radius:8px;background:var(--sf2);color:var(--tx);font-size:11px;text-align:center;text-transform:uppercase;outline:none;font-family:-apple-system,sans-serif;"></div>';
   });
-  s+='<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
+  s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
+    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddVazio()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
+    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddParc()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
+  s+='<div id="rencr-ptot" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:8px 4px 0;border-top:0.5px solid var(--ln3);"></div>';
   return s+'</div>';
+}
+/* As parcelas do lancamento de c, na ordem da data, com o que ja aconteceu com cada uma. */
+function REN_crLoteParc(c){
+  var L=String(c.lote||c.id), out=[];
+  ((REN_cache&&REN_cache.cr)||[]).forEach(function(r){
+    if(String(r.lote||r.id)!==L) return;
+    var it=null; (REN_cache.itens||[]).forEach(function(y){ if(y.tab==='cr' && y.cr && String(y.cr.id)===String(r.id)) it=y; });
+    var k=it?REN_key(it):null, trav='';
+    if(it){ if(REN_cache.bx[k]) trav='RECEBIDA'; else if(REN_pagoTot(it)>0) trav='PARCIAL'; else if(it.prorrogada) trav='PRORROGADA'; }
+    out.push({id:r.id, idx:(it?it.idx:(Number(r.ordem)||0)), valor:Number(r.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}),
+      data:String(r.venc||'').slice(0,10).split('-').reverse().join('/'), nota:(k&&REN_cache.notas&&REN_cache.notas[k])||'', nota0:(k&&REN_cache.notas&&REN_cache.notas[k])||'', trav:trav, venc:String(r.venc||'')});
+  });
+  out.sort(function(a,b){ return a.venc<b.venc?-1:(a.venc>b.venc?1:a.idx-b.idx); });
+  return out;
+}
+function REN_crNotaIco(i, el){
+  var e=document.getElementById('rencr-pi-'+i); if(!e) return; var on=!!String(el.value||'').trim();
+  e.style.background=on?'var(--acc)':'transparent'; e.style.color=on?'var(--acc-tx)':'var(--mu2)'; e.style.borderColor=on?'var(--acc)':'var(--ln)';
+}
+function REN_crNotaTog(i){
+  REN_crParcLe(); var pp=REN_crParc[i]; if(!pp) return;
+  pp._nAb=!pp._nAb || !!String(pp.nota||'').trim();
+  REN_crPinta();
+  try{ var e=document.getElementById('rencr-pn-'+i); if(e){ e.focus(); var n=e.value.length; e.setSelectionRange(n,n); } }catch(err){}
+}
+function REN_crAddVazio(){
+  REN_crParcLe();
+  REN_crParc.push({valor:'', data:''});
+  REN_crPinta();
+  try{ var _c=document.getElementById('rencr-pv-'+(REN_crParc.length-1)); if(_c){ _c.focus(); VB_rolaAteLinha(_c.closest?_c.closest('div'):_c); } }catch(e){}
 }
 function REN_crPinta(){
   var box=document.getElementById('rencr-parc'); if(!box) return;
@@ -12076,9 +12140,8 @@ function REN_crPinta(){
 function REN_crAddParc(){
   REN_crParcLe();
   var last=REN_crParc[REN_crParc.length-1]||{valor:'',data:''};
-  var d=VB_brToDate(String(last.data||'').trim());
-  var nova='';
-  if(d){ var d2=VB_mesData(d,1,null); nova=('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear(); }
+  var _pr=REN_parcProx(last.data), nova=_pr.prox;
+  if(_pr.cheia) last.data=_pr.cheia;
   REN_crParc.push({valor:String(last.valor||''), data:nova});
   REN_crPinta();
   /* o valor ja veio copiado; o que falta e a DATA -- o foco vai pra ela com o teclado ainda aberto */
@@ -12090,6 +12153,7 @@ function REN_crAddParc(){
 }
 function REN_crDelParc(i){
   REN_crParcLe();
+  if(REN_crParc[i] && REN_crParc[i].trav) return;
   if(REN_crParc.length<=1) return;
   REN_crParc.splice(i,1);
   REN_crPinta();
@@ -12102,25 +12166,23 @@ function REN_crDe(id){
 function REN_crEstado(){
   function g(i){ var e=document.getElementById(i); return e?String(e.value||''):''; }
   var pp=[];
-  (REN_crParc||[]).forEach(function(_,i){ pp.push(g('rencr-pv-'+i)+'@'+g('rencr-pd-'+i)); });
+  (REN_crParc||[]).forEach(function(q,i){ pp.push(q.trav?('T'+q.id):(g('rencr-pv-'+i)+'@'+g('rencr-pd-'+i)+'@'+g('rencr-pn-'+i))); });
   return [g('rencr-dev'),g('rencr-desc'),g('rencr-valor'),g('rencr-venc'),g('rencr-nota'),pp.join(';')].join('\u241f');
 }
 function REN_crDirty(){
   var b=document.getElementById('rencr-salvar'); if(!b) return;
   var cr=((document.getElementById('rencr-dev')||{}).value||'').trim();
   var okP=true;
-  if(REN_crEditId){
-    var v=REN_num((document.getElementById('rencr-valor')||{}).value||'');
-    var d=REN_brToISO((document.getElementById('rencr-venc')||{}).value||'');
-    okP=(Number(v)>0 && !!d);
-  } else {
+  {
     okP=(REN_crParc||[]).length>0;
-    (REN_crParc||[]).forEach(function(_,i){
+    (REN_crParc||[]).forEach(function(q,i){
+      if(q.trav) return;
       var ev=document.getElementById('rencr-pv-'+i), ed=document.getElementById('rencr-pd-'+i);
       if(!(REN_num(ev?ev.value:'')>0) || !REN_brToISO(ed?ed.value:'')) okP=false;
     });
   }
   var ok=(!!cr && okP) && (REN_crForm===null || REN_crEstado()!==REN_crForm);
+  try{ REN_parcTot('rencr', (REN_crParc||[]).length); }catch(e){}
   b.style.background=ok?'var(--acc)':'var(--sf3)';
   b.style.color=ok?'var(--acc-tx)':'var(--mu2)';
   b.style.cursor=ok?'pointer':'not-allowed';
@@ -12149,11 +12211,7 @@ function REN_crSheet(id){
     +'<input id="rencr-dev" oninput="REN_crDirty()" placeholder="QUEM VAI TE PAGAR" value="'+esc(c&&c.devedor)+'" style="'+IN+'">'
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencr-desc" oninput="REN_crDirty()" placeholder="ALUGUEL \u00b7 EMPR\u00c9STIMO \u00b7 COMISS\u00c3O" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
-    +(c?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
-    +'<div><div style="'+RT+'">VALOR</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 8px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="rencr-valor" inputmode="decimal" oninput="REC_maskVal(this);REN_crDirty()" value="'+vBR+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
-    +'<div><div style="'+RT+'">VENCIMENTO</div><input data-selall id="rencr-venc" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_crDirty()" oninput="REC_maskData(this);REN_crDirty()" value="'+dBR+'" style="'+IN+'"></div>'
-    +'</div>')
-    :('<div id="rencr-parc"></div>'))
+    +'<div id="rencr-parc"></div>'   /* v1.302.1: editar abre o lancamento inteiro */
     +'<div style="'+RT+'margin-top:8px;">NOTA</div>'
     +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
@@ -12171,8 +12229,9 @@ function REN_crSheet(id){
      A folha de gasto da peca continua no sistema: la ele e o unico pintor. */
   delete VB_folhaCfg['cr'];
   REN_crEditId = c ? String(c.id) : '';
-  if(!c){ REN_crParc=[{valor:'',data:''}]; REN_crPinta(); }
-  else { REN_crParc=[]; }
+  if(!c){ REN_crParc=[{valor:'',data:''}]; }
+  else { REN_crParc=REN_crLoteParc(c); }
+  REN_crPinta();
   REN_crForm = c ? REN_crEstado() : null;
   REN_crDirty();
   try{ VB_cliAttach('rencr-dev'); }catch(e){}
@@ -12183,13 +12242,8 @@ function REN_crSalvar(id){
   var nt=((document.getElementById('rencr-nota')||{}).value||'').trim().toUpperCase();
   if(!dv){ VB_toast('Preencha quem vai te pagar.'); return; }
   var v, d, reg, q, nT=1;
-  if(id){
-    v=REN_num((document.getElementById('rencr-valor')||{}).value);
-    d=REN_brToISO((document.getElementById('rencr-venc')||{}).value);
-    if(!(v>0)){ VB_toast('Preencha o valor.'); return; }
-    if(!d){ VB_toast('Data inválida.'); return; }
-    reg={devedor:(dv||null), descricao:(ds||null), valor:v, venc:d, nota:(nt||null)};
-  } else {
+  if(id){ REN_crSalvarLote(id, dv, ds, nt); return; }
+  {
     REN_crParcLe();
     var linhas=[];
     var ruim=false;
@@ -12199,10 +12253,19 @@ function REN_crSalvar(id){
         var r=Math.random()*16|0; return (ch==='x'?r:((r&0x3)|0x8)).toString(16);
       });
     })();
+    /* v1.302.0: numera pela DATA, nao pela ordem de digitacao -- a 21/10 digitada por ultimo
+       era a 05 DE 06 e aparecia depois da 17/12. Empate de data mantem a ordem digitada. */
+    var _tmp=[];
     (REN_crParc||[]).forEach(function(pp, i){
       var vv=REN_num(pp.valor), dd=REN_brToISO(pp.data);
       if(!(vv>0) || !dd){ ruim=true; return; }
-      linhas.push({devedor:(dv||null), descricao:(ds||null), valor:vv, venc:dd, nota:(nt||null), lote:_lote, ordem:i});
+      _tmp.push({vv:vv, dd:dd, i:i, pn:String(pp.nota||'').trim().toUpperCase()});
+    });
+    _tmp.sort(function(a,b){ return a.dd<b.dd?-1:(a.dd>b.dd?1:a.i-b.i); });
+    var _notasP=[];
+    _tmp.forEach(function(t, k){
+      linhas.push({devedor:(dv||null), descricao:(ds||null), valor:t.vv, venc:t.dd, nota:(nt||null), lote:_lote, ordem:k});
+      if(t.pn) _notasP.push({op_tab:'cr', op_id:String(_lote), parcela_idx:k, nota:t.pn});
     });
     if(ruim || !linhas.length){ VB_toast('Preencha valor e vencimento de todos os t\u00edtulos.'); return; }
     reg=linhas; nT=linhas.length; v=linhas[0].valor; d=linhas[0].venc;
@@ -12211,18 +12274,72 @@ function REN_crSalvar(id){
   q=id?sb.from('contas_receber').update(reg).eq('id',id):sb.from('contas_receber').insert(reg);
   q.then(function(res){
     if(res.error){ VB_erro(res.error.message,'Não consegui salvar a entrada.'); return; }
+    if(!id && typeof _notasP!=='undefined' && _notasP.length){
+      sb.from('parcela_notas').upsert(_notasP, {onConflict:'op_tab,op_id,parcela_idx'}).then(function(r2){ if(r2&&r2.error){ VB_toast('Entrada salva, mas não consegui salvar as notas das parcelas.'); } else { try{ REN_abrir(); }catch(e){} } }).catch(function(){ VB_toast('Sem conexão — notas das parcelas não gravadas.'); });
+    }
     try{ VB_log('ENTRADA MANUAL', id?'editou entrada':('nova entrada'+(nT>1?(' \u00b7 '+nT+' t\u00edtulos'):'')), dv||ds, HIST_fmtMoeda(v)+' \u00b7 '+d.split('-').reverse().join('/')); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast(id?'Entrada salva.':(nT>1?(nT+' t\u00edtulos lan\u00e7ados.'):'Entrada lan\u00e7ada.'));
     REN_abrir();
   }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
+/* v1.302.1: salva o lancamento inteiro. So grava o que mudou; parcela travada (recebida,
+   parcial, prorrogada) so recebe DE QUEM/DESCRICAO/NOTA do lancamento. Nova parcela ganha a
+   proxima ordem livre -- a ordem e a chave das baixas e notas e nunca e reaproveitada. */
+function REN_crSalvarLote(id, dv, ds, nt){
+  var c=REN_crDe(id); if(!c) return;
+  REN_crParcLe();
+  var L=String(c.lote||c.id), orig=REN_crLoteParc(c), ruim=false;
+  (REN_crParc||[]).forEach(function(pp){ if(pp.trav) return; if(!(REN_num(pp.valor)>0) || !REN_brToISO(pp.data)) ruim=true; });
+  if(ruim || !(REN_crParc||[]).length){ VB_toast('Preencha valor e vencimento de todos os t\u00edtulos.'); return; }
+  if(!VB_gravando('REN_crSalvar')) return;
+  var base={devedor:(dv||null), descricao:(ds||null), nota:(nt||null)};
+  var maxIdx=-1; orig.forEach(function(o){ if(o.idx>maxIdx) maxIdx=o.idx; });
+  var ops=[], notas=[], apagaNota=[], novos=[], vivos={};
+  (REN_crParc||[]).forEach(function(pp){
+    var pn=String(pp.nota||'').trim().toUpperCase();
+    if(pp.id){
+      vivos[String(pp.id)]=1;
+      var upd=Object.assign({}, base);
+      if(!pp.trav){ upd.valor=REN_num(pp.valor); upd.venc=REN_brToISO(pp.data); }
+      var r0=null; ((REN_cache&&REN_cache.cr)||[]).forEach(function(r){ if(String(r.id)===String(pp.id)) r0=r; });
+      var mudou=!r0 || Object.keys(upd).some(function(k){ var v0=r0[k]; if(k==='valor') return Number(v0||0)!==upd[k]; if(k==='venc') return String(v0||'').slice(0,10)!==upd[k]; return (v0||null)!==upd[k]; });
+      if(mudou) ops.push(sb.from('contas_receber').update(upd).eq('id', pp.id));
+      if(!pp.trav && pn!==String(pp.nota0||'').toUpperCase()){ if(pn) notas.push({op_tab:'cr', op_id:L, parcela_idx:pp.idx, nota:pn}); else apagaNota.push(pp.idx); }
+    } else {
+      novos.push({vv:REN_num(pp.valor), dd:REN_brToISO(pp.data), pn:pn});
+    }
+  });
+  novos.sort(function(a,b){ return a.dd<b.dd?-1:(a.dd>b.dd?1:0); });
+  var ins=[];
+  novos.forEach(function(n){ maxIdx++; ins.push(Object.assign({}, base, {valor:n.vv, venc:n.dd, lote:L, ordem:maxIdx})); if(n.pn) notas.push({op_tab:'cr', op_id:L, parcela_idx:maxIdx, nota:n.pn}); });
+  if(ins.length) ops.push(sb.from('contas_receber').insert(ins));
+  var nDel=0;
+  orig.forEach(function(o){ if(o.trav || vivos[String(o.id)]) return; nDel++; ops.push(sb.from('contas_receber').delete().eq('id', o.id)); apagaNota.push(o.idx); });
+  if(notas.length) ops.push(sb.from('parcela_notas').upsert(notas, {onConflict:'op_tab,op_id,parcela_idx'}));
+  apagaNota.forEach(function(ix){ ops.push(sb.from('parcela_notas').delete().match({op_tab:'cr', op_id:L, parcela_idx:ix})); });
+  Promise.all(ops).then(function(rs){
+    var err=rs.filter(function(r){ return r && r.error; });
+    if(err.length){ VB_erro(err[0].error.message,'Não consegui salvar a entrada.'); REN_abrir(); return; }
+    try{ VB_log('ENTRADA MANUAL','editou lançamento', dv||ds, (REN_crParc.length)+' t\u00edtulos'+(ins.length?(' \u00b7 '+ins.length+' novo'+(ins.length>1?'s':'')):'')+(nDel?(' \u00b7 '+nDel+' apagado'+(nDel>1?'s':'')):'')); }catch(e){}
+    var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
+    VB_toast('Entrada salva.');
+    REN_abrir();
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
+}
 function REN_crExcluir(btn, id){
   var _cX=REN_crDe(id)||{};
+  /* v1.302.1: a folha agora e do lancamento inteiro, entao EXCLUIR apaga o lancamento -- e so se
+     nenhuma parcela tiver baixa, parcial ou prorrogacao. Parcela solta sai pelo x da lista. */
+  var _lp=REN_crLoteParc(_cX), _trv=_lp.filter(function(q){ return q.trav; }).length;
+  if(_trv){ VB_toast('Tem parcela recebida neste lançamento. Apague as outras pelo × da lista.'); return; }
   if(!VB_podeExec(btn)){ VB_toast('Toque de novo para excluir.'); btn.dataset.armed='1'; btn.textContent='TOQUE DE NOVO'; btn.style.color='var(--red2)'; setTimeout(function(){ if(btn&&btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent='EXCLUIR'; btn.style.color='var(--so2)'; } },2500); return; }
-  sb.from('contas_receber').delete().eq('id',id).then(function(res){
+  var _Lx=String(_cX.lote||_cX.id), _ids=_lp.map(function(q){ return q.id; });
+  if(!_ids.length) _ids=[id];
+  sb.from('contas_receber').delete().in('id',_ids).then(function(res){
     if(res.error){ VB_erro(res.error.message,'Não consegui excluir.'); return; }
-    try{ VB_log('ENTRADA MANUAL','excluiu entrada', _cX.devedor||_cX.descricao||'', HIST_fmtMoeda(Number(_cX.valor)||0)+(_cX.venc?(' \u00b7 VENCIA '+String(_cX.venc).split('-').reverse().join('/')):'')+(_cX.recebido_em?' \u00b7 ESTAVA RECEBIDA':'')); }catch(e){}
+    sb.from('parcela_notas').delete().match({op_tab:'cr', op_id:_Lx}).then(function(){}).catch(function(){});
+    try{ VB_log('ENTRADA MANUAL','excluiu entrada', _cX.devedor||_cX.descricao||'', _ids.length+' t\u00edtulo'+(_ids.length>1?'s':'')+' \u00b7 '+HIST_fmtMoeda(_lp.reduce(function(t,q){ return t+REN_num(q.valor); },0)||Number(_cX.valor)||0)); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast('Entrada exclu\u00edda.');
     REN_abrir();
@@ -12724,25 +12841,34 @@ function REN_cpParcHTML(){
   (REN_cpParc||[]).forEach(function(pp,i){
     s+='<div style="display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 22px;gap:6px;align-items:center;">'
       +'<span style="font-size:10px;color:var(--so);font-weight:700;text-align:center;">'+String(i+1).padStart(2,'0')+'</span>'
-      +'<input data-selall id="rencp-pv-'+i+'" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty()" value="'+String(pp.valor||'')+'" placeholder="0,00" style="'+IN+'">'
+      +'<input data-selall id="rencp-pv-'+i+'" inputmode="decimal" oninput="REC_maskVal(this);REN_cpDirty();REN_parcTot(\'rencp\',REN_cpParc.length)" value="'+String(pp.valor||'')+'" placeholder="0,00" style="'+IN+'">'
       +'<input data-selall id="rencp-pd-'+i+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" onblur="autoCompleteDate(this);REN_cpDirty()" oninput="REC_maskData(this);REN_cpDirty()" value="'+String(pp.data||'')+'" style="'+IN+'">'
       +((REN_cpParc.length>1)?('<span onclick="REN_cpDelParc('+i+')" style="font-size:13px;color:var(--so2);cursor:pointer;text-align:center;">\u00d7</span>'):'<span></span>')
       +'</div>';
   });
-  s+='<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddParc()" style="margin-top:8px;padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;">+ REPETIR \u00daLTIMA</div>';
+  s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
+    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddVazio()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
+    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddParc()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
+  s+='<div id="rencp-ptot" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:8px 4px 0;border-top:0.5px solid var(--ln3);"></div>';
   return s+'</div>';
 }
 function REN_cpPinta(){
   var box=document.getElementById('rencp-parc'); if(!box) return;
   box.innerHTML=REN_cpParcHTML();
   REN_cpDirty();
+  try{ REN_parcTot('rencp', (REN_cpParc||[]).length); }catch(e){}
+}
+function REN_cpAddVazio(){
+  REN_cpParcLe();
+  REN_cpParc.push({valor:'', data:''});
+  REN_cpPinta();
+  try{ var _c=document.getElementById('rencp-pv-'+(REN_cpParc.length-1)); if(_c){ _c.focus(); VB_rolaAteLinha(_c.closest?_c.closest('div'):_c); } }catch(e){}
 }
 function REN_cpAddParc(){
   REN_cpParcLe();
   var last=REN_cpParc[REN_cpParc.length-1]||{valor:'',data:''};
-  var d=VB_brToDate(String(last.data||'').trim());
-  var nova='';
-  if(d){ var d2=VB_mesData(d,1,null); nova=('0'+d2.getDate()).slice(-2)+'/'+('0'+(d2.getMonth()+1)).slice(-2)+'/'+d2.getFullYear(); }
+  var _pr=REN_parcProx(last.data), nova=_pr.prox;
+  if(_pr.cheia) last.data=_pr.cheia;
   REN_cpParc.push({valor:String(last.valor||''), data:nova});
   REN_cpPinta();
   /* o valor ja veio copiado; o que falta e a DATA -- o foco vai pra ela com o teclado ainda aberto */
@@ -13424,11 +13550,15 @@ function REN_abrir(){
         if(oa!==ob) return oa-ob;
         return String(a.venc||'')<String(b2.venc||'')?-1:1;
       });
+      /* v1.302.1: o NUMERO que aparece (dnum) segue a data; a chave (idx = ordem) nao muda,
+         porque baixa, nota e prorrogacao estao presas a ela. */
+      var _porData=g.slice().sort(function(a2,b2){ var va=String(a2.venc||''), vb=String(b2.venc||''); if(va!==vb) return va<vb?-1:1; return (Number(a2.ordem)||0)-(Number(b2.ordem)||0); });
       g.forEach(function(c, i){
+        var _dn=_porData.indexOf(c);
         itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
           cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
           rot:String(c.descricao||'ENTRADA MANUAL'),
-          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:i, cr:c, dOp:String(c.created_at||'').slice(0,10)});
+          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:_dn, cr:c, dOp:String(c.created_at||'').slice(0,10)});
       });
     });
     /* PRORROGACAO: mora em tabela lateral, como a nota e o repasse. A data e o valor ORIGINAIS
@@ -13888,7 +14018,7 @@ function REN_ficha(k, exp){
   else if(x.venc===hoje) status='<b>VENCE HOJE</b>';
   else status='A VENCER';
   var irmas=REN_cache.itens.filter(function(y){ return y.tab===x.tab && y.opId===x.opId; });
-  irmas.sort(function(a2,b2){ return a2.idx-b2.idx; });
+  irmas.sort(function(a2,b2){ return (a2.tab==='cr'?a2.dnum:a2.idx)-(b2.tab==='cr'?b2.dnum:b2.idx); });   /* v1.302.1: entrada manual na ordem da data */
   var LIM=8, colapsa=(!exp && irmas.length>LIM);
   var mostrar={};
   if(colapsa){
@@ -14192,7 +14322,7 @@ function REN_cobrarCanvas(k){
   var x=REN_cache&&REN_cache.map[k]; if(!x) return null;
   var hoje=REN_hojeISO();
   var irmas=REN_cache.itens.filter(function(y){ return y.tab===x.tab && y.opId===x.opId; });
-  irmas.sort(function(a,b){ return a.idx-b.idx; });
+  irmas.sort(function(a,b){ return (a.tab==='cr'?a.dnum:a.idx)-(b.tab==='cr'?b.dnum:b.idx); });
   var fmt=function(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
   var dBR=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4); };
   var dCur=function(iso){ var s=String(iso||'').slice(0,10); return s.slice(8,10)+'/'+s.slice(5,7); };
@@ -16567,7 +16697,9 @@ function MER_cpRender(r){
   hh+='<div id="mer-cp-grid" style="display:grid;grid-template-columns:1fr 1fr 30px;gap:2px;align-items:end;">';
   MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
-  hh+='<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAdd()" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</div>';
+  hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
+    +'<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAddVazio()" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ ADICIONAR</div>'
+    +'<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAdd()" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR ÚLTIMA</div></div>';
   /* CUSTO x LANCADO x FALTA e a pergunta que a folha responde: ja cobri tudo o que devo? */
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
@@ -16631,6 +16763,19 @@ function MER_cpAdd(){
       var _d=_ds[_ds.length-1];
       if(_d){ _d.focus(); var _n=_d.value.length; _d.setSelectionRange(_n,_n); }
     }catch(e){}
+    return;
+  }
+  var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
+}
+/* v1.302.0: linha vazia, para parcela que nao repete a anterior */
+function MER_cpAddVazio(){
+  var nv={id:null, valor:0, venc:'', nota:'', pago:false};
+  MER_cpLinhas.push(nv);
+  var g=document.getElementById('mer-cp-grid');
+  if(g){
+    g.insertAdjacentHTML('beforeend', MER_cpLinhaHTML(nv, MER_cpLinhas.length-1)); MER_cpPinta(); MER_cpTotais();
+    try{ VB_rolaAteLinha(g.lastElementChild); }catch(e){}
+    try{ var _vs=g.querySelectorAll('input[inputmode="decimal"]'); var _v=_vs[_vs.length-1]; if(_v) _v.focus(); }catch(e){}
     return;
   }
   var r=MER_rows.find(function(x){ return String(x.id)===String(MER_cpId); }); if(r) MER_cpRender(r);
@@ -21585,6 +21730,17 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.1</span><span class="cl-ver-date">14/10/2026</span></div>
+      <div class="cl-item">Entrada manual: o número da parcela (01 DE 06) segue a data em todo lugar, inclusive nos lançamentos já salvos — sem apagar nada</div>
+      <div class="cl-item">EDITAR da entrada abre o lançamento inteiro, igual à NOVA ENTRADA: muda valor, data e nota, acrescenta e apaga parcelas. Parcela recebida, parcial ou prorrogada fica travada. EXCLUIR apaga o lançamento inteiro, só se nenhuma parcela tiver sido recebida</div>
+  </div>
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.0</span><span class="cl-ver-date">14/10/2026</span></div>
+      <div class="cl-item">NOVA ENTRADA e NOVA CONTA: data sem ano (14/10) agora é completada antes do REPETIR ÚLTIMA, que preenche a próxima com +1 mês; total das parcelas embaixo da lista, atualizando enquanto digita</div>
+      <div class="cl-item">Dois botões nas listas de parcelas (ENTRADAS, SAÍDAS e PARCELAS DA COMPRA): + ADICIONAR (linha vazia) e + REPETIR ÚLTIMA</div>
+      <div class="cl-item">NOVA ENTRADA: ao salvar, as parcelas são numeradas pela data, não pela ordem digitada; cada linha tem um i para escrever a nota daquela parcela já na criação (a mesma nota que aparece no card)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.301.3</span><span class="cl-ver-date">13/10/2026</span></div>
       <div class="cl-item">Panorama do lucro: o título e os nomes das colunas (MÊS · RESULTADO · JUROS PAGOS · LUCRO) ficam presos no topo; meses e totais rolam por baixo</div>
