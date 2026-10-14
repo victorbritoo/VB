@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.302.2</title>
+<title>VB - v1.302.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12188,8 +12188,10 @@ function REN_crDirty(){
   b.style.cursor=ok?'pointer':'not-allowed';
   b.style.pointerEvents=ok?'':'none';
 }
+/* v1.302.3: EDITAR aberto do card volta pro card, como DAR BAIXA, PRORROGAR e EDITAR NOTA */
+var REN_crVolta=null;
 function REN_crFecharGuard(){
-  function fecha(){ var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none'; }
+  function fecha(){ var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none'; var kv=REN_crVolta; REN_crVolta=null; if(kv && REN_cache && REN_cache.map[kv]) REN_ficha(kv); }
   if(REN_crForm===null || REN_crEstado()===REN_crForm){ fecha(); return; }
   VB_confirm2('Altera\u00e7\u00f5es feitas', 'SALVAR', 'DESCARTAR', function(salvar){
     if(salvar) REN_crSalvar(REN_crEditId||'');
@@ -12197,6 +12199,7 @@ function REN_crFecharGuard(){
   });
 }
 function REN_crSheet(id){
+  REN_crVolta=null;
   if(REN_cache&&REN_cache.crErro){ VB_toast('Rode o SQL da contas_receber primeiro.'); return; }
   var c=REN_crDe(id);
   var ov=REN_cpOv('ren-cr-ov');
@@ -12212,7 +12215,7 @@ function REN_crSheet(id){
     +'<div style="'+RT+'margin-top:8px;">DESCRI\u00c7\u00c3O</div>'
     +'<input id="rencr-desc" oninput="REN_crDirty()" placeholder="ALUGUEL \u00b7 EMPR\u00c9STIMO \u00b7 COMISS\u00c3O" value="'+esc(c&&c.descricao)+'" style="'+IN+'">'
     +'<div id="rencr-parc"></div>'   /* v1.302.1: editar abre o lancamento inteiro */
-    +'<div style="'+RT+'margin-top:8px;">NOTA INTERNA \u00b7 S\u00d3 NO APP</div>'   /* v1.302.2: a da parcela vai na foto do cobrar; esta nunca sai */
+    +'<div style="'+RT+'margin-top:8px;">NOTA INTERNA</div>'   /* v1.302.2: a da parcela vai na foto do cobrar; esta nunca sai */
     +'<input id="rencr-nota" oninput="REN_crDirty()" placeholder="COMBINADO NO WHATSAPP" value="'+esc(c&&c.nota)+'" style="'+IN+'">'
     +'<button onclick="REN_crSalvar(\'' + (c?String(c.id):'') + '\')" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;" id="rencr-salvar">SALVAR</button>'
     +(c?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">'
@@ -12324,6 +12327,7 @@ function REN_crSalvarLote(id, dv, ds, nt){
     try{ VB_log('ENTRADA MANUAL','editou lançamento', dv||ds, (REN_crParc.length)+' t\u00edtulos'+(ins.length?(' \u00b7 '+ins.length+' novo'+(ins.length>1?'s':'')):'')+(nDel?(' \u00b7 '+nDel+' apagado'+(nDel>1?'s':'')):'')); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast('Entrada salva.');
+    REN_fichaVoltar=REN_crVolta; REN_crVolta=null;
     REN_abrir();
   }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
@@ -12342,6 +12346,7 @@ function REN_crExcluir(btn, id){
     try{ VB_log('ENTRADA MANUAL','excluiu entrada', _cX.devedor||_cX.descricao||'', _ids.length+' t\u00edtulo'+(_ids.length>1?'s':'')+' \u00b7 '+HIST_fmtMoeda(_lp.reduce(function(t,q){ return t+REN_num(q.valor); },0)||Number(_cX.valor)||0)); }catch(e){}
     var o=document.getElementById('ren-cr-ov'); if(o) o.style.display='none';
     VB_toast('Entrada exclu\u00edda.');
+    REN_crVolta=null;
     REN_abrir();
   }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
 }
@@ -14037,6 +14042,7 @@ function REN_ficha(k, exp){
     var st, stC;
     if(yb){ st='\u2713 '+HIST_fmtData(String(yb.recebido_em||y.venc).slice(0,10)); stC='var(--mu)'; }
     else if(y.venc<hoje){ st='ATRASADA'; stC='var(--red)'; }
+    else if(String(y.venc).slice(0,10)===hoje){ st='VENCE HOJE'; stC='var(--tx)'; }   /* v1.302.3: igual ao STATUS de cima e a foto do cobrar */
     else { st='A VENCER'; stC='var(--so)'; }
     var _seu=null;
     if(oi){ var _rp=yb?REN_repDe(y, yb):REN_repAlvo(oi,y); _seu=Math.round((y.valor-_rp)*100)/100; }
@@ -14292,7 +14298,7 @@ function REN_ficha(k, exp){
        serve enquanto ela esta em aberto. */
     +'<button onclick="'+(b?('REN_notaBxSheet(\''+k+'\')'):('REN_notaSheet(\''+k+'\')'))+'" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(b?((b.nota?'EDITAR ':'')+'NOTA'):(REN_notaDe(x)?'EDITAR NOTA':'NOTA'))+'</button>'
     +((x.tab==='cr')
-      ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+((x.cr&&x.cr.id)||x.opId)+'\');" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
+      ? ('<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';REN_crSheet(\''+((x.cr&&x.cr.id)||x.opId)+'\');REN_crVolta=\''+k+'\';" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EDITAR</button>')
       : ('<button onclick="REN_abrirOp(\''+x.tab+'\',\''+x.opId+'\',\''+k+'\')" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">OPERA\u00c7\u00c3O</button>'))
     +'<button onclick="document.getElementById(\'ren-ficha-ov\').style.display=\'none\';CLIP_abrir(\''+CLIP_esc(x.cliente).replace(/'/g,"\\'")+'\',null,\''+k+'\');" style="padding:'+(b?'8px 4px':'10px 4px')+';border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">PANORAMA</button>'
     +(_qFin?('<button onclick="REN_quitar(\''+x.opId+'\',\''+k+'\')" style="padding:10px 4px;border:0.5px solid var(--ln3);border-radius:12px;background:var(--sf2);color:var(--tx);font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">QUITAR</button>'):'')
@@ -21731,6 +21737,12 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.3</span><span class="cl-ver-date">14/10/2026</span></div>
+      <div class="cl-item">EDITAR da entrada aberto pelo card volta pro card ao fechar ou salvar, como DAR BAIXA e PRORROGAR. Se a parcela foi apagada ou o lançamento excluído, fica na lista</div>
+      <div class="cl-item">PARCELAS DA OPERAÇÃO no card mostra VENCE HOJE na parcela do dia, igual ao status de cima e à foto do cobrar</div>
+      <div class="cl-item">Campo da nota do lançamento passou a se chamar só NOTA INTERNA</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.302.2</span><span class="cl-ver-date">14/10/2026</span></div>
       <div class="cl-item">Lista de parcelas da entrada: o botão de nota virou o mesmo ⓘ cinza das vendas, e o total ficou TOTAL (6)</div>
