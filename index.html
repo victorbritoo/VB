@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.307.0</title>
+<title>VB - v1.307.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12563,6 +12563,8 @@ function REN_opCarimbo(data){
   var _m=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][Number(s.slice(5,7))-1]||s.slice(5,7);
   return ' \u00b7 #'+_m+'/'+s.slice(2,4);
 }
+/* v1.307.1: tira o carimbo onde a data da operacao ja aparece (ficha do titulo, COBRAR, EXTRATO). */
+function REN_semCarimbo(s){ return String(s||'').replace(/ \u00b7 #[A-Z]{3}\/\d{2}$/,''); }
 function REN_cpGrupo(c){
   if(c.origem_id) return 'O|'+String(c.origem_tab||'')+'|'+String(c.origem_id);
   var a=VB_cliNorm(c.credor||''), b=VB_cliNorm(c.descricao||'');
@@ -14085,7 +14087,7 @@ function REN_ficha(k, exp){
   var _ehRep=false;
   try{ _ehRep=!!(b && oi && (REN_repDe(x,b)>0 || b.repassado_em)); }catch(e){}
   hh+='<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">'+(_ehRep?'REPASSE':REN_termo(x.tab,false,true))+'</div>';
-  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco(REN_opRotulo(x),CLIP_esc(REN_rotCurto(x.rot)||x.rot))+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('CLIENTE',CLIP_esc(VB_nomeCurto(x.cliente)))+bloco(REN_opRotulo(x),CLIP_esc(REN_semCarimbo(REN_rotCurto(x.rot)||x.rot)))+'</div>';
   /* ERA desceu pra baixo do VENCIMENTO: duas datas do mesmo fato lidas juntas, e uma linha a menos */
   /* prorrogada: a data velha e a nova na MESMA linha, com a seta -- a gramatica que o card
      da lista ja usa. Bloco proprio pra ERA quebrava a grade e nao pertencia a coluna nenhuma. */
@@ -14354,7 +14356,7 @@ function REN_cobrarCanvas(k){
   var saldo=0; linhas.forEach(function(L){ if(!L.pago) saldo+=L.resta; }); saldo=Math.round(saldo*100)/100;
   /* v1.300.83: titulo IGUAL ao da tabela que o cliente recebeu (venda com SN, financiamento e
      manual pela descricao). So a antecipacao segue com o rotulo curto da lista. */
-  var tit=String((x.tab==='ant')?(REN_rotCurto(x.rot)||x.rot||''):(x.rot||'')).toUpperCase();
+  var tit=String((x.tab==='ant')?REN_semCarimbo(REN_rotCurto(x.rot)||x.rot||''):(x.rot||'')).toUpperCase();
   var sec=(x.tab==='ant')?'ANTECIPAÇÃO':(x.tab==='fin')?'FINANCIAMENTO':(x.tab==='cr')?'ENTRADAS':'VENDAS';
   var W=390, esc=3, padH=18, padV=12, altVB=34, altTit=28, altHead=22, altTot=24, altRow=24, altSub=11;
   /* v1.300.84: a data do NEGOCIO embaixo do titulo. O carimbo do canto e de quando a foto saiu
@@ -22276,6 +22278,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.307.1</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">Carimbo da antecipação sai da ficha do título, do COBRAR e do EXTRATO, onde a data da operação já aparece; fica no card da lista e na foto PARCELAS A VENCER</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.307.0</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">Carimbo da antecipação com o mês por extenso: #OUT/26 em vez de #10/26 (card das ENTRADAS, ficha e foto PARCELAS A VENCER)</div>
