@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.306.5</title>
+<title>VB - v1.306.6</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20525,6 +20525,9 @@ function NP_aplicaEmit(c, forca){
 /* 1.306.3: o campo mostra em maiusculo como todo campo do app; o PDF escreve o endereco do jeito do
    contrato -- palavras com inicial maiuscula, de/da/do em minusculo, UF e CEP em maiusculo, "nº". */
 function NP_titEnd(s){
+  return NP_titEnd0(s).replace(/CEP:?\s*(\d{2})\.?(\d{3})-?(\d{3})/g,'CEP $1.$2-$3');
+}
+function NP_titEnd0(s){
   var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1};
   return String(s||'').split(/(\s+)/).map(function(w,i){
     if(!w || /^\s+$/.test(w)) return w;
@@ -20789,7 +20792,7 @@ function NP_share(){ if(!NP_pdf) return;
 function NP_emitTxt(s){
   if(s.tipo==='pj'){
     var rp=s.reps.map(function(p){ return [{t:p.nome,b:1},{t:', CPF '+p.cpf}]; });
-    var out=[{t:'a EMITENTE, '},{t:s.emit.nome,b:1},{t:', CNPJ '+s.emit.doc+', neste ato representada por '}];
+    var out=[{t:'o EMITENTE, '},{t:s.emit.nome,b:1},{t:', CNPJ '+s.emit.doc+', neste ato representado por '}];
     rp.forEach(function(p,i){ if(i) out.push({t:' e por '}); out=out.concat(p); });
     return out;
   }
@@ -20800,7 +20803,7 @@ function NP_corpo(t, s, ben, emi){
   return [{t:(t.dt.d===1?'Ao ':'Aos ')},{t:NP_dNum(t.dt),b:1,u:1},{t:' ('+NP_dExt(t.dt)+')',b:1,u:1},{t:', '}]
     .concat(NP_emitTxt(s))
     .concat([{t:', '+(s.tipo==='pj'?'pagará':'pagarei')+' por esta única via de '},{t:'NOTA PROMISSÓRIA',b:1},{t:' a '},{t:bnm,b:1},
-      {t:', CNPJ '+bcn+', ou à sua ordem, a quantia de '},{t:NP_valTxt(t.v),b:1},
+      {t:', CNPJ '+bcn+', ou à sua ordem, a quantia de '},{t:NP_valTxt(t.v),b:1,u:1},
       {t:', em moeda corrente nacional, pagável na praça de Fortaleza/CE. Emitida em Fortaleza/CE, '+NP_dNum(emi)+'.'}]);
 }
 /* 1.305.1: na PJ os representantes sempre avalizam (regra do VB). Lista de avalistas do documento =
@@ -20867,7 +20870,7 @@ function NP_paginas(r, s){
     segs.forEach(function(sg){
       var tx=String(sg.t).replace(/\b(CPF|CNPJ) (?=\d)/g,'$1: ');
       if(sg.b){ sg2.push({t:tx,b:1,u:sg.u}); return; }
-      tx.split(/(EMITENTE|BENEFICIÁRIA)/).forEach(function(pc){ if(pc) sg2.push({t:pc,b:(pc==='EMITENTE'||pc==='BENEFICIÁRIA')?1:0,u:sg.u}); });
+      tx.split(/(EMITENTE|BENEFICIÁRIA|AVALISTAS|AVALISTA)/).forEach(function(pc){ if(pc) sg2.push({t:pc,b:/^(EMITENTE|BENEFICIÁRIA|AVALISTAS?)$/.test(pc)?1:0,u:sg.u}); });
     });
     sg2.forEach(function(sg){ String(sg.t).split(/(\s+)/).forEach(function(p,pi){
       if(p==='') return;
@@ -22270,6 +22273,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.6</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP: EMITENTE no masculino em todo o documento (“o EMITENTE, …, neste ato representado por”), AVALISTA(S) em negrito como EMITENTE e BENEFICIÁRIA, CEP sempre 00.000-000 e o valor de cada nota em negrito sublinhado, como na confissão de dívida</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.5</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP: nomes do emitente, dos representantes e da beneficiária em negrito no topo; EMITENTE e BENEFICIÁRIA sempre em negrito; meses com maiúscula (15 de Novembro de 2026); CPF: e CNPJ: com dois pontos; VENCIMENTO em maiúsculo; a data de cada nota sublinhada do número até o fecha-parêntese do extenso, com o extenso em negrito</div>
