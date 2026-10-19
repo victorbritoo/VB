@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.304.3</title>
+<title>VB - v1.305.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -19588,11 +19588,18 @@ function CLI_cepInput(el){
     if(!j || j.erro) return;
     var ids = {e1:pfx+'-end1',e2:pfx+'-bairro',cid:pfx+'-cidade',uf:pfx+'-uf'};
     var g=function(id){ return document.getElementById(id); };
-    if(g(ids.e1) && !g(ids.e1).value && j.logradouro) g(ids.e1).value=j.logradouro;
-    if(g(ids.e2) && !g(ids.e2).value && j.bairro) g(ids.e2).value=j.bairro.toUpperCase();
+    /* 1.305.0: CEP novo manda -- troca rua, bairro, cidade e UF mesmo preenchidos. Se a rua mudou,
+       Nº e complemento eram da casa antiga e saem; so corrigiu um digito do CEP (mesma rua), ficam. */
+    var _e1=g(ids.e1), _ruaVelha=_e1?VB_cliNorm(_e1.value):'';
+    var _ruaMudou=!!(j.logradouro && _ruaVelha && VB_cliNorm(j.logradouro)!==_ruaVelha);
+    if(_e1 && j.logradouro) _e1.value=j.logradouro;
+    if(g(ids.e2) && j.bairro) g(ids.e2).value=j.bairro.toUpperCase();
+    if(g(ids.cid) && j.localidade) g(ids.cid).value=j.localidade;
+    if(g(ids.uf) && j.uf) g(ids.uf).value=j.uf;
+    if(_ruaMudou){
+      [pfx+(pfx==='cli'?'-num':'-numero'), pfx+'-end2'].forEach(function(id){ var f=g(id); if(f) f.value=''; });
+    }
     try{ if(pfx==='clif') CLI_fichaSync(); }catch(e){}
-    if(g(ids.cid) && !g(ids.cid).value && j.localidade) g(ids.cid).value=j.localidade;
-    if(g(ids.uf) && !g(ids.uf).value && j.uf) g(ids.uf).value=j.uf;
     VB_toast('Endereço do CEP preenchido.');
   }).catch(function(){});
 }
@@ -22153,6 +22160,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.305.0</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">Cadastro: trocar o CEP troca rua, bairro, cidade e UF pelos do CEP novo, mesmo já preenchidos. Se a rua mudou, Nº e complemento são apagados (eram da casa antiga); se só corrigiu o CEP na mesma rua, ficam. Vale no NOVO CLIENTE, na ficha e no contrato</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.304.3</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP: a folha ficou no padrão do app — rótulos e campos centralizados, beneficiária no seletor do contrato, sem o botão PESSOA FÍSICA / JURÍDICA (o CPF ou CNPJ já diz; REPRESENTANTES só aparece com CNPJ)</div>
