@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.305.1</title>
+<title>VB - v1.306.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2022,7 +2022,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
     var abrirLbl = (tab==='ven') ? 'ABRIR VENDA' : (tab==='pag') ? 'ABRIR PAGAMENTO' : (tab==='fin') ? 'ABRIR' : 'ABRIR OPERAÇÃO';
     var _btnCss = 'white-space:nowrap;overflow:hidden;padding:8px 2px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-size:10px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;text-align:center;';
     h += '<button onclick="event.stopPropagation();HIST_abrirOperacao('+idx+')" style="'+_btnCss+'">'+abrirLbl+'</button>';
-    if(_npB){ h += '<button onclick="event.stopPropagation();NP_abrir('+idx+')" style="'+_btnCss+'">GERAR NP</button>'; }
+    if(_npB){ h += '<button onclick="event.stopPropagation();NP_porta('+idx+')" style="'+_btnCss+'">NP</button>'; }
     if(temRelogio){ h += '<button onclick="event.stopPropagation();HIST_abrirRelogio('+idx+')" style="'+_btnCss+'">RELÓGIO</button>'; }
     if(temSocioBtn){ h += '<button onclick="event.stopPropagation();HIST_resumoSocio('+idx+')" style="'+_btnCss+'">SÓCIO</button>'; }
     if(tab==='ven'){ h += '<button onclick="event.stopPropagation();CTR_abrir('+idx+')" style="'+_btnCss+'">CONTRATO</button>'; }
@@ -4887,13 +4887,13 @@ function HIST_fetch(term){
       if(HIST_tabAtual==='ven') try{ HIST_fetch(term); }catch(e){}
     });
   }
-  if((tab==='ven'||tab==='fin') && HIST_conStatus===null){
+  if((tab==='ven'||tab==='fin'||tab==='ant') && HIST_conStatus===null){
     HIST_conStatus='loading';
-    sb.from('contratos').select('venda_id,fin_id,assinado_em,created_at').then(function(q3){
+    sb.from('contratos').select('venda_id,fin_id,ant_id,assinado_em,created_at').then(function(q3){
       HIST_conStatus={};
       /* venda e financiamento no mesmo mapa: os ids sao uuid, nao colidem */
-      if(!q3.error) (q3.data||[]).forEach(function(c){ var _id=c.venda_id||c.fin_id; if(!_id) return; var _k=String(_id), _cur=HIST_conStatus[_k]; if(!_cur || (!_cur.ass && c.assinado_em)) HIST_conStatus[_k]={ass:c.assinado_em||null, ger:c.created_at||null}; });
-      if(HIST_tabAtual==='ven'||HIST_tabAtual==='fin') try{ HIST_fetch(term); }catch(e){}
+      if(!q3.error) (q3.data||[]).forEach(function(c){ var _id=c.venda_id||c.fin_id||c.ant_id; if(!_id) return; var _k=String(_id), _cur=HIST_conStatus[_k]; if(!_cur || (!_cur.ass && c.assinado_em)) HIST_conStatus[_k]={ass:c.assinado_em||null, ger:c.created_at||null}; });
+      if(HIST_tabAtual==='ven'||HIST_tabAtual==='fin'||HIST_tabAtual==='ant') try{ HIST_fetch(term); }catch(e){}
     });
   }
   var q=sb.from(HIST_tabela(tab)).select('*');
@@ -5083,6 +5083,9 @@ function HIST_renderRows(tab, rows){
       if(r.quantidade_titulos) campos.push({l:'Títulos', v:String(r.quantidade_titulos)});
       if(r.prazo_medio!=null) campos.push({l:'Prazo médio', v:Number(r.prazo_medio).toFixed(1)+' d'+VB_prazoMeses(r.prazo_medio)});
       if(r.valor_liquido) campos.push({l:'Líquido', v:HIST_fmtMoeda(r.valor_liquido)});
+      var _npS=(HIST_conStatus&&typeof HIST_conStatus==='object')?HIST_conStatus[String(r.id)]:null;
+      if(_npS){ var _npDH=function(iso){ var s=CON_dtHora(iso)||''; return s.replace(/^(\d{2}\/\d{2})\/\d{4}\s*/, '$1 \u00b7 '); };
+        campos.push({l:'NP', v:(_npS.ass?('Assinada \u00b7 '+_npDH(_npS.ass)):('Gerada'+(_npS.ger?(' \u00b7 '+_npDH(_npS.ger)):'')))}); }
     } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
       valor=HIST_fmtMoeda(r.valor_financiado)+(Number(r.qtd_parcelas)>0?(' ('+Number(r.qtd_parcelas)+'X)'):'');
@@ -20544,6 +20547,38 @@ function NP_ov(){
   }
   return ov;
 }
+/* 1.306.0: botao NP do card e porteiro, como o CONTRATO -- com NP registrada abre a ficha (ver,
+   anexar assinado, gerar nova); sem, abre a folha. Assinada manda, mesmo havendo uma mais nova. */
+function NP_porta(idx){
+  var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(!r) return;
+  sb.from('contratos').select('*').eq('ant_id', String(r.id)).order('created_at',{ascending:false}).then(function(res){
+    var arr=(!res.error && res.data)?res.data:[];
+    if(!arr.length){ NP_abrir(idx); return; }
+    var c=arr.filter(function(x){ return x.assinado_em; })[0] || arr[0];
+    CON_fichaObj(c, function(){ NP_abrir(idx); });
+  }).catch(function(){ NP_abrir(idx); });
+}
+function NP_registra(r, s, tot, n){
+  try{
+    var nm=String((r.nome&&String(r.nome).trim()&&VB_cliNorm(r.nome)!==VB_cliNorm(r.cliente))?r.nome:VB_nomeCurto(r.cliente||r.nome||''));
+    sb.from('contratos').insert({created_at:VB_carimbo(), cliente_nome:s.emit.nome, cpf:s.emit.doc||null, descricao:'NP '+nm+' \u00b7 '+n+' NOTA'+(n>1?'S':''), valor_total:tot||null, fname:NP_fname, ant_id:String(r.id)}).select('id').then(function(res){
+      if(res.error){ VB_erro(res.error.message,'NP gerada, mas não registrada em Contratos.'); return; }
+      try{ HIST_conStatus=null; }catch(e){}
+      var _novo=(res.data&&res.data[0])?res.data[0].id:null;
+      if(_novo) sb.from('contratos').delete().eq('ant_id',String(r.id)).is('assinado_em',null).neq('id',_novo).then(function(){ try{ CON_load&&CON_load(); }catch(e){} }).catch(function(){});
+    }).catch(function(){});
+  }catch(e){}
+}
+function NP_verRegistro(c){
+  sb.from('antecipacoes').select('*').eq('id', c.ant_id).limit(1).then(function(res){
+    var r=res&&res.data&&res.data[0];
+    if(!r || !r.np){ VB_toast('Operação ou dados da NP não encontrados.'); return; }
+    NP_r=r; NP_st=JSON.parse(JSON.stringify(r.np)); NP_norm();
+    var s=NP_limpo(), pgs=NP_paginas(r, s);
+    NP_pdf=CTR_pdfBlob(pgs); NP_fname=c.fname||NP_fname;
+    NP_viewer(pgs, r);
+  }).catch(function(){ VB_toast('Sem conexão.'); });
+}
 function NP_fechar(){ var ov=document.getElementById('np-ov'); if(ov) ov.style.display='none'; NP_r=null; }
 /* le a tela para o estado antes de redesenhar (adicionar/remover linha, trocar PF/PJ) */
 function NP_le(){
@@ -20676,6 +20711,7 @@ function NP_gerar(){
   NP_pdf=CTR_pdfBlob(pgs);
   var nm=String((r.nome&&String(r.nome).trim()&&VB_cliNorm(r.nome)!==VB_cliNorm(r.cliente))?r.nome:VB_nomeCurto(r.cliente||r.nome||'OP'));
   NP_fname='NP_'+VB_cliNorm(nm).replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')+'_'+NP_fmtDt(NP_emissao(r)).replace(/\//g,'-')+'.pdf';
+  NP_registra(r, s, NP_titulos(r).reduce(function(a,t){ return a+t.v; },0), NP_titulos(r).length);
   /* grava na operacao e completa o cadastro de quem assina (so campo vazio) */
   try{
     sb.from('antecipacoes').update({np:s}).eq('id', r.id).then(function(res){ if(!res.error){ r.np=s; try{ VB_log('ANTECIPAÇÃO','gerou NP', r.nome||r.cliente||'', s.emit.nome+' · '+NP_titulos(r).length+' notas'); }catch(e){} } }).catch(function(){});
@@ -21013,11 +21049,11 @@ function CON_fichaObj(c, aoGerarNovo){
   ov.id='vb-con-ficha';
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10060;display:flex;align-items:flex-end;justify-content:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">CONTRATO</div>'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">'+(c.ant_id?'NOTA PROMISSÓRIA':'CONTRATO')+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;">'
-    +'<div style="grid-column:1/-1;">'+bloco('CLIENTE',c.cliente_nome)+'</div>'
-    +bloco('CPF',c.cpf)+bloco('DATA',dt)
-    +'<div style="grid-column:1/-1;">'+bloco(c.fin_id?'VEÍCULO':'RELÓGIO',c.descricao)+'</div>'
+    +'<div style="grid-column:1/-1;">'+bloco(c.ant_id?'EMITENTE':'CLIENTE',c.cliente_nome)+'</div>'
+    +bloco(c.ant_id?'CPF / CNPJ':'CPF',c.cpf)+bloco('DATA',dt)
+    +'<div style="grid-column:1/-1;">'+bloco(c.ant_id?'OPERAÇÃO':(c.fin_id?'VEÍCULO':'RELÓGIO'),c.descricao)+'</div>'
     +bloco('VALOR',c.valor_total?('R$ '+CTR_fmtV(Number(c.valor_total))):'')+bloco('ARQUIVO',c.fname)
     +'</div>'
     +'<div style="border-top:0.5px solid var(--ln3);margin-top:6px;padding-top:8px;">'
@@ -21031,18 +21067,20 @@ function CON_fichaObj(c, aoGerarNovo){
         +'<button id="conf-ver" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VERS\u00c3O GERADA (SEM ASSINATURA)</button>'
       : '<button id="conf-ver" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VISUALIZAR</button>'
         +'<button id="conf-anexar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">ANEXAR ASSINADO (PDF)</button>')
-    +(aoGerarNovo?'<button id="conf-novo" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR NOVO CONTRATO</button>':'')
+    +(aoGerarNovo?'<button id="conf-novo" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">'+(c.ant_id?'GERAR NOVA NP':'GERAR NOVO CONTRATO')+'</button>':'')
     +'<button id="conf-fechar" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   ov.querySelector('#conf-fechar').addEventListener('click',function(){ ov.remove(); });
-  ov.querySelector('#conf-ver').addEventListener('click',function(){ CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f,null,c._vendaDesc||c.descricao); }); });
+  ov.querySelector('#conf-ver').addEventListener('click',function(){
+    if(c.ant_id){ NP_verRegistro(c); return; }   /* NP nao guarda arquivo: redesenha da operacao */
+    CON_getBlob(c,function(b,f){ CTR_viewerPDF(b,f,null,c._vendaDesc||c.descricao); }); });
   var bn=ov.querySelector('#conf-novo');
   if(bn){ var _armN=false; bn.addEventListener('click',function(){
     if(c.assinado_em && !_armN){
       _armN=true; bn.textContent='J\u00c1 EXISTE ASSINADO \u2014 TOQUE DE NOVO'; bn.style.color='var(--red)'; bn.style.borderColor='var(--red)';
-      setTimeout(function(){ _armN=false; if(bn){ bn.textContent='GERAR NOVO CONTRATO'; bn.style.color='var(--tx)'; bn.style.borderColor='var(--ln3)'; } },3000);
+      setTimeout(function(){ _armN=false; if(bn){ bn.textContent=(c.ant_id?'GERAR NOVA NP':'GERAR NOVO CONTRATO'); bn.style.color='var(--tx)'; bn.style.borderColor='var(--ln3)'; } },3000);
       return;
     }
     ov.remove(); aoGerarNovo();
@@ -21074,7 +21112,7 @@ function CON_fichaObj(c, aoGerarNovo){
   });
   var bs2=ov.querySelector('#conf-ass');
   if(bs2) bs2.addEventListener('click',function(){
-    var nm=(c.fname||'CONTRATO.docx').replace(/\.docx$/i,'')+' ASSINADO.pdf';
+    var nm=(c.fname||'CONTRATO.docx').replace(/\.(docx|pdf)$/i,'')+' ASSINADO.pdf';
     if(c.assinado_path){
       sb.storage.from('contratos').download(c.assinado_path).then(function(res){
         if(res.error||!res.data){ VB_toast('Arquivo não disponível.'); return; }
@@ -22180,6 +22218,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.0</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP com controle, como o contrato: cada NP gerada entra em GESTÃO › CADASTROS › CONTRATOS (emitente, total, operação), com AGUARDANDO ASSINATURA, ANEXAR ASSINADO e ver o assinado. Gerar de novo troca a não assinada; assinada nunca é apagada sozinha</div>
+      <div class="cl-item">No card da antecipação o botão virou NP: sem NP abre a folha; com NP abre a ficha dela (VISUALIZAR, ANEXAR ASSINADO, GERAR NOVA NP). O detalhe do card mostra NP: GERADA ou ASSINADA com data e hora</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.305.1</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">CLIENTES: a busca acha pelo apelido (WET acha a WET MOTORS) e ignora acento. Vale também na busca do devedor no contrato</div>
