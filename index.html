@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.307.1</title>
+<title>VB - v1.308.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2787,7 +2787,7 @@ function VB_relatorioMenu(){
     for(var _i=0;_i<_perBtns.length;_i++){ _perBtns[_i].addEventListener('click', function(){ var per=this.getAttribute('data-per'); if(per==='messel'){ VB_relMesPicker(); return; } VB_relMesSel=null; VB_relSetPeriodo(per); }); }
   }
   var nomes={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'};
-  var abaBtn=ov.querySelector('#vb-rel-aba'); if(abaBtn) abaBtn.textContent=(nomes[HIST_tabAtual]||'ABA ATUAL');
+  var abaBtn=ov.querySelector('#vb-rel-aba'); if(abaBtn){ abaBtn.textContent=(nomes[HIST_tabAtual]||'ABA ATUAL'); abaBtn.style.display=(HIST_tabAtual==='pag')?'none':''; }
   VB_relSetEscopo('todos'); // abre sempre em TODOS
   VB_relSetPeriodo(VB_relPeriodo);
   var hint=ov.querySelector('#vb-rel-hint');
@@ -2960,8 +2960,11 @@ function VB_fetchFiltrado(onOk, onErr){
   VB_fetchTudo(function(dados, total){
     var mapa={antecipacoes:'ant', financiamentos_hist:'fin', vendas:'ven', pagamentos:'pag'};
     var soTab = ((typeof VB_relEscopo!=='undefined' && VB_relEscopo==='todos') || (HIST_searchGlobal && HIST_searchTerm)) ? null : HIST_tabAtual; // escopo do menu (Aba/Todos); busca ativa = todos
+    if(soTab==='pag') soTab=null;
     var out={}, tot=0;
     Object.keys(dados).forEach(function(tname){
+      /* v1.308.0: PAGAMENTOS fora dos relatorios (PDF e completo) -- encontro de contas, sem lucro nem taxa */
+      if(tname==='pagamentos'){ out[tname]=[]; return; }
       if(!mapa[tname]){ out[tname]=dados[tname]||[]; return; } // só as 4 verticais são operação: o resto (mercadorias, clientes, sócios, log...) vai junto como referência, sem contar nem filtrar
       var tab=mapa[tname];
       if(soTab && tab!==soTab){ out[tname]=[]; return; }
@@ -15531,8 +15534,7 @@ function FM_panorama(){
   if(_esc) hh+='<div id="fm-pan-ant" onclick="FM_panAnteriores()" style="cursor:pointer;text-align:center;padding:8px 0;border-top:0.5px solid var(--ln3);font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:700;">VER ANTERIORES ('+_esc+')</div>';
   L.forEach(function(x){
     var _oc=(_ix++<_esc);
-    if(x.fut && !sep){ sep=true;
-      hh+='<div style="border-top:0.5px solid var(--ln);margin-top:6px;padding:8px 2px 2px;'+RT+'">GARANTIDO · SEM VENDA NOVA</div>'; }
+    if(x.fut && !sep){ sep=true; } /* v1.308.0: faixa GARANTIDO · SEM VENDA NOVA removida; o mes corrente em destaque ja separa */
     if(x.fut) totF+=x.luc;
     var agora=(x.ym===hojeYM), vaz=(Math.abs(x.resu)<0.005 && Math.abs(x.jur)<0.005);
     var lbl=(FM_MESES[Number(x.ym.slice(5,7))-1]||'').slice(0,3)+'/'+x.ym.slice(2,4);
@@ -22278,6 +22280,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.308.0</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">Relatório PDF e relatório completo sem PAGAMENTOS (seção, folha divisória e contagem de operações); na aba PAGAMENTOS o relatório sai com TODOS</div>
+      <div class="cl-item">PANORAMA DO LUCRO: saiu a faixa GARANTIDO · SEM VENDA NOVA</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.307.1</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">Carimbo da antecipação sai da ficha do título, do COBRAR e do EXTRATO, onde a data da operação já aparece; fica no card da lista e na foto PARCELAS A VENCER</div>
