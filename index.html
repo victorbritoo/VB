@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.306.1</title>
+<title>VB - v1.306.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20573,7 +20573,7 @@ function NP_verRegistro(c){
   sb.from('antecipacoes').select('*').eq('id', c.ant_id).limit(1).then(function(res){
     var r=res&&res.data&&res.data[0];
     if(!r || !r.np){ VB_toast('Operação ou dados da NP não encontrados.'); return; }
-    NP_r=r; NP_st=JSON.parse(JSON.stringify(r.np)); NP_norm();
+    NP_r=r; NP_st=JSON.parse(JSON.stringify(r.np)); NP_norm(); NP_viewDoGerar=false;
     var s=NP_limpo(), pgs=NP_paginas(r, s);
     NP_pdf=CTR_pdfBlob(pgs); NP_fname=c.fname||NP_fname;
     NP_viewer(pgs, r);
@@ -20735,6 +20735,10 @@ function NP_gerar(){
     var _rp=s.reps.map(function(p){ return {nome:p.nome, cpf:p.cpf, ec:p.ec||''}; });
     setTimeout(function(){ try{ sb.from('clientes').update({representantes:_rp}).eq('nome', s.emit.nome).then(function(){}).catch(function(){}); }catch(e){} }, 1600);
   }
+  /* 1.306.2: a folha de preencher fecha antes da leitura abrir -- senao o FECHAR da leitura
+     devolvia a folha, como se a NP ainda estivesse sendo criada. NP_r fica (legenda usa). */
+  var _ov=document.getElementById('np-ov'); if(_ov) _ov.style.display='none';
+  NP_viewDoGerar=true;
   NP_viewer(pgs, r);
 }
 /* 1.304.3: abre a NP inteira para ler, como o contrato (CTR_viewerPDF); o COMPARTILHAR copia a
@@ -20753,7 +20757,12 @@ function NP_viewer(pgs, r){
   ov.innerHTML=inner;
   document.body.appendChild(ov);
 }
-function NP_viewFechar(){ var v=document.getElementById('np-view'); if(v) v.remove(); }
+var NP_viewDoGerar=false;
+function NP_viewFechar(){
+  var v=document.getElementById('np-view'); if(v) v.remove();
+  /* veio do GERAR: volta ao Historico ja com o status NP do card atualizado */
+  if(NP_viewDoGerar){ NP_viewDoGerar=false; NP_r=null; try{ HIST_conStatus=null; if(document.getElementById('hist-lista')) HIST_fetch(HIST_searchTerm||''); }catch(e){} }
+}
 function NP_legenda(){
   var r=NP_r||{}, n=r?NP_titulos(r).length:1;
   var nm=String((r.nome&&String(r.nome).trim()&&VB_cliNorm(r.nome)!==VB_cliNorm(r.cliente))?r.nome:VB_nomeCurto(r.cliente||r.nome||''));
@@ -22220,6 +22229,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.2</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">Depois de gerar a NP, o FECHAR da leitura voltava para a folha de preencher, como se a nota ainda estivesse sendo criada. Agora volta para o Histórico, com o card já mostrando NP · Gerada</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.1</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP aberta pela lista de CONTRATOS mostrava CONTRATO / CLIENTE / RELÓGIO e o VISUALIZAR falhava: a lista não trazia o vínculo com a antecipação. Agora abre como NOTA PROMISSÓRIA, igual pelo card</div>
