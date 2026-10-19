@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.306.4</title>
+<title>VB - v1.306.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20461,7 +20461,7 @@ function NP_moeda(v){ return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimu
 function NP_ext(v){ return CTR_extensoReais(Number(v)||0); }
 function NP_valTxt(v){ return NP_moeda(v)+' ('+NP_ext(v)+')'; }
 /* {d,m,y} -> "26 de outubro de 2026" / dia 1 = "1º" */
-function NP_dNum(dt){ return (dt.d===1?'1º':String(dt.d))+' de '+NP_MES[dt.m-1]+' de '+dt.y; }
+function NP_dNum(dt){ return (dt.d===1?'1º':String(dt.d))+' de '+CTR_MESES[dt.m-1]+' de '+dt.y; }
 function NP_dExt(dt){ return (dt.d===1?'Primeiro':CTR_extInt(dt.d))+' de '+CTR_MESES[dt.m-1]+' de '+CTR_extInt(dt.y); }
 /* "Aos 26 de outubro de 2026 (vinte e seis ...)" — dia 1 pede "Ao 1º" */
 function NP_abertura(dt){ return (dt.d===1?'Ao ':'Aos ')+NP_dNum(dt); }
@@ -20797,7 +20797,7 @@ function NP_emitTxt(s){
 }
 function NP_corpo(t, s, ben, emi){
   var bnm=CTR_FIN_CREDORES[ben].nome, bcn=CTR_FIN_CREDORES[ben].cnpj;
-  return [{t:(t.dt.d===1?'Ao ':'Aos ')},{t:NP_dNum(t.dt),b:1},{t:' ('+NP_dExt(t.dt)+'), '}]
+  return [{t:(t.dt.d===1?'Ao ':'Aos ')},{t:NP_dNum(t.dt),b:1,u:1},{t:' ('+NP_dExt(t.dt)+')',b:1,u:1},{t:', '}]
     .concat(NP_emitTxt(s))
     .concat([{t:', '+(s.tipo==='pj'?'pagará':'pagarei')+' por esta única via de '},{t:'NOTA PROMISSÓRIA',b:1},{t:' a '},{t:bnm,b:1},
       {t:', CNPJ '+bcn+', ou à sua ordem, a quantia de '},{t:NP_valTxt(t.v),b:1},
@@ -20846,9 +20846,9 @@ function NP_aval(s){
 }
 function NP_assinantes(s){
   var a=[], av=NP_avsDoc(s);
-  if(s.tipo==='pj') s.reps.forEach(function(p){ a.push({nome:p.nome+' – CPF '+p.cpf, papel:'REPRESENTANTE DO EMITENTE E AVALISTA'}); });
-  else a.push({nome:s.emit.nome+' – CPF '+s.emit.doc, papel:'EMITENTE'});
-  av.forEach(function(v){ if(!v.rep) a.push({nome:v.nome+' – CPF '+v.cpf, papel:'AVALISTA'}); });
+  if(s.tipo==='pj') s.reps.forEach(function(p){ a.push({nome:p.nome+' – CPF: '+p.cpf, papel:'REPRESENTANTE DO EMITENTE E AVALISTA'}); });
+  else a.push({nome:s.emit.nome+' – CPF: '+s.emit.doc, papel:'EMITENTE'});
+  av.forEach(function(v){ if(!v.rep) a.push({nome:v.nome+' – CPF: '+v.cpf, papel:'AVALISTA'}); });
   return a;
 }
 /* ---- desenho: A4 a 150 dpi, como o contrato ---- */
@@ -20862,10 +20862,17 @@ function NP_paginas(r, s){
   /* quebra segmentos {t,b} em linhas de palavras com largura */
   function linhas(segs, w, sz){
     var toks=[];
-    segs.forEach(function(sg){ String(sg.t).split(/(\s+)/).forEach(function(p,pi){
+    /* 1.306.5: CPF e CNPJ com dois pontos; EMITENTE e BENEFICIARIA sempre em negrito */
+    var sg2=[];
+    segs.forEach(function(sg){
+      var tx=String(sg.t).replace(/\b(CPF|CNPJ) (?=\d)/g,'$1: ');
+      if(sg.b){ sg2.push({t:tx,b:1,u:sg.u}); return; }
+      tx.split(/(EMITENTE|BENEFICIÁRIA)/).forEach(function(pc){ if(pc) sg2.push({t:pc,b:(pc==='EMITENTE'||pc==='BENEFICIÁRIA')?1:0,u:sg.u}); });
+    });
+    sg2.forEach(function(sg){ String(sg.t).split(/(\s+)/).forEach(function(p,pi){
       if(p==='') return;
       if(/^\s+$/.test(p)){ toks.push({sp:1}); return; }
-      toks.push({t:p,b:sg.b?1:0});
+      toks.push({t:p,b:sg.b?1:0,u:sg.u?1:0});
     }); });
     /* junta palavra colada em segmentos diferentes ("LEITÃO" + ",") numa unidade so */
     var words=[], cur=null;
@@ -20885,7 +20892,13 @@ function NP_paginas(r, s){
       var gap=ls.spw;
       if(justo && !L.ult && L.ws.length>1){ var tw=0; L.ws.forEach(function(k){ tw+=k.w; }); gap=(w-tw)/(L.ws.length-1); }
       var xx=x;
-      L.ws.forEach(function(wd){ wd.parts.forEach(function(k){ fnt(k.b,sz); ctx.fillText(k.t, xx, y); xx+=k.w; }); xx+=gap; });
+      L.ws.forEach(function(wd,wi){
+        wd.parts.forEach(function(k){ fnt(k.b,sz); ctx.fillText(k.t, xx, y); if(k.u) ctx.fillRect(xx, y+3, k.w, 1.4); xx+=k.w; });
+        /* sublinhado continuo: o espaco entre duas palavras sublinhadas tambem e riscado */
+        var nx=L.ws[wi+1];
+        if(nx && wd.parts[wd.parts.length-1].u && nx.parts[0].u) ctx.fillRect(xx, y+3, gap, 1.4);
+        xx+=gap;
+      });
       y+=lh;
     });
   }
@@ -20898,13 +20911,13 @@ function NP_paginas(r, s){
   y+=36;
   var cab=[{t:'EMITENTE: ',b:1}];
   if(s.tipo==='pj'){
-    cab.push({t:s.emit.nome+', CNPJ '+s.emit.doc+', com sede na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+', neste ato representada por '});
-    s.reps.forEach(function(p,i){ if(i) cab.push({t:(s.reps[i-1].ec?', e por ':' e por ')}); cab.push({t:p.nome+', CPF '+p.cpf+(p.ec?(', '+String(p.ec).toLowerCase()):'')}); });
+    cab.push({t:s.emit.nome,b:1}); cab.push({t:', CNPJ '+s.emit.doc+', com sede na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+', neste ato representada por '});
+    s.reps.forEach(function(p,i){ if(i) cab.push({t:(s.reps[i-1].ec?', e por ':' e por ')}); cab.push({t:p.nome,b:1}); cab.push({t:', CPF '+p.cpf+(p.ec?(', '+String(p.ec).toLowerCase()):'')}); });
     cab.push({t:'.'});
-  } else cab.push({t:s.emit.nome+', CPF '+s.emit.doc+', residente na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+'.'});
+  } else { cab.push({t:s.emit.nome,b:1}); cab.push({t:', CPF '+s.emit.doc+', residente na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+'.'}); }
   desenha(linhas(cab, CW, 16), M, CW, 16, 22, true);
   y+=6;
-  desenha(linhas([{t:'BENEFICIÁRIA: ',b:1},{t:CTR_FIN_CREDORES[ben].nome+', CNPJ '+CTR_FIN_CREDORES[ben].cnpj+', '+NP_BEN[ben].end+'.'}], CW, 16), M, CW, 16, 22, true);
+  desenha(linhas([{t:'BENEFICIÁRIA: ',b:1},{t:CTR_FIN_CREDORES[ben].nome,b:1},{t:', CNPJ '+CTR_FIN_CREDORES[ben].cnpj+', '+NP_BEN[ben].end+'.'}], CW, 16), M, CW, 16, 22, true);
   y+=26;
   /* notas */
   var PAD=16, HDR=40;
@@ -20916,7 +20929,7 @@ function NP_paginas(r, s){
     ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.strokeRect(M, y0, CW, bh);
     y=y0+28;
     fnt(1,20); ctx.fillText('NOTA PROMISSÓRIA Nº '+NP_dd2(i+1)+'/'+NP_dd2(N), M+PAD, y);
-    fnt(1,18); ctx.fillText('Vencimento: '+NP_fmtDt(t.dt), M+CW*0.47, y);
+    fnt(1,18); ctx.fillText('VENCIMENTO: '+NP_fmtDt(t.dt), M+CW*0.47, y);
     fnt(1,20); ctx.textAlign='right'; ctx.fillText(NP_moeda(t.v), M+CW-PAD, y); ctx.textAlign='left';
     ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(M, y0+HDR); ctx.lineTo(M+CW, y0+HDR); ctx.stroke();
     y=y0+HDR+10+LH-5;
@@ -22257,6 +22270,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.5</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP: nomes do emitente, dos representantes e da beneficiária em negrito no topo; EMITENTE e BENEFICIÁRIA sempre em negrito; meses com maiúscula (15 de Novembro de 2026); CPF: e CNPJ: com dois pontos; VENCIMENTO em maiúsculo; a data de cada nota sublinhada do número até o fecha-parêntese do extenso, com o extenso em negrito</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.4</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP: total no mesmo tamanho e negrito do título; EMITENTE e BENEFICIÁRIA em parágrafos separados; o estado civil dos representantes entra na qualificação do emitente, e o AVAL passa a dizer “Os representantes acima qualificados, … prestam, em caráter pessoal, aval…”, sem repetir CPF. Outro avalista que não é representante continua qualificado ali</div>
