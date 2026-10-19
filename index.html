@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.304.2</title>
+<title>VB - v1.304.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11411,7 +11411,7 @@ var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log
   /* criadas na hora: nao existem quando a pagina abre, mas o observador do body avisa quando
      entram. Sem elas na lista, a pagina rolava por baixo do contrato -- defeito da 1.300.12. */
   'vb-ctr-sh','vb-ctr-view','vb-ctr-vass','vb-ctr-prev','vb-ctr-sheet','vb-con-ficha',
-  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr','vb-price-sheet','np-ov'];
+  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr','vb-price-sheet','np-ov','np-view'];
 function VB_folhaAjusta(ov){
   try{
     if(!ov || ov.style.display==='none' || ov.style.display==='') return;
@@ -20531,7 +20531,7 @@ function NP_le(){
   var g=function(id){ var el=document.getElementById(id); return el?String(el.value||'').trim():null; };
   var x;
   if((x=g('np-en'))!==null) s.emit.nome=x.toUpperCase();
-  if((x=g('np-ed'))!==null) s.emit.doc=x;
+  if((x=g('np-ed'))!==null){ s.emit.doc=x; var _dl=x.replace(/\D/g,'').length; if(_dl===14) s.tipo='pj'; else if(_dl===11) s.tipo='pf'; }
   if((x=g('np-ee'))!==null) s.emit.end=x;
   s.reps.forEach(function(p,i){ if((x=g('np-rn'+i))!==null) p.nome=x.toUpperCase(); if((x=g('np-rc'+i))!==null) p.cpf=x; });
   s.avs.forEach(function(a,i){
@@ -20562,44 +20562,49 @@ function NP_puxa(kind, i){
     NP_le();
   }).catch(function(){});
 }
+/* 1.304.3: sem seletor PF/PJ -- o documento diz (14 digitos = CNPJ). Folha no padrao do DAR BAIXA:
+   rotulo 8px centrado, campo centrado; beneficiaria no seletor do CREDOR do contrato. */
+function NP_tipoDe(doc){ return String(doc||'').replace(/\D/g,'').length===14?'pj':'pf'; }
+function NP_docMuda(el){
+  CLI_maskCPF(el);
+  var t=NP_tipoDe(el.value);
+  if(NP_st && t!==NP_st.tipo){ NP_le(); NP_st.tipo=t; NP_render(); var e2=document.getElementById('np-ed'); if(e2){ e2.focus(); try{ var n=e2.value.length; e2.setSelectionRange(n,n); }catch(e){} } }
+}
 function NP_render(){
   var s=NP_st, r=NP_r; if(!s||!r) return;
+  s.tipo=NP_tipoDe(s.emit.doc)==='pj'?'pj':(String(s.emit.doc||'').replace(/\D/g,'').length?'pf':s.tipo);
   var ov=NP_ov(), ts=NP_titulos(r), tot=ts.reduce(function(a,t){ return a+t.v; },0);
-  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;text-transform:uppercase;';
-  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin:8px 0 3px;';
-  var SEC='font-size:9px;letter-spacing:1.5px;color:var(--tx);font-weight:700;margin:14px 0 2px;';
-  var X='<span style="font-size:15px;color:var(--so2);cursor:pointer;padding:0 4px;">×</span>';
-  function pill(on,txt,fn){ return '<button onclick="'+fn+'" style="flex:1;padding:9px 4px;border-radius:999px;font-size:10px;letter-spacing:1px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--acc);':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+txt+'</button>'; }
+  var IN='width:100%;box-sizing:border-box;padding:10px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;text-transform:uppercase;';
+  var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;';
+  var SEC='font-size:9px;letter-spacing:2px;color:var(--tx);font-weight:700;margin:14px 0 6px;text-align:center;';
+  var SL='padding:9px 2px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:12px;font-family:-apple-system,sans-serif;text-align:center;text-align-last:center;width:100%;box-sizing:border-box;';
+  var ADD='padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;margin-top:6px;';
+  var X='<span style="font-size:15px;color:var(--so2);cursor:pointer;padding:0 2px;">×</span>';
+  var G2='display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) 18px;gap:6px;align-items:center;';
   function inp(id,val,ph,extra,css){ return '<input id="'+id+'" value="'+CLIP_esc(val||'')+'" placeholder="'+ph+'" '+(extra||'')+' style="'+IN+(css||'')+'">'; }
+  function cmp(rot,html){ return '<div><div style="'+RT+'">'+rot+'</div>'+html+'</div>'; }
   var cpfX='inputmode="numeric" oninput="CLI_maskCPF(this)"';
-  var h='<div style="width:100%;max-width:460px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+  var h='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">NOTAS PROMISSÓRIAS</div>'
-    +'<div style="text-align:center;font-size:11px;color:var(--mu);font-weight:600;">'+ts.length+' NOTA'+(ts.length>1?'S':'')+' · '+NP_moeda(tot)+' · EMISSÃO '+NP_fmtDt(NP_emissao(r))+'</div>';
-  h+='<div style="'+SEC+'">BENEFICIÁRIA</div><div style="display:flex;gap:6px;margin-top:6px;">'+pill(s.ben==='com','VB COMÉRCIO',"NP_set('ben','com')")+pill(s.ben==='fact','VB FACTORING',"NP_set('ben','fact')")+'</div>';
-  h+='<div style="'+SEC+'">EMITENTE</div><div style="display:flex;gap:6px;margin-top:6px;">'+pill(s.tipo==='pf','PESSOA FÍSICA',"NP_set('tipo','pf')")+pill(s.tipo==='pj','PESSOA JURÍDICA',"NP_set('tipo','pj')")+'</div>';
-  h+='<div style="'+RT+'">'+(s.tipo==='pj'?'RAZÃO SOCIAL':'NOME')+'</div>'+inp('np-en',s.emit.nome,(s.tipo==='pj'?'EMPRESA LTDA':'NOME COMPLETO'),'autocomplete="off" onchange="NP_puxa(\'e\')"');
-  h+='<div style="'+RT+'">'+(s.tipo==='pj'?'CNPJ':'CPF')+'</div>'+inp('np-ed',s.emit.doc,(s.tipo==='pj'?'00.000.000/0000-00':'000.000.000-00'),cpfX);
-  h+='<div style="'+RT+'">ENDEREÇO</div>'+inp('np-ee',s.emit.end,'Av. X, nº 100, Bairro, Fortaleza/CE, CEP 60.000-000','','text-transform:none;');
+    +'<div style="text-align:center;font-size:12px;color:var(--mu);margin-bottom:12px;">'+ts.length+' NOTA'+(ts.length>1?'S':'')+' · '+NP_moeda(tot)+' · EMISSÃO '+NP_fmtDt(NP_emissao(r))+'</div>';
+  h+=cmp('BENEFICIÁRIA','<select id="np-ben" onchange="NP_set(\'ben\',this.value)" style="'+SL+'"><option value="com"'+(s.ben==='com'?' selected':'')+'>VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME</option><option value="fact"'+(s.ben==='fact'?' selected':'')+'>VB FACTORING E FOMENTO MERCANTIL LTDA</option></select>');
+  h+='<div style="'+SEC+'">EMITENTE</div>';
+  h+=cmp(s.tipo==='pj'?'RAZÃO SOCIAL':'NOME', inp('np-en',s.emit.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'e\')"'));
+  h+='<div style="margin-top:6px;">'+cmp('CPF / CNPJ', inp('np-ed',s.emit.doc,'CPF OU CNPJ','inputmode="numeric" oninput="NP_docMuda(this)"'))+'</div>';
+  h+='<div style="margin-top:6px;">'+cmp('ENDEREÇO', inp('np-ee',s.emit.end,'Av. X, nº 100, Bairro, Fortaleza/CE','','text-transform:none;'))+'</div>';
   if(s.tipo==='pj'){
-    h+='<div style="'+SEC+'">REPRESENTANTES (ASSINAM)</div>';
+    h+='<div style="'+SEC+'">REPRESENTANTES</div>';
     s.reps.forEach(function(p,i){
-      h+='<div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:6px;">'
-        +inp('np-rn'+i,p.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'r\','+i+')"')+inp('np-rc'+i,p.cpf,'CPF',cpfX)
-        +'<span onclick="NP_delRep('+i+')">'+X+'</span></div>';
+      h+='<div style="'+G2+(i?'margin-top:6px;':'')+'">'+inp('np-rn'+i,p.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'r\','+i+')"')+inp('np-rc'+i,p.cpf,'CPF',cpfX)+'<span onclick="NP_delRep('+i+')">'+X+'</span></div>';
     });
-    if(s.reps.length<2) h+='<div onpointerdown="event.preventDefault()" onclick="NP_addRep()" style="font-size:10px;letter-spacing:1px;color:var(--mu2);font-weight:600;margin-top:8px;cursor:pointer;">+ REPRESENTANTE</div>';
+    if(s.reps.length<2) h+='<div data-fast="1" onpointerdown="event.preventDefault();NP_addRep()" style="'+ADD+'">+ REPRESENTANTE</div>';
   }
   h+='<div style="'+SEC+'">AVALISTAS</div>';
-  if(!s.avs.length) h+='<div style="font-size:10px;color:var(--mu);margin-top:4px;">—</div>';
   s.avs.forEach(function(a,i){
-    a.cj=a.cj||{nome:'',cpf:''};
-    h+='<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:8px;margin-top:8px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:9px;letter-spacing:1px;color:var(--so);font-weight:700;">AVALISTA '+(i+1)+'</span><span onclick="NP_delAv('+i+')">'+X+'</span></div>'
-      +'<div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:6px;margin-top:4px;">'+inp('np-an'+i,a.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'a\','+i+')"')+inp('np-ac'+i,a.cpf,'CPF',cpfX)+'</div>'
-      +'<div style="margin-top:6px;">'+inp('np-ae'+i,a.ec,'ESTADO CIVIL')+'</div>'
-      +'</div>';
+    h+='<div style="'+G2+(i?'margin-top:10px;':'')+'">'+inp('np-an'+i,a.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'a\','+i+')"')+inp('np-ac'+i,a.cpf,'CPF',cpfX)+'<span onclick="NP_delAv('+i+')">'+X+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:minmax(0,1fr) 18px;gap:6px;margin-top:6px;">'+inp('np-ae'+i,a.ec,'ESTADO CIVIL')+'<span></span></div>';
   });
-  if(s.avs.length<4) h+='<div onpointerdown="event.preventDefault()" onclick="NP_addAv()" style="font-size:10px;letter-spacing:1px;color:var(--mu2);font-weight:600;margin-top:8px;cursor:pointer;">+ AVALISTA</div>';
+  if(s.avs.length<4) h+='<div data-fast="1" onpointerdown="event.preventDefault();NP_addAv()" style="'+ADD+'">+ AVALISTA</div>';
   h+='<div id="np-falta" style="font-size:10px;letter-spacing:1px;color:var(--red);font-weight:700;text-align:center;margin-top:12px;min-height:12px;"></div>'
     +'<button id="np-gerar" onclick="NP_gerar()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR NP</button>'
     +'<button onclick="NP_fechar()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
@@ -20671,16 +20676,33 @@ function NP_gerar(){
     var _rp=s.reps.map(function(p){ return {nome:p.nome, cpf:p.cpf}; });
     setTimeout(function(){ try{ sb.from('clientes').update({representantes:_rp}).eq('nome', s.emit.nome).then(function(){}).catch(function(){}); }catch(e){} }, 1600);
   }
-  /* o iOS so abre a folha de compartilhar com toque fresco: montar o PDF gasta o toque */
-  var ov=NP_ov();
-  ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:4px;">NP PRONTA</div>'
-    +'<div style="text-align:center;font-size:11px;color:var(--mu);margin-bottom:12px;word-break:break-all;">'+CLIP_esc(NP_fname)+' · '+pgs.length+' PÁG.</div>'
-    +'<button onclick="NP_share()" style="width:100%;padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">COMPARTILHAR PDF</button>'
-    +'<button onclick="NP_render()" style="width:100%;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">VOLTAR</button>'
-    +'</div>';
+  NP_viewer(pgs, r);
 }
-function NP_share(){ if(!NP_pdf) return; CTR_share1(new File([NP_pdf], NP_fname, {type:'application/pdf'}), NP_pdf); }
+/* 1.304.3: abre a NP inteira para ler, como o contrato (CTR_viewerPDF); o COMPARTILHAR copia a
+   legenda e manda o PDF no mesmo toque. */
+function NP_viewer(pgs, r){
+  var old=document.getElementById('np-view'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='np-view';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100020;display:flex;flex-direction:column;';
+  var inner='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
+  pgs.forEach(function(cv){ inner+='<img src="'+cv.toDataURL('image/jpeg',0.8)+'" style="display:block;width:100%;max-width:520px;margin:0 auto 10px;border-radius:6px;">'; });
+  inner+='</div>'
+    +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
+    +'<button onclick="NP_viewFechar()" style="padding:13px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">FECHAR</button>'
+    +'<button onclick="NP_share()" style="padding:13px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;">COMPARTILHAR</button>'
+    +'</div>';
+  ov.innerHTML=inner;
+  document.body.appendChild(ov);
+}
+function NP_viewFechar(){ var v=document.getElementById('np-view'); if(v) v.remove(); }
+function NP_legenda(){
+  var r=NP_r||{}, n=r?NP_titulos(r).length:1;
+  var nm=String((r.nome&&String(r.nome).trim()&&VB_cliNorm(r.nome)!==VB_cliNorm(r.cliente))?r.nome:VB_nomeCurto(r.cliente||r.nome||''));
+  return VB_legenda('NP '+nm, (n>1?'Seguem notas promissórias':'Segue nota promissória')+' para conferência e assinatura.', 'Fico no aguardo.');
+}
+function NP_share(){ if(!NP_pdf) return;
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(NP_legenda()).then(function(){ VB_toast('Legenda copiada — é só colar junto do PDF.'); }, function(){}); } }catch(e){}
+  CTR_share1(new File([NP_pdf], NP_fname, {type:'application/pdf'}), NP_pdf); }
 /* ---- texto ---- */
 function NP_emitTxt(s){
   if(s.tipo==='pj'){
@@ -20705,7 +20727,7 @@ function NP_clausula(s, n){
                :'As '+nn+' notas promissórias acima são títulos autônomos e independentes entre si, cada qual exigível em seu vencimento. ');
   var quem='pelo EMITENTE'+(s.tipo==='pj'?(', por meio de seu'+(s.reps.length>1?'s representantes legais':' representante legal')):'')
     +(s.avs.length?(', pel'+(s.avs.length>1?'os AVALISTAS':'o AVALISTA')+(function(){ var nc=s.avs.filter(function(a){return a.cj;}).length; return nc?(' e respectivo'+(nc>1?'s':'')+' cônjuge'+(nc>1?'s':'')):''; })()):'');
-  t+='A assinatura eletrônica aposta '+quem+' neste documento, por meio da plataforma gov.br, vale como assinatura em cada uma das notas individualmente, sendo expressamente admitida pelas partes como válida e eficaz para todos os fins, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020.';
+  t+='A assinatura eletrônica aposta '+quem+' neste documento, por meio de plataforma de assinatura eletrônica, vale como assinatura em cada uma das notas individualmente, sendo expressamente admitida pelas partes como válida e eficaz para todos os fins, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020.';
   return [{t:t}];
 }
 function NP_aval(s){
@@ -20807,7 +20829,7 @@ function NP_paginas(r, s){
   if(y+alt>H-M){ nova(); }
   if(lav){ desenha(lav, M, CW, 16, 22, true); y+=12; }
   desenha(lcl, M, CW, 16, 22, true); y+=14;
-  fnt(1,17); ctx.fillText('ASSINATURA'+(um?'':'S')+' ELETRÔNICA'+(um?'':'S')+(s.tipo==='pj'||!um?'':' DO EMITENTE')+' (gov.br)', M, y+4); y+=22;
+  fnt(1,17); ctx.textAlign='center'; ctx.fillText('ASSINATURA'+(um?'':'S')+' ELETRÔNICA'+(um?'':'S'), W/2, y+4); ctx.textAlign='left'; y+=22;
   ass.forEach(function(p, k){
     var col=um?0:(k%2), row=um?k:Math.floor(k/2);
     var x=M+col*(COLW+24), yy=y+row*(BH+62);
@@ -22131,6 +22153,12 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.304.3</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP: a folha ficou no padrão do app — rótulos e campos centralizados, beneficiária no seletor do contrato, sem o botão PESSOA FÍSICA / JURÍDICA (o CPF ou CNPJ já diz; REPRESENTANTES só aparece com CNPJ)</div>
+      <div class="cl-item">NP: ao gerar, abre o documento inteiro para ler, como o contrato. O COMPARTILHAR copia a legenda (*NP NOME*. / Seguem notas promissórias para conferência e assinatura. / Fico no aguardo.)</div>
+      <div class="cl-item">NP: ASSINATURA ELETRÔNICA centralizada e sem gov.br; a cláusula passou a dizer “plataforma de assinatura eletrônica”, porque a assinatura pode ser feita em outro site</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.304.2</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP: valor e data por extenso com maiúscula, no padrão dos contratos — (Treze Mil e Oitocentos Reais), (Quinze de Novembro de Dois Mil e Vinte e Seis)</div>
