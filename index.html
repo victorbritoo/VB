@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.306.2</title>
+<title>VB - v1.306.4</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20522,6 +20522,21 @@ function NP_aplicaEmit(c, forca){
   var vazio=!s.reps.some(function(p){ return p.nome; });
   if(rp.length && (forca || vazio)) s.reps=rp.slice(0,2).map(function(p){ return {nome:String(p.nome).toUpperCase(), cpf:p.cpf||'', ec:String(p.ec||'').toUpperCase()}; });
 }
+/* 1.306.3: o campo mostra em maiusculo como todo campo do app; o PDF escreve o endereco do jeito do
+   contrato -- palavras com inicial maiuscula, de/da/do em minusculo, UF e CEP em maiusculo, "nº". */
+function NP_titEnd(s){
+  var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1};
+  return String(s||'').split(/(\s+)/).map(function(w,i){
+    if(!w || /^\s+$/.test(w)) return w;
+    var W=w.toUpperCase(), lim=W.replace(/[^A-ZÀ-Ý0-9º°]/g,'');
+    if(/^\d/.test(w)) return w;
+    if(lim==='CEP') return w.replace(/cep/i,'CEP');
+    if(lim==='Nº'||lim==='N°'||lim==='NO'&&/º|°/.test(w)) return w.replace(/n[º°o]/i,'nº');
+    if(W.indexOf('/')>0){ var pr=W.split('/'); return pr[0].charAt(0)+pr[0].slice(1).toLowerCase()+'/'+pr.slice(1).join('/'); }
+    if(i>0 && con[lim]) return w.toLowerCase();
+    return W.charAt(0)+W.slice(1).toLowerCase();
+  }).join('');
+}
 function NP_endCli(c){
   var d=CLI_decEnd1(c);
   function _t(x){ if(!x) return ''; var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1}; return String(x).toUpperCase().split(' ').map(function(w,k){ if(k>0&&con[w]) return w.toLowerCase(); if(/^\d/.test(w)) return w; return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); }
@@ -20572,7 +20587,7 @@ function NP_registra(r, s, tot, n){
 function NP_verRegistro(c){
   sb.from('antecipacoes').select('*').eq('id', c.ant_id).limit(1).then(function(res){
     var r=res&&res.data&&res.data[0];
-    if(!r || !r.np){ VB_toast('Operação ou dados da NP não encontrados.'); return; }
+    if(!r || !r.np){ VB_toast('Não consegui abrir a NP.'); return; }
     NP_r=r; NP_st=JSON.parse(JSON.stringify(r.np)); NP_norm(); NP_viewDoGerar=false;
     var s=NP_limpo(), pgs=NP_paginas(r, s);
     NP_pdf=CTR_pdfBlob(pgs); NP_fname=c.fname||NP_fname;
@@ -20648,14 +20663,13 @@ function NP_render(){
   h+='<div style="'+SEC+'">EMITENTE</div>';
   h+=cmp(s.tipo==='pj'?'RAZÃO SOCIAL':'NOME', inp('np-en',s.emit.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'e\')"'));
   h+=cmp('CPF / CNPJ', inp('np-ed',s.emit.doc,'CPF OU CNPJ','inputmode="numeric" oninput="NP_docMuda(this)"'));
-  h+=cmp('ENDEREÇO', inp('np-ee',s.emit.end,'Av. X, nº 100, Bairro, Fortaleza/CE','','text-transform:none;'));
+  h+=cmp('ENDEREÇO', inp('np-ee',s.emit.end,'AV. X, Nº 100, BAIRRO, FORTALEZA/CE'));
   if(s.tipo==='pj'){
-    h+='<div style="'+SEC+'">REPRESENTANTES</div>';
+    h+='<div style="'+SEC+'">REPRESENTANTES E AVALISTAS</div>';
     s.reps.forEach(function(p,i){
       h+='<div style="'+G2+'">'+inp('np-rn'+i,p.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'r\','+i+')"')+inp('np-rc'+i,p.cpf,'CPF',cpfX)+'<span onclick="NP_delRep('+i+')">'+X+'</span></div>';
     });
     if(s.reps.length<2) h+='<div data-fast="1" onpointerdown="event.preventDefault();NP_addRep()" style="'+ADD+'">+ REPRESENTANTE</div>';
-    h+='<div style="font-size:9px;letter-spacing:1px;color:var(--mu);text-align:center;margin:0 0 4px;">ASSINAM COMO REPRESENTANTES E AVALISTAS</div>';
   }
   h+='<div style="'+SEC+'">'+(s.tipo==='pj'?'OUTROS AVALISTAS':'AVALISTAS')+'</div>';
   s.avs.forEach(function(a,i){
@@ -20810,13 +20824,24 @@ function NP_clausula(s, n){
 }
 function NP_aval(s){
   var av=NP_avsDoc(s); if(!av.length) return null;
-  var um=av.length===1;
-  var out=[{t:'AVAL: ',b:1},{t:(um?'O AVALISTA abaixo qualificado presta':'Os AVALISTAS abaixo qualificados prestam')+', em caráter pessoal, aval ao EMITENTE em cada uma das notas acima: '}];
-  av.forEach(function(a,i){
-    if(i) out.push({t:'; '});
-    out.push({t:a.nome,b:1}); out.push({t:', CPF '+a.cpf+(a.ec?(', '+String(a.ec).toLowerCase()):'')});
-  });
-  out.push({t:'.'});
+  var reps=av.filter(function(a){ return a.rep; }), ext=av.filter(function(a){ return !a.rep; });
+  /* sujeitos: representantes so pelo nome (ja qualificados no EMITENTE); outros avalistas qualificados aqui */
+  var grupos=[];
+  if(reps.length){
+    var g=[{t:(reps.length>1?'os representantes acima qualificados, ':'o representante acima qualificado, ')}];
+    reps.forEach(function(a,i){ if(i) g.push({t:(i===reps.length-1?' e ':', ')}); g.push({t:a.nome,b:1}); });
+    grupos.push(g);
+  }
+  if(ext.length){
+    var g2=[{t:(ext.length>1?'os AVALISTAS ':'o AVALISTA ')}];
+    ext.forEach(function(a,i){ if(i) g2.push({t:(i===ext.length-1?', e ':', ')}); g2.push({t:a.nome,b:1}); g2.push({t:', CPF '+a.cpf+(a.ec?(', '+String(a.ec).toLowerCase()):'')}); });
+    grupos.push(g2);
+  }
+  var out=[{t:'AVAL: ',b:1}];
+  grupos.forEach(function(g,i){ if(i) out.push({t:', e '}); out=out.concat(g); });
+  /* primeira letra maiuscula depois de "AVAL: " */
+  out[1].t=out[1].t.charAt(0).toUpperCase()+out[1].t.slice(1);
+  out.push({t:(av.length>1?', prestam':', presta')+', em caráter pessoal, aval ao EMITENTE em cada uma das notas acima.'});
   return out;
 }
 function NP_assinantes(s){
@@ -20867,16 +20892,19 @@ function NP_paginas(r, s){
   nova();
   /* cabecalho da 1a pagina */
   fnt(1,27); y+=8; ctx.fillText('NOTAS PROMISSÓRIAS Nº 01/'+NP_dd2(N)+(N>1?(' A '+NP_dd2(N)+'/'+NP_dd2(N)):''), M, y);
-  fnt(0,16); ctx.textAlign='right'; ctx.fillText('Total: '+NP_moeda(tot), W-M, y); ctx.textAlign='left';
-  y+=34;
+  /* 1.306.4: total no tamanho do titulo; EMITENTE e BENEFICIARIA em paragrafos proprios; o estado
+     civil dos representantes entra aqui, e o aval so os refere ("acima qualificados"). */
+  fnt(1,27); ctx.textAlign='right'; ctx.fillText(NP_moeda(tot), W-M, y); ctx.textAlign='left';
+  y+=36;
   var cab=[{t:'EMITENTE: ',b:1}];
   if(s.tipo==='pj'){
-    cab.push({t:s.emit.nome+', CNPJ '+s.emit.doc+', com sede na '+s.emit.end.replace(/\.$/,'')+', neste ato representada por '});
-    s.reps.forEach(function(p,i){ if(i) cab.push({t:' e por '}); cab.push({t:p.nome+', CPF '+p.cpf}); });
-    cab.push({t:'. '});
-  } else cab.push({t:s.emit.nome+', CPF '+s.emit.doc+', residente na '+s.emit.end.replace(/\.$/,'')+'. '});
-  cab.push({t:'BENEFICIÁRIA: ',b:1}); cab.push({t:CTR_FIN_CREDORES[ben].nome+', CNPJ '+CTR_FIN_CREDORES[ben].cnpj+', '+NP_BEN[ben].end+'.'});
+    cab.push({t:s.emit.nome+', CNPJ '+s.emit.doc+', com sede na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+', neste ato representada por '});
+    s.reps.forEach(function(p,i){ if(i) cab.push({t:(s.reps[i-1].ec?', e por ':' e por ')}); cab.push({t:p.nome+', CPF '+p.cpf+(p.ec?(', '+String(p.ec).toLowerCase()):'')}); });
+    cab.push({t:'.'});
+  } else cab.push({t:s.emit.nome+', CPF '+s.emit.doc+', residente na '+NP_titEnd(s.emit.end).replace(/\.$/,'')+'.'});
   desenha(linhas(cab, CW, 16), M, CW, 16, 22, true);
+  y+=6;
+  desenha(linhas([{t:'BENEFICIÁRIA: ',b:1},{t:CTR_FIN_CREDORES[ben].nome+', CNPJ '+CTR_FIN_CREDORES[ben].cnpj+', '+NP_BEN[ben].end+'.'}], CW, 16), M, CW, 16, 22, true);
   y+=26;
   /* notas */
   var PAD=16, HDR=40;
@@ -22229,6 +22257,14 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.4</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP: total no mesmo tamanho e negrito do título; EMITENTE e BENEFICIÁRIA em parágrafos separados; o estado civil dos representantes entra na qualificação do emitente, e o AVAL passa a dizer “Os representantes acima qualificados, … prestam, em caráter pessoal, aval…”, sem repetir CPF. Outro avalista que não é representante continua qualificado ali</div>
+  </div>
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.3</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">Folha da NP: o ENDEREÇO passou a aparecer em maiúsculo como todo campo do app; no PDF ele sai no formato do contrato (Avenida Senador Virgílio Távora, nº 2620, Dionísio Torres, Fortaleza/CE, CEP …). A seção virou REPRESENTANTES E AVALISTAS e saiu a frase explicativa embaixo dela. Aviso de erro no padrão “Não consegui abrir a NP.”</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.306.2</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">Depois de gerar a NP, o FECHAR da leitura voltava para a folha de preencher, como se a nota ainda estivesse sendo criada. Agora volta para o Histórico, com o card já mostrando NP · Gerada</div>
