@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.304.1</title>
+<title>VB - v1.304.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -20442,11 +20442,11 @@ var NP_BEN={
 var NP_MES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 var NP_r=null, NP_st=null, NP_pdf=null, NP_fname='';
 function NP_moeda(v){ return 'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function NP_ext(v){ return CTR_extensoReais(Number(v)||0).toLowerCase(); }
+function NP_ext(v){ return CTR_extensoReais(Number(v)||0); }
 function NP_valTxt(v){ return NP_moeda(v)+' ('+NP_ext(v)+')'; }
 /* {d,m,y} -> "26 de outubro de 2026" / dia 1 = "1º" */
 function NP_dNum(dt){ return (dt.d===1?'1º':String(dt.d))+' de '+NP_MES[dt.m-1]+' de '+dt.y; }
-function NP_dExt(dt){ return (dt.d===1?'primeiro':CTR_extInt(dt.d).toLowerCase())+' de '+NP_MES[dt.m-1]+' de '+CTR_extInt(dt.y).toLowerCase(); }
+function NP_dExt(dt){ return (dt.d===1?'Primeiro':CTR_extInt(dt.d))+' de '+CTR_MESES[dt.m-1]+' de '+CTR_extInt(dt.y); }
 /* "Aos 26 de outubro de 2026 (vinte e seis ...)" — dia 1 pede "Ao 1º" */
 function NP_abertura(dt){ return (dt.d===1?'Ao ':'Aos ')+NP_dNum(dt); }
 function NP_titulos(r){
@@ -20474,15 +20474,40 @@ function NP_abrir(idx){
   if(!NP_titulos(r).length){ VB_toast('Sem títulos com data e valor.'); return; }
   NP_r=r; NP_pdf=null;
   if(r.np){ NP_st=JSON.parse(JSON.stringify(r.np)); NP_norm(); NP_render(); return; }
-  NP_st=NP_vazio(); NP_render();
-  /* sem NP salva nesta operacao: abre com a ultima do mesmo cliente */
-  try{
-    sb.from('antecipacoes').select('id,np,created_at').eq('cliente', r.cliente||'').not('np','is',null).order('created_at',{ascending:false}).limit(1).then(function(res){
-      if(res.error||!res.data||!res.data[0]||NP_r!==r) return;
-      NP_st=JSON.parse(JSON.stringify(res.data[0].np)); NP_norm(); NP_render();
-      VB_toast('Dados da última NP de '+VB_nomeCurto(r.cliente||'')+'.');
-    }).catch(function(){});
-  }catch(e){}
+  NP_st=NP_vazio(); NP_st.emit.nome=String(r.cliente||'').toUpperCase(); NP_render();
+  /* 1.304.2: sem NP nesta operacao, o emitente e o dono da op (dados do cadastro, PJ se tem CNPJ,
+     representantes da empresa); beneficiaria e avalistas vem da ultima NP do mesmo cliente. */
+  var qc=r.cliente_id ? sb.from('clientes').select('*').eq('id', r.cliente_id).limit(1)
+                      : sb.from('clientes').select('*').eq('nome', r.cliente||'').limit(1);
+  var ql=sb.from('antecipacoes').select('id,np,created_at').eq('cliente', r.cliente||'').not('np','is',null).order('created_at',{ascending:false}).limit(1);
+  Promise.all([qc, ql]).then(function(rs){
+    if(NP_r!==r) return;
+    NP_le();
+    var c=rs[0]&&rs[0].data&&rs[0].data[0], ult=rs[1]&&rs[1].data&&rs[1].data[0]&&rs[1].data[0].np;
+    if(ult){ NP_st.ben=(ult.ben==='fact')?'fact':'com'; NP_st.avs=(ult.avs||[]).map(function(a){ return {nome:a.nome,cpf:a.cpf,ec:a.ec,cj:null}; }); }
+    if(c) NP_aplicaEmit(c, true);
+    NP_render();
+  }).catch(function(){});
+}
+/* preenche o emitente a partir do cadastro; forca=true sobrescreve (abertura), false so completa */
+function NP_aplicaEmit(c, forca){
+  var s=NP_st, dg=String(c.cpf||'').replace(/\D/g,'');
+  if(forca){ s.emit.nome=String(c.nome||'').toUpperCase(); if(dg.length===14) s.tipo='pj'; else if(dg.length===11) s.tipo='pf'; }
+  if(forca || !s.emit.doc) s.emit.doc=c.cpf||s.emit.doc||'';
+  if(forca || !s.emit.end) s.emit.end=NP_endCli(c)||s.emit.end||'';
+  var rp=Array.isArray(c.representantes)?c.representantes.filter(function(p){ return p&&p.nome; }):[];
+  var vazio=!s.reps.some(function(p){ return p.nome; });
+  if(rp.length && (forca || vazio)) s.reps=rp.slice(0,2).map(function(p){ return {nome:String(p.nome).toUpperCase(), cpf:p.cpf||''}; });
+}
+function NP_endCli(c){
+  var d=CLI_decEnd1(c);
+  function _t(x){ if(!x) return ''; var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1}; return String(x).toUpperCase().split(' ').map(function(w,k){ if(k>0&&con[w]) return w.toLowerCase(); if(/^\d/.test(w)) return w; return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); }
+  var p=[];
+  if(d.e1) p.push(_t(d.e1)+(d.num?(', nº '+String(d.num)):''));
+  if(d.e2) p.push(_t(d.e2)); if(d.bai && VB_cliNorm(d.bai)!==VB_cliNorm(d.e2)) p.push(_t(d.bai));
+  if(c.cidade) p.push(_t(c.cidade)+(c.uf?('/'+String(c.uf).toUpperCase()):''));
+  if(c.cep) p.push('CEP '+c.cep);
+  return p.join(', ') || (c.endereco||'');
 }
 function NP_norm(){
   var s=NP_st||{}; var v=NP_vazio();
@@ -20530,15 +20555,7 @@ function NP_puxa(kind, i){
     var c=res&&res.data&&res.data[0]; if(!c) return;
     var put=function(fid,val){ var f=document.getElementById(fid); if(f && !String(f.value||'').trim() && val){ f.value=val; } };
     if(kind==='e'){
-      put('np-ed', c.cpf||'');
-      var d=CLI_decEnd1(c);
-      function _t(s){ if(!s) return ''; var con={'DE':1,'DA':1,'DO':1,'DAS':1,'DOS':1,'E':1}; return String(s).toUpperCase().split(' ').map(function(w,k){ if(k>0&&con[w]) return w.toLowerCase(); if(/^\d/.test(w)) return w; return w.charAt(0)+w.slice(1).toLowerCase(); }).join(' '); }
-      var p=[];
-      if(d.e1) p.push(_t(d.e1)+(d.num?(', nº '+String(d.num)):''));
-      if(d.e2) p.push(_t(d.e2)); if(d.bai) p.push(_t(d.bai));
-      if(c.cidade) p.push(_t(c.cidade)+(c.uf?('/'+String(c.uf).toUpperCase()):''));
-      if(c.cep) p.push('CEP '+c.cep);
-      put('np-ee', p.join(', ') || (c.endereco||''));
+      NP_le(); NP_st.emit.doc=''; NP_st.emit.end=''; NP_aplicaEmit(c, false); NP_render(); return;
     } else if(kind==='r'){ put('np-rc'+i, c.cpf||''); }
     else if(kind==='a'){ put('np-ac'+i, c.cpf||''); put('np-ae'+i, String(c.estado_civil||'').toUpperCase()); }
     else { put('np-jc'+i, c.cpf||''); }
@@ -20650,6 +20667,10 @@ function NP_gerar(){
       }catch(e){}
     }, 1500);
   });
+  if(s.tipo==='pj' && s.reps.length){
+    var _rp=s.reps.map(function(p){ return {nome:p.nome, cpf:p.cpf}; });
+    setTimeout(function(){ try{ sb.from('clientes').update({representantes:_rp}).eq('nome', s.emit.nome).then(function(){}).catch(function(){}); }catch(e){} }, 1600);
+  }
   /* o iOS so abre a folha de compartilhar com toque fresco: montar o PDF gasta o toque */
   var ov=NP_ov();
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
@@ -22110,6 +22131,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.304.2</span><span class="cl-ver-date">19/10/2026</span></div>
+      <div class="cl-item">NP: valor e data por extenso com maiúscula, no padrão dos contratos — (Treze Mil e Oitocentos Reais), (Quinze de Novembro de Dois Mil e Vinte e Seis)</div>
+      <div class="cl-item">NP: a folha abre com o dono da operação como emitente (PJ quando o cadastro tem CNPJ), com documento, endereço e os representantes da empresa. Beneficiária e avalistas vêm da última NP do mesmo cliente. Os representantes usados ficam gravados no cadastro da empresa</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.304.1</span><span class="cl-ver-date">19/10/2026</span></div>
       <div class="cl-item">NP: cônjuge do avalista saiu da folha, do texto do aval e das assinaturas. O estado civil do avalista continua na qualificação</div>
