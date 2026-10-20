@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.312.0</title>
+<title>VB - v1.312.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -5093,9 +5093,10 @@ function HIST_renderRows(tab, rows){
         campos.push({l:'NP', v:(_npS.ass?('Assinada \u00b7 '+_npDH(_npS.ass)):('Gerada'+(_npS.ger?(' \u00b7 '+_npDH(_npS.ger)):'')))}); }
     } else if(rtab==='fin'){
       titulo=r.nome||r.descricao||'(sem descrição)';
-      valor=HIST_fmtMoeda(r.valor_financiado)+(Number(r.qtd_parcelas)>0?(' ('+Number(r.qtd_parcelas)+'X)'):'');
+      valor='';   /* v1.312.1: uma linha so, como VENDAS -- valor (48X) · L: · cliente */
       var _lF=HIST_lucroRow('fin', r), _finV=Number(r.valor_financiado)||0;
       var _l2F=[];
+      if(r.valor_financiado!=null) _l2F.push('<span style="color:var(--tx);">'+HIST_esc(HIST_valCurto(r.valor_financiado)+(Number(r.qtd_parcelas)>0?(' ('+Number(r.qtd_parcelas)+'X)'):''))+'</span>');
       if(_lF!=null){
         var _pF=(!r.tem_investidor && _finV>0)?(' <span style="color:var(--so);">('+Math.round(_lF/_finV*100)+'%)</span>'):'';
         _l2F.push('<span style="color:var(--tx);font-weight:700;">L: '+HIST_esc(HIST_valCurto(_lF))+'</span>'+_pF);
@@ -16556,7 +16557,7 @@ function MER_abrir(id){
         if(_trTroca.length){ vh+=lin('Recebeu em Troca', _trTroca.map(function(p){return (p.t.m||'RELÓGIO EM TROCA');}).join(' · ')); }
         vh+=lin('Notas', v.notas||'');
         vh+='</div>';
-        vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:10px;border:0.5px solid var(--ln);border-radius:12px;background:var(--sf);font-size:10px;letter-spacing:2px;color:var(--tx2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
+        vh+='<button onclick="MER_abrirVenda(\''+String(v.id)+'\')" style="width:100%;margin-top:8px;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">ABRIR VENDA</button>';
         MER_vendaCache=v;
         alvo.innerHTML=vh;
       });
@@ -22293,6 +22294,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.312.1</span><span class="cl-ver-date">20/10/2026</span></div>
+      <div class="cl-item">HISTÓRICO › FINANCIAMENTO: card com uma linha só, como VENDAS (valor (48X) · L: · cliente)</div>
+      <div class="cl-item">ESTOQUE: ABRIR VENDA na ficha da peça vendida no desenho secundário</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.312.0</span><span class="cl-ver-date">20/10/2026</span></div>
       <div class="cl-item">ESTOQUE: linhas do card em 10px como as ENTRADAS; ficha da peça com VENDER no tamanho do botão principal, CUSTOS/EDITAR/BAIXA MANUAL no desenho secundário e EXCLUIR | FECHAR na mesma linha</div>
