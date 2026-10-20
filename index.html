@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.312.2</title>
+<title>VB - v1.312.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -467,8 +467,8 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
     </div>
     <button id="mer-view-baixa" style="display:none;width:100%;margin-top:8px;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">BAIXA MANUAL</button>
     <button id="mer-view-voltar" style="display:none;width:100%;margin-top:8px;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VOLTAR AO ESTOQUE</button>
-    <button id="mer-view-cancelar" style="display:none;width:100%;margin-top:8px;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">CANCELAR</button>
-    <div style="display:flex;gap:8px;margin-top:8px;">
+    <button id="mer-view-cancelar" style="display:none;width:100%;margin-top:8px;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">VOLTAR</button>
+    <div id="mer-view-rodape" style="display:flex;gap:8px;margin-top:8px;">
     <button id="mer-view-excluir" style="flex:1;min-width:0;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;font-size:11px;letter-spacing:2px;color:var(--so2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">EXCLUIR</button>
     <button onclick="MER_viewFechar()" style="flex:1;min-width:0;padding:12px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>
     </div>
@@ -5669,7 +5669,8 @@ function VB_dirtyPaintTela(tela){
   else { b.style.background='var(--sf)'; b.style.color='var(--tx)'; }
   var travar = ehEdicao && !sujo;   // edição sem alteração: trava; nova operação ou com alteração: libera
   b.style.pointerEvents = travar ? 'none' : '';
-  b.style.opacity = travar ? '0.45' : '';
+  b.style.opacity = '';
+  if(travar){ b.style.background='var(--sf3)'; b.style.color='var(--mu2)'; }   /* v1.312.3: travado = desenho das SAIDAS */
 }
 // qualquer digitação nas telas de edição repinta o botão (padrão do Estoque, 1.76.0)
 (function(){
@@ -16580,6 +16581,7 @@ function MER_abrir(id){
   MER_viewEdit=false; MER_viewEditRow=null;
   _be.textContent='EDITAR'; _be.disabled=false;
   var _bcX=document.getElementById('mer-view-cancelar'); if(_bcX) _bcX.style.display='none';
+  var _rodX=document.getElementById('mer-view-rodape'); if(_rodX) _rodX.style.display='flex';
   var _bb=document.getElementById('mer-view-baixa');
   var _bvo=document.getElementById('mer-view-voltar');
   var _bx=document.getElementById('mer-view-excluir');
@@ -17191,9 +17193,9 @@ function MER_viewDirtyPaint(){
   if(!MER_viewEdit) return;
   var b=document.getElementById('mer-view-editar'); if(!b) return;
   var dd=MER_viewDirty();
-  b.style.background=dd?'var(--acc)':'var(--sf)';
+  b.style.background=dd?'var(--acc)':'var(--sf3)';   /* v1.312.3: travado = desenho das SAIDAS */
   b.style.color=dd?'var(--acc-tx)':'var(--mu2)';
-  b.style.border=dd?'none':'0.5px solid var(--ln)';
+  b.style.border='none';
 }
 function MER_viewPossRefresh(){
   if(!MER_viewEdit || !MER_viewEditRow) return;
@@ -17264,7 +17266,12 @@ function MER_viewEditar(id){
   _be.textContent='SALVAR ALTERA\u00c7\u00d5ES';
   _be.onclick=MER_viewSalvar;
   var _bc=document.getElementById('mer-view-cancelar');
-  if(_bc){ _bc.style.display='block'; _bc.onclick=function(){ MER_viewEdit=false; MER_viewEditRow=null; MER_abrir(id); }; }
+  if(_bc){ _bc.style.display='block'; _bc.onclick=function(){
+    var _volta=function(){ MER_viewEdit=false; MER_viewEditRow=null; MER_abrir(id); };
+    /* v1.312.3: VOLTAR devolve a ficha; com alteracao, o mesmo dialogo do FECHAR */
+    if(MER_viewDirty()){ VB_confirm2('Alterações feitas', 'SALVAR', 'DESCARTAR', function(salvar){ if(salvar){ MER_viewSalvar(); return; } _volta(); }); return; }
+    _volta(); }; }
+  var _rod=document.getElementById('mer-view-rodape'); if(_rod) _rod.style.display='none';   /* na edicao a saida e o VOLTAR */
   MER_viewSnap0=MER_viewSnapshot();
   MER_viewDirtyPaint();
 }
@@ -22295,6 +22302,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.312.3</span><span class="cl-ver-date">20/10/2026</span></div>
+      <div class="cl-item">Botão de salvar travado (sem alteração) com um desenho só no app: fundo cinza, texto cinza, sem borda (Estoque e telas de operação passaram ao desenho das SAÍDAS)</div>
+      <div class="cl-item">Edição da peça: CANCELAR virou VOLTAR (devolve à ficha, perguntando se houver alteração) e o FECHAR sai durante a edição</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.312.2</span><span class="cl-ver-date">20/10/2026</span></div>
       <div class="cl-item">Ficha da peça vendida: ABRIR VENDA vira o botão principal (preto, no topo) e EDITAR fica cinza claro ao lado de CUSTOS</div>
