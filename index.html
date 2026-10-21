@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.319.0</title>
+<title>VB - v1.320.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12660,10 +12660,19 @@ function REN_cpIrmas(c){
   g.sort(function(a,b){ var va=String(a.venc||''), vb=String(b.venc||''); if(va!==vb) return va<vb?-1:1; return String(a.created_at||'')<String(b.created_at||'')?-1:1; });
   return g;
 }
+/* v1.320.0: conta que veio do sistema antigo ja comecou la (Audi A3: 08 DE 30, nao 01 DE 23).
+   num_ini = numero da 1a irma que esta no app, num_tot = total do contrato. Mesma regra da entrada
+   manual (v1.315.0). Le de qualquer irma que tenha o campo: a ordem das irmas inclui as pagas. */
+function REN_cpNumAj(g){
+  var y=null; (g||[]).some(function(z){ if(Number(z.num_ini)>1 || Number(z.num_tot)>0){ y=z; return true; } return false; });
+  var ini=(y && Number(y.num_ini)>1)?(Number(y.num_ini)-1):0, n=(g||[]).length;
+  var tot=(y && Number(y.num_tot)>=n+ini)?Number(y.num_tot):(n+ini);
+  return {ini:ini, tot:tot, tem:!!y};
+}
 function REN_cpNm(c, g){
-  g=g||REN_cpIrmas(c); if(g.length<2) return '';
+  g=g||REN_cpIrmas(c); var aj=REN_cpNumAj(g); if(g.length<2 && !aj.tem) return '';
   var i=0; g.forEach(function(y,j){ if(String(y.id)===String(c.id)) i=j; });
-  return ('0'+(i+1)).slice(-2)+' DE '+('0'+g.length).slice(-2);
+  return ('0'+(i+1+aj.ini)).slice(-2)+' DE '+('0'+aj.tot).slice(-2);
 }
 function REN_cpVoltarGuard(id){
   function volta(){ REN_cpFicha(id); }
@@ -16032,9 +16041,11 @@ function SOC_recebFoto(){
     var g=_grp[k].slice();
     g.sort(function(a,b2){ return String(a.venc||'')<String(b2.venc||'')?-1:1; });
     g.forEach(function(c,i){
+      /* v1.320.0: numero igual ao do card -- conta as irmas pagas e respeita num_ini/num_tot */
+      var _nmc=''; try{ _nmc=REN_cpNm(c).replace(' DE ',' de '); }catch(e){ _nmc=''; }
       linhas.push({d:String(c.venc||'').slice(0,10), v:Number(c.valor)||0,
         nome:String(c.descricao||c.credor||'\u2014'),
-        nm:(g.length>1?(('0'+(i+1)).slice(-2)+' de '+('0'+g.length).slice(-2)):'')});
+        nm:_nmc});
     });
   });
   (REN_cache.itens||[]).forEach(function(x){
@@ -22490,6 +22501,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.320.0</span><span class="cl-ver-date">21/10/2026</span></div>
+      <div class="cl-item">Conta a pagar que veio do sistema antigo com a numeração do contrato (Audi A3 do Adriano: 08 DE 30 em vez de 01 DE 23), no card, na ficha e na foto RECEBIMENTOS do sócio (colunas num_ini e num_tot)</div>
+      <div class="cl-item">RECEBIMENTOS (FOTO) do sócio numera a conta a pagar igual ao card, contando as parcelas já pagas</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.319.0</span><span class="cl-ver-date">21/10/2026</span></div>
       <div class="cl-item">Painel do sócio e GERAR EXTRATO (FOTO) com o bloco ENTRADAS: os lançamentos manuais em que ele tem parte (contratos migrados), parcelas em aberto, quanto ele tem a receber e o que já pode ser repassado</div>
