@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.313.0</title>
+<title>VB - v1.314.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13553,7 +13553,7 @@ function REN_abrir(){
     /* ENTRADA MANUAL: gemea da conta a pagar. Uma linha por vencimento, digitada, nao derivada.
        Vira item com a mesma forma dos outros -- lista, busca, cabecalho de mes, panorama e
        TOTAL A RECEBER passam a conta-la sem que nenhum deles precise saber que ela existe.
-       Nao tem socio nem repasse: entrada manual e 100% VB.
+       Sem socio e 100% VB; com socio_nome/socio_valor (v1.314.0) repassa como o financiamento com investidor.
        E CAIXA, NAO LUCRO -- espelho da regra das SAIDAS, que nunca descontam do lucro. */
     var crErro=(res[9]&&res[9].error)?String((res[9].error&&res[9].error.message)||''):'';
     var crRows=((res[9]&&res[9].data)||[]).slice();
@@ -13639,6 +13639,17 @@ function REN_abrir(){
     (res[1].data||[]).forEach(function(r){
       REN_finMap[String(r.id)]=r;
       if(r.tem_investidor && Number(r.investidor_parcela)>0) opInfo['fin|'+String(r.id)]={socio:VB_nomeCurto(r.investidor_nome||'INVESTIDOR'), fixo:Number(r.investidor_parcela), lbl:'INVESTIDOR'};
+    });
+    /* v1.314.0: ENTRADA MANUAL COM SOCIO. Os contratos que vieram dos Lembretes (financiamentos com
+       investidor, relogios com socio) tem uma parte que nao e do VB. Duas colunas no lancamento
+       (socio_nome, socio_valor = quanto do socio em CADA parcela) e o lote passa a se comportar como o
+       financiamento com investidor: valor fixo por parcela, repasse nasce na baixa em A REPASSAR.
+       Sem as colunas preenchidas continua 100% VB, como sempre. Nao ha campo na tela: quem preenche
+       e o SQL da migracao. Caixa, nao lucro: o Fechamento nao muda. */
+    crRows.forEach(function(c){
+      var sv=Number(c.socio_valor)||0; if(!c.socio_nome || !(sv>0)) return;
+      var L=String(c.lote||c.id); if(opInfo['cr|'+L]) return;
+      opInfo['cr|'+L]={socio:VB_nomeCurto(String(c.socio_nome)), fixo:Math.round(sv*100)/100, lbl:'S\u00d3CIO'};
     });
     var prev={}; ((res[4]&&res[4].data)||[]).forEach(function(pv){ prev[pv.op_tab+'|'+pv.op_id+'|'+pv.parcela_idx]=Number(pv.valor); });
     var pags={};
@@ -22304,6 +22315,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.314.0</span><span class="cl-ver-date">21/10/2026</span></div>
+      <div class="cl-item">Entrada manual com sócio: lançamento com SÓCIO e valor por parcela (colunas socio_nome e socio_valor, preenchidas pelo SQL da migração dos Lembretes) repassa como o financiamento com investidor — o repasse nasce em A REPASSAR na baixa, o card mostra a parte VB e a ficha os blocos SÓCIO e VB. Sem sócio continua 100% VB; o lucro não muda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.313.0</span><span class="cl-ver-date">20/10/2026</span></div>
       <div class="cl-item">Botões comprimidos em todo o app: fichas, folhas e diálogos com a mesma altura baixa das telas de operação (folga 9)</div>
