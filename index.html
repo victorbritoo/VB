@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.314.0</title>
+<title>VB - v1.315.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13576,12 +13576,16 @@ function REN_abrir(){
       /* v1.302.1: o NUMERO que aparece (dnum) segue a data; a chave (idx = ordem) nao muda,
          porque baixa, nota e prorrogacao estao presas a ela. */
       var _porData=g.slice().sort(function(a2,b2){ var va=String(a2.venc||''), vb=String(b2.venc||''); if(va!==vb) return va<vb?-1:1; return (Number(a2.ordem)||0)-(Number(b2.ordem)||0); });
+      /* v1.315.0: contrato que veio do sistema antigo ja comecou la. num_ini (1a parcela que esta no app)
+         e num_tot (parcelas do contrato) fazem a numeracao ser a do contrato: 15 DE 24, nao 01 DE 10 --
+         no card, na ficha e na foto do COBRAR. So a numeracao muda; a chave (idx = ordem) continua a mesma. */
+      var _g0=g[0]||{}, _nIni=(Number(_g0.num_ini)>1)?(Number(_g0.num_ini)-1):0, _nTot=(Number(_g0.num_tot)>=g.length+_nIni)?Number(_g0.num_tot):(g.length+_nIni);
       g.forEach(function(c, i){
         var _dn=_porData.indexOf(c);
         itens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0,
           cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
           rot:String(c.descricao||'ENTRADA MANUAL'),
-          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:g.length, dnum:_dn, cr:c, dOp:String(c.created_at||'').slice(0,10)});
+          tab:'cr', opId:L, idx:(Number(c.ordem)||i), tot:_nTot, dnum:_dn+_nIni, cr:c, dOp:String(c.created_at||'').slice(0,10)});
       });
     });
     /* PRORROGACAO: mora em tabela lateral, como a nota e o repasse. A data e o valor ORIGINAIS
@@ -22315,6 +22319,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.315.0</span><span class="cl-ver-date">21/10/2026</span></div>
+      <div class="cl-item">Entrada manual que veio do sistema antigo com a numeração do contrato: 15 DE 24 em vez de 01 DE 10, no card, na ficha e na foto do COBRAR (colunas num_ini e num_tot, preenchidas pelo SQL dos financiamentos migrados). A data da operação passa a ser a original</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.314.0</span><span class="cl-ver-date">21/10/2026</span></div>
       <div class="cl-item">Entrada manual com sócio: lançamento com SÓCIO e valor por parcela (colunas socio_nome e socio_valor, preenchidas pelo SQL da migração dos Lembretes) repassa como o financiamento com investidor — o repasse nasce em A REPASSAR na baixa, o card mostra a parte VB e a ficha os blocos SÓCIO e VB. Sem sócio continua 100% VB; o lucro não muda</div>
