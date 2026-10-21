@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.318.2</title>
+<title>VB - v1.319.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -10285,6 +10285,29 @@ function SOC_pillSalvar(ev){
     if(campo==='nome') SOC_propagaNome(antigo, novo).then(fim); else fim();
   }).catch(function(){ VB_toast('Sem conex\u00e3o \u2014 nada gravado.'); });
 }
+/* v1.319.0: ENTRADAS (manual) em que o socio tem parte -- os contratos do sistema antigo. Mesma
+   conta das ENTRADAS: a parte dele por parcela vem do opInfo (socio_valor fixo). A RECEBER = parte
+   dele nas parcelas que o cliente ainda nao pagou, menos o que ja foi repassado antes; A REPASSAR =
+   cliente ja pagou e o repasse nao saiu. */
+function SOC_crDe(nomeSoc){
+  var out={ops:[], n:0, parc:0, rec:0, rep:0};
+  if(!REN_cache) return out;
+  var alvo=VB_cliNorm(VB_nomeCurto(nomeSoc||'')), alvoCheio=VB_cliNorm(nomeSoc||'');
+  function bate(n){ var s=VB_cliNorm(n||''); if(!s) return false; return s===alvo || s===alvoCheio || VB_cliNorm(VB_nomeCurto(n||''))===alvo; }
+  var G={};
+  (REN_cache.itens||[]).forEach(function(x){
+    if(x.tab!=='cr') return;
+    var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(!oi || !bate(oi.socio)) return;
+    var g=G[x.opId]||(G[x.opId]={nome:REN_rotCurto(x.rot||''), cli:VB_nomeCurto(x.cliente||''), n:0, ult:'', rec:0, rep:0});
+    var b=REN_cache.bx[REN_key(x)];
+    if(!b){ var a=REN_adiDe(x); var v=Math.max(0,(Number(REN_repAlvo(oi,x))||0)-(a?(Number(a.valor)||0):0)); g.n++; g.rec+=v; if(String(x.venc)>g.ult) g.ult=String(x.venc); }
+    else if(!b.repassado_em){ g.rep+=Math.max(0,Number(REN_repFalta(x,b))||0); }
+  });
+  Object.keys(G).forEach(function(k){ var g=G[k]; g.rec=Math.round(g.rec*100)/100; g.rep=Math.round(g.rep*100)/100; if(!(g.n||g.rep>0.004)) return; out.ops.push(g); out.parc+=g.n; out.rec+=g.rec; out.rep+=g.rep; });
+  out.ops.sort(function(a,b){ return b.rec-a.rec; });
+  out.n=out.ops.length; out.rec=Math.round(out.rec*100)/100; out.rep=Math.round(out.rep*100)/100;
+  return out;
+}
 function SOC_abrir(id){
   var r=SOC_rows.find(function(x){return String(x.id)===String(id);}); if(!r) return;
   if(String(SOC_viewId)!==String(id)){ var _fd=document.getElementById('soc-filtro-de'), _fa=document.getElementById('soc-filtro-ate'); if(_fd)_fd.value=''; if(_fa)_fa.value=''; }
@@ -10302,7 +10325,8 @@ function SOC_abrir(id){
   Promise.all([
     sb.from('vendas').select('*').ilike('socio', nome),
     sb.from('financiamentos_hist').select('*').eq('tem_investidor', true).ilike('investidor_nome', nome),
-    sb.from('mercadorias').select('*').ilike('socio', nome)
+    sb.from('mercadorias').select('*').ilike('socio', nome),
+    (REN_cache?null:REN_abrir())   /* v1.319.0: o bloco ENTRADAS le o REN_cache */
   ]).then(function(res){
     var vendas=(res[0].error?[]:(res[0].data||[]));
     var fins=(res[1].error?[]:(res[1].data||[]));
@@ -10350,7 +10374,8 @@ function SOC_abrir(id){
       var ap=Number(f.investidor_aporte)||0, rt=(Number(f.investidor_parcela)||0)*(Number(f.qtd_parcelas)||0);
       return {nome:(f.nome||f.descricao||'—'), data:HIST_fmtData(String(f.data_operacao||f.data_inicio||(f.created_at||'').split('T')[0]).slice(0,10)), aporte:ap, retorno:rt, lucro:rt-ap};
     });
-    SOC_viewData={nome:r.nome||'', fDe:(isoDe?fDe:''), fAte:(isoAte?fAte:''), nE:nE, custoE:custoE, capE:capE, eOps:eOps, nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps};
+    var crS=SOC_crDe(r.nome||'');
+    SOC_viewData={nome:r.nome||'', fDe:(isoDe?fDe:''), fAte:(isoAte?fAte:''), nE:nE, custoE:custoE, capE:capE, eOps:eOps, nV:nV, totV:totV, capV:capV, lucroS:lucroS, nC:nC, totC:totC, repC:repC, cOps:cOps, nF:nF, aporte:aporte, retorno:retorno, lucroF:lucroF, vOps:vOps, fOps:fOps, crS:crS};
     function bloco(t,linhas){
       var s='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-bottom:8px;">'
         +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu2);font-weight:600;margin-bottom:6px;">'+t+'</div>';
@@ -10374,6 +10399,11 @@ function SOC_abrir(id){
       ['Retorno total', HIST_fmtMoeda(retorno)],
       ['Lucro', HIST_fmtMoeda(lucroF)]
     ] : [['Operações','0']]);
+    if(crS.n) hh+=bloco('ENTRADAS', [
+      ['Opera\u00e7\u00f5es', String(crS.n)],
+      ['Parcelas em aberto', String(crS.parc)],
+      ['A receber dele', HIST_fmtMoeda(crS.rec)]
+    ].concat(crS.rep>0.004?[['A repassar', HIST_fmtMoeda(crS.rep)]]:[]));
     if(nE) hh+=bloco('EM ESTOQUE', [
       ['Relógios', String(nE)],
       ['Capital do Sócio', HIST_fmtMoeda(capE)],
@@ -15852,9 +15882,10 @@ function SOC_extratoFoto(){
   var d=SOC_viewData; if(!d){ VB_toast('Abra um sócio primeiro.'); return; }
   var W=820, PAD=40, CW=W-PAD*2;
   var temV=d.vOps&&d.vOps.length>0, temC=d.cOps&&d.cOps.length>0, temF=d.fOps&&d.fOps.length>0, temE=d.eOps&&d.eOps.length>0;
+  var crS=d.crS||{ops:[]}, temR=crS.ops.length>0, _rTot=(crS.rep>0.004)?3:2;
   function secH(n){ return 58 + n*46 + 46 + 18; } // título + linhas + total + respiro
   var temP=!!(d.fDe||d.fAte);
-  var H=170 + (temP?26:0) + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + (temE?(secH(d.eOps.length)+22):0) + ((!temV&&!temC&&!temF&&!temE)?60:0) + 50;
+  var H=170 + (temP?26:0) + (temV?(secH(d.vOps.length)+44):0) + (temC?secH(d.cOps.length):0) + (temF?(secH(d.fOps.length)+44):0) + (temE?(secH(d.eOps.length)+22):0) + (temR?(secH(crS.ops.length)+(_rTot-2)*22):0) + ((!temV&&!temC&&!temF&&!temE&&!temR)?60:0) + 50;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   var c=cv.getContext('2d');
   c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
@@ -15933,6 +15964,11 @@ function SOC_extratoFoto(){
         'Capital Investido '+nm+': '+HIST_fmtMoeda(d.aporte),
         'Lucro '+nm+': '+HIST_fmtMoeda(d.lucroF)+((d.aporte>0&&d.lucroF>0)?(' ('+Math.round(d.lucroF/d.aporte*100)+'%)'):'')]; })());
   }
+  if(temR){
+    secao('ENTRADAS \u00b7 '+crS.n+(crS.n===1?' OPERA\u00c7\u00c3O':' OPERA\u00c7\u00d5ES'),
+      crS.ops.map(function(o){ return {nome:o.nome+(o.cli?(' \u00b7 '+o.cli):''), data:(o.n?(o.n+(o.n===1?' parcela':' parcelas')+' em aberto'+(o.ult?(' \u00b7 at\u00e9 '+o.ult.split('-').reverse().join('/')):'')):'Cliente j\u00e1 pagou'), dir:HIST_fmtMoeda(o.rec+o.rep), dir2:(o.rep>0.004?('A repassar '+HIST_fmtMoeda(o.rep)):'')}; }),
+      (function(){ var nm=VB_nomeCurto(d.nome||'S\u00d3CIO').toUpperCase(); var t=['TOTAL', 'A receber '+nm+': '+HIST_fmtMoeda(crS.rec)]; if(crS.rep>0.004) t.push('A repassar: '+HIST_fmtMoeda(crS.rep)); return t; })());
+  }
   if(temE){
     secao('EM ESTOQUE · '+d.nE+(d.nE===1?' RELÓGIO':' RELÓGIOS')+periodo(d.eOps),
       d.eOps.map(function(o){
@@ -15943,7 +15979,7 @@ function SOC_extratoFoto(){
         'Capital '+nm+': '+HIST_fmtMoeda(d.capE),
         'Capital VB: '+HIST_fmtMoeda(Math.max(0,(Number(d.custoE)||0)-(Number(d.capE)||0)))]; })());
   }
-  if(!temV && !temC && !temF && !temE){
+  if(!temV && !temC && !temF && !temE && !temR){
     c.fillStyle='#bbb'; c.font='600 15px -apple-system, Helvetica, sans-serif';
     c.fillText('Sem operações registradas.', PAD, y+30); y+=60;
   }
@@ -16009,7 +16045,8 @@ function SOC_recebFoto(){
       if(b.repassado_em) return;            /* ja pago a ele: nao e mais recebivel */
       v=REN_repFalta(x, b); data=String(b.venc||x.venc||'').slice(0,10);   /* so o saldo */
     } else {
-      v=Number(REN_repAlvo(oi, x))||0;
+      var _ad=REN_adiDe(x);   /* v1.319.0: repasse adiantado ja saiu -- fica so o que falta */
+      v=(Number(REN_repAlvo(oi, x))||0)-(_ad?(Number(_ad.valor)||0):0);
     }
     v=Math.round((Number(v)||0)*100)/100;
     if(!(v>0.005)) return;
@@ -22453,6 +22490,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.319.0</span><span class="cl-ver-date">21/10/2026</span></div>
+      <div class="cl-item">Painel do sócio e GERAR EXTRATO (FOTO) com o bloco ENTRADAS: os lançamentos manuais em que ele tem parte (contratos migrados), parcelas em aberto, quanto ele tem a receber e o que já pode ser repassado</div>
+      <div class="cl-item">RECEBIMENTOS (FOTO) do sócio desconta o repasse adiantado</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.318.2</span><span class="cl-ver-date">21/10/2026</span></div>
       <div class="cl-item">Parcela em aberto: o botão REPASSAR ANTES virou só REPASSAR (a folha diz que o cliente ainda não pagou)</div>
