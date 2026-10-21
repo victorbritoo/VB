@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.315.0</title>
+<title>VB - v1.316.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11020,7 +11020,8 @@ function CLIP_abrir(nome, cliId, voltarK){
     sb.from('contratos').select('cliente_nome,descricao,valor_total,assinado_em,created_at').limit(1000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,venc,recebido_em,valor_recebido').limit(20000),
     sb.from('parcela_pagamentos').select('op_tab,op_id,parcela_idx,valor').limit(20000),
-    sb.from('financiamentos_hist').select('id,cliente,cliente_id,descricao,nome,valor_financiado,valor_total,valor_parcela,qtd_parcelas,taxa,data_inicio,data_operacao,created_at,tem_investidor,investidor_parcela,vb_parcela,simulacao').limit(10000)
+    sb.from('financiamentos_hist').select('id,cliente,cliente_id,descricao,nome,valor_financiado,valor_total,valor_parcela,qtd_parcelas,taxa,data_inicio,data_operacao,created_at,tem_investidor,investidor_parcela,vb_parcela,simulacao').limit(10000),
+    sb.from('contas_receber').select('*').limit(20000)   /* v1.316.0: entrada manual no panorama */
   ]).then(function(res){
     function key(s){ return String(s||'').trim().toUpperCase(); }
     var casa=function(r,nm){ if(alvoId && r.cliente_id!=null){ return String(r.cliente_id)===alvoId; } return key(nm)===alvo; };
@@ -11029,6 +11030,18 @@ function CLIP_abrir(nome, cliId, voltarK){
     var con=(res[2].data||[]).filter(function(r){ return key(r.cliente_nome)===alvo; });
     /* financiamento so casa pelo CLIENTE (v1.300.45); o antigo, sem cliente, nao tem dono */
     var fin=((res[5]&&res[5].data)||[]).filter(function(r){ return !VB_ehSimulacao(r) && (r.cliente_id!=null || String(r.cliente||'').trim()) && casa(r, r.cliente); });
+    /* v1.316.0: ENTRADA MANUAL no panorama. Os contratos do sistema antigo entraram como entrada
+       manual (21/10) e o panorama nao os via: a Zenith aparecia com 95 mil a receber em vez de 1,75
+       milhao. Casa pelo nome do devedor (a linha nao tem cliente_id), monta o item com a MESMA forma
+       do REN (lote = operacao, ordem = parcela, numeracao do contrato) e entra em A RECEBER, A VENCER,
+       pontualidade e no bloco ENTRADAS. Lucro nao muda: entrada manual e caixa. */
+    var _alvoN=VB_cliNorm(alvo), crL={}, crItens=[];
+    ((res[6]&&res[6].data)||[]).forEach(function(c){ if(VB_cliNorm(c.devedor)!==_alvoN) return; var L=String(c.lote||c.id); (crL[L]=crL[L]||[]).push(c); });
+    Object.keys(crL).forEach(function(L){
+      var g=crL[L].slice().sort(function(a,b2){ var va=String(a.venc||''), vb=String(b2.venc||''); if(va!==vb) return va<vb?-1:1; return (Number(a.ordem)||0)-(Number(b2.ordem)||0); });
+      var g0=g[0]||{}, nIni=(Number(g0.num_ini)>1)?(Number(g0.num_ini)-1):0, nTot=(Number(g0.num_tot)>=g.length+nIni)?Number(g0.num_tot):(g.length+nIni);
+      g.forEach(function(c,i){ crItens.push({venc:String(c.venc||'').slice(0,10), valor:Number(c.valor)||0, cliente:String(c.devedor||'').toUpperCase(), rot:String(c.descricao||'ENTRADA MANUAL'), tab:'cr', opId:L, idx:(Number(c.ordem)||0), tot:nTot, dnum:i+nIni, cr:c}); });
+    });
     var hoje=REN_hojeISO();
     var antOk=ant.filter(function(r){ return (Number(r.valor_liquido)||0)<=(Number(r.valor_bruto)||0); });
     var antAtr=ant.filter(function(r){ return (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0); });
@@ -11041,7 +11054,7 @@ function CLIP_abrir(nome, cliId, voltarK){
        a baixa grava o TOTAL, nao a ultima entrada. */
     var _pgm={}; ((res[4]&&res[4].data)||[]).forEach(function(pg){ var k2=pg.op_tab+'|'+pg.op_id+'|'+pg.parcela_idx; _pgm[k2]=(_pgm[k2]||0)+(Number(pg.valor)||0); });
     function _pagoDe(k2){ var v2=_pgm[k2]||0; if(v2>0) return Math.round(v2*100)/100; var b2=_bx[k2]; return b2?(Math.round((Number(b2.valor_recebido)||0)*100)/100):0; }
-    var todas=REN_coleta(antOk, fin, ven);
+    var todas=REN_coleta(antOk, fin, ven).concat(crItens);
     /* JA PAGO = tudo que ja entrou nas operacoes dele, quitadas ou nao. */
     var jaPago=0, jaN=0, jaParc=0;
     todas.forEach(function(x){ var k3=REN_key(x), pv=_pagoDe(k3); if(pv<=0) return; jaPago+=pv; if(_bx[k3]) jaN++; else jaParc++; });
@@ -11094,12 +11107,13 @@ function CLIP_abrir(nome, cliId, voltarK){
        mostrava a parte do VB com o rotulo LUCRO TOTAL -- o numero certo com o nome errado. */
     var _temSoc=(Math.abs(lucTot-lucVB)>=0.005);
     /* Pontualidade: so parcelas com baixa, comparando o recebimento com o vencimento. */
-    var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; }); fin.forEach(function(f){ _ops['fin|'+String(f.id)]=1; });
+    var _ops={}; ven.forEach(function(v){ _ops['ven|'+String(v.id)]=1; }); antOk.forEach(function(r){ _ops['ant|'+String(r.id)]=1; }); fin.forEach(function(f){ _ops['fin|'+String(f.id)]=1; }); Object.keys(crL).forEach(function(L){ _ops['cr|'+L]=1; });
     var pgN=0, pgDia=0, pgAtr=0, pgDias=0, pgAtrL=[];
     /* de qual operacao veio cada baixa: sem isso o bloco diz "1 com atraso" e nao diz qual */
     var _opRot={}; ven.forEach(function(v){ _opRot['ven|'+String(v.id)]=String(v.descricao||v.nome||''); });
     antOk.forEach(function(r){ _opRot['ant|'+String(r.id)]=String(r.nome||r.cliente||'ANTECIPA\u00c7\u00c3O'); });
     fin.forEach(function(f){ _opRot['fin|'+String(f.id)]=REN_rotCurto(String(f.descricao||f.nome||'FINANCIAMENTO')); });
+    Object.keys(crL).forEach(function(L){ _opRot['cr|'+L]=String(crL[L][0].descricao||'ENTRADA'); });
     ((res[3]&&res[3].data)||[]).forEach(function(b3){
       if(!_ops[b3.op_tab+'|'+String(b3.op_id)]) return;
       if(!b3.venc || !b3.recebido_em) return;
@@ -11142,7 +11156,7 @@ function CLIP_abrir(nome, cliId, voltarK){
     /* apelido e o padrao de exibicao no app inteiro; nome completo so em contrato,
        cadastro do cliente e relatorio -- onde ele e o nome legal, nao um rotulo */
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(alvo))+'</div>';
-    hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length+fin.length)+' OPERA\u00c7\u00d5ES</div>';
+    hh+='<div style="text-align:center;font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;margin:2px 0 12px;">PANORAMA \u00b7 '+(ant.length+ven.length+fin.length+Object.keys(crL).length)+' OPERA\u00c7\u00d5ES</div>';
     /* linha com valor a direita e o lucro logo abaixo, em cinza */
     /* Sem percentual: nao existe denominador honesto para as tres formas. Em peca propria a base
        e o seu custo, em sociedade e a sua parte dele, em consignacao e zero. O giro em dias, sim,
@@ -11214,6 +11228,28 @@ function CLIP_abrir(nome, cliId, voltarK){
         +ln('<b>'+(_difF?'Lucro VB':'Lucro')+'</b>', HIST_fmtMoeda(finLuc))
         +(_difF?ln('Lucro total', HIST_fmtMoeda(finLucT)):'');
       hh+=bl('FINANCIAMENTOS \u00b7 '+finL.length, innF, HIST_fmtMoeda(finTot), finL.length);
+    }
+    // ENTRADAS (manual) -- v1.316.0
+    var _crKs=Object.keys(crL);
+    if(_crKs.length){
+      var innE='', _crTot=0, _crSoc=0, _crLs=[];
+      _crKs.forEach(function(L){
+        var its=crItens.filter(function(x){ return x.opId===L; }), ab=its.filter(function(x){ return !_bx[REN_key(x)]; });
+        var falta=0; ab.forEach(function(x){ var f3=(Number(x.valor)||0)-_pagoDe(REN_key(x)); if(f3>0) falta+=f3; });
+        falta=Math.round(falta*100)/100; _crTot+=falta;
+        var c0=crL[L][0]||{}, sv=Number(c0.socio_valor)||0, soc=(c0.socio_nome && sv>0)?(VB_nomeCurto(String(c0.socio_nome))+' '+HIST_fmtMoeda(sv)+'/PARC.'):'';
+        if(soc) _crSoc+=sv*ab.length;
+        var ult=ab.length?ab[ab.length-1].venc:'';
+        _crLs.push({rot:String(c0.descricao||'ENTRADA'), data:String(c0.created_at||'').slice(0,10), falta:falta, n:ab.length, tot:(its[0]?its[0].tot:its.length), ult:ult, soc:soc});
+      });
+      _crLs.sort(function(a,b2){ return b2.falta-a.falta; });
+      _crLs.forEach(function(e){
+        var ex=[(e.n?(e.n+' DE '+e.tot+' EM ABERTO'):'QUITADO'), (e.ult?('AT\u00c9 '+fdt(e.ult)):''), e.soc].filter(Boolean).join(' \u00b7 ');
+        innE+=ln((e.data?fdt(e.data)+' \u00b7 ':'')+CLIP_esc(e.rot), HIST_fmtMoeda(e.falta))+'<div class="vb-det" style="text-align:right;">'+ex+'</div>';
+      });
+      innE+='<div style="border-top:0.5px solid var(--ln3);margin-top:7px;"></div>'+ln('<b>A receber</b>', HIST_fmtMoeda(_crTot))
+        +(_crSoc>0?(ln('S\u00f3cios', HIST_fmtMoeda(_crSoc))+ln('<b>VB</b>', HIST_fmtMoeda(Math.round((_crTot-_crSoc)*100)/100))):'');
+      hh+=bl('ENTRADAS \u00b7 '+_crKs.length, innE, HIST_fmtMoeda(_crTot), _crKs.length);
     }
     // EM ABERTO
     var inner='';
@@ -22319,6 +22355,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.316.0</span><span class="cl-ver-date">21/10/2026</span></div>
+      <div class="cl-item">Panorama do cliente com as entradas manuais: bloco ENTRADAS (um lançamento por linha, com o que falta, parcelas em aberto, último vencimento e a parte do sócio), e as parcelas entram no A RECEBER, no A VENCER e na pontualidade. A Zenith passa de R$ 95 mil para o total real. Lucro não muda</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.315.0</span><span class="cl-ver-date">21/10/2026</span></div>
       <div class="cl-item">Entrada manual que veio do sistema antigo com a numeração do contrato: 15 DE 24 em vez de 01 DE 10, no card, na ficha e na foto do COBRAR (colunas num_ini e num_tot, preenchidas pelo SQL dos financiamentos migrados). A data da operação passa a ser a original</div>
