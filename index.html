@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.321.0</title>
+<title>VB - v1.321.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1716,7 +1716,7 @@ function HIST_carregarAnt(r, semHoje){
     if(isFinite(_pmSP)&&_pmSP>0){
       var _offP=ANT_pmCom(false,true), _onP=ANT_pmCom(true,true);
       if(isFinite(_offP)&&isFinite(_onP)&&Math.abs(_onP-_offP)>0.01&&Math.abs(_offP-_pmSP)<0.01) ANT_pisoLigado=false;
-      else { var _medP=ANT_pmCom(true,true,'media'); if(isFinite(_medP)&&Math.abs(_medP-_pmSP)<0.01&&Math.abs(_onP-_pmSP)>=0.01) ANT_pisoModo='media'; }
+      else { var _medP=ANT_pmCom(true,true,'media'); if(!r.simulacao&&isFinite(_medP)&&Math.abs(_medP-_pmSP)<0.01&&Math.abs(_onP-_pmSP)>=0.01) ANT_pisoModo='media'; }
     }
     if(!ANT_modoPersonalizado){ ANT_toggleModo(); } else { ANT_renderTitulos(); ANT_recalcPersonalizado(); }
   } else {
@@ -1739,7 +1739,7 @@ function HIST_carregarAnt(r, semHoje){
     if(isFinite(_pmS)&&_pmS>0){
       var _off=ANT_pmCom(false,false), _on=ANT_pmCom(true,false);
       if(isFinite(_off)&&isFinite(_on)&&Math.abs(_on-_off)>0.01&&Math.abs(_off-_pmS)<0.01) ANT_pisoLigado=false;
-      else { var _med=ANT_pmCom(true,false,'media'); if(isFinite(_med)&&Math.abs(_med-_pmS)<0.01&&Math.abs(_on-_pmS)>=0.01) ANT_pisoModo='media'; }
+      else { var _med=ANT_pmCom(true,false,'media'); if(!r.simulacao&&isFinite(_med)&&Math.abs(_med-_pmS)<0.01&&Math.abs(_on-_pmS)>=0.01) ANT_pisoModo='media'; }
     }
     ANT_recalc();
   }
@@ -3925,7 +3925,7 @@ function HIST_imgAnt(r){
   if(isFinite(_pmR)&&_pmR>0){
     var _oR=ANT_pmCom(false,true), _nR=ANT_pmCom(true,true);
     if(isFinite(_oR)&&isFinite(_nR)&&Math.abs(_nR-_oR)>0.01&&Math.abs(_oR-_pmR)<0.01) ANT_pisoLigado=false;
-    else { var _mR=ANT_pmCom(true,true,'media'); if(isFinite(_mR)&&Math.abs(_mR-_pmR)<0.01&&Math.abs(_nR-_pmR)>=0.01) ANT_pisoModo='media'; }
+    else { var _mR=ANT_pmCom(true,true,'media'); if(!r.simulacao&&isFinite(_mR)&&Math.abs(_mR-_pmR)<0.01&&Math.abs(_nR-_pmR)>=0.01) ANT_pisoModo='media'; }
   }
   var img=document.getElementById('ant-tabelaImagem'); if(img) img.src='';
   VB_silentGen=true; try{ ANT_gerarTabela(); } finally { VB_silentGen=false; ANT_pisoLigado=_plS; ANT_pisoModo=_pmoS; }
@@ -9297,8 +9297,9 @@ function ANT_toggleTipo(id){
   ANT_recalcPersonalizado();
   VB_toast(t.tipo==='pg' ? 'Título marcado como PAGAMENTO (abate).' : 'Título de volta a DÉBITO.');
 }
-/* v1.321.0: prazo COBRADO de cada titulo ao lado da data, no desenho das Vendas -- o mesmo
-   numero da coluna Prazo da tabela do cliente. (30d) = titulo no piso. */
+/* v1.321.1: dias REAIS de cada titulo (calendario, sem +4 e sem piso) ao lado da data, no
+   desenho das Vendas -- e o numero que o VB usa pra decidir se empurra a data. A tabela e o
+   resumo do cliente seguem com o prazo COBRADO, que e o que fecha a conta dos juros. */
 var ANT_prazoTit={};
 function ANT_diasPinta(){
   document.querySelectorAll('#ant-listaTitulos [data-adias]').forEach(function(sp){
@@ -9333,7 +9334,7 @@ function ANT_recalcPersonalizado(){
     if(venc){
       pr=(s<0)?ANT_diasEntre(hoje,venc):(ANT_pisoLigado?ANT_prazoDe(hoje,venc):ANT_diasEntre(hoje,venc)); // PG: dias exatos, sem +4
       if(s>0 && !isNaN(v) && v>0){ var _p2=_ajP(pr); if(Math.abs(_p2-pr)>1e-9) ANT_pisoAgiu=true; pr=_p2; }   /* PG fica de fora do piso */
-      ANT_prazoTit[t.id]=pr;
+      ANT_prazoTit[t.id]=ANT_diasEntre(hoje,venc);   /* v1.321.1: na tela, o dia real (calendario) */
     }
     if(isNaN(v)||v<=0) return;
     totalVB+=s*v;
@@ -22556,6 +22557,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.321.1</span><span class="cl-ver-date">22/10/2026</span></div>
+      <div class="cl-item">Ao lado da data de cada título, os dias REAIS até o vencimento (calendário, sem o +4 e sem o piso) — é o número para decidir se empurra a data. A tabela e o resumo do cliente continuam com o prazo cobrado, que é o que fecha a conta dos juros</div>
+      <div class="cl-item">Simulação salva com a regra antiga do piso reabre com o piso por título (só operação efetivada mantém a regra com que foi salva)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.321.0</span><span class="cl-ver-date">22/10/2026</span></div>
       <div class="cl-item">Antecipação com piso de 30 dias POR TÍTULO: cada título abaixo de 30 dias (já com o +4) é cobrado como 30; os de 30 ou mais ficam como estão. Antes o piso esticava todos até a média dar 30, e o título curto saía cobrando menos de um mês</div>
