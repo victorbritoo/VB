@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.321.1</title>
+<title>VB - v1.322.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -457,7 +457,7 @@ button, [onclick]{ -webkit-touch-callout:none; -webkit-user-select:none; user-se
 
 <div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100005;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
   <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
-    <div id="mer-view-titulo" style="font-size:16px;font-weight:700;color:var(--ink);text-align:center;"></div>
+    <div id="mer-view-titulo" style="font-size:14px;font-weight:700;color:var(--ink);text-align:center;"></div>
     <div id="mer-view-body" style="margin-top:12px;"></div>
     <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:9px;border:none;border-radius:14px;background:var(--acc);font-size:12px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
     <div style="display:flex;gap:8px;margin-top:8px;">
@@ -16658,10 +16658,14 @@ function MER_abrir(id){
     });
   })();
   var cx=(r.marca||r.modelo||r.ano||r.sn)?{marca:r.marca||'',modelo:r.modelo||'',ano:r.ano||'',sn:r.sn||''}:MER_desmontar(r.descricao);
-  document.getElementById('mer-view-titulo').textContent=r.descricao||'(sem descrição)';
+  /* v1.322.0: titulo sem o SN (igual ao card da lista); SN mora na caixa de baixo */
+  var _mvT=REN_rotCurto(r.descricao||'')||'(sem descrição)';
+  document.getElementById('mer-view-titulo').textContent=_mvT;
   function lin(l,v){ return v?('<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-top:4px;"><span style="color:var(--mu);white-space:nowrap;">'+l+':</span><span style="font-weight:700;color:var(--tx);text-align:right;text-transform:uppercase;">'+HIST_esc(v)+'</span></div>'):''; }
   var hh='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;">';
-  hh+=lin('Marca',cx.marca)+lin('Modelo',cx.modelo)+lin('Ano',cx.ano)+lin('Ref',r.ref||'')+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
+  /* v1.322.0: marca, modelo e ano so aparecem aqui quando o titulo nao os mostra */
+  var _mvTu=String(_mvT).toUpperCase(), _mvTem=function(v){ v=String(v||'').trim().toUpperCase(); return !!v && _mvTu.indexOf(v)>=0; };
+  hh+=(_mvTem(cx.marca)?'':lin('Marca',cx.marca))+(_mvTem(cx.modelo)?'':lin('Modelo',cx.modelo))+(_mvTem(cx.ano)?'':lin('Ano',cx.ano))+lin('Ref',r.ref||'')+lin('SN',cx.sn)+lin('Acompanha',r.infos||'');
   hh+='</div><div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 14px;margin-top:8px;">';
   hh+=lin('Custo', r.custo!=null?('R$ '+MER_fmtBR(r.custo)):'');
   (function(){
@@ -22557,6 +22561,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.322.0</span><span class="cl-ver-date">24/10/2026</span></div>
+      <div class="cl-item">Ficha da peça (Estoque, Vendidos e o RELÓGIO do Histórico): título sem o SN, em 14px, igual ao card da lista; MODELO, ANO e MARCA saem da caixa de baixo quando já estão no título. Ficam REF, SN e ACOMPANHA</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.321.1</span><span class="cl-ver-date">22/10/2026</span></div>
       <div class="cl-item">Ao lado da data de cada título, os dias REAIS até o vencimento (calendário, sem o +4 e sem o piso) — é o número para decidir se empurra a data. A tabela e o resumo do cliente continuam com o prazo cobrado, que é o que fecha a conta dos juros</div>
