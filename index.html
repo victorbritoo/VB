@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.322.1</title>
+<title>VB - v1.323.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -14325,7 +14325,7 @@ function REN_ficha(k, exp){
   if(x.prorrogada && x.proNota) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DA PRORROGA\u00c7\u00c3O', CLIP_esc(x.proNota))+'</div>';
   (function(){ var _nl=REN_notaLote(x); if(_nl) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco('NOTA DO LAN\u00c7AMENTO', CLIP_esc(_nl))+'</div>'; })();
   (function(){ var _nt=REN_notaDe(x); if(_nt) hh+='<div style="display:grid;grid-template-columns:1fr;">'+bloco(REN_rotNota(x.tab), CLIP_esc(_nt))+'</div>'; })();
-  if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?(' ('+REN_termo(x.tab).toLowerCase()+' '+HIST_fmtMoeda(x.valor)+')'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
+  if(b) hh+='<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:2px 10px;">'+bloco('RECEBIDO',HIST_fmtMoeda(Number(b.valor_recebido)||0)+(Number(b.valor_recebido)!==Number(x.valor)?('<div style="font-size:9px;color:var(--mu);font-weight:600;margin-top:1px;">'+REN_termo(x.tab)+' '+HIST_fmtMoeda(x.valor)+'</div>'):''),false,!b.nota)+(b.nota?bloco('NOTA',CLIP_esc(b.nota)):'')+'</div>';
   /* REPASSE e SOCIO dividem uma linha: eram dois blocos de largura cheia e a ficha crescia demais */
   var _bRep='', _bSoc='', _bVb='';
   if(b){
@@ -15487,6 +15487,24 @@ function FM_calcMes(ym, res, _merMap){
             res._proMap[REN_key(px)]=px;
           });
         }catch(e){}
+        /* v1.323.0: ENTRADA MANUAL tambem. O valor dela e caixa (o lucro do contrato antigo ja esta
+           na planilha), mas o que entra ACIMA da parcela e juro novo, 100% VB (o socio leva o valor
+           de face). Mesma chave do REN_abrir: lote|ordem (ordem 0 cai na posicao). */
+        try{
+          var _crL={};
+          (((res[11]&&res[11].data)||[])).forEach(function(c){ var L=String(c.lote||c.id); (_crL[L]=_crL[L]||[]).push(c); });
+          Object.keys(_crL).forEach(function(L){
+            var g=_crL[L].slice().sort(function(a,b2){ var oa=Number(a.ordem)||0, ob=Number(b2.ordem)||0; if(oa!==ob) return oa-ob; return String(a.venc||'')<String(b2.venc||'')?-1:1; });
+            var pd=g.slice().sort(function(a2,b2){ var va=String(a2.venc||''), vb=String(b2.venc||''); if(va!==vb) return va<vb?-1:1; return (Number(a2.ordem)||0)-(Number(b2.ordem)||0); });
+            var g0=g[0]||{}, nI=(Number(g0.num_ini)>1)?(Number(g0.num_ini)-1):0, nT=(Number(g0.num_tot)>=g.length+nI)?Number(g0.num_tot):(g.length+nI);
+            g.forEach(function(c,i){
+              var dn=pd.indexOf(c)+nI+1, p2=function(n){ return ('0'+n).slice(-2); };
+              res._proMap['cr|'+L+'|'+(Number(c.ordem)||i)]={tab:'cr', valor:Number(c.valor)||0,
+                cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
+                nm:String(c.descricao||'ENTRADA MANUAL')+(nT>1?(' \u00b7 '+p2(dn)+' DE '+p2(nT)):'')};
+            });
+          });
+        }catch(e){}
       }
       /* O GATILHO E A BAIXA, NAO A PRORROGACAO (v1.260.0). Antes so contava parcela que tinha
          passado pelo botao PRORROGAR -- entao atrasada paga corrigida, sem acordo registrado,
@@ -15501,7 +15519,7 @@ function FM_calcMes(ym, res, _merMap){
         if(!px) return;
         var j=(Number(bx.valor_recebido)||0)-(Number(px.valor)||0);
         if(j>0.005){ _proJ+=j; _proN++;
-          _proIt.push({cliente:String(px.cliente||px.rot||'\u2014'), tab:String(px.tab||''), idx:(Number(px.parcela_idx||px.idx)||0),
+          _proIt.push({cliente:String(px.cliente||px.rot||'\u2014'), tab:String(px.tab||''), idx:(Number(px.parcela_idx||px.idx)||0), nm:(px.nm||''),
                        orig:(Number(px.valor)||0), pago:(Number(bx.valor_recebido)||0), juros:j, data:String(bx.recebido_em||'').slice(0,10)});
         }
       });
@@ -15550,7 +15568,8 @@ function FM_load(){
     sb.from('parcela_prorroga').select('*').limit(10000),
     sb.from('parcela_baixas').select('op_tab,op_id,parcela_idx,valor_recebido,recebido_em').limit(20000),
     sb.from('mercadoria_custos').select('mercadoria_id,valor,data,descricao,cobrar').limit(20000),
-    sb.from('mercadorias').select('id,descricao').limit(20000)
+    sb.from('mercadorias').select('id,descricao').limit(20000),
+    sb.from('contas_receber').select('id,lote,ordem,venc,valor,devedor,descricao,num_ini,num_tot').limit(20000)   /* res[11] -- v1.323.0: juros das entradas manuais */
   ]).then(function(res){
     var _merMap={};
     ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
@@ -15625,7 +15644,7 @@ function FM_load(){
       var _pdet='';
       (_dPro.itens||[]).forEach(function(it){
         _pdet+=fmDet(VB_nomeCurto(it.cliente),
-          REN_termo(it.tab,false,true)+' '+(it.idx+1)+' \u00b7 '+HIST_fmtMoeda(it.orig)+' \u2192 '+HIST_fmtMoeda(it.pago)+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''),
+          (it.nm?it.nm:(REN_termo(it.tab,false,true)+' '+(it.idx+1)))+' \u00b7 '+HIST_fmtMoeda(it.orig)+' \u2192 '+HIST_fmtMoeda(it.pago)+(it.data?(' \u00b7 '+it.data.split('-').reverse().join('/')):''),
           HIST_fmtMoeda(it.juros));
       });
       _ord.push({luc:_dPro.juros, html:bloco('JUROS RECEBIDOS · '+_dPro.n+(_dPro.n===1?' PARCELA':' PARCELAS'), HIST_fmtMoeda(_dPro.juros), [['Juros', HIST_fmtMoeda(_dPro.juros)]], false, fmDetCaixa(_pdet))});
@@ -22560,6 +22579,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.323.0</span><span class="cl-ver-date">28/10/2026</span></div>
+      <div class="cl-item">Fechamento: JUROS RECEBIDOS passa a contar também as entradas manuais (contratos migrados) — o que entrou acima do valor da parcela, no mês em que ela fechou, 100% VB. O valor da parcela continua fora do lucro</div>
+      <div class="cl-item">Ficha da parcela recebida: quando o recebido difere da parcela, o valor da parcela desce para a linha de baixo, em vez de cortar com reticências</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.322.1</span><span class="cl-ver-date">25/10/2026</span></div>
       <div class="cl-item">Ficha da peça com a caixa completa de volta (MARCA, MODELO, ANO, REF, SN e ACOMPANHA, sempre na mesma ordem); o título continua sem o SN, em 14px</div>
