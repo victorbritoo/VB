@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.324.3</title>
+<title>VB - v1.326.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1499,6 +1499,7 @@ button{ text-transform:inherit; }
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
     <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
+    <span id="ren-olho" onclick="REN_privToggle()" style="cursor:pointer;padding:8px 4px 8px 12px;display:inline-flex;align-items:center;color:var(--mu2);"></span>
   </div>
   <div class="simulacao-label">ENTRADAS/SAÍDAS</div>
   <hr class="divider">
@@ -1778,6 +1779,7 @@ function HIST_carregarAnt(r, semHoje){
 function HIST_carregarVen(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   VEN_currentOperationId = r.id;
+  VEN_ordemChecar(r.id);   /* v1.325.0 */
   /* Guarda a linha como ela veio do banco: e contra ela que o salvamento decide se o repasse
      combinado ficou velho. VEN_resumoAtualRow nao serve -- so existe depois de abrir a folha
      do socio, e a maioria das edicoes nunca passa por la. */
@@ -6757,6 +6759,7 @@ function VEN_limpar(){
   });
   VB_autoGrow(document.getElementById('ven-notas'));
   VEN_currentOperationId = null;
+  VEN_ordemTrava = false;   /* v1.325.0: venda nova sempre ordena */
   VEN_merVinculo = null;
   VEN_crono=[];
   VEN_simFlag=false; try{VEN_paintSimChip();}catch(e){}
@@ -7227,7 +7230,39 @@ function VEN_fecharTabela(){
 }
 
 var VB_fotoSocioDados=null;
+/* v1.325.0 -- parcelas da venda em ordem de vencimento (a entrada/troca do dia da venda primeiro).
+   A ordem e a chave de baixa, pagamento, nota, prorrogacao e repasse (parcela_idx), entao venda
+   que ja tem qualquer um desses -- ou contrato gerado, que fixou a numeracao com o cliente -- nunca
+   e reordenada. Venda reaberta nasce travada ate a consulta responder. */
+var VEN_ordemTrava=false;
+function VEN_ordemChecar(id){
+  VEN_ordemTrava=true;
+  if(!id || typeof sb==='undefined') return;
+  var k=String(id);
+  function q(t){ return sb.from(t).select('id').eq('op_tab','ven').eq('op_id', k).limit(1); }
+  Promise.all([
+    q('parcela_baixas'), q('parcela_pagamentos'), q('parcela_notas'),
+    q('parcela_prorroga'), q('repasse_previsto'), q('repasse_adiantado'),
+    sb.from('contratos').select('id').eq('venda_id', k).limit(1)
+  ]).then(function(res){
+    if(String(VEN_currentOperationId)!==k) return;
+    var tem=res.some(function(r){ return !r || r.error || (r.data && r.data.length); });
+    VEN_ordemTrava=tem;
+  }).catch(function(){});
+}
+function VEN_ordenaParcelas(){
+  if(!VEN_modoPersonalizado || VEN_ordemTrava || !VEN_parcelas || VEN_parcelas.length<2) return false;
+  function ch(p){ var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(p.data||'').trim()); return m?(m[3]+m[2]+m[1]):(p.troca?'00000000':'99999999'); }
+  var ix=VEN_parcelas.map(function(p,i){ return {p:p,i:i,k:ch(p)}; });
+  ix.sort(function(a,b){ return a.k<b.k?-1:(a.k>b.k?1:a.i-b.i); });
+  var mudou=ix.some(function(o,j){ return o.i!==j; });
+  if(!mudou) return false;
+  VEN_parcelas=ix.map(function(o){ return o.p; });
+  try{ VEN_renderParcelas(); VEN_syncFromParcelas(); }catch(e){}
+  return true;
+}
 function VEN_gerarTabela(){
+  try{ VEN_ordenaParcelas(); }catch(e){}
   if(typeof VEN_socioExtra==='undefined' || !VEN_socioExtra){ VB_fotoSocioDados=null; VEN_fotoVoltaSocio=null; }
   var desc    = (document.getElementById('ven-tabelaDesc').value||'').trim().toUpperCase();
   var titulo  = desc || 'TABELA DE PARCELAS';
@@ -7532,6 +7567,7 @@ function VEN_confirmarOperacao(btn){
   }
   var desc=(document.getElementById('ven-tabelaDesc').value||'').trim();
   var dataStr=(document.getElementById('ven-tabelaData').value||'');
+  try{ VEN_ordenaParcelas(); }catch(e){}   /* v1.325.0 */
   var modo = VEN_modoPersonalizado ? 'personalizado' : 'simples';
   var total=VEN_parseBR(document.getElementById('ven-total').value);
   var qtd=parseInt(document.getElementById('ven-qtd').value||'0');
@@ -14141,7 +14177,7 @@ function REN_render(){
       var _ab=(REN_repAberto[g.nome]!=null) ? (REN_repAberto[g.nome]===true) : (_gOrd.length===1);
       REN_repNomes[gi]=g.nome;
       hh+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 10px;margin-top:6px;">'
-        +'<div onclick="REN_repTog('+gi+')" style="cursor:pointer;display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);">'
+        +'<div data-priv="1" onclick="REN_repTog('+gi+')" style="cursor:pointer;display:flex;align-items:baseline;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--tx);">'
         +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+VB_seta(_ab, gid+'-c', 11)+CLIP_esc(g.nome)+' \u00b7 '+g.itens.length+'</span>'
         +'<span style="white-space:nowrap;flex:none;padding-left:8px;'+(g.red?'color:var(--red);':'')+'">'+HIST_fmtMoeda(g.tot)+'</span>'
         +'</div></div>';
@@ -14188,6 +14224,37 @@ function REN_render(){
   }
     body.innerHTML=hh;
 }
+/* v1.326.0 -- modo discreto (privacidade): o olhinho do cabecalho troca os TOTAIS por R$ ••••••
+   (cards pretos e cabecalhos de mes/secao). Os cards de parcela ficam com valor: e com eles que se
+   trabalha. A escolha fica no aparelho. Mascara no texto depois de desenhar -- nenhuma conta muda. */
+var REN_oculto=(function(){ try{ return localStorage.getItem('vb_ren_oculto')==='1'; }catch(e){ return false; } })();
+function REN_olhoPinta(){
+  var o=document.getElementById('ren-olho'); if(!o) return;
+  var olho='<path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>';
+  o.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+olho+(REN_oculto?'<line x1="3" y1="3" x2="21" y2="21"/>':'')+'</svg>';
+}
+function REN_privAplica(){
+  REN_olhoPinta();
+  if(!REN_oculto) return;
+  var body=document.getElementById('ren-body'); if(!body) return;
+  var alvos=[];
+  body.querySelectorAll('div').forEach(function(d){
+    var st=d.getAttribute('style')||'';
+    if(st.indexOf('background:var(--acc)')>=0 || d.getAttribute('data-priv')){ alvos.push(d); return; }
+    var f=d.firstElementChild;
+    if(f && f.tagName==='SPAN' && /display:flex/.test(st) && /font-size:9px;letter-spacing:2px/.test(f.getAttribute('style')||'')) alvos.push(d);
+  });
+  alvos.forEach(function(d){
+    var w=document.createTreeWalker(d, NodeFilter.SHOW_TEXT, null), n;
+    while((n=w.nextNode())){ if(/R\$/.test(n.nodeValue)) n.nodeValue=n.nodeValue.replace(/R\$\s*[\d.]+,\d{2}/g,'R$ \u2022\u2022\u2022\u2022\u2022\u2022'); }
+  });
+}
+function REN_privToggle(){
+  REN_oculto=!REN_oculto;
+  try{ localStorage.setItem('vb_ren_oculto', REN_oculto?'1':'0'); }catch(e){}
+  try{ REN_render(); }catch(e){ REN_privAplica(); }
+}
+(function(){ var _r0=REN_render; REN_render=function(){ var r=_r0.apply(this, arguments); try{ REN_privAplica(); }catch(e){} return r; }; })();
 function REN_ficha(k, exp){
   /* mata folha que tenha ficado aberta por tras: ja apareceu DAR BAIXA sozinha ao voltar */
   ['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
@@ -22683,6 +22750,15 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.326.0</span><span class="cl-ver-date">29/10/2026</span></div>
+      <div class="cl-item">ENTRADAS/SAÍDAS com olhinho no cabeçalho (modo discreto): um toque troca os totais por R$ •••••• — card preto e totais de mês e de seção, nas três abas e na busca. Os cards de cada parcela continuam com valor. A escolha fica guardada no aparelho</div>
+  </div>
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.325.0</span><span class="cl-ver-date">29/10/2026</span></div>
+      <div class="cl-item">Vendas: ao gerar a tabela e ao salvar, as parcelas entram em ordem de vencimento (entrada e troca do dia da venda primeiro). Tabela, contrato, card das ENTRADAS, ficha e COBRAR passam a numerar igual — a 01 é a mais próxima</div>
+      <div class="cl-item">Venda que já tem recebimento, pagamento parcial, nota, prorrogação, repasse combinado ou adiantado, ou contrato gerado, não é reordenada: a numeração dela já foi combinada com o cliente</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.324.3</span><span class="cl-ver-date">29/10/2026</span></div>
       <div class="cl-item">Panorama do cliente: PARCELAS A VENCER (FOTO) só aparece quando o cliente tem parcela em aberto — cliente zerado (ou que só é credor, como o CEZAR) não mostra mais o botão que gerava foto vazia</div>
