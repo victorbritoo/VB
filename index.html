@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.323.0</title>
+<title>VB - v1.324.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11279,6 +11279,7 @@ function CLIP_abrir(nome, cliId, voltarK){
       /* EM ATRASO e parcela vencida dele; EM COBRANCA e antecipacao atrasada, com juro corrigido
          ate hoje. Duas dividas de natureza diferente -- por isso duas linhas, nao uma soma. */
       if(totAtr>0) innR+=ln('Em atraso \u00b7 '+atrN+' parcela'+(atrN===1?'':'s'), HIST_fmtMoeda(totAtr), true);
+      if(totAtr>0) innR+=ln('Em atraso corrigido hoje', '<span id="clip-atr-hoje">\u2026</span>', true);   /* v1.324.0 */
       if(totCob>0) innR+=ln('Em cobran\u00e7a', HIST_fmtMoeda(totCob), true);
     }
     hh+=bl('RESULTADO', innR);
@@ -11390,9 +11391,11 @@ function CLIP_abrir(nome, cliId, voltarK){
       hh+=bl('CONTRATOS \u00b7 '+con.length, innK, (function(){ var na=0; con.forEach(function(c4){ if(c4.assinado_em) na++; }); return na+' ASSINADO'+(na===1?'':'S'); })(), con.length);
     }
     hh+='<button onclick="CLIP_recebFoto(\''+CLIP_esc(nome).replace(/'/g,"\\'")+'\')" style="width:100%;padding:9px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">PARCELAS A VENCER (FOTO)</button>';
+    if(fut.some(function(x){ return x.venc<=hoje; })) hh+='<button onclick="CLIP_vencFoto(\''+CLIP_esc(nome).replace(/'/g,"\\'")+'\')" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">PARCELAS VENCIDAS (FOTO)</button>';   /* v1.324.0 */
     hh+='<button onclick="'+(voltarK?('document.getElementById(\'clip-overlay\').style.display=\'none\';REN_ficha(\''+voltarK+'\')'):'document.getElementById(\'clip-overlay\').style.display=\'none\'')+'" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">'+(voltarK?'VOLTAR':'FECHAR')+'</button>';
     hh+='</div>';
     ov.innerHTML=hh;
+    try{ CLIP_atrHojePinta(nome); }catch(e){}
   });
 }
 /* === A RECEBER (Fase 1): cronograma derivado das operações — só leitura, sem tabela nova === */
@@ -16281,6 +16284,107 @@ function CLIP_recebFoto(nome){
   });
   if(!linhas.length){ VB_toast('Este cliente n\u00e3o tem parcela em aberto.'); return; }
   VB_recebDoc(nome, linhas, 'P A R C E L A S   A   V E N C E R', 'Parcelas');
+}
+/* v1.324.0: PARCELAS VENCIDAS do cliente -- as atrasadas e as que vencem hoje, com o valor
+   ORIGINAL (o que falta da parcela) e o de HOJE (REN_valorHoje: 0,2% ao dia, juro simples, folga
+   do fim de semana, juros antes do principal no parcial). Mesma fonte do A RECEBER (REN_cache:
+   prorrogacao ja aplicada, antecipacao atrasada fora -- ela corrige pela taxa da operacao). */
+function CLIP_vencLinhas(nome){
+  var alvo=VB_cliNorm(nome||''), hoje=REN_hojeISO(), out=[];
+  if(!REN_cache || !alvo) return out;
+  (REN_cache.itens||[]).forEach(function(x){
+    if(VB_cliNorm(x.cliente)!==alvo) return;
+    if(REN_cache.bx[REN_key(x)]) return;
+    if(!(String(x.venc||'')<=hoje)) return;
+    var o=Math.round((Number(REN_falta(x))||0)*100)/100; if(!(o>0.005)) return;
+    var vh=null; try{ vh=REN_valorHoje(x, hoje); }catch(e){ vh=null; }
+    out.push({d:String(x.venc).slice(0,10), o:o, h:(vh?vh.valor:o), dias:(vh?vh.dias:0),
+      nome:String(x.rot||'—'), nm:(function(){ try{ return REN_nm(x)||''; }catch(e){ return ''; } })()});
+  });
+  out.sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
+  return out;
+}
+function CLIP_vencFoto(nome){
+  if(!REN_cache){
+    VB_toast('Carregando…');
+    var pr=REN_abrir();
+    if(pr && pr.then){ pr.then(function(){ CLIP_vencFoto(nome); }); return; }
+    setTimeout(function(){ if(REN_cache) CLIP_vencFoto(nome); }, 1400);
+    return;
+  }
+  var L=CLIP_vencLinhas(nome);
+  if(!L.length){ VB_toast('Nenhuma parcela vencida.'); return; }
+  var tO=0, tH=0; L.forEach(function(l){ tO+=l.o; tH+=l.h; }); tO=Math.round(tO*100)/100; tH=Math.round(tH*100)/100;
+  var W=820, PAD=40, CW=W-PAD*2, y=176, LH=42, TH=26;
+  var hh=TH+L.length*LH+LH+32, H=y+hh+40, DPR=2;
+  var cv=document.createElement('canvas'); cv.width=W*DPR; cv.height=H*DPR;
+  var c=cv.getContext('2d'); c.scale(DPR,DPR);
+  c.fillStyle='#f5f5f3'; c.fillRect(0,0,W,H);
+  c.fillStyle='#111'; c.font='400 44px Georgia,"Times New Roman",serif'; c.textAlign='left';
+  try{ c.letterSpacing='1px'; }catch(e){} c.fillText('VB', PAD, 70); try{ c.letterSpacing='0px'; }catch(e){}
+  c.font='600 13px -apple-system, Helvetica, sans-serif'; c.fillStyle='#999';
+  c.fillText('P A R C E L A S   V E N C I D A S', PAD, 96);
+  c.fillStyle='#111'; c.font='700 26px -apple-system, Helvetica, sans-serif';
+  c.fillText(VB_nomeCurto(nome||'').toUpperCase(), PAD, 146);
+  c.textAlign='right'; c.font='700 22px -apple-system, Helvetica, sans-serif';
+  c.fillText(HIST_fmtMoeda(tH), PAD+CW, 146); c.textAlign='left';
+  function trunc(t,maxW,font){ c.font=font; t=String(t||''); if(c.measureText(t).width<=maxW) return t; while(t.length>1 && c.measureText(t+'…').width>maxW){ t=t.slice(0,-1); } return t+'…'; }
+  c.fillStyle='#fff'; c.strokeStyle='#e0e0e0'; c.lineWidth=1;
+  c.beginPath(); c.roundRect(PAD, y, CW, hh, 14); c.fill(); c.stroke();
+  var R=PAD+CW-22, HX=R-118, OR=HX-16, OX=OR-118, DIASC=OX-30, VENCC=DIASC-76, DESCX=PAD+22, DESCW=VENCC-44-DESCX-12;
+  var FN='700 15px -apple-system, Helvetica, sans-serif', FD='500 12px -apple-system, Helvetica, sans-serif', FS='500 11px -apple-system, Helvetica, sans-serif';
+  var yy=y+TH;
+  c.fillStyle='#c0c0c0'; c.font='700 9px -apple-system, Helvetica, sans-serif';
+  try{ c.letterSpacing='1.5px'; }catch(e){}
+  c.textAlign='left'; c.fillText('DESCRIÇÃO', DESCX, yy);
+  c.textAlign='center'; c.fillText('VENCIMENTO', VENCC, yy); c.fillText('DIAS', DIASC, yy);
+  c.textAlign='right'; c.fillText('ORIGINAL', OR, yy); c.fillText('HOJE', R, yy);
+  try{ c.letterSpacing='0px'; }catch(e){}
+  L.forEach(function(l, i){
+    yy+=LH;
+    if(i>0){ c.strokeStyle='#f0f0f0'; c.beginPath(); c.moveTo(DESCX, yy-28); c.lineTo(R, yy-28); c.stroke(); }
+    c.fillStyle='#111'; c.textAlign='left';
+    c.fillText(trunc(String(l.nome||'').replace(/\s*\bSN:\s*/i,' '), DESCW, FN), DESCX, yy-4);
+    if(l.nm){ c.fillStyle='#aaa'; c.font=FS; c.fillText(l.nm.toUpperCase(), DESCX, yy+11); }
+    c.fillStyle='#aaa'; c.font=FD; c.textAlign='center';
+    c.fillText(HIST_fmtData(l.d), VENCC, yy-4);
+    c.fillText(l.dias>0?String(l.dias):'—', DIASC, yy-4);
+    c.fillStyle='#4a4a4a'; c.font=FN;
+    c.textAlign='left';  c.fillText('R$', OX, yy-4);
+    c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.o).replace(/^R\$\s*/,''), OR, yy-4);
+    c.fillStyle='#111';
+    c.textAlign='left';  c.fillText('R$', HX, yy-4);
+    c.textAlign='right'; c.fillText(HIST_fmtMoeda(l.h).replace(/^R\$\s*/,''), R, yy-4);
+  });
+  yy+=LH;
+  c.strokeStyle='#eee'; c.beginPath(); c.moveTo(DESCX, yy-24); c.lineTo(R, yy-24); c.stroke();
+  c.fillStyle='#111'; c.font='700 13px -apple-system, Helvetica, sans-serif'; c.textAlign='left';
+  c.fillText('TOTAL · '+L.length+(L.length===1?' PARCELA':' PARCELAS'), DESCX, yy);
+  c.font='700 16px -apple-system, Helvetica, sans-serif'; c.fillStyle='#4a4a4a';
+  c.textAlign='left';  c.fillText('R$', OX, yy);
+  c.textAlign='right'; c.fillText(HIST_fmtMoeda(tO).replace(/^R\$\s*/,''), OR, yy);
+  c.fillStyle='#111';
+  c.textAlign='left';  c.fillText('R$', HX, yy);
+  c.textAlign='right'; c.fillText(HIST_fmtMoeda(tH).replace(/^R\$\s*/,''), R, yy);
+  c.textAlign='left';
+  var hj=new Date(), ds=('0'+hj.getDate()).slice(-2)+'-'+('0'+(hj.getMonth()+1)).slice(-2)+'-'+hj.getFullYear();
+  VB_carimboData(c, W, {fs:12, mg:PAD, y:40, cor:'#bbb', agora:true});
+  var fr='Em atraso: '+HIST_fmtMoeda(tO)+'.'+(Math.abs(tH-tO)>0.004?(' Valor hoje: '+HIST_fmtMoeda(tH)+'.'):'');
+  VB_fotoPreview(cv, 'VB - Parcelas vencidas '+(nome||'')+' '+ds+'.jpg', true);
+  VB_fotoFrase=fr;   /* depois do preview, que zera: o COMPARTILHAR copia de novo */
+  REN_copia(fr, 'Frase copiada — é só colar.');
+}
+/* linha HOJE do card RESULTADO: o total corrigido das parcelas ja vencidas (antes de hoje) */
+function CLIP_atrHojePinta(nome){
+  var el=document.getElementById('clip-atr-hoje'); if(!el) return;
+  var pinta=function(){
+    var e2=document.getElementById('clip-atr-hoje'); if(!e2) return;
+    var hoje=REN_hojeISO(), t=0;
+    CLIP_vencLinhas(nome).forEach(function(l){ if(l.d<hoje) t+=l.h; });
+    e2.textContent=t>0?HIST_fmtMoeda(Math.round(t*100)/100):'—';
+  };
+  if(REN_cache){ pinta(); return; }
+  var pr=REN_abrir(); if(pr && pr.then) pr.then(pinta);
 }
 function SOC_viewFechar(){ var ov=document.getElementById('soc-view-overlay'); if(ov) ov.style.display='none'; }
 function SOC_toggleForm(force){
@@ -22579,6 +22683,11 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.324.0</span><span class="cl-ver-date">29/10/2026</span></div>
+      <div class="cl-item">Panorama do cliente: PARCELAS VENCIDAS (FOTO), embaixo do PARCELAS A VENCER — as atrasadas e as que vencem hoje, com VENCIMENTO, DIAS, ORIGINAL (o que falta) e HOJE (corrigido a 0,2% ao dia, regra do VALOR HOJE), e o total das duas colunas. Sai como foto ou PDF e copia a frase "Em atraso: R$ X. Valor hoje: R$ Y."</div>
+      <div class="cl-item">Card RESULTADO do panorama com a linha EM ATRASO CORRIGIDO HOJE, embaixo do EM ATRASO</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.323.0</span><span class="cl-ver-date">28/10/2026</span></div>
       <div class="cl-item">Fechamento: JUROS RECEBIDOS passa a contar também as entradas manuais (contratos migrados) — o que entrou acima do valor da parcela, no mês em que ela fechou, 100% VB. O valor da parcela continua fora do lucro</div>
