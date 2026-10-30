@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.326.0</title>
+<title>VB - v1.327.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -636,8 +636,6 @@ button{ text-transform:inherit; }
     <button onclick="PIN_request('ges')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;">
       <span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Cadastros</span>
     </button>
-<!-- Recebimentos guardado: módulo intacto (tela screen-rec, funções, backup); pra reativar, devolver:
-         <button onclick="PIN_request('rec')">Recebimentos</button> -->
     <div id="home-backup-status" onclick="PIN_request('hist')" style="display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;"></div>
   </div>
 </div>
@@ -1529,37 +1527,6 @@ button{ text-transform:inherit; }
 </div>
 </div>
 
-<div id="screen-rec" class="vb-screen">
-<div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-    <div class="logo" onclick="showScreen('home')" style="cursor:pointer;">VB</div>
-  </div>
-  <div class="simulacao-label">RECEBIMENTOS</div>
-  <hr class="divider">
-
-  <div id="rec-listas" style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:12px;align-items:center;"></div>
-
-  <div id="rec-hero" style="background:var(--acc);border-radius:16px;padding:16px 18px;margin-bottom:12px;color:var(--acc-tx);"></div>
-
-  <div id="rec-repassar" style="display:none;font-size:12px;color:var(--tx3);margin:-6px 2px 12px;font-family:-apple-system,sans-serif;"></div>
-
-  <button id="rec-resumo-tog" onclick="REC_toggleResumo()" style="background:none;border:none;color:var(--tx);font-size:10px;letter-spacing:0.5px;font-weight:700;cursor:pointer;padding:0 2px 8px;font-family:-apple-system,sans-serif;">RESUMO ▾</button>
-  <div id="rec-resumo" style="display:none;"></div>
-
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-    <div style="flex:1;position:relative;"><input id="rec-search" type="text" placeholder="Buscar cliente, descrição" oninput="REC_render()" style="width:100%;height:40px;border:0.5px solid var(--ln);border-radius:12px;padding:0 34px 0 14px;font-size:14px;color:var(--tx);outline:none;background:var(--sf);font-family:-apple-system,sans-serif;box-sizing:border-box;">
-    <button onclick="REC_limparBusca()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);border:none;background:var(--sf3);color:var(--mu0);border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">×</button></div>
-    <button onclick="REC_novo()" title="Adicionar" style="width:40px;height:40px;flex-shrink:0;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-  </div>
-
-  <div style="display:flex;gap:6px;margin-bottom:12px;">
-    <button id="rec-tab-receber" onclick="REC_setView('receber')" style="flex:1;padding:8px;border:0.5px solid var(--lnk);border-radius:10px;background:var(--acc);color:var(--acc-tx);font-size:12px;font-weight:700;letter-spacing:0.3px;cursor:pointer;font-family:-apple-system,sans-serif;">A RECEBER</button>
-    <button id="rec-tab-concluido" onclick="REC_setView('concluido')" style="flex:1;padding:8px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--mu);font-size:12px;font-weight:700;letter-spacing:0.3px;cursor:pointer;font-family:-apple-system,sans-serif;">CONCLUÍDOS</button>
-  </div>
-
-  <div id="rec-lista"></div>
-</div>
-</div>
 
 <script>
 // ===== SUPABASE (login) =====
@@ -5825,7 +5792,7 @@ function showScreen(name){
   var anteriorAtual = HIST_tabAtual ? 'hist' : 'home';
   // Guarda de onde veio só quando abrindo um módulo a partir do histórico
   document.getElementById('screen-home').style.display=name==='home'?'block':'none';
-  ['fin','ant','pag','ven','hist','rec','mer','soc','ges','cli','con','ren'].forEach(function(s){
+  ['fin','ant','pag','ven','hist','mer','soc','ges','cli','con','ren'].forEach(function(s){
     var el = document.getElementById('screen-'+s);
     if(el) el.style.display=s===name?'block':'none';
   });
@@ -5848,7 +5815,6 @@ function showScreen(name){
     if(typeof HIST_updateLupa==='function') HIST_updateLupa();
     HIST_refresh(); }
   if(name==='home'){ VB_updateBackupStatus(); }
-  if(name==='rec'){ REC_load(); }
   if(name==='mer'){
     VB_telaAnterior='home'; // estoque é botão direto da Home: voltar sempre vai pra Home (corrige trap Estoque→Vendidos→Abrir Venda→Voltar)
     var _mw=document.getElementById('mer-busca-wrap'); if(_mw) _mw.style.display='none';
@@ -11588,7 +11554,7 @@ var VB_FOLHAS=['clip-overlay','fm-overlay','glb-overlay','hist-mes-overlay','log
   /* criadas na hora: nao existem quando a pagina abre, mas o observador do body avisa quando
      entram. Sem elas na lista, a pagina rolava por baixo do contrato -- defeito da 1.300.12. */
   'vb-ctr-sh','vb-ctr-view','vb-ctr-vass','vb-ctr-prev','vb-ctr-sheet','vb-con-ficha',
-  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','rec-editor','rec-listas-mgr','vb-price-sheet','np-ov','np-view'];
+  'vb-rsoc-sheet','vb-clif-sheet','vb-cliord','cli-res-ficha','vb-price-sheet','np-ov','np-view'];
 function VB_folhaAjusta(ov){
   try{
     if(!ov || ov.style.display==='none' || ov.style.display==='') return;
@@ -19499,531 +19465,10 @@ function INV_gerarTabela(){
   INV_updateInvestidor();
 })();
 
-/* ============================================================
-   Módulo RECEBIMENTOS  (lista cronológica + acordo estruturado)
-   Linha = parcela. Tipo/Cliente/Descrição. Rateio opcional.
-   Atrasado em vermelho, recebidos em CONCLUÍDOS.
-   ============================================================ */
-var REC_acordos=[];
-var REC_listas=[];
-var REC_listaAtual=null;
-var REC_editLista=null;
-var REC_view='receber';
-var REC_resumoOpen=false;
-var REC_editId=null;
-var REC_DIRS={entrada:'Entrada',saida:'Saída',controle:'Controle'};
-var REC_editParc=[];
-var REC_editTipo='dinheiro';
-var REC_editRateio=[];
-var REC_rateioOn=false;
-var REC_genMode='unico';
-var REC_delArmed=false;
-var REC_TIPOS={dinheiro:'Dinheiro',cheque:'Cheque',boleto:'Boleto'};
-var REC_inpCss='width:100%;height:38px;border:0.5px solid var(--ln);border-radius:10px;padding:0 12px;font-size:14px;color:var(--tx);outline:none;background:var(--sf);font-family:-apple-system,sans-serif;box-sizing:border-box;';
-var REC_taCss='width:100%;min-height:44px;border:0.5px solid var(--ln);border-radius:10px;padding:9px 12px;font-size:14px;color:var(--tx);outline:none;background:var(--sf);font-family:-apple-system,sans-serif;box-sizing:border-box;resize:vertical;line-height:1.4;';
-
-function REC_money(n){ n=Number(n)||0; return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function REC_valStr(n){ return (n!=null&&n!=='')?Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
+/* Mascaras de campo herdadas do antigo modulo RECEBIMENTOS (removido na v1.327.0); usadas no app inteiro */
 function REC_parseBR(s){ return VB_dinheiro(s); }
-function REC_esc(s){ return (s==null?'':(''+s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function REC_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-function REC_isoToBR(iso){ if(!iso) return ''; var p=(''+iso).split('-'); if(p.length!==3) return ''; return p[2]+'/'+p[1]+'/'+p[0]; }
-function REC_brToIso(br){ var p=(''+br).split('/'); if(p.length<2) return null; var d=p[0].replace(/\D/g,''), m=p[1].replace(/\D/g,''), y=p[2]?p[2].replace(/\D/g,''):''; if(!d||!m) return null; d=('0'+d).slice(-2); m=('0'+m).slice(-2); if(!y) y=''+new Date().getFullYear(); else if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m+'-'+d; }
 function REC_maskData(el){ var v=el.value.replace(/\D/g,'').slice(0,8); var out=v; if(v.length>4) out=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4); else if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
-function REC_ymToBR(ym){ if(!ym) return ''; var p=(''+ym).split('-'); if(p.length<2) return ''; return p[1]+'/'+p[0]; }
-function REC_brToYM(br){ var p=(''+br).split('/'); if(p.length<2) return ''; var m=p[0].replace(/\D/g,''), y=p[1].replace(/\D/g,''); if(!m||!y) return ''; m=('0'+m).slice(-2); if(y.length<=2) y='20'+('0'+y).slice(-2); return y+'-'+m; }
-function REC_maskMesAno(el){ var v=el.value.replace(/\D/g,'').slice(0,6); var out=v; if(v.length>2) out=v.slice(0,2)+'/'+v.slice(2); el.value=out; }
 function REC_maskVal(el){ var raw=el.value.replace(/\D/g,''); el.value=raw?Number(parseInt(raw,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''; }
-function REC_ymAtual(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
-function REC_diasNoMes(y,m){ return new Date(y,m,0).getDate(); }
-function REC_vencDoMes(ym,dia){ var p=(''+ym).split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10); var d=Math.min(dia, REC_diasNoMes(y,m)); return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2); }
-function REC_addYM(ym,k){ var p=(''+ym).split('-'); var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1+k, 1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); }
-function REC_mesLabel(d){ if(!d) return 'SEM DATA'; var p=(''+d).split('-'); var mn=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO']; var m=parseInt(p[1],10); return (mn[m-1]||'')+' '+p[0]; }
-function REC_groupedHTML(items, mode){
-  var html='', last=null, first=true;
-  for(var i=0;i<items.length;i++){ var it=items[i];
-    var d = mode==='rec' ? (it.p.recebido_em||it.p.venc) : it.p.venc;
-    var key = d ? (''+d).slice(0,7) : 'sem';
-    if(key!==last){ last=key; html+='<div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--mu2);margin:'+(first?'2px':'16px')+' 2px 7px;">'+REC_mesLabel(d)+'</div>'; first=false; }
-    html+=REC_rowHTML(it);
-  }
-  return html;
-}
-
-function REC_normalize(r){
-  var arr=Array.isArray(r.parcelas)?r.parcelas.map(function(p){ return {valor:Number(p.valor)||0, venc:p.venc||null, recebido:!!p.recebido, recebido_em:p.recebido_em||null, rateio:Array.isArray(p.rateio)?p.rateio.map(function(x){ return {nome:x.nome||'', valor:Number(x.valor)||0, pago:!!x.pago, pago_em:x.pago_em||null}; }):[], pagamentos:Array.isArray(p.pagamentos)?p.pagamentos.map(function(x){ return {valor:Number(x.valor)||0, data:x.data||null}; }):[]}; }):[];
-  if(!arr.length){ arr=[{valor:Number(r.valor)||0, venc:r.venc||null, recebido:!!r.recebido, recebido_em:r.recebido_em||null, rateio:[], pagamentos:[]}]; }
-  return { id:r.id, lista_id:(r.lista_id!=null?r.lista_id:null), cliente:r.pessoa||r.titulo||'', descricao:r.descricao||'', tipo:r.tipo||'dinheiro', obs:r.obs||'', parcelas:arr };
-}
-function REC_acordoById(id){ for(var i=0;i<REC_acordos.length;i++){ if(REC_acordos[i].id===id) return REC_acordos[i]; } return null; }
-function REC_listaById(id){ for(var i=0;i<REC_listas.length;i++){ if(REC_listas[i].id===id) return REC_listas[i]; } return null; }
-function REC_dirAtual(){ var l=REC_listaById(REC_listaAtual); return l?l.direcao:'entrada'; }
-function REC_pagamentos(p){ return Array.isArray(p.pagamentos)?p.pagamentos:[]; }
-function REC_somaPag(p){ var s=0; REC_pagamentos(p).forEach(function(x){ s+=Number(x.valor)||0; }); return s; }
-function REC_quitada(p){ if(p.recebido) return true; var v=Number(p.valor)||0; return v>0 && REC_somaPag(p)>=v-0.005; }
-function REC_saldo(p){ var v=Number(p.valor)||0; if(p.recebido) return 0; return Math.max(0, v-REC_somaPag(p)); }
-function REC_parcial(p){ return !REC_quitada(p) && REC_somaPag(p)>0; }
-function REC_aRepassar(ac){ var s=0; (ac.parcelas||[]).forEach(function(p){ if(REC_quitada(p)) (p.rateio||[]).forEach(function(x){ if(!x.pago) s+=Number(x.valor)||0; }); }); return s; }
-function REC_cleanRateioP(list){ return (list||[]).filter(function(rt){ return (rt.nome&&(''+rt.nome).trim())||Number(rt.valor)>0; }).map(function(rt){ return {nome:(''+(rt.nome||'')).trim(), valor:Number(rt.valor)||0, pago:!!rt.pago, pago_em:rt.pago_em||null}; }); }
-
-function REC_load(){
-  sb.from('listas').select('*').order('ordem',{ascending:true}).order('id',{ascending:true}).then(function(lr){
-    if(lr.error){ console.log('REC listas error',lr.error); }
-    REC_listas=(lr.data||[]).filter(function(l){ return !l.arquivada; });
-    if(!REC_listas.length){
-      sb.from('listas').insert({nome:'Recebimentos',direcao:'entrada',ordem:0}).select().then(function(ir){
-        if(ir.error){ console.log('REC cria lista padrão error',ir.error); }
-        REC_listas=(ir.data||[]); REC_listaAtual=REC_listas.length?REC_listas[0].id:null; REC_loadItems();
-      }).catch(function(e){ console.log('REC cria lista ex',e); REC_loadItems(); });
-      return;
-    }
-    if(!REC_listaAtual || !REC_listaById(REC_listaAtual)) REC_listaAtual=REC_listas[0].id;
-    REC_loadItems();
-  }).catch(function(e){ console.log('REC listas ex',e); VB_toast('Sem conexão.'); });
-}
-function REC_loadItems(){
-  sb.from('recebimentos').select('*').order('created_at',{ascending:false}).then(function(res){
-    if(res.error){ console.log('REC load error',res.error); VB_toast('Não consegui carregar os recebimentos.'); return; }
-    REC_acordos=(res.data||[]).filter(function(a){ return !a.arquivado; }).map(REC_normalize);
-    REC_render();
-  }).catch(function(e){ console.log('REC load ex',e); VB_toast('Sem conexão.'); });
-}
-function REC_naListaAtual(ac){
-  if(ac.lista_id!=null) return ac.lista_id===REC_listaAtual;
-  return REC_listas.length>0 && REC_listaAtual===REC_listas[0].id; /* itens antigos (sem lista) caem na 1ª */
-}
-
-function REC_tituloItem(it){
-  var l=REC_listaById(it.ac.lista_id); var dir=l?l.direcao:'entrada';
-  var tl=(dir==='controle')?'':(REC_TIPOS[it.ac.tipo]||'');
-  var s=(tl?tl+' ':'')+(it.ac.cliente||'(sem nome)')+(it.ac.descricao?' ('+it.ac.descricao+')':'');
-  if(it.total>1) s+=' '+(it.idx+1)+'/'+it.total;
-  return s;
-}
-
-function REC_limparBusca(){ var b=document.getElementById('rec-search'); if(b){ b.value=''; REC_render(); b.focus(); } }
-function REC_render(){
-  REC_renderListas();
-  REC_renderResumo();
-  var dir=REC_dirAtual();
-  var hoje=REC_hojeISO(), ym=hoje.slice(0,7);
-  var listAc=REC_acordos.filter(REC_naListaAtual);
-  var tMes=0,tAtrasado=0,tPagoMes=0,tTot=0, nPend=0, nConc=0;
-  var items=[];
-  listAc.forEach(function(ac){ ac.parcelas.forEach(function(p,idx){
-    items.push({ac:ac,p:p,idx:idx,total:ac.parcelas.length});
-    var quit=REC_quitada(p), sal=REC_saldo(p);
-    if(!quit){ nPend++; tTot+=sal; if(p.venc&&p.venc<hoje) tAtrasado+=sal; if(p.venc&&p.venc.slice(0,7)===ym) tMes+=sal; }
-    else { nConc++; }
-    REC_pagamentos(p).forEach(function(x){ if(x.data&&(''+x.data).slice(0,7)===ym) tPagoMes+=Number(x.valor)||0; });
-    if(p.recebido && !REC_pagamentos(p).length && p.recebido_em && (''+p.recebido_em).slice(0,7)===ym) tPagoMes+=Number(p.valor)||0;
-  }); });
-
-  var hero=document.getElementById('rec-hero');
-  if(hero){
-    if(dir==='controle'){
-      hero.innerHTML=''
-        +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu);font-weight:600;">PENDENTES</div>'
-        +'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:32px;font-weight:400;letter-spacing:0.5px;margin:4px 0 12px;">'+nPend+'</div>'
-        +'<div style="display:flex;gap:18px;border-top:0.5px solid #2c2c2c;padding-top:10px;">'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">ATRASADOS</div><div style="font-size:14px;font-weight:700;color:var(--acc-tx);margin-top:2px;">'+items.filter(function(it){return !REC_quitada(it.p)&&it.p.venc&&it.p.venc<hoje;}).length+'</div></div>'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">CONCLUÍDOS</div><div style="font-size:14px;font-weight:700;color:var(--acc-tx);margin-top:2px;">'+nConc+'</div></div>'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">TOTAL</div><div style="font-size:14px;font-weight:700;color:var(--acc-tx);margin-top:2px;">'+(nPend+nConc)+'</div></div>'
-        +'</div>';
-    } else {
-      var saida=dir==='saida';
-      var l1=saida?'A PAGAR ESTE MÊS':'A RECEBER ESTE MÊS';
-      var l2=saida?'PAGO (MÊS)':'RECEBIDO (MÊS)';
-      var l3=saida?'A PAGAR (TUDO)':'A RECEBER (TUDO)';
-      hero.innerHTML=''
-        +'<div style="font-size:9px;letter-spacing:2px;color:var(--mu);font-weight:600;">'+l1+'</div>'
-        +'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:32px;font-weight:400;letter-spacing:0.5px;margin:4px 0 12px;">'+REC_money(tMes)+'</div>'
-        +'<div style="display:flex;gap:18px;border-top:0.5px solid #2c2c2c;padding-top:10px;">'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">ATRASADO</div><div style="font-size:14px;font-weight:700;color:'+(tAtrasado>0?'#ff6b5e':'#fff')+';margin-top:2px;">'+REC_money(tAtrasado)+'</div></div>'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">'+l2+'</div><div style="font-size:14px;font-weight:700;color:#7dd39a;margin-top:2px;">'+REC_money(tPagoMes)+'</div></div>'
-          +'<div style="flex:1;"><div style="font-size:8px;letter-spacing:1px;color:var(--mu);font-weight:600;">'+l3+'</div><div style="font-size:14px;font-weight:700;color:var(--acc-tx);margin-top:2px;">'+REC_money(tTot)+'</div></div>'
-        +'</div>';
-    }
-  }
-
-  var rep=document.getElementById('rec-repassar');
-  if(rep){ var totRep=0; listAc.forEach(function(ac){ totRep+=REC_aRepassar(ac); });
-    if(totRep>0 && dir!=='controle'){ rep.style.display='block'; rep.innerHTML='A repassar a sócios: <b style="color:var(--tx);">'+REC_money(totRep)+'</b>'; } else { rep.style.display='none'; rep.innerHTML=''; }
-  }
-
-  var s=document.getElementById('rec-search'); var termo=(s?s.value:'').trim().toLowerCase();
-  if(termo){ items=items.filter(function(it){ return (REC_tituloItem(it)+' ').toLowerCase().indexOf(termo)!==-1; }); }
-
-  var pend=items.filter(function(it){ return !REC_quitada(it.p); });
-  var conc=items.filter(function(it){ return REC_quitada(it.p); });
-  pend.sort(function(a,b){ var av=a.p.venc||'9999',bv=b.p.venc||'9999'; return av<bv?-1:av>bv?1:0; });
-  conc.sort(function(a,b){ var av=a.p.recebido_em||a.p.venc||'',bv=b.p.recebido_em||b.p.venc||''; return av>bv?-1:av<bv?1:0; });
-
-  var tr=document.getElementById('rec-tab-receber'), tc=document.getElementById('rec-tab-concluido');
-  if(tr&&tc){ var onR=REC_view==='receber';
-    tr.style.background=onR?'var(--acc)':'var(--sf)'; tr.style.color=onR?'var(--acc-tx)':'var(--mu)'; tr.style.borderColor=onR?'var(--acc)':'var(--ln)';
-    tc.style.background=!onR?'var(--acc)':'var(--sf)'; tc.style.color=!onR?'var(--acc-tx)':'var(--mu)'; tc.style.borderColor=!onR?'var(--acc)':'var(--ln)';
-    tr.textContent=(dir==='saida'?'A PAGAR':dir==='controle'?'PENDENTES':'A RECEBER')+(pend.length?' ('+pend.length+')':''); tc.textContent='CONCLUÍDOS'+(conc.length?' ('+conc.length+')':'');
-  }
-
-  var cont=document.getElementById('rec-lista'); if(!cont) return;
-  var show=REC_view==='receber'?pend:conc;
-  if(!show.length){
-    var msg=REC_view==='receber'?(listAc.length?'Tudo em dia 👏':'Lista vazia.<br>Toque no <b>+</b> para adicionar.'):'Nada concluído ainda.';
-    cont.innerHTML='<div style="text-align:center;color:var(--so);font-size:13px;padding:34px 0;line-height:1.6;">'+msg+'</div>';
-    return;
-  }
-  cont.innerHTML=REC_groupedHTML(show, REC_view==='receber'?'venc':'rec');
-}
-function REC_setView(v){ REC_view=v; REC_render(); }
-function REC_setLista(id){ REC_listaAtual=id; REC_view='receber'; REC_render(); }
-function REC_toggleResumo(){ REC_resumoOpen=!REC_resumoOpen; var b=document.getElementById('rec-resumo'); if(b) b.style.display=REC_resumoOpen?'block':'none'; var t=document.getElementById('rec-resumo-tog'); if(t) t.innerHTML='RESUMO '+(REC_resumoOpen?'▴':'▾'); REC_renderResumo(); }
-function REC_renderResumo(){
-  var box=document.getElementById('rec-resumo'); if(!box) return;
-  if(!REC_resumoOpen){ box.innerHTML=''; return; }
-  var dir=REC_dirAtual();
-  var listAc=REC_acordos.filter(REC_naListaAtual);
-  var hoje=REC_hojeISO(), ym=hoje.slice(0,7);
-  var d7=new Date(); d7.setDate(d7.getDate()+7); var d7i=d7.getFullYear()+'-'+('0'+(d7.getMonth()+1)).slice(-2)+'-'+('0'+d7.getDate()).slice(-2);
-  var st={vencer:0,atras:0,parc:0,quit:0};
-  var tipoSaldo={}, tipoN={}; var socio={}; var prox7=0, recMes=0, saldoTot=0, qtdPend=0;
-  listAc.forEach(function(ac){ ac.parcelas.forEach(function(p){
-    var quit=REC_quitada(p), sal=REC_saldo(p);
-    if(quit){ st.quit++; }
-    else { qtdPend++; saldoTot+=sal; if(p.venc&&p.venc<hoje) st.atras++; else st.vencer++; if(REC_parcial(p)) st.parc++;
-      if(p.venc&&p.venc>=hoje&&p.venc<=d7i) prox7+=sal;
-      var tp=ac.tipo||'dinheiro'; tipoSaldo[tp]=(tipoSaldo[tp]||0)+sal; tipoN[tp]=(tipoN[tp]||0)+1;
-    }
-    if(quit){ (p.rateio||[]).forEach(function(x){ if(!x.pago){ var nm=(x.nome&&(''+x.nome).trim())||'(sócio)'; socio[nm]=(socio[nm]||0)+(Number(x.valor)||0); } }); }
-    REC_pagamentos(p).forEach(function(x){ if(x.data&&(''+x.data).slice(0,7)===ym) recMes+=Number(x.valor)||0; });
-    if(p.recebido && !REC_pagamentos(p).length && p.recebido_em && (''+p.recebido_em).slice(0,7)===ym) recMes+=Number(p.valor)||0;
-  }); });
-  var ctrl=(dir==='controle');
-  var labReceb=(dir==='saida')?'PAGO NO MÊS':'RECEBIDO NO MÊS';
-  var row=function(l,v){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px;"><span style="color:var(--tx3);">'+l+'</span><span style="color:var(--tx);font-weight:600;">'+v+'</span></div>'; };
-  var sec=function(t){ return '<div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:700;margin:12px 0 4px;">'+t+'</div>'; };
-  var html='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:13px 15px;margin-bottom:12px;">';
-  html+=sec('POR STATUS');
-  html+=row('A vencer', st.vencer);
-  html+=row('Atrasadas', st.atras);
-  if(!ctrl) html+=row('Parciais', st.parc);
-  html+=row('Concluídas', st.quit);
-  if(!ctrl){
-    var tnames={dinheiro:'Dinheiro',cheque:'Cheque',boleto:'Boleto'};
-    var anyTipo=Object.keys(tipoSaldo).length>0;
-    if(anyTipo){ html+=sec((dir==='saida'?'A PAGAR':'A RECEBER')+' POR TIPO');
-      ['dinheiro','cheque','boleto'].forEach(function(tp){ if(tipoN[tp]) html+=row((tnames[tp]||tp)+' ('+tipoN[tp]+')', REC_money(tipoSaldo[tp])); });
-    }
-    html+=sec('FLUXO');
-    html+=row('Próximos 7 dias', REC_money(prox7));
-    html+=row(labReceb, REC_money(recMes));
-    html+=row((dir==='saida'?'Total a pagar':'Total a receber'), REC_money(saldoTot));
-    var snames=Object.keys(socio);
-    if(snames.length){ html+=sec('A REPASSAR POR SÓCIO');
-      snames.sort(function(a,b){ return socio[b]-socio[a]; }).forEach(function(nm){ html+=row(nm, REC_money(socio[nm])); });
-    }
-  }
-  html+='</div>';
-  box.innerHTML=html;
-}
-
-function REC_renderListas(){
-  var cont=document.getElementById('rec-listas'); if(!cont) return;
-  var chips=REC_listas.map(function(l){
-    var on=l.id===REC_listaAtual;
-    return '<button onclick="REC_setLista('+l.id+')" style="flex-shrink:0;padding:7px 13px;border:0.5px solid '+(on?'#111':'#ddd')+';border-radius:20px;background:'+(on?'#111':'#fff')+';color:'+(on?'#fff':'#666')+';font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:-apple-system,sans-serif;">'+REC_esc(l.nome)+'</button>';
-  }).join('');
-  chips+='<button onclick="REC_openListas()" title="Gerenciar listas" style="flex-shrink:0;width:32px;height:32px;border:0.5px solid var(--ln);border-radius:50%;background:var(--sf);color:var(--mu);font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;">+</button>';
-  cont.innerHTML=chips;
-}
-
-function REC_rowHTML(it){
-  var hoje=REC_hojeISO();
-  var quit=REC_quitada(it.p), parcial=REC_parcial(it.p);
-  var atras=!quit && it.p.venc && it.p.venc<hoje;
-  var corData=atras?'#c0392b':'#888';
-  var corTit=quit?'#aaa':(atras?'#c0392b':'#111');
-  var circ=quit
-    ? '<span onclick="REC_toggleItem('+it.ac.id+','+it.idx+',event)" style="width:24px;height:24px;border-radius:50%;background:var(--grn-bg);color:var(--acc-tx);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
-    : '<span onclick="REC_toggleItem('+it.ac.id+','+it.idx+',event)" style="width:24px;height:24px;border-radius:50%;border:1.5px solid '+(atras?'#c0392b':'#ccc')+';display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
-  var temVal=Number(it.p.valor)>0;
-  var saldoLine=parcial?'<div style="font-size:10px;color:var(--mu);margin-top:2px;">saldo '+REC_money(REC_saldo(it.p))+'</div>':'';
-  var valBloco=temVal
-    ? '<div onclick="REC_abrir('+it.ac.id+')" style="text-align:right;cursor:pointer;flex-shrink:0;"><div style="font-size:14px;font-weight:700;color:'+(quit?'#aaa':'#111')+';">'+REC_money(it.p.valor)+'</div><div style="font-size:11px;color:'+corData+';margin-top:2px;">'+REC_isoToBR(it.p.venc)+'</div>'+saldoLine+'</div>'
-    : '<div onclick="REC_abrir('+it.ac.id+')" style="text-align:right;cursor:pointer;flex-shrink:0;"><div style="font-size:12px;color:'+corData+';">'+REC_isoToBR(it.p.venc)+'</div></div>';
-  return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;">'
-    +circ
-    +'<div onclick="REC_abrir('+it.ac.id+')" style="flex:1;cursor:pointer;min-width:0;"><div style="font-size:14px;font-weight:600;color:'+corTit+';line-height:1.3;'+(quit?'text-decoration:line-through;text-decoration-color:var(--mu);':'')+'">'+REC_esc(REC_tituloItem(it))+'</div>'+(it.ac.obs?'<div style="font-size:11px;color:var(--tx);line-height:1.35;margin-top:2px;white-space:pre-wrap;">'+REC_esc(it.ac.obs)+'</div>':'')+'</div>'
-    +valBloco
-  +'</div>';
-}
-
-function REC_toggleItem(acId,idx,ev){
-  if(ev&&ev.stopPropagation) ev.stopPropagation();
-  var ac=REC_acordoById(acId); if(!ac) return; var p=ac.parcelas[idx]; if(!p) return;
-  p.recebido=!p.recebido; p.recebido_em=p.recebido?VB_carimbo():null;
-  REC_render();
-  sb.from('recebimentos').update({parcelas:ac.parcelas}).eq('id',ac.id).then(function(res){ if(res.error){ console.log('REC persist error',res.error); VB_toast('Não consegui salvar.'); REC_load(); } }).catch(function(e){ console.log('REC persist ex',e); VB_toast('Sem conexão — nada gravado.'); REC_load(); });
-}
-
-/* ----- Editor ----- */
-function REC_novo(){ REC_editId=null; REC_editLista=REC_listaAtual; REC_editTipo='dinheiro'; REC_genMode='unico'; REC_rateioOn=false; REC_editRateio=[]; REC_delArmed=false; REC_editParc=[{valor:0,venc:'',recebido:false,recebido_em:null,rateio:[],pagamentos:[]}]; REC_openEditor({}); }
-function REC_abrir(id){ var ac=REC_acordoById(id); if(!ac) return; REC_editId=id; REC_editLista=(ac.lista_id!=null?ac.lista_id:REC_listaAtual); REC_editTipo=ac.tipo||'dinheiro'; REC_genMode='unico'; REC_delArmed=false; REC_editParc=ac.parcelas.map(function(p){ return {valor:p.valor,venc:p.venc,recebido:p.recebido,recebido_em:p.recebido_em,rateio:(p.rateio||[]).map(function(x){ return {nome:x.nome,valor:x.valor,pago:!!x.pago,pago_em:x.pago_em||null}; }),pagamentos:(p.pagamentos||[]).map(function(x){ return {valor:x.valor,data:x.data}; })}; }); var r0=REC_editParc[0]||{}; REC_editRateio=(r0.rateio||[]).map(function(x){ return {nome:x.nome,valor:x.valor}; }); REC_rateioOn=REC_editRateio.length>0; REC_openEditor(ac); }
-
-function REC_openEditor(ac){
-  var ov=document.getElementById('rec-editor');
-  if(!ov){ ov=document.createElement('div'); ov.id='rec-editor'; ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10070;align-items:flex-end;justify-content:center;'; document.body.appendChild(ov); }
-  var dir=(REC_listaById(REC_editLista)||{}).direcao||'entrada';
-  var ctrl=(dir==='controle');
-  var lblCli=ctrl?'ITEM':(dir==='saida'?'PARA QUEM (cliente/fornecedor)':'CLIENTE');
-  var tipoBtn=function(t){ var on=REC_editTipo===t; return '<button onclick="REC_setTipo(\''+t+'\')" style="flex:1;padding:9px;border:0.5px solid '+(on?'#111':'#ddd')+';border-radius:10px;background:'+(on?'#111':'#fff')+';color:'+(on?'#fff':'#888')+';font-size:12px;font-weight:700;cursor:pointer;">'+REC_TIPOS[t]+'</button>'; };
-  var html='<div style="width:100%;max-width:480px;background:var(--sf);border-radius:18px 18px 0 0;max-height:94vh;display:flex;flex-direction:column;font-family:-apple-system,sans-serif;">'
-    +'<div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--ln);">'
-      +'<button onclick="REC_closeEditor()" style="border:none;background:none;color:var(--mu);font-size:13px;cursor:pointer;">Cancelar</button>'
-      +'<div style="font-size:12px;letter-spacing:1px;font-weight:700;color:var(--tx);">'+(REC_editId?'EDITAR':'NOVO')+'</div>'
-      +'<button onclick="REC_salvar(this)" style="border:none;background:none;color:var(--grn);font-size:13px;font-weight:700;cursor:pointer;">Salvar</button>'
-    +'</div>'
-    +'<div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));">'
-      +(ctrl?'':'<div style="display:flex;gap:8px;margin-bottom:12px;">'+tipoBtn('dinheiro')+tipoBtn('cheque')+tipoBtn('boleto')+'</div>')
-      +'<div style="margin-bottom:10px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">'+lblCli+'</div><input id="rec-f-cli" autocapitalize="sentences" value="'+REC_esc(ac.cliente||'')+'" placeholder="'+(ctrl?'Ligar para o contador':'Wanderson WET')+'" style="'+REC_inpCss+'"></div>'
-      +'<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">DESCRIÇÃO <span style="color:var(--mu);font-weight:400;letter-spacing:0;">(vai entre parênteses)</span></div><input id="rec-f-desc" autocapitalize="sentences" value="'+REC_esc(ac.descricao||'')+'" placeholder="ex.: OP RAM 1500" style="'+REC_inpCss+'"></div>'
-      +'<div style="font-size:11px;letter-spacing:0.5px;color:var(--mu2);font-weight:700;margin-bottom:8px;">'+(ctrl?'VALOR (opcional) E DATA':'VALOR E DATA')+'</div>'
-      +'<div id="rec-parc-list"></div>'
-      +'<button onclick="REC_addParc()" style="width:100%;padding:9px;border:0.5px dashed var(--ln0);border-radius:10px;background:var(--sf);color:var(--tx3);font-size:12px;font-weight:600;cursor:pointer;margin-top:2px;">+ Adicionar parcela</button>'
-      +'<button onclick="REC_toggleGen()" id="rec-gen-toggle" style="width:100%;padding:9px;border:none;border-radius:10px;background:none;color:var(--mu);font-size:11px;font-weight:600;cursor:pointer;margin-top:2px;text-decoration:underline;">gerar parcelas mensais (financiamento)</button>'
-      +'<div id="rec-gen-box" style="display:none;background:var(--bg);border-radius:12px;padding:10px;margin-top:6px;">'
-        +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
-          +'<div style="flex:1.2;"><div style="font-size:9px;color:var(--mu2);font-weight:600;margin-bottom:2px;">VALOR PARC.</div><input id="rec-g-val" inputmode="numeric" oninput="REC_maskVal(this)" onclick="this.select()" placeholder="0,00" style="'+REC_inpCss+'text-align:right;"></div>'
-          +'<div style="flex:0.7;"><div style="font-size:9px;color:var(--mu2);font-weight:600;margin-bottom:2px;">Nº VEZES</div><input id="rec-g-qtd" inputmode="numeric" onclick="this.select()" placeholder="24" style="'+REC_inpCss+'text-align:center;"></div>'
-          +'<div style="flex:1.2;"><div style="font-size:9px;color:var(--mu2);font-weight:600;margin-bottom:2px;">1ª PARCELA</div><input id="rec-g-data1" inputmode="numeric" maxlength="10" oninput="REC_maskData(this)" onblur="autoCompleteDate(this)" onclick="this.select()" value="'+REC_isoToBR(REC_hojeISO())+'" placeholder="DD/MM/AAAA" style="'+REC_inpCss+'text-align:center;"></div>'
-        +'</div>'
-        +'<div style="font-size:9px;color:var(--so);margin-bottom:8px;line-height:1.4;">Gera mensalmente a partir da 1ª parcela. Depois é só ajustar as datas que precisar.</div>'
-        +'<button onclick="REC_genIguais()" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:10px;background:var(--sf);color:var(--tx);font-size:11px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">GERAR PARCELAS</button>'
-      +'</div>'
-      +(ctrl?'':'<hr style="border:none;border-top:0.5px solid var(--ln3);margin:14px 0 10px;">'
-      +'<button onclick="REC_toggleRateio()" id="rec-rateio-toggle" style="width:100%;padding:11px;border:0.5px solid '+(REC_rateioOn?'var(--acc)':'var(--ln)')+';border-radius:10px;background:'+(REC_rateioOn?'var(--acc)':'var(--sf)')+';color:'+(REC_rateioOn?'var(--acc-tx)':'var(--mu)')+';font-size:12px;font-weight:700;letter-spacing:0.5px;cursor:pointer;">RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':'')+'</button>'
-      +'<div id="rec-rateio-box" style="display:'+(REC_rateioOn?'block':'none')+';margin-top:8px;"></div>')
-      +'<div style="margin-top:14px;"><div style="font-size:10px;letter-spacing:0.5px;color:var(--mu2);font-weight:600;margin-bottom:3px;">NOTA</div><textarea id="rec-f-nota" autocapitalize="sentences" rows="2" placeholder="forma de pagamento, observações... (livre)" style="'+REC_taCss+'">'+REC_esc(ac.obs||'')+'</textarea></div>'
-      +(REC_editId?'<button onclick="REC_excluir(this)" style="width:100%;padding:11px;border:none;border-radius:10px;background:var(--sf);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;margin-top:14px;">Excluir</button>':'')
-    +'</div>'
-  +'</div>';
-  ov.innerHTML=html; ov.style.display='flex';
-  REC_renderParcEditor(); if(!ctrl) REC_renderRateio();
-}
-
-function REC_setTipo(t){ REC_editTipo=t; var segs=document.querySelectorAll('#rec-editor [onclick^="REC_setTipo"]'); for(var i=0;i<segs.length;i++){ var on=segs[i].getAttribute('onclick').indexOf("'"+t+"'")!==-1; segs[i].style.background=on?'var(--acc)':'var(--sf)'; segs[i].style.color=on?'var(--acc-tx)':'var(--mu)'; segs[i].style.borderColor=on?'var(--acc)':'var(--ln)'; } }
-function REC_toggleGen(){ var b=document.getElementById('rec-gen-box'); if(b) b.style.display=(b.style.display==='none')?'block':'none'; }
-
-function REC_renderParcEditor(){
-  var cont=document.getElementById('rec-parc-list'); if(!cont) return;
-  if(!REC_editParc.length){ cont.innerHTML='<div style="font-size:11px;color:var(--so);padding:4px 2px 8px;">Sem parcela. Adicione abaixo.</div>'; return; }
-  var multi=REC_editParc.length>1;
-  cont.innerHTML=REC_editParc.map(function(p,idx){
-    if(!p.rateio) p.rateio=[];
-    var circ=p.recebido
-      ? '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;background:var(--grn-bg);color:var(--acc-tx);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;cursor:pointer;">&#10003;</span>'
-      : '<span onclick="REC_togParc('+idx+')" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ln0);display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
-    var row='<div style="display:flex;align-items:center;gap:7px;margin-bottom:'+(REC_rateioOn?'4px':'6px')+';">'
-      +circ
-      +(multi?'<span style="font-size:11px;color:var(--so);font-weight:600;width:22px;text-align:right;flex-shrink:0;">'+(idx+1)+'</span>':'')
-      +'<input value="'+REC_esc(REC_valStr(p.valor))+'" oninput="REC_parcValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="Valor" style="'+REC_inpCss+'flex:1.1;text-align:right;">'
-      +'<input value="'+REC_esc(REC_isoToBR(p.venc))+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="REC_parcDataBlur('+idx+',this)" onclick="this.select()" style="'+REC_inpCss+'flex:1.2;text-align:center;">'
-      +(multi?'<button onclick="REC_editParc.splice('+idx+',1);REC_renderParcEditor()" style="border:none;background:none;color:var(--red);font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>':'<span style="width:20px;flex-shrink:0;"></span>')
-    +'</div>';
-    var blk='';
-    if(REC_rateioOn){
-      var ind=(multi?53:31);
-      var resumo=p.rateio.length?p.rateio.map(function(r){ return REC_esc(r.nome||'sócio')+' '+REC_money(r.valor)+(r.pago?' ✓':''); }).join(' · '):'definir rateio';
-      blk='<div style="margin:0 0 9px '+ind+'px;">'
-        +'<button onclick="REC_editParc['+idx+']._open=!REC_editParc['+idx+']._open;REC_renderParcEditor()" style="border:none;background:none;color:var(--tx);font-size:10px;font-weight:600;cursor:pointer;padding:0;text-align:left;">↳ rateio: '+resumo+'  '+(p._open?'▴':'▾')+'</button>';
-      if(p._open){
-        blk+='<div style="margin-top:6px;">'+p.rateio.map(function(rt,j){
-          var pgc=rt.pago
-            ? '<span onclick="REC_togParcRtPago('+idx+','+j+')" title="repassado" style="width:22px;height:22px;border-radius:50%;background:var(--grn-bg);color:var(--acc-tx);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;cursor:pointer;">&#10003;</span>'
-            : '<span onclick="REC_togParcRtPago('+idx+','+j+')" title="marcar repassado" style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ln0);display:inline-block;flex-shrink:0;box-sizing:border-box;cursor:pointer;"></span>';
-          return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">'
-            +pgc
-            +'<input value="'+REC_esc(rt.nome||'')+'" autocapitalize="sentences" oninput="REC_editParc['+idx+'].rateio['+j+'].nome=this.value" placeholder="Sócio" style="'+REC_inpCss+'height:32px;flex:1.2;font-size:13px;'+(rt.pago?'color:var(--tx);':'')+'">'
-            +'<input value="'+REC_esc(REC_valStr(rt.valor))+'" oninput="REC_parcRtVal('+idx+','+j+',this)" onclick="this.select()" inputmode="numeric" placeholder="R$" style="'+REC_inpCss+'height:32px;flex:1;font-size:13px;text-align:right;'+(rt.pago?'color:var(--tx);':'')+'">'
-            +'<button onclick="REC_editParc['+idx+'].rateio.splice('+j+',1);REC_renderParcEditor()" style="border:none;background:none;color:var(--red);font-size:18px;line-height:1;cursor:pointer;width:18px;flex-shrink:0;">&times;</button>'
-          +'</div>';
-        }).join('')
-        +'<button onclick="REC_addParcRt('+idx+')" style="border:none;background:none;color:var(--grn);font-size:11px;font-weight:600;cursor:pointer;padding:2px 0;">+ sócio</button>'
-        +'<div style="font-size:10px;color:var(--so);margin-top:4px;">Marque a bolinha do sócio quando você repassar a parte dele.</div>'
-        +'</div>';
-      }
-      blk+='</div>';
-    }
-    var pblk='';
-    if(Number(p.valor)>0){
-      var indp=(multi?53:31);
-      var pg=p.pagamentos||[]; var somap=0; pg.forEach(function(x){ somap+=Number(x.valor)||0; });
-      var sal=Math.max(0,(Number(p.valor)||0)-somap);
-      var resP = somap>0 ? ('pago '+REC_money(somap)+' · saldo '+REC_money(sal)) : 'registrar pagamento parcial';
-      pblk='<div style="margin:'+(REC_rateioOn?'-4px':'0')+' 0 10px '+indp+'px;">'
-        +'<button onclick="REC_editParc['+idx+']._pagOpen=!REC_editParc['+idx+']._pagOpen;REC_renderParcEditor()" style="border:none;background:none;color:var(--tx);font-size:10px;font-weight:600;cursor:pointer;padding:0;text-align:left;">↳ '+resP+'  '+(p._pagOpen?'▴':'▾')+'</button>';
-      if(p._pagOpen){
-        pblk+='<div style="margin-top:6px;">'+pg.map(function(x,j){
-          return '<div style="display:flex;gap:6px;margin-bottom:5px;">'
-            +'<input value="'+REC_esc(REC_valStr(x.valor))+'" oninput="REC_pagVal('+idx+','+j+',this)" onclick="this.select()" inputmode="numeric" placeholder="Valor" style="'+REC_inpCss+'height:32px;flex:1;font-size:13px;text-align:right;">'
-            +'<input value="'+REC_esc(REC_isoToBR(x.data))+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this)" onblur="REC_pagData('+idx+','+j+',this)" onclick="this.select()" style="'+REC_inpCss+'height:32px;flex:1;font-size:13px;text-align:center;">'
-            +'<button onclick="REC_editParc['+idx+'].pagamentos.splice('+j+',1);REC_renderParcEditor()" style="border:none;background:none;color:var(--red);font-size:18px;line-height:1;cursor:pointer;width:18px;flex-shrink:0;">&times;</button>'
-          +'</div>';
-        }).join('')
-        +'<button onclick="REC_addPag('+idx+')" style="border:none;background:none;color:var(--grn);font-size:11px;font-weight:600;cursor:pointer;padding:2px 0;">+ pagamento</button>'
-        +'<div style="font-size:10px;color:var(--so);margin-top:4px;">Quando a soma fecha o valor, a parcela é dada como recebida.</div>'
-        +'</div>';
-      }
-      pblk+='</div>';
-    }
-    return row+blk+pblk;
-  }).join('');
-}
-function REC_parcValInput(idx,el){ REC_maskVal(el); if(REC_editParc[idx]) REC_editParc[idx].valor=REC_parseBR(el.value); }
-function REC_parcDataBlur(idx,el){ if(typeof autoCompleteDate==='function'){ autoCompleteDate(el); } if(REC_editParc[idx]) REC_editParc[idx].venc=REC_brToIso(el.value); }
-function REC_togParc(idx){ var p=REC_editParc[idx]; if(!p) return; p.recebido=!p.recebido; p.recebido_em=p.recebido?VB_carimbo():null; REC_renderParcEditor(); }
-function REC_addParc(){ REC_editParc.push({valor:0,venc:'',recebido:false,recebido_em:null,rateio:REC_defRateio(),pagamentos:[]}); REC_renderParcEditor(); }
-
-function REC_addMonthsISO(iso,k){ var p=(''+iso).split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10), d=parseInt(p[2],10); var idx=(m-1)+k; var ny=y+Math.floor(idx/12); var nm=(idx%12)+1; var nd=Math.min(d, REC_diasNoMes(ny,nm)); return ny+'-'+('0'+nm).slice(-2)+'-'+('0'+nd).slice(-2); }
-function REC_genIguais(){
-  var val=REC_parseBR((document.getElementById('rec-g-val')||{}).value);
-  var qtd=parseInt((document.getElementById('rec-g-qtd')||{}).value||'0',10);
-  var d1el=document.getElementById('rec-g-data1'); if(d1el&&typeof autoCompleteDate==='function') autoCompleteDate(d1el);
-  var data1=REC_brToIso(d1el?d1el.value:'');
-  if(!(val>0)){ VB_toast('Preencha o valor da parcela.'); return; }
-  if(!qtd||qtd<1){ VB_toast('Preencha o nº de vezes.'); return; }
-  if(!data1){ VB_toast('Preencha a data da 1ª parcela.'); return; }
-  var arr=[]; for(var k=0;k<qtd;k++){ arr.push({valor:val, venc:REC_addMonthsISO(data1,k), recebido:false, recebido_em:null, rateio:REC_defRateio(), pagamentos:[]}); }
-  REC_editParc=arr; REC_renderParcEditor();
-  var b=document.getElementById('rec-gen-box'); if(b) b.style.display='none';
-  VB_toast(qtd+' parcelas geradas. Ajuste as datas se precisar.');
-}
-
-/* ----- Rateio ----- */
-function REC_toggleRateio(){
-  REC_rateioOn=!REC_rateioOn;
-  if(REC_rateioOn && !REC_editRateio.length){ REC_editRateio=[{nome:'',valor:0}]; }
-  var b=document.getElementById('rec-rateio-box'); if(b) b.style.display=REC_rateioOn?'block':'none';
-  var t=document.getElementById('rec-rateio-toggle'); if(t){ t.style.background=REC_rateioOn?'var(--acc)':'var(--sf)'; t.style.color=REC_rateioOn?'var(--acc-tx)':'var(--mu)'; t.style.borderColor=REC_rateioOn?'var(--acc)':'var(--ln)'; t.textContent='RATEIO DE SÓCIO'+(REC_rateioOn?' ✓':''); }
-  REC_renderRateio();
-}
-function REC_renderRateio(){
-  var cont=document.getElementById('rec-rateio-box'); if(!cont) return;
-  if(!REC_rateioOn){ cont.innerHTML=''; return; }
-  var html=REC_editRateio.map(function(rt,idx){
-    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">'
-      +'<input value="'+REC_esc(rt.nome||'')+'" autocapitalize="sentences" oninput="REC_editRateio['+idx+'].nome=this.value" placeholder="Sócio" style="'+REC_inpCss+'flex:1.2;">'
-      +'<input value="'+REC_esc(REC_valStr(rt.valor))+'" oninput="REC_rateioValInput('+idx+',this)" onclick="this.select()" inputmode="numeric" placeholder="Parte (R$)" style="'+REC_inpCss+'flex:1;text-align:right;">'
-      +'<button onclick="REC_editRateio.splice('+idx+',1);REC_renderRateio()" style="border:none;background:none;color:var(--red);font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;width:20px;">&times;</button>'
-    +'</div>';
-  }).join('');
-  html+='<button onclick="REC_editRateio.push({nome:\'\',valor:0});REC_renderRateio()" style="width:100%;padding:8px;border:0.5px dashed var(--ln0);border-radius:10px;background:var(--sf);color:var(--tx3);font-size:11px;font-weight:600;cursor:pointer;">+ Sócio</button>';
-  html+='<div style="font-size:10px;color:var(--mu2);margin-top:8px;line-height:1.4;">Este rateio vale como padrão. Você pode abrir cada parcela na lista acima e mudar o rateio só dela.</div>';
-  html+='<button onclick="REC_aplicarRateioTodas()" style="width:100%;padding:9px;border:0.5px solid var(--lnk);border-radius:10px;background:var(--sf);color:var(--tx);font-size:11px;font-weight:700;letter-spacing:0.3px;cursor:pointer;margin-top:8px;">APLICAR A TODAS AS PARCELAS</button>';
-  cont.innerHTML=html;
-}
-function REC_rateioValInput(idx,el){ REC_maskVal(el); if(REC_editRateio[idx]) REC_editRateio[idx].valor=REC_parseBR(el.value); }
-function REC_cleanRateio(list){ return (list||[]).filter(function(rt){ return (rt.nome&&(''+rt.nome).trim())||Number(rt.valor)>0; }).map(function(rt){ return {nome:(''+(rt.nome||'')).trim(), valor:Number(rt.valor)||0}; }); }
-function REC_defRateio(){ return REC_rateioOn?REC_cleanRateio(REC_editRateio):[]; }
-function REC_aplicarRateioTodas(){ var d=REC_defRateio(); REC_editParc.forEach(function(p){ p.rateio=d.map(function(x){ return {nome:x.nome,valor:x.valor}; }); }); REC_renderParcEditor(); VB_toast(d.length?'Rateio aplicado a todas as parcelas.':'Rateio limpo das parcelas.'); }
-function REC_parcRtVal(idx,j,el){ REC_maskVal(el); if(REC_editParc[idx]&&REC_editParc[idx].rateio&&REC_editParc[idx].rateio[j]) REC_editParc[idx].rateio[j].valor=REC_parseBR(el.value); }
-function REC_addParcRt(idx){ if(!REC_editParc[idx].rateio) REC_editParc[idx].rateio=[]; REC_editParc[idx].rateio.push({nome:'',valor:0,pago:false,pago_em:null}); REC_editParc[idx]._open=true; REC_renderParcEditor(); }
-function REC_togParcRtPago(idx,j){ var rt=REC_editParc[idx]&&REC_editParc[idx].rateio?REC_editParc[idx].rateio[j]:null; if(!rt) return; rt.pago=!rt.pago; rt.pago_em=rt.pago?VB_carimbo():null; REC_renderParcEditor(); }
-function REC_addPag(idx){ if(!REC_editParc[idx].pagamentos) REC_editParc[idx].pagamentos=[]; REC_editParc[idx].pagamentos.push({valor:0,data:REC_hojeISO()}); REC_editParc[idx]._pagOpen=true; REC_renderParcEditor(); }
-function REC_pagVal(idx,j,el){ REC_maskVal(el); if(REC_editParc[idx]&&REC_editParc[idx].pagamentos&&REC_editParc[idx].pagamentos[j]) REC_editParc[idx].pagamentos[j].valor=REC_parseBR(el.value); }
-function REC_pagData(idx,j,el){ if(typeof autoCompleteDate==='function') autoCompleteDate(el); if(REC_editParc[idx]&&REC_editParc[idx].pagamentos&&REC_editParc[idx].pagamentos[j]) REC_editParc[idx].pagamentos[j].data=REC_brToIso(el.value); }
-
-function REC_salvar(btn){
-  var cli=((document.getElementById('rec-f-cli')||{}).value||'').trim();
-  if(!cli){ VB_toast('Preencha o nome do cliente.'); return; }
-  var desc=((document.getElementById('rec-f-desc')||{}).value||'').trim()||null;
-  var nota=((document.getElementById('rec-f-nota')||{}).value||'').trim()||null;
-  var defR=REC_defRateio();
-  if(!REC_editParc.length){ VB_toast('Preencha ao menos uma data.'); return; }
-  var parc=REC_editParc.map(function(p){
-    var pr=REC_rateioOn?REC_cleanRateioP(p.rateio||[]):[];
-    if(REC_rateioOn && !pr.length) pr=defR.slice();
-    var pg=(p.pagamentos||[]).filter(function(x){ return Number(x.valor)>0; }).map(function(x){ return {valor:Number(x.valor)||0, data:x.data||null}; });
-    var somap=0; pg.forEach(function(x){ somap+=x.valor; });
-    var v=Number(p.valor)||0;
-    var rec=!!p.recebido || (v>0 && somap>=v-0.005);
-    var recem=p.recebido_em||null;
-    if(rec && !recem){ var ult=null; pg.forEach(function(x){ if(x.data&&(!ult||x.data>ult)) ult=x.data; }); recem=ult?ult+'T12:00:00.000Z':VB_carimbo(); }
-    if(!rec) recem=null;
-    return {valor:v, venc:p.venc||null, recebido:rec, recebido_em:recem, rateio:pr, pagamentos:pg};
-  });
-  var row={ pessoa:cli, descricao:desc, tipo:REC_editTipo, obs:nota, parcelas:parc, lista_id:REC_editLista };
-  if(btn){ btn.textContent='Salvando...'; btn.disabled=true; }
-  if(!VB_gravando('REC_salvar')) return;
-  var q=REC_editId?sb.from('recebimentos').update(row).eq('id',REC_editId).select():sb.from('recebimentos').insert(row).select();
-  q.then(function(res){
-    if(res.error){ console.log('REC save error',res.error); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Não consegui salvar.'); return; }
-    REC_closeEditor(); VB_toast(REC_editId?'Atualizado.':'Adicionado.'); REC_load();
-  }).catch(function(e){ console.log('REC save ex',e); if(btn){ btn.textContent='Salvar'; btn.disabled=false; } VB_toast('Sem conexão — nada gravado.'); });
-}
-
-function REC_closeEditor(){ var ov=document.getElementById('rec-editor'); if(ov) ov.style.display='none'; REC_delArmed=false; }
-
-/* ----- Gerenciar listas ----- */
-function REC_openListas(){
-  var ov=document.getElementById('rec-listas-mgr');
-  if(!ov){ ov=document.createElement('div'); ov.id='rec-listas-mgr'; ov.style.cssText='display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10075;align-items:flex-end;justify-content:center;'; ov.addEventListener('click',function(e){ if(e.target===ov) REC_closeListas(); }); document.body.appendChild(ov); }
-  ov.innerHTML='<div style="width:100%;max-width:480px;background:var(--sf);border-radius:18px 18px 0 0;max-height:90vh;display:flex;flex-direction:column;font-family:-apple-system,sans-serif;">'
-    +'<div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--ln);">'
-      +'<div style="width:50px;"></div>'
-      +'<div style="font-size:12px;letter-spacing:1px;font-weight:700;color:var(--tx);">LISTAS</div>'
-      +'<button onclick="REC_closeListas()" style="border:none;background:none;color:var(--grn);font-size:13px;font-weight:700;cursor:pointer;width:50px;text-align:right;">OK</button>'
-    +'</div>'
-    +'<div id="rec-listas-mgr-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));"></div>'
-  +'</div>';
-  ov.style.display='flex'; REC_renderListasMgr();
-}
-function REC_closeListas(){ var ov=document.getElementById('rec-listas-mgr'); if(ov) ov.style.display='none'; }
-function REC_renderListasMgr(){
-  var body=document.getElementById('rec-listas-mgr-body'); if(!body) return;
-  var dirBtn=function(l,d,txt){ var on=l.direcao===d; return '<button onclick="REC_setDirLista('+l.id+',\''+d+'\')" style="flex:1;padding:7px;border:0.5px solid '+(on?'#111':'#ddd')+';border-radius:8px;background:'+(on?'#111':'#fff')+';color:'+(on?'#fff':'#888')+';font-size:10px;font-weight:700;cursor:pointer;">'+txt+'</button>'; };
-  body.innerHTML=REC_listas.map(function(l){
-    return '<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:11px;margin-bottom:9px;">'
-      +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
-        +'<input value="'+REC_esc(l.nome)+'" autocapitalize="sentences" onchange="REC_renomearLista('+l.id+',this.value)" style="'+REC_inpCss+'flex:1;font-weight:600;">'
-        +'<button onclick="REC_arquivarLista('+l.id+',this)" style="border:none;background:none;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;">arquivar</button>'
-      +'</div>'
-      +'<div style="display:flex;gap:6px;">'+dirBtn(l,'entrada','ENTRADA')+dirBtn(l,'saida','SAÍDA')+dirBtn(l,'controle','CONTROLE')+'</div>'
-    +'</div>';
-  }).join('');
-  body.innerHTML+='<button onclick="REC_novaLista()" style="width:100%;padding:11px;border:0.5px dashed var(--ln0);border-radius:10px;background:var(--sf);color:var(--tx3);font-size:12px;font-weight:600;cursor:pointer;margin-top:2px;">+ Nova lista</button>';
-}
-function REC_novaLista(){
-  sb.from('listas').insert({nome:'Nova lista',direcao:'entrada',ordem:REC_listas.length}).select().then(function(res){
-    if(res.error){ console.log('REC nova lista error',res.error); VB_toast('Não criou a lista.'); return; }
-    if(res.data&&res.data[0]) REC_listas.push(res.data[0]);
-    REC_renderListasMgr(); REC_renderListas();
-  }).catch(function(e){ console.log('REC nova lista ex',e); VB_toast('Sem conexão — nada gravado.'); });
-}
-function REC_renomearLista(id,val){
-  val=(''+val).trim()||'Lista'; var l=REC_listaById(id); if(l) l.nome=val;
-  sb.from('listas').update({nome:val}).eq('id',id).then(function(res){ if(res.error){ console.log('REC renomear error',res.error); VB_toast('Não renomeou.'); } REC_renderListas(); }).catch(function(e){ console.log('REC renomear ex',e); });
-}
-function REC_setDirLista(id,dir){
-  var l=REC_listaById(id); if(l) l.direcao=dir;
-  sb.from('listas').update({direcao:dir}).eq('id',id).then(function(res){ if(res.error){ console.log('REC dir error',res.error); VB_toast('Não consegui salvar a direção.'); } REC_renderListasMgr(); REC_render(); }).catch(function(e){ console.log('REC dir ex',e); });
-}
-function REC_arquivarLista(id,btn){
-  if(REC_listas.length<=1){ VB_toast('Deixe ao menos uma lista.'); return; }
-  if(btn&&!btn._armed){ btn._armed=true; btn.textContent='confirmar?'; setTimeout(function(){ if(btn){btn._armed=false; btn.textContent='arquivar';} },3000); return; }
-  sb.from('listas').update({arquivada:true}).eq('id',id).then(function(res){
-    if(res.error){ console.log('REC arquivar error',res.error); VB_toast('Não arquivou.'); return; }
-    REC_listas=REC_listas.filter(function(l){ return l.id!==id; });
-    if(REC_listaAtual===id) REC_listaAtual=REC_listas.length?REC_listas[0].id:null;
-    REC_renderListasMgr(); REC_render();
-  }).catch(function(e){ console.log('REC arquivar ex',e); VB_toast('Sem conexão — nada gravado.'); });
-}
-function REC_excluir(btn){
-  if(!REC_editId) return;
-  if(!REC_delArmed){ REC_delArmed=true; if(btn){ btn.textContent='Tocar de novo para excluir'; btn.style.background='var(--red)'; btn.style.color='var(--acc-tx)'; } setTimeout(function(){ REC_delArmed=false; if(btn){ btn.textContent='Excluir'; btn.style.background='var(--sf)'; btn.style.color='var(--tx)'; } },3000); return; }
-  sb.from('recebimentos').delete().eq('id',REC_editId).then(function(res){ if(res.error){ console.log('REC del error',res.error); VB_toast('Não consegui excluir.'); return; } REC_closeEditor(); VB_toast('Excluído.'); REC_load(); }).catch(function(e){ console.log('REC del ex',e); VB_toast('Sem conexão — nada gravado.'); });
-}
-
 
 /* === CLIENTES (v1.119.1): cadastro com campos separados + ficha estilo estoque === */
 var CLI_rows=[], CLI_editId=null, CLI_ordem='nome', CLI_buscaOn=false;
@@ -22750,6 +22195,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.327.0</span><span class="cl-ver-date">30/10/2026</span></div>
+      <div class="cl-item">Removido o módulo RECEBIMENTOS antigo, desligado desde agosto e sem botão na Home: tela, funções e folhas dele (cerca de 520 linhas). ENTRADAS/SAÍDAS não muda. A tabela recebimentos continua no banco e no backup, intacta</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.326.0</span><span class="cl-ver-date">29/10/2026</span></div>
       <div class="cl-item">ENTRADAS/SAÍDAS com olhinho no cabeçalho (modo discreto): um toque troca os totais por R$ •••••• — card preto e totais de mês e de seção, nas três abas e na busca. Os cards de cada parcela continuam com valor. A escolha fica guardada no aparelho</div>
