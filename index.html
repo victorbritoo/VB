@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.328.0</title>
+<title>VB - v1.329.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12090,6 +12090,75 @@ function REN_irMes(ym){
    socio e nao seria dinheiro dele. Mesmo criterio do LIQUIDO no card preto.
    Mes de referencia e o VENCIMENTO nos dois lados — e uma previsao de caixa, nao um realizado.
    Meses passados aparecem porque e neles que moram as parcelas atrasadas. */
+/* ===== PANORAMA SEMANAL (v1.329.0) =====
+   Mesma folha do PANORAMA MENSAL, com a troca MES / SEMANA no topo. Semana de segunda a
+   domingo: atrasadas (antes da segunda desta semana) numa linha, depois 8 semanas. Embaixo,
+   DE / ATE para qualquer intervalo. Mesmas contas do mes: entrada pelo que falta (REN_falta),
+   VB descontando o repasse (REN_repAlvo), saida pelo que falta (REN_cpFalta). */
+var REN_panModo='mes', REN_panAb=[], REN_panVB=null, REN_panDeTxt='', REN_panAteTxt='';
+function REN_isoMais(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function REN_segunda(iso){ var d=new Date(iso+'T12:00:00Z'); return REN_isoMais(iso, -((d.getUTCDay()+6)%7)); }
+function REN_dmCurto(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7); }
+function REN_panSoma(de, ate){
+  var r={ent:0, vb:0, n:0, sai:0, sn:0};
+  (REN_panAb||[]).forEach(function(x){ var v=String(x.venc||''); if(!v || (de&&v<de) || (ate&&v>ate)) return; r.ent+=REN_falta(x); r.vb+=(REN_panVB?REN_panVB(x):REN_falta(x)); r.n++; });
+  ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){ if(c.pago_em) return; var v=String(c.venc||''); if(!v || (de&&v<de) || (ate&&v>ate)) return; r.sai+=REN_cpFalta(c); r.sn++; });
+  return r;
+}
+function REN_panModoSet(m){ REN_panModo=(m==='sem')?'sem':'mes'; REN_painel(REN_panDe); }
+function REN_panAbas(){
+  function ab(id,lbl){ var on=(REN_panModo===id);
+    return '<button onclick="REN_panModoSet(\''+id+'\')" style="flex:1;padding:9px 2px;border-radius:12px;font-size:10px;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;font-family:-apple-system,sans-serif;'+(on?'background:var(--acc);color:var(--acc-tx);border:none;':'background:var(--sf);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+lbl+'</button>'; }
+  return '<div style="display:flex;gap:6px;margin-bottom:10px;">'+ab('mes','MÊS')+ab('sem','SEMANA')+'</div>';
+}
+function REN_panLinha(lbl, r, vermelho, agora, clique){
+  var _dif=(Math.abs(r.ent-r.vb)>0.005);
+  return '<div '+(clique?('onclick="'+clique+'" '):'')+'style="'+(clique?'cursor:pointer;':'')+'display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
+    +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(vermelho?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(r.n?('<span style="font-size:9px;color:var(--mu);font-weight:600;"> ('+r.n+')</span>'):'')+'</span>'
+    +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(r.n?VB_kFmt(r.ent):'—')+'</span>'
+    +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((r.n&&_dif)?VB_kFmt(r.vb):'')+'</span>'
+    +'<span style="font-size:11px;font-weight:600;color:var(--mu);text-align:right;white-space:nowrap;">'+(r.sn?VB_kFmt(r.sai):'—')+'</span>'
+    +'</div>';
+}
+function REN_panSemanas(){
+  var hoje=REN_hojeISO(), seg=REN_segunda(hoje), hh='';
+  var atr=REN_panSoma(null, REN_isoMais(seg,-1));
+  if(atr.n||atr.sn) hh+=REN_panLinha('ATRASADAS ⚠', atr, 1, 0, '');
+  for(var k=0;k<8;k++){
+    var de=REN_isoMais(seg,7*k), ate=REN_isoMais(de,6), r=REN_panSoma(de, ate);
+    hh+=REN_panLinha(REN_dmCurto(de)+'–'+REN_dmCurto(ate), r, 0, (k===0), 'REN_irMes(\''+de.slice(0,7)+'\')');
+  }
+  return hh;
+}
+function REN_panIntervalo(){
+  var hoje=REN_hojeISO();
+  if(!REN_panDeTxt && !REN_panAteTxt){ REN_panDeTxt=HIST_fmtData(hoje); REN_panAteTxt=HIST_fmtData(REN_isoMais(hoje,14)); }
+  var LB='display:block;font-size:8px;letter-spacing:1px;color:var(--mu2);font-weight:600;text-align:center;padding-left:1px;margin-bottom:3px;';
+  var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;text-align:center;';
+  function campo(id,rot,val){ return '<div><span style="'+LB+'">'+rot+'</span><input data-selall id="'+id+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this);REN_panIntCalc()" onblur="autoCompleteDate(this);REN_panIntCalc()" value="'+val+'" style="'+IN+'"></div>'; }
+  return '<div style="border-top:0.5px solid var(--ln);margin-top:6px;padding-top:8px;">'
+    +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;margin-bottom:6px;">INTERVALO</div>'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;">'+campo('ren-pan-de','DE',REN_panDeTxt)+campo('ren-pan-ate','ATÉ',REN_panAteTxt)+'</div>'
+    +'<div id="ren-pan-int" data-priv="1" style="margin-top:6px;">'+REN_panIntHTML()+'</div>'
+    +'</div>';
+}
+function REN_panIntHTML(){
+  var de=REN_brToISO(REN_panDeTxt), ate=REN_brToISO(REN_panAteTxt);
+  var ok=(/^\d{4}-\d{2}-\d{2}$/.test(de||'') && /^\d{4}-\d{2}-\d{2}$/.test(ate||'') && de<=ate);
+  var r=ok?REN_panSoma(de, ate):null;
+  var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
+  var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
+  function v(x,n){ return (r && n)?HIST_fmtMoeda(x):'—'; }
+  return '<div style="'+_L+'"><span style="'+_R+'">ENTRADAS'+(r?(' <span style="letter-spacing:0;opacity:0.7;">('+r.n+')</span>'):'')+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+v(r&&r.ent,r&&r.n)+'</span></div>'
+    +'<div style="'+_L+'"><span style="'+_R+'">VB</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+v(r&&r.vb,r&&r.n)+'</span></div>'
+    +'<div style="'+_L+'"><span style="'+_R+'">SAÍDAS'+(r?(' <span style="letter-spacing:0;opacity:0.7;">('+r.sn+')</span>'):'')+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);">'+(r&&r.sn?('− '+HIST_fmtMoeda(r.sai)):'—')+'</span></div>';
+}
+/* so o resultado muda enquanto digita: redesenhar a folha derrubaria o teclado */
+function REN_panIntCalc(){
+  var a=document.getElementById('ren-pan-de'), b=document.getElementById('ren-pan-ate');
+  if(a) REN_panDeTxt=a.value; if(b) REN_panAteTxt=b.value;
+  var el=document.getElementById('ren-pan-int'); if(el) el.innerHTML=REN_panIntHTML();
+}
 var REN_panDe='ren';   /* de qual lista o painel foi aberto: 'ren' (entradas) ou 'cp' (saidas) */
 function REN_painel(de){
   if(!REN_cache){ VB_toast('Carregando ainda\u2026'); return; }
@@ -12104,6 +12173,8 @@ function REN_painel(de){
   var bx=REN_cache.bx||{}, hoje=REN_hojeISO();
   var abertas=(REN_cache.itens||[]).filter(function(x){ return !bx[REN_key(x)]; });
   function vbDe(x){ var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oi?REN_repAlvo(oi,x):0); }
+  REN_panAb=abertas; REN_panVB=vbDe;
+  var _sem=(REN_panModo==='sem');
   var M={};
   function slot(ym){ if(!M[ym]) M[ym]={ym:ym, ent:0, entVB:0, entN:0, sai:0, saiN:0}; return M[ym]; }
   abertas.forEach(function(x){
@@ -12113,7 +12184,7 @@ function REN_painel(de){
   ((REN_cache.cp)||[]).forEach(function(c){
     if(c.pago_em) return;
     var ym=String(c.venc||'').slice(0,7); if(!ym) return;
-    var s=slot(ym); s.sai+=Number(c.valor)||0; s.saiN++;
+    var s=slot(ym); s.sai+=REN_cpFalta(c); s.saiN++;
   });
   var meses=Object.keys(M).sort();
   var tEnt=0, tEntVB=0, tSai=0;
@@ -12122,7 +12193,7 @@ function REN_painel(de){
   var hh='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     /* v1.318.0: titulo e linha das colunas presos no topo; so os meses rolam (como o Fechamento) */
     +'<div style="position:sticky;top:-18px;z-index:3;background:var(--bg);margin:-18px -16px 0;padding:18px 16px 0;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">PANORAMA MENSAL</div>';
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">'+(_sem?'PANORAMA SEMANAL':'PANORAMA MENSAL')+'</div>'+REN_panAbas();
   if(!meses.length){
     hh+='</div>';
     hh+='<div style="text-align:center;font-size:12px;color:var(--mu);margin:24px 0;">Nada a vencer.</div>';
@@ -12132,11 +12203,11 @@ function REN_painel(de){
        ultima letra empurra o titulo para dentro e ele nunca encosta na borda dos valores */
     var RTd='font-size:8px;letter-spacing:0;color:var(--so);font-weight:700;text-align:right;';
     hh+='<div style="display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;padding:0 2px 4px;">'
-      +'<span style="'+RT+'">M\u00caS</span>'
+      +'<span style="'+RT+'">'+(_sem?'SEMANA':'M\u00caS')+'</span>'
       +'<span style="'+RTd+'">ENTRADAS</span>'
       +'<span style="'+RTd+'">VB</span>'
       +'<span style="'+RTd+'">SA\u00cdDAS</span></div></div>';
-    meses.forEach(function(ym){
+    if(_sem) hh+=REN_panSemanas(); else meses.forEach(function(ym){
       var m=M[ym];
       var passado=(ym<hojeYM), agora=(ym===hojeYM);
       var lbl=(FM_MESES[Number(ym.slice(5,7))-1]||'').slice(0,3)+'/'+ym.slice(2,4);
@@ -12154,6 +12225,7 @@ function REN_painel(de){
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--mu)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
         +'</div>';
     });
+    if(_sem) hh+=REN_panIntervalo();
     /* mesmas linhas e mesmos nomes do card preto: o painel detalha o card, nao inventa outra conta */
     var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
     var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
@@ -22286,6 +22358,12 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.329.0</span><span class="cl-ver-date">03/11/2026</span></div>
+      <div class="cl-item">Panorama (toque no TOTAL A RECEBER ou no TOTAL A PAGAR) ganhou MÊS / SEMANA no topo. Em SEMANA: atrasadas numa linha e as próximas 8 semanas, de segunda a domingo, com ENTRADAS, VB e SAÍDAS. Tocar numa semana leva à lista no mês dela</div>
+      <div class="cl-item">INTERVALO: DE e ATÉ com o total de entradas, a parte do VB e as saídas do período. Abre preenchido com hoje até daqui a 14 dias</div>
+      <div class="cl-item">SAÍDAS do panorama passam a somar o que falta pagar (pagamento parcial abatido), igual ao TOTAL A PAGAR. Antes somavam o valor cheio da conta</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.328.0</span><span class="cl-ver-date">30/10/2026</span></div>
       <div class="cl-item">Card da venda no Histórico: o botão CONTRATO virou DOCUMENTOS. Abre CONTRATO e NOTA PROMISSÓRIA, cada um com o estado (NÃO GERADO, AGUARDANDO ASSINATURA ou ASSINADO). O detalhe do card mostra Contrato e NP</div>
