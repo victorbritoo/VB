@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.330.1</title>
+<title>VB - v1.330.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -13974,6 +13974,8 @@ function REN_render(){
            numa coluna so. Antes ela ia na ultima linha e descia quando o card ganhava PAGO/RESTA,
            REPASSADO ou nota. Ordem das linhas nao muda; so o canto onde o VB aparece. */
         var _vb=null; try{ var _oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(_oi){ var _rp=REN_repAlvo(_oi,x); if(_rp>0.004) _vb=Math.round(((Number(x.valor)||0)-_rp)*100)/100; } }catch(e){}
+        /* v1.330.2: repassado antes de receber -- a parcela inteira ja e da VB, a parte VB em cinza sai */
+        if(_vb!=null && !REN_cache.bx[k] && REN_adiDe(x)) _vb=null;
         var VBS=(_vb!=null)?('<span style="flex:none;white-space:nowrap;font-size:9px;letter-spacing:0;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(_vb)+' VB)</span>'):'';
         var L=[];
         if(REN_parcial(x)) L.push({c:'var(--mu2)', t:'PAGO: '+HIST_fmtMoeda(REN_pagoTot(x))+' \u00b7 RESTA: '+HIST_fmtMoeda(REN_falta(x)), mt:1});
@@ -20312,13 +20314,16 @@ function CTR_paginas(doc){
     function _txtP(q){ return (q&&q!=='IMG'&&q.length)?q.map(function(s){ return s[1]; }).join('').trim():''; }
     function _assinantes(){
       var L=[], nt=0, i=_iAss;
+      /* v1.330.2: devedor empresa -- quem assina sao os socios, por ela: P/ EMPRESA no lugar de DEVEDOR */
+      var _pjM=null; try{ _pjM=doc.paras.map(_txtP).join(' ').match(/de outro lado,\s*(.+?),\s*pessoa jur[ií]dica/i); }catch(e){}
+      var _papDev=_pjM?('P/ '+_pjM[1].trim().toUpperCase()):'DEVEDOR';
       for(;i<doc.paras.length;i++){
         var q=doc.paras[i];
         if(!ehLinhaAss(q)) continue;
         var j=i+1; while(j<doc.paras.length && !_txtP(doc.paras[j])) j++;
         var t=_txtP(doc.paras[j]);
         if(/^Nome\s*:/i.test(t)){ nt++; L.push({nome:'TESTEMUNHA '+nt, papel:'', tes:1}); }
-        else if(t){ L.push({nome:t.toUpperCase(), papel:(L.filter(function(a){return !a.tes;}).length?'DEVEDOR':'CREDOR')}); }
+        else if(t){ L.push({nome:t.toUpperCase(), papel:(L.filter(function(a){return !a.tes;}).length?_papDev:'CREDOR')}); }
       }
       return L;
     }
@@ -22429,6 +22434,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.2</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Parcela repassada antes de receber: sai a parte VB em cinza do card (a parcela inteira já é da VB). Contrato com empresa devedora: embaixo da caixa de cada sócio vem P/ NOME DA EMPRESA no lugar de DEVEDOR</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.1</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Busca de cliente por palavras soltas: VITOR CAVA acha VITOR COSTA CAVALCANTE (vale para CLIENTES, devedor, 2º devedor e representantes). Título do bloco agora só REPRESENTANTES</div>
