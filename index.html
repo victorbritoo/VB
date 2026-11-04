@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.330.4</title>
+<title>VB - v1.330.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12134,10 +12134,14 @@ function REN_panSemanas(){
 }
 function REN_panIntervalo(){
   var hoje=REN_hojeISO();
-  if(!REN_panDeTxt && !REN_panAteTxt){ REN_panDeTxt=HIST_fmtData(hoje); REN_panAteTxt=HIST_fmtData(REN_isoMais(hoje,14)); }
+  /* v1.330.5: guarda ISO (o campo e de data). ATE padrao = sexta da semana que vem -- semana de
+     sabado a sexta, parcela de fim de semana entra na segunda */
+  if(!/^\d{4}-/.test(REN_panDeTxt||'') || !/^\d{4}-/.test(REN_panAteTxt||'')){ REN_panDeTxt=hoje; REN_panAteTxt=REN_isoMais(REN_segunda(hoje),13); }
   var LB='display:block;font-size:8px;letter-spacing:1px;color:var(--mu2);font-weight:600;text-align:center;padding-left:1px;margin-bottom:3px;';
   var IN='width:100%;box-sizing:border-box;padding:9px 8px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);color:var(--tx);font-size:13px;font-family:-apple-system,sans-serif;text-align:center;';
-  function campo(id,rot,val){ return '<div><span style="'+LB+'">'+rot+'</span><input data-selall id="'+id+'" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="REC_maskData(this);REN_panIntCalc()" onblur="autoCompleteDate(this);REN_panIntCalc()" value="'+val+'" style="'+IN+'"></div>'; }
+  /* v1.330.5: calendario do aparelho (so aqui) -- abre no mes da data do campo; o Safari tambem
+     parou de oferecer cartao de credito no campo digitado */
+  function campo(id,rot,val){ return '<div><span style="'+LB+'">'+rot+'</span><input type="date" autocomplete="off" id="'+id+'" oninput="REN_panIntCalc()" onchange="REN_panIntCalc()" value="'+val+'" style="'+IN+'display:block;-webkit-appearance:none;appearance:none;min-height:38px;"></div>'; }
   /* v1.329.2: caixa propria -- solto, o resultado parecia o TOTAL A RECEBER logo abaixo */
   return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:8px;">'
     +'<div style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;margin-bottom:6px;">INTERVALO</div>'
@@ -12146,7 +12150,7 @@ function REN_panIntervalo(){
     +'</div>';
 }
 function REN_panIntHTML(){
-  var de=REN_brToISO(REN_panDeTxt), ate=REN_brToISO(REN_panAteTxt);
+  var de=REN_panDeTxt, ate=REN_panAteTxt;
   var ok=(/^\d{4}-\d{2}-\d{2}$/.test(de||'') && /^\d{4}-\d{2}-\d{2}$/.test(ate||'') && de<=ate);
   var r=ok?REN_panSoma(de, ate):null;
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
@@ -22431,6 +22435,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.5</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">PANORAMA, INTERVALO: DE e ATÉ abrem o calendário do aparelho (só aqui; o resto do app segue digitado). ATÉ começa na sexta da semana que vem (semana de sábado a sexta). O Safari parou de oferecer cartão de crédito nesses campos</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.4</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Tabela de parcelas do contrato: rodapé com Parcelas em maiúscula (Total · 12 Parcelas · R$ ...)</div>
