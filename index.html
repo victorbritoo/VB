@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.331.0</title>
+<title>VB - v1.332.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1534,7 +1534,7 @@ var sb = supabase.createClient('https://mkvewfmqanskvtbtiynk.supabase.co', 'sb_p
 
 function VB_showApp(){
   var ov=document.getElementById('login-overlay'); if(ov) ov.style.display='none';
-  setTimeout(function(){ try{ VB_snapshotAuto(); VB_backupLembrete(); }catch(e){} }, 2500);
+  setTimeout(function(){ try{ VB_snapshotAuto(); }catch(e){} }, 2500);
   try{ VB_apelidosCarrega(); }catch(e){}
   setTimeout(function(){ try{ VB_autoteste(); VB_storageVigia(); MIG_silencioso(); }catch(e){} }, 4000);
 }
@@ -2477,18 +2477,10 @@ function VB_fmtBackupRel(iso){
   return 'há '+dias+' dias ('+hh+')';
 }
 function VB_updateBackupStatus(){
-  VB_renderBackupStatus(VB_lerBackupLocal());
-  // fonte da verdade: Supabase (vb_meta) — cobre Safari x PWA x outro aparelho
-  try{
-    sb.from('vb_meta').select('valor').eq('chave','ultimo_backup').maybeSingle().then(function(res){
-      if(res && res.data && res.data.valor){
-        var remoto=res.data.valor, local=VB_lerBackupLocal();
-        var best = (!local || new Date(remoto) > new Date(local)) ? remoto : local;
-        try{ localStorage.setItem(VB_BACKUP_LS, best); }catch(e){}
-        VB_renderBackupStatus(best);
-      }
-    });
-  }catch(e){}
+  /* v1.332.0: o backup fora do Supabase e o do bot (diario, iCloud). O aviso vermelho so acusa
+     falha do snapshot automatico do app; o backup manual nao e mais cobrado. */
+  var m=null; try{ m=localStorage.getItem('vb_snap_falha'); }catch(e){}
+  VB_renderBackupStatus(m);
 }
 /* ===== A PAGAR na Home =====
    O total a pagar so existia dentro do painel do ENTRADAS -- lugar onde o VB so entra quando
@@ -2575,17 +2567,15 @@ function HOME_pagarCarrega(){
 function VB_lerBackupLocal(){
   try{ return localStorage.getItem(VB_BACKUP_LS); }catch(e){ return null; }
 }
-function VB_renderBackupStatus(iso){
-  var txt, show;
-  if(iso===null){ txt='Você ainda não fez backup'; show=true; }
-  else {
-    var dias=Math.floor((Date.now()-new Date(iso).getTime())/86400000);
-    if(dias>=7){ txt='Sem backup há '+dias+' dias'; show=true; } else { txt=''; show=false; }
-  }
+function VB_renderBackupStatus(msg){
   ['hist-backup-status','home-backup-status'].forEach(function(id){
     var el=document.getElementById(id); if(!el) return;
-    if(show){ el.textContent=txt; el.style.display=''; } else { el.style.display='none'; }
+    if(msg){ el.textContent=msg; el.style.display=''; } else { el.style.display='none'; }
   });
+}
+function VB_snapMarca(ok){
+  try{ if(ok) localStorage.removeItem('vb_snap_falha'); else localStorage.setItem('vb_snap_falha','Backup automático falhou hoje'); }catch(e){}
+  VB_updateBackupStatus();
 }
 
 
@@ -2904,7 +2894,7 @@ function VB_fetchTudo(onOk, onErr){
   /* baixas, pagamentos e repasse combinado sao dado operacional: sem eles a restauracao
      devolve as vendas com todas as parcelas em aberto de novo. */
   var tabelas=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos','repasse_adiantado'];
-  Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
+  Promise.all(tabelas.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,ant_id,np_venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     if(res.some(function(x){ return x.rows===null; })){ onErr&&onErr(); return; }
     var dados={}, total=0;
@@ -3074,12 +3064,13 @@ function VB_snapshotAuto(){
     sb.from('vb_backups').select('created_at').order('created_at',{ascending:false}).limit(1).then(function(res){
       if(res.error) return; // tabela ausente ou offline: silêncio total
       var ult=(res.data&&res.data[0])?new Date(res.data[0].created_at):null;
-      if(ult && (Date.now()-ult.getTime()) < 24*60*60*1000) return; // já tem snapshot nas últimas 24h
+      if(ult && (Date.now()-ult.getTime()) < 24*60*60*1000){ VB_snapMarca(true); return; } // já tem snapshot nas últimas 24h
       VB_fetchTudo(function(dados, total){
-        if(!total) return; // nunca fotografa banco vazio
+        if(!total){ VB_snapMarca(false); return; } // nunca fotografa banco vazio
         var payload={ app:'VB', tipo:'backup', versao:(document.title||'').replace('VB - v',''), gerado_em:new Date().toISOString(), total:total, dados:dados };
         sb.from('vb_backups').insert({total:total, payload:payload}).then(function(r2){
-          if(r2.error) return;
+          if(r2.error){ VB_snapMarca(false); return; }
+          VB_snapMarca(true);
           sb.from('vb_backups').select('id,created_at').order('created_at',{ascending:false}).then(function(r3){
             var rows=(r3&&r3.data)||[];
             if(rows.length>14){
@@ -3088,23 +3079,7 @@ function VB_snapshotAuto(){
             }
           });
         });
-      }, function(){});
-    });
-  }catch(e){}
-}
-// Lembrete ativo do backup iCloud vencido (1 toast por dia, no máximo)
-function VB_backupLembrete(){
-  try{
-    sb.from('vb_meta').select('valor').eq('chave','ultimo_backup').maybeSingle().then(function(res){
-      var remoto=(res&&res.data&&res.data.valor)||null, local=VB_lerBackupLocal();
-      var best=(remoto&&local) ? (new Date(remoto)>new Date(local)?remoto:local) : (remoto||local);
-      var dias=best ? Math.floor((Date.now()-new Date(best).getTime())/86400000) : null;
-      if(best && dias<7) return;
-      var hoje=REN_hojeISO(), marcado=null; /* dia local: depois das 21h o lembrete achava que ja era amanha */
-      try{ marcado=localStorage.getItem('vb_bkp_toast_dia'); }catch(e){}
-      if(marcado===hoje) return;
-      try{ localStorage.setItem('vb_bkp_toast_dia', hoje); }catch(e){}
-      VB_toast(best ? ('Sem backup no iCloud há '+dias+' dias') : 'Você ainda não fez backup no iCloud');
+      }, function(){ VB_snapMarca(false); });
     });
   }catch(e){}
 }
@@ -3330,7 +3305,7 @@ function VB_diffCampos(a,b){
 function VB_restaurarDiff(cb){
   var d=VB_restPayload.data.dados;
   var tabs=['antecipacoes','financiamentos_hist','vendas','pagamentos','mercadorias','listas','recebimentos','socios','clientes','contratos','parcela_baixas','parcela_pagamentos','repasse_previsto','parcela_notas','contas_pagar','parcela_prorroga','contas_receber','mercadoria_custos','conta_pagamentos','repasse_adiantado'];
-  Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
+  Promise.all(tabs.map(function(t){ return VB_fetchPag(t, t==='contratos'?'id,created_at,cliente_nome,cpf,descricao,valor_total,fname,venda_id,fin_id,ant_id,np_venda_id,assinado_em,assinado_path':'*').then(function(rows){ return {t:t, rows:rows}; }); }))
   .then(function(res){
     var diff={}, okAll=true;
     res.forEach(function(x){
@@ -22453,6 +22428,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.0</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Backup passa a levar a ligação da NP com a venda e com a antecipação (antes, restaurar soltava as 3 NPs ligadas). O aviso vermelho "Sem backup há X dias" e o lembrete diário do iCloud saíram: o backup de fora é o do bot. O vermelho agora só aparece se o backup automático do app falhar</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.331.0</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Gerar de novo um contrato ou NP já substituía o anterior sem assinatura; agora o app avisa (não precisa apagar o antigo à mão). Salvar financiamento, venda, antecipação ou pagamento sem mudar nada não gera mais linha no log</div>
