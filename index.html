@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.330.0</title>
+<title>VB - v1.330.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -19776,7 +19776,11 @@ function CLI_load(){
    achava a WET MOTORS. Agora le o apelido tambem e ignora acento, como a busca das ENTRADAS. */
 function CLI_casaBusca(c,q){
   var t=VB_cliNorm(q); if(!t) return true;
-  return VB_cliNorm(c.nome).indexOf(t)>=0 || VB_cliNorm(c.apelido||'').indexOf(t)>=0 || String(c.cpf||'').indexOf(q)>=0;
+  if(String(c.cpf||'').indexOf(String(q).trim())>=0) return true;
+  /* v1.330.1: cada palavra digitada basta estar no nome ou apelido, em qualquer ordem --
+     VITOR CAVA acha VITOR COSTA CAVALCANTE (antes exigia o trecho colado) */
+  var n=VB_cliNorm(c.nome)+' | '+VB_cliNorm(c.apelido||'');
+  return t.split(/\s+/).every(function(w){ return n.indexOf(w)>=0; });
 }
 function CLI_render(){
   var el=document.getElementById('cli-lista'); if(!el) return;
@@ -21869,7 +21873,7 @@ function CTR_finAbrirForm(idx){
     +'<div style="display:grid;grid-template-columns:1.6fr 60px;gap:6px;">'+campo('ctr-cidade','CIDADE','')+campo('ctr-uf','UF','','maxlength="2"')+'</div>'
     /* v1.330.0: devedor PJ (CNPJ) -- representantes saem do cadastro, como o 2o devedor */
     +'<div id="ctr-rep-box" style="display:none;">'
-    +'<div style="'+SEC+'">REPRESENTANTES (ASSINAM PELA EMPRESA)</div>'
+    +'<div style="'+SEC+'">REPRESENTANTES</div>'
     +[1,2].map(function(k){ return '<div style="position:relative;">'+campo('ctrr'+k+'-nome','REPRESENTANTE '+k+(k===2?' (OPCIONAL)':''),'','oninput="CTR_finBuscaRep(this,'+k+')"','DIGITE PARA BUSCAR NO CADASTRO')
       +'<div id="ctrr'+k+'-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div></div>'
       +'<div id="ctrr'+k+'-info" style="font-size:10px;letter-spacing:0.5px;color:var(--mu);text-align:center;margin:-2px 0 6px;"></div>'; }).join('')
@@ -21919,7 +21923,7 @@ function CTR_finBuscaRep(el,k){
   var box=document.getElementById('ctrr'+k+'-res'); if(!box) return;
   CTR_finReps[k]=null; var inf=document.getElementById('ctrr'+k+'-info'); if(inf) inf.textContent='';
   if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
-  var achou=CTR_clientes.filter(function(c){ return String(c.cpf||'').replace(/\D/g,'').length!==14 && ((c.nome||'').toUpperCase().indexOf(q)>=0 || String(c.apelido||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0); }).slice(0,6);
+  var achou=CTR_clientes.filter(function(c){ return String(c.cpf||'').replace(/\D/g,'').length!==14 && CLI_casaBusca(c,q); }).slice(0,6);
   if(!achou.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML=achou.map(function(c){
     var i=CTR_clientes.indexOf(c);
@@ -21945,7 +21949,7 @@ function CTR_finBusca2(el){
   var box=document.getElementById('ctr2-res'); if(!box) return;
   CTR_finDev2=null; var inf=document.getElementById('ctr2-info'); if(inf) inf.textContent='';
   if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
-  var achou=CTR_clientes.filter(function(c){ return (c.nome||'').toUpperCase().indexOf(q)>=0 || String(c.apelido||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0; }).slice(0,6);
+  var achou=CTR_clientes.filter(function(c){ return CLI_casaBusca(c,q); }).slice(0,6);
   if(!achou.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML=achou.map(function(c){
     var i=CTR_clientes.indexOf(c);
@@ -22425,6 +22429,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.1</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Busca de cliente por palavras soltas: VITOR CAVA acha VITOR COSTA CAVALCANTE (vale para CLIENTES, devedor, 2º devedor e representantes). Título do bloco agora só REPRESENTANTES</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.0</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Contrato do financiamento com empresa como devedora: com CNPJ no devedor, a folha troca o 2º DEVEDOR por REPRESENTANTES (até 2, buscados no cadastro). O texto qualifica a empresa e os sócio-administradores que a representam, fica no plural (DEVEDORES) e as caixas de assinatura são as dos representantes</div>
