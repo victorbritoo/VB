@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.329.2</title>
+<title>VB - v1.330.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -21635,17 +21635,25 @@ function CTR_finParcelas(r){
   return out;
 }
 function CTR_finCorpo(o){
-  var um=(o.devs.length===1);
+  /* v1.330.0: empresa devedora fica no plural (DEVEDORES), como no modelo do VB: a empresa e os
+     socios que a representam e assinam */
+  var um=(o.devs.length===1 && !o.devs[0].pj);
   function S(a,b){ return um?a:b; }
   var DEV=S('DEVEDOR','DEVEDORES');
   var P=CTR_finP, V=CTR_finVazio, x='';
   /* partes */
   var CR=o.cred||CTR_FIN_CREDORES.fact;
   var sp=[[ '', 'De um lado, '],['bu',CR.nome],['', ', pessoa jurídica de direito privado inscrita no CNPJ sob o Nº '+CR.cnpj+', estabelecida em Fortaleza/CE, na '+CR.end+', representada por seu sócio-administrador '],['bu','VICTOR FERNANDES BRITO'],['', ', brasileiro, casado, empresário, inscrito no CPF Nº 600.174.363-03, RG Nº 2003002005986-SSP/CE, residente e domiciliado em Fortaleza/CE, na Rua Canuto de Aguiar, Nº 1077, apto. 1300, Meireles, CEP 60.160-120, doravante denominado simplesmente '],['bu','CREDOR'],['', ', e, de outro lado, ']];
+  function pf(d){ sp.push(['bu', d.nome]); sp.push(['', ', '+d.qual+', titular do CPF Nº. '+d.cpf+(d.semDoc?'':(', e do '+d.doc))+', domiciliado '+d.end]); }
   o.devs.forEach(function(d,i){
     if(i>0) sp.push(['', ', e ']);
-    sp.push(['bu', d.nome]);
-    sp.push(['', ', '+d.qual+', titular do CPF Nº. '+d.cpf+(d.semDoc?'':(', e do '+d.doc))+', domiciliado '+d.end]);
+    if(d.pj){
+      sp.push(['bu', d.nome]);
+      sp.push(['', ', pessoa jurídica de direito privado inscrita no CNPJ sob o Nº '+d.cpf+', estabelecida '+d.end+', representada por '+(d.reps.length>1?'seus sócio-administradores ':'seu sócio-administrador ')]);
+      d.reps.forEach(function(rp,j){ if(j>0) sp.push(['', ', e ']); pf(rp); });
+      return;
+    }
+    pf(d);
   });
   sp.push(['', ', como ']); sp.push(['bu', DEV]); sp.push(['', '.']);
   x+=P(sp)+V();
@@ -21689,7 +21697,7 @@ function CTR_finCorpo(o){
   x+=P([['','Fortaleza/CE, {{DATA_EXTENSO}}.']],{c:1})+V(1)+V(1);
   function ass(nome){ return P([['','___________________________________________________________']],{c:1})+P([['b',nome]],{c:1})+V(1)+V(1); }
   x+=ass(CR.nome);
-  o.devs.forEach(function(d){ x+=ass(d.nome); });
+  o.devs.forEach(function(d){ if(d.pj) d.reps.forEach(function(rp){ x+=ass(rp.nome); }); else x+=ass(d.nome); });
   x+=P([['b','Testemunhas:']],{c:1})+V(1)+V(1);
   function cel(){ return '<w:tc><w:tcPr><w:tcW w:w="2500" w:type="pct"/></w:tcPr>'+P([['','______________________________']],{c:1})+P([['','Nome:']],{c:1})+P([['','CPF:']],{c:1})+P([['','RG:']],{c:1})+'</w:tc>'; }
   x+='<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>'+cel()+cel()+'</w:tr></w:tbl>'+V(1);
@@ -21822,7 +21830,7 @@ function CTR_finAbrir(idx){
 }
 function CTR_finAbrirForm(idx){
   var r=HIST_rowsCache[idx]; if(!r){ VB_toast('Linha não encontrada.'); return; }
-  CTR_finRow=r; CTR_rowAtual=r; CTR_cliSel=null; CTR_finDev2=null;
+  CTR_finRow=r; CTR_rowAtual=r; CTR_cliSel=null; CTR_finDev2=null; CTR_finReps=[null,null,null];
   var old=document.getElementById('vb-ctr-sheet'); if(old) old.remove();
   var desc=String(r.descricao||'').toUpperCase();
   var vg=(r.veiculo&&typeof r.veiculo==='object')?r.veiculo:{};
@@ -21849,7 +21857,7 @@ function CTR_finAbrirForm(idx){
     +'</div>'
     +campo('ctr-qual','QUALIFICAÇÃO','brasileiro, casado, empresário')
     +'<div style="display:grid;grid-template-columns:1.3fr 74px 1fr;gap:6px;">'
-    +campo('ctr-cpf','CPF','','inputmode="numeric" oninput="CLI_maskCPF(this)"')
+    +campo('ctr-cpf','CPF / CNPJ','','inputmode="numeric" oninput="CLI_maskCPF(this);CTR_finPJ()"')
     +'<div><span style="'+LB+'">TIPO</span><select id="ctr-doctipo" style="'+SL+'"><option>RG</option><option>CNH</option><option value="Passaporte">PASS.</option></select></div>'
     +campo('ctr-docnum','Nº DOCUMENTO','')
     +'</div>'
@@ -21859,12 +21867,21 @@ function CTR_finAbrirForm(idx){
     +'</div>'
     +'<div style="display:grid;grid-template-columns:54px 1fr 1fr;gap:6px;">'+campo('ctr-numero','Nº','')+campo('ctr-end2','COMPL.','')+campo('ctr-bairro','BAIRRO','')+'</div>'
     +'<div style="display:grid;grid-template-columns:1.6fr 60px;gap:6px;">'+campo('ctr-cidade','CIDADE','')+campo('ctr-uf','UF','','maxlength="2"')+'</div>'
+    /* v1.330.0: devedor PJ (CNPJ) -- representantes saem do cadastro, como o 2o devedor */
+    +'<div id="ctr-rep-box" style="display:none;">'
+    +'<div style="'+SEC+'">REPRESENTANTES (ASSINAM PELA EMPRESA)</div>'
+    +[1,2].map(function(k){ return '<div style="position:relative;">'+campo('ctrr'+k+'-nome','REPRESENTANTE '+k+(k===2?' (OPCIONAL)':''),'','oninput="CTR_finBuscaRep(this,'+k+')"','DIGITE PARA BUSCAR NO CADASTRO')
+      +'<div id="ctrr'+k+'-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div></div>'
+      +'<div id="ctrr'+k+'-info" style="font-size:10px;letter-spacing:0.5px;color:var(--mu);text-align:center;margin:-2px 0 6px;"></div>'; }).join('')
+    +'</div>'
+    +'<div id="ctr2-box">'
     +'<div style="'+SEC+'">2º DEVEDOR (OPCIONAL)</div>'
     +'<div style="position:relative;">'
     +campo('ctr2-nome','NOME COMPLETO','','oninput="CTR_finBusca2(this)"','DIGITE PARA BUSCAR NO CADASTRO')
     +'<div id="ctr2-res" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;margin-top:-4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);"></div>'
     +'</div>'
     +'<div id="ctr2-info" style="font-size:10px;letter-spacing:0.5px;color:var(--mu);text-align:center;margin:-2px 0 6px;"></div>'
+    +'</div>'
     +'<div style="'+SEC+'">VEÍCULO</div>'
     +'<div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;">'+campo('ctrv-marca','MARCA',vg.marca||'')+campo('ctrv-modelo','MODELO',_modelo)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'+campo('ctrv-placa','PLACA',_placa)+campo('ctrv-renavam','RENAVAM',vg.renavam||'','inputmode="numeric"')+'</div>'
@@ -21885,8 +21902,43 @@ function CTR_finAbrirForm(idx){
       if(!_cli && r.cliente){ var _m=CTR_clientes.filter(function(c){ return VB_cliNorm(c.nome)===VB_cliNorm(r.cliente); }); if(_m.length===1) _cli=_m[0]; }
       if(_cli){ CTR_pegaCli(CTR_clientes.indexOf(_cli)); }
       if(vg.dev2_id!=null){ var _c2=CTR_clientes.find(function(c){ return String(c.id)===String(vg.dev2_id); }); if(_c2) CTR_finPega2(CTR_clientes.indexOf(_c2)); }
+      (vg.rep_ids||[]).forEach(function(id,j){ var _cr=CTR_clientes.find(function(c){ return String(c.id)===String(id); }); if(_cr) CTR_finPegaRep(CTR_clientes.indexOf(_cr), j+1); });
     }catch(e){}
+    CTR_finPJ();
   });
+}
+var CTR_finReps=[null,null,null];
+function CTR_finEhPJ(){ var el=document.getElementById('ctr-cpf'); return !!el && String(el.value||'').replace(/\D/g,'').length===14; }
+function CTR_finPJ(){
+  var pj=CTR_finEhPJ(), a=document.getElementById('ctr-rep-box'), b=document.getElementById('ctr2-box');
+  if(a) a.style.display=pj?'block':'none';
+  if(b) b.style.display=pj?'none':'block';
+}
+function CTR_finBuscaRep(el,k){
+  var q=(el.value||'').trim().toUpperCase();
+  var box=document.getElementById('ctrr'+k+'-res'); if(!box) return;
+  CTR_finReps[k]=null; var inf=document.getElementById('ctrr'+k+'-info'); if(inf) inf.textContent='';
+  if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
+  var achou=CTR_clientes.filter(function(c){ return String(c.cpf||'').replace(/\D/g,'').length!==14 && ((c.nome||'').toUpperCase().indexOf(q)>=0 || String(c.apelido||'').toUpperCase().indexOf(q)>=0 || (c.cpf||'').indexOf(q)>=0); }).slice(0,6);
+  if(!achou.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML=achou.map(function(c){
+    var i=CTR_clientes.indexOf(c);
+    return '<div onpointerdown="event.preventDefault();CTR_finPegaRep('+i+','+k+')" style="padding:10px 12px;border-bottom:0.5px solid var(--ln3);cursor:pointer;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;">'+CTR_esc(c.nome||'')+'</div>'
+      +'<div style="font-size:9px;color:var(--so);">'+CTR_esc(c.cpf||'SEM CPF')+'</div></div>';
+  }).join('');
+  box.style.display='block';
+}
+function CTR_finPegaRep(i,k){
+  var c=CTR_clientes[i]; if(!c) return;
+  var box=document.getElementById('ctrr'+k+'-res'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  var el=document.getElementById('ctrr'+k+'-nome'); if(el){ el.value=c.nome||''; el.blur(); }
+  CTR_finReps[k]=CTR_finDevCad(c);
+  var inf=document.getElementById('ctrr'+k+'-info');
+  if(inf){
+    if(CTR_finReps[k].falta.length){ inf.style.color='var(--red)'; inf.textContent='CADASTRO SEM '+CTR_finReps[k].falta.join(' E '); }
+    else { inf.style.color='var(--mu)'; inf.textContent=(c.cpf||'')+' · '+(c.cidade||''); }
+  }
 }
 function CTR_finBusca2(el){
   var q=(el.value||'').trim().toUpperCase();
@@ -21941,9 +21993,21 @@ function CTR_finGerar(ov){
   var _comp=[_tit(_e2),_tit(_bai)].filter(Boolean).join(', ')||null;
   var end=CLI_compEnd(_linha,_comp,_tit(_cid),_uf,_cep)||'';
   if(!nome||!cpf||!_e1){ trava('PREENCHA NOME, CPF E ENDEREÇO DO DEVEDOR'); return; }
-  if(_cpfDig.length===14){ trava('CONTRATO AINDA N\u00c3O ACEITA CNPJ'); return; }   /* v1.300.113: texto do contrato e so de pessoa fisica */
-  var devs=[{nome:nome, qual:g('ctr-qual')||'brasileiro(a)', cpf:cpf, doc:doct+' Nº. '+docn, semDoc:semDoc, end:end}];
-  if(g('ctr2-nome')){
+  var _pj=(_cpfDig.length===14), _reps=[];
+  if(_pj){
+    /* v1.330.0: empresa como devedora -- representada pelos socios do cadastro, que assinam */
+    for(var _k=1;_k<=2;_k++){
+      if(!g('ctrr'+_k+'-nome')) continue;
+      var _rp=CTR_finReps[_k];
+      if(!_rp){ trava('ESCOLHA O REPRESENTANTE '+_k+' NA LISTA'); return; }
+      if(_rp.falta.length){ trava('CADASTRO DO REPRESENTANTE '+_k+' SEM '+_rp.falta.join(' E ')); return; }
+      _reps.push(_rp);
+    }
+    if(!_reps.length){ trava('ESCOLHA O REPRESENTANTE DA EMPRESA'); return; }
+    if(_reps.length===2 && String(_reps[0].cpf).replace(/\D/g,'')===String(_reps[1].cpf).replace(/\D/g,'')){ trava('REPRESENTANTES IGUAIS'); return; }
+  }
+  var devs=[_pj?{pj:1, nome:nome, cpf:cpf, end:end, reps:_reps}:{nome:nome, qual:g('ctr-qual')||'brasileiro(a)', cpf:cpf, doc:doct+' Nº. '+docn, semDoc:semDoc, end:end}];
+  if(!_pj && g('ctr2-nome')){
     if(!CTR_finDev2){ trava('ESCOLHA O 2º DEVEDOR NA LISTA'); return; }
     if(String(CTR_finDev2.cpf||'').replace(/\D/g,'').length===14){ trava('CONTRATO AINDA N\u00c3O ACEITA CNPJ'); return; }
     if(CTR_finDev2.falta.length){ trava('CADASTRO DO 2º DEVEDOR SEM '+CTR_finDev2.falta.join(' E ')); return; }
@@ -21978,7 +22042,7 @@ function CTR_finGerar(ov){
     var hd=dec.decode(parts['word/header1.xml']);
     hd=hd.split('VB COMÉRCIO SERVIÇOS E COBRANÇAS EIRELI – ME').join(_cred.nome);
     hd=hd.split('{{DEVEDOR_NOME}}').join(CTR_esc(devs.map(function(d){ return d.nome; }).join(' e ')));
-    if(devs.length>1) hd=hd.split('<w:t>DEVEDOR</w:t>').join('<w:t>DEVEDORES</w:t>');
+    if(devs.length>1 || devs[0].pj) hd=hd.split('<w:t>DEVEDOR</w:t>').join('<w:t>DEVEDORES</w:t>');
     parts['word/document.xml']=enc.encode(doc);
     parts['word/header1.xml']=enc.encode(hd);
     if(foto) parts['word/media/image1.jpg']=foto;
@@ -21994,7 +22058,7 @@ function CTR_finGerar(ov){
     }, r.descricao||veic.modelo);
     CTR_finSalvarRegistro(blob, fname, devs.map(function(d){ return d.nome; }).join(' E '), cpf, String(r.descricao||(veic.modelo+' '+veic.placa)).toUpperCase(), total, r.id);
     /* veiculo e 2o devedor ficam no financiamento: gerar de novo nao pede para redigitar */
-    var _vg={marca:veic.marca, modelo:veic.modelo, placa:veic.placa, chassi:veic.chassi, renavam:veic.renavam, cor:veic.cor, ano:veic.ano, dev2_id:(devs[1]?devs[1].id:null), credor:_credK};
+    var _vg={marca:veic.marca, modelo:veic.modelo, placa:veic.placa, chassi:veic.chassi, renavam:veic.renavam, cor:veic.cor, ano:veic.ano, dev2_id:(devs[1]?devs[1].id:null), rep_ids:(devs[0].pj?devs[0].reps.map(function(x){ return x.id; }):null), credor:_credK};
     sb.from('financiamentos_hist').update({veiculo:_vg}).eq('id', r.id).then(function(rs){ if(!rs.error) r.veiculo=_vg; });
     VB_log('FINANCIAMENTO','gerou contrato', r.descricao||nome, devs.map(function(d){ return d.nome; }).join(' e ')+' · '+CTR_fmtV(total));
     /* devedor 1: o cadastro acompanha o que foi corrigido na folha, como no contrato de venda */
@@ -22361,6 +22425,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.0</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Contrato do financiamento com empresa como devedora: com CNPJ no devedor, a folha troca o 2º DEVEDOR por REPRESENTANTES (até 2, buscados no cadastro). O texto qualifica a empresa e os sócio-administradores que a representam, fica no plural (DEVEDORES) e as caixas de assinatura são as dos representantes</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.329.2</span><span class="cl-ver-date">03/11/2026</span></div>
       <div class="cl-item">Panorama: o INTERVALO ficou numa caixa própria, separado do TOTAL A RECEBER, e o título passou a ser só PANORAMA (a aba já diz se é mês ou semana)</div>
