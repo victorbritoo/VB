@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.330.6</title>
+<title>VB - v1.330.7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -11986,6 +11986,13 @@ function REN_repFalta(x, b){
   var f=Math.round((REN_repDe(x, b)-REN_repPago(b))*100)/100;
   return f>0.005?f:0;
 }
+/* v1.330.7: repasse que AINDA falta pagar ao socio. Repassado antes de receber (adiantamento), a
+   parte dele ja saiu do bolso do VB: o que o cliente pagar e todo VB. Usado nos totais de VB. */
+function REN_repPend(oi, x){
+  var rp=Number(REN_repAlvo(oi, x))||0;
+  try{ if(REN_cache && !(REN_cache.bx||{})[REN_key(x)]){ var a=REN_adiDe(x); if(a) rp=Math.max(0, rp-(Number(a.valor)||0)); } }catch(e){}
+  return rp;
+}
 function REN_repAlvo(oi, x){
   var pv=REN_repPrev(x);
   if(pv!=null) return Math.round(pv*100)/100;
@@ -12118,7 +12125,7 @@ function REN_panLinha(lbl, r, vermelho, agora, clique){
   return '<div '+(clique?('onclick="'+clique+'" '):'')+'style="'+(clique?'cursor:pointer;':'')+'display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
     +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(vermelho?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(r.n?('<span style="font-size:9px;color:var(--mu);font-weight:600;"> ('+r.n+')</span>'):'')+'</span>'
     +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(r.n?VB_kFmt(r.ent):'—')+'</span>'
-    +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((r.n&&_dif)?VB_kFmt(r.vb):'')+'</span>'
+    +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+(r.n?VB_kFmt(r.vb):'—')+'</span>'
     +'<span style="font-size:11px;font-weight:600;color:var(--mu);text-align:right;white-space:nowrap;">'+(r.sn?VB_kFmt(r.sai):'—')+'</span>'
     +'</div>';
 }
@@ -12181,7 +12188,7 @@ function REN_painel(de){
   }
   var bx=REN_cache.bx||{}, hoje=REN_hojeISO();
   var abertas=(REN_cache.itens||[]).filter(function(x){ return !bx[REN_key(x)]; });
-  function vbDe(x){ var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oi?REN_repAlvo(oi,x):0); }
+  function vbDe(x){ var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oi?REN_repPend(oi,x):0); }
   REN_panAb=abertas; REN_panVB=vbDe;
   var _sem=(REN_panModo==='sem');
   var M={};
@@ -12230,7 +12237,7 @@ function REN_painel(de){
       hh+='<div onclick="REN_irMes(\''+ym+'\')" style="cursor:pointer;display:grid;grid-template-columns:104px repeat(3,1fr);gap:2px;align-items:baseline;padding:7px 2px;border-top:0.5px solid var(--ln3);'+(agora?'background:var(--sf);border-radius:8px;':'')+'">'
         +'<span style="font-size:11px;font-weight:'+(agora?'700':'600')+';color:'+(passado?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+lbl+(passado?' \u26a0':'')+'<span style="font-size:9px;color:var(--mu);font-weight:600;"> ('+m.entN+' \u00b7 '+_peso+'%)</span></span>'
         +'<span style="font-size:11px;font-weight:600;color:var(--tx);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.ent):'\u2014')+'</span>'
-        +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+((m.entN&&_dif)?VB_kFmt(m.entVB):'')+'</span>'
+        +'<span style="font-size:11px;font-weight:600;color:var(--so);text-align:right;white-space:nowrap;">'+(m.entN?VB_kFmt(m.entVB):'—')+'</span>'
         +'<span style="font-size:11px;font-weight:600;color:'+(m.saiN?'var(--mu)':'var(--mu)')+';text-align:right;white-space:nowrap;">'+(m.saiN?VB_kFmt(m.sai):'\u2014')+'</span>'
         +'</div>';
     });
@@ -13955,7 +13962,7 @@ function REN_render(){
   var receb=REN_tipoF(REN_filtra(itens.filter(function(x){ return !!bx[REN_key(x)]; })));
   var atr=abertas.filter(function(x){ return x.venc<hoje; });
   var venc=abertas.filter(function(x){ return x.venc>=hoje; });
-  function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repAlvo(oiX,x):0); }
+  function _vbDe(x){ var oiX=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; return REN_falta(x)-(oiX?REN_repPend(oiX,x):0); }
   var totAb=0, totAbVB=0; abertas.forEach(function(x){ totAb+=REN_falta(x); totAbVB+=_vbDe(x); });
   var totAtr=0; atr.forEach(function(x){ totAtr+=REN_falta(x); });
   /* tres chips permanentes para uma escolha que quase nao muda: virou um so, que cicla e
@@ -14264,7 +14271,7 @@ function REN_render(){
         /* REN_repAlvo, nao REN_repDef: o cabecalho ignorava o repasse COMBINADO e usava so o
            rateio proporcional, entao discordava da ficha em toda venda com repasse fixado a mao.
            Combinado e decisao do VB; rateio e o palpite do app quando nao ha decisao. */
-        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?(Number(REN_repAlvo(oiY,y))||0):0); } });
+        vs.forEach(function(y){ if(y.venc.slice(0,7)===ym){ gtot+=y.valor; gn++; var oiY=REN_cache.opInfo&&REN_cache.opInfo[y.tab+'|'+y.opId]; gvb+=y.valor-(oiY?(Number(REN_repPend(oiY,y))||0):0); } });
         var gvbTx=(Math.abs(gtot-gvb)>0.005)?(' <span style="font-size:10px;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(gvb)+' VB)</span>'):'';
         hh+='<div id="renmes-'+ym+'" onclick="REN_painel()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 3px;padding:4px 4px;position:sticky;top:0;z-index:2;background:var(--bg);scroll-margin-top:8px;"><span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+FM_MESES[Number(ym.slice(5,7))-1]+' '+ym.slice(0,4)+' \u00b7 '+gn+'</span><span style="font-size:11px;font-weight:700;color:var(--tx);white-space:nowrap;">'+HIST_fmtMoeda(gtot)+gvbTx+'<span style="font-size:11px;color:var(--so);font-weight:400;margin-left:6px;">\u203a</span></span></div>';
       }
@@ -22437,6 +22444,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.7</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Parcela repassada ao sócio antes de receber conta inteira como VB também no PANORAMA, no VB do TOTAL A RECEBER e nos subtotais da lista (antes só o card). No PANORAMA a coluna VB repete o valor quando é 100% VB, em vez de ficar em branco</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.6</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">INTERVALO do PANORAMA: o Safari seguia oferecendo cartão de crédito porque o nome interno do campo tinha "pan" (sigla de número de cartão). Nome trocado</div>
