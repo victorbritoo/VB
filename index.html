@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.330.7</title>
+<title>VB - v1.331.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -2401,6 +2401,11 @@ function VB_logDiffArr(nome, A, B){
     out.push(mostra.join(' · ')+(mud.length>6?(' · e mais '+(mud.length-6)+' títulos alterados'):''));
   }
   return out.join(' · ');
+}
+/* v1.331.0: salvou sem mudar NADA (todo campo igual ao que estava) -- nao vira linha no log */
+function VB_logIgual(prev, row){
+  if(!prev||!row) return false;
+  try{ return Object.keys(row).every(function(k){ var a=prev[k], b=row[k]; return JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b); }); }catch(e){ return false; }
 }
 function VB_logDiff(prev, row){
   if(!prev||!row) return '';
@@ -6523,7 +6528,7 @@ function FIN_confirmarOperacao(btn){
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
-      VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(!(ehAtualizacao && VB_logIgual(_pv,_lr))) VB_log('FINANCIAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
       /* cliente novo vira cadastro A COMPLETAR, igual a venda; simulacao nao cria ninguem */
       if(!FIN_simFlag && row.cliente) VB_cliGarantir(row.cliente);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
@@ -7769,7 +7774,7 @@ function VEN_confirmarOperacao(btn){
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
-      VB_log('VENDA', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(!(ehAtualizacao && VB_logIgual(_pv,_lr))) VB_log('VENDA', ehAtualizacao?'editou':'criou', _reg, _det);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -8837,7 +8842,7 @@ function ANT_confirmarOperacao(btn){
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
-      VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(!(ehAtualizacao && VB_logIgual(_pv,_lr))) VB_log('ANTECIPAÇÃO', ehAtualizacao?'editou':'criou', _reg, _det);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ANT_simFlag ? (ehAtualizacao?'Simulação atualizada.':'Simulação salva.') : (ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.'));
@@ -9629,7 +9634,7 @@ function PAG_confirmarOperacao(btn){
       var _pv=(ehAtualizacao&&VB_logPrev)?VB_logPrev:null;
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
-      VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      if(!(ehAtualizacao && VB_logIgual(_pv,_lr))) VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -20600,7 +20605,7 @@ function NP_registra(r, s, tot, n){
       if(res.error){ VB_erro(res.error.message,'NP gerada, mas não registrada em Contratos.'); return; }
       try{ HIST_conStatus=null; }catch(e){}
       var _novo=(res.data&&res.data[0])?res.data[0].id:null;
-      if(_novo) sb.from('contratos').delete().eq(r._ven?'np_venda_id':'ant_id',String(r.id)).is('assinado_em',null).neq('id',_novo).then(function(){ try{ CON_load&&CON_load(); }catch(e){} }).catch(function(){});
+      if(_novo) sb.from('contratos').delete().eq(r._ven?'np_venda_id':'ant_id',String(r.id)).is('assinado_em',null).neq('id',_novo).select('id').then(function(rd){ try{ CON_load&&CON_load(); }catch(e){} try{ if(rd&&rd.data&&rd.data.length) VB_toast('A NP anterior sem assinatura foi substituída por esta.'); }catch(e){} }).catch(function(){});
     }).catch(function(){});
   }catch(e){}
 }
@@ -21279,9 +21284,8 @@ function CTR_salvarRegistro(blob, fname, nome, cpf, marca, total, vendaId){
         var _novoId=(res.data&&res.data[0])?res.data[0].id:null;
         if(vendaId && _novoId){
           /* rascunho nao assinado da mesma venda sai: um contrato por venda. Assinado nunca e apagado. */
-          sb.from('contratos').delete().eq('venda_id',vendaId).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
-        }
-        VB_toast('Contrato salvo em Gestão \u203a Cadastros \u203a Contratos.');
+          sb.from('contratos').delete().eq('venda_id',vendaId).is('assinado_em',null).neq('id',_novoId).select('id').then(function(rd){ try{ CON_load&&CON_load(); }catch(e){} CTR_avisaTroca(rd); });
+        } else VB_toast('Contrato salvo em Gestão \u203a Cadastros \u203a Contratos.');
 
       });
     };
@@ -21352,6 +21356,12 @@ function CON_share(i){
     if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file]}).catch(function(){}); }
     else { var url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); }
   });
+}
+/* v1.331.0: gerar de novo ja troca o rascunho nao assinado (desde sempre) -- agora o app AVISA,
+   para nao precisar apagar o antigo na mao antes. Assinado nunca e apagado. */
+function CTR_avisaTroca(rd){
+  var n=(rd&&rd.data)?rd.data.length:0;
+  VB_toast(n?'Contrato salvo. O anterior sem assinatura foi substituído.':'Contrato salvo em Gestão \u203a Cadastros \u203a Contratos.');
 }
 function CON_del(btn,i){
   var c=CON_rows[i]; if(!c) return;
@@ -22115,9 +22125,8 @@ function CTR_finSalvarRegistro(blob, fname, nome, cpf, desc, total, finId){
         var _novoId=(res.data&&res.data[0])?res.data[0].id:null;
         if(_novoId){
           /* um contrato por financiamento: rascunho nao assinado sai. Assinado nunca e apagado. */
-          sb.from('contratos').delete().eq('fin_id',String(finId)).is('assinado_em',null).neq('id',_novoId).then(function(){ try{ CON_load&&CON_load(); }catch(e){} });
-        }
-        VB_toast('Contrato salvo em Gestão › Cadastros › Contratos.');
+          sb.from('contratos').delete().eq('fin_id',String(finId)).is('assinado_em',null).neq('id',_novoId).select('id').then(function(rd){ try{ CON_load&&CON_load(); }catch(e){} CTR_avisaTroca(rd); });
+        } else VB_toast('Contrato salvo em Gestão › Cadastros › Contratos.');
       });
     };
     fr.readAsDataURL(blob);
@@ -22444,6 +22453,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.331.0</span><span class="cl-ver-date">04/11/2026</span></div>
+      <div class="cl-item">Gerar de novo um contrato ou NP já substituía o anterior sem assinatura; agora o app avisa (não precisa apagar o antigo à mão). Salvar financiamento, venda, antecipação ou pagamento sem mudar nada não gera mais linha no log</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.330.7</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Parcela repassada ao sócio antes de receber conta inteira como VB também no PANORAMA, no VB do TOTAL A RECEBER e nos subtotais da lista (antes só o card). No PANORAMA a coluna VB repete o valor quando é 100% VB, em vez de ficar em branco</div>
