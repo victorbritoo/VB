@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.332.2</title>
+<title>VB - v1.332.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12119,7 +12119,11 @@ function REN_panSemanas(){
   if(atr.n||atr.sn) hh+=REN_panLinha('ATRASADAS ⚠', atr, 1, 0, '');
   for(var k=0;k<8;k++){
     var de=REN_isoMais(seg,7*k), ate=REN_isoMais(de,6), r=REN_panSoma(de, ate, (k===0)?hoje:null, 'apos');
-    hh+=REN_panLinha(REN_dmCurto(de)+'–'+REN_dmCurto(ate), r, 0, (k===0), 'REN_irMes(\''+de.slice(0,7)+'\')');
+    /* v1.332.3: a semana atual so conta o que ainda nao atrasou -- o rotulo comeca no primeiro dia
+       que ainda nao atrasou (sexta: so 06/11; segunda: o sabado ainda vale, semana inteira) */
+    var ini=de; if(k===0){ while(ini<hoje && REN_diaUtil(ini)<hoje) ini=REN_isoMais(ini,1); }
+    var rot=(ini===ate)?REN_dmCurto(ate):(REN_dmCurto(ini)+'–'+REN_dmCurto(ate));
+    hh+=REN_panLinha(rot, r, 0, (k===0), 'REN_irMes(\''+de.slice(0,7)+'\')');
   }
   return hh;
 }
@@ -22432,6 +22436,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.3</span><span class="cl-ver-date">06/11/2026</span></div>
+      <div class="cl-item">PANORAMA · SEMANA: o nome da semana atual mostra só os dias que ela conta (na sexta, "06/11"; na quarta, "11/11–13/11"). O que já venceu está em ATRASADAS</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.2</span><span class="cl-ver-date">06/11/2026</span></div>
       <div class="cl-item">Panorama do cliente e ficha do sócio: o bloco ENTRADAS virou ENTRADA MANUAL (são só os contratos do sistema antigo; o nome igual ao da aba ENTRADAS dava a entender que era tudo a receber)</div>
