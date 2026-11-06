@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.332.0</title>
+<title>VB - v1.332.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -12088,10 +12088,14 @@ function REN_isoMais(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.ge
    fica na semana util em que o dinheiro chega (mesma regra do fim de semana nao contar atraso) */
 function REN_segunda(iso){ var d=new Date(iso+'T12:00:00Z'); return REN_isoMais(iso, -((d.getUTCDay()+1)%7)); }
 function REN_dmCurto(iso){ return iso.slice(8,10)+'/'+iso.slice(5,7); }
-function REN_panSoma(de, ate){
+/* v1.332.1: corte = hoje. 'atr' conta so o que ja atrasou (primeiro dia util do vencimento antes de
+   hoje, mesma regra do REN_diasAtraso); 'apos' conta so o que ainda nao atrasou. Antes a linha
+   ATRASADAS cortava no sabado da semana e o vencido da semana atual ficava sem vermelho. */
+function REN_panCorte(v, corte, modo){ if(!corte) return true; var atr=(REN_diaUtil(v)<corte); return (modo==='atr')?atr:!atr; }
+function REN_panSoma(de, ate, corte, modo){
   var r={ent:0, vb:0, n:0, sai:0, sn:0};
-  (REN_panAb||[]).forEach(function(x){ var v=String(x.venc||''); if(!v || (de&&v<de) || (ate&&v>ate)) return; r.ent+=REN_falta(x); r.vb+=(REN_panVB?REN_panVB(x):REN_falta(x)); r.n++; });
-  ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){ if(c.pago_em) return; var v=String(c.venc||''); if(!v || (de&&v<de) || (ate&&v>ate)) return; r.sai+=REN_cpFalta(c); r.sn++; });
+  (REN_panAb||[]).forEach(function(x){ var v=String(x.venc||''); if(!v || (de&&v<de) || (ate&&v>ate) || !REN_panCorte(v,corte,modo)) return; r.ent+=REN_falta(x); r.vb+=(REN_panVB?REN_panVB(x):REN_falta(x)); r.n++; });
+  ((REN_cache&&REN_cache.cp)||[]).forEach(function(c){ if(c.pago_em) return; var v=String(c.venc||''); if(!v || (de&&v<de) || (ate&&v>ate) || !REN_panCorte(v,corte,modo)) return; r.sai+=REN_cpFalta(c); r.sn++; });
   return r;
 }
 function REN_panModoSet(m){ REN_panModo=(m==='sem')?'sem':'mes'; REN_painel(REN_panDe); }
@@ -12111,10 +12115,10 @@ function REN_panLinha(lbl, r, vermelho, agora, clique){
 }
 function REN_panSemanas(){
   var hoje=REN_hojeISO(), seg=REN_segunda(hoje), hh='';
-  var atr=REN_panSoma(null, REN_isoMais(seg,-1));
+  var atr=REN_panSoma(null, null, hoje, 'atr');
   if(atr.n||atr.sn) hh+=REN_panLinha('ATRASADAS ⚠', atr, 1, 0, '');
   for(var k=0;k<8;k++){
-    var de=REN_isoMais(seg,7*k), ate=REN_isoMais(de,6), r=REN_panSoma(de, ate);
+    var de=REN_isoMais(seg,7*k), ate=REN_isoMais(de,6), r=REN_panSoma(de, ate, (k===0)?hoje:null, 'apos');
     hh+=REN_panLinha(REN_dmCurto(de)+'–'+REN_dmCurto(ate), r, 0, (k===0), 'REN_irMes(\''+de.slice(0,7)+'\')');
   }
   return hh;
@@ -22428,6 +22432,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.1</span><span class="cl-ver-date">06/11/2026</span></div>
+      <div class="cl-item">PANORAMA · SEMANA: a linha ATRASADAS passa a mostrar tudo que já atrasou até hoje (antes cortava no sábado e o vencido da semana atual ficava sem vermelho). A semana atual mostra só o que ainda vai vencer. Parcela de sábado e domingo só atrasa depois da segunda, como no resto do app</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.0</span><span class="cl-ver-date">04/11/2026</span></div>
       <div class="cl-item">Backup passa a levar a ligação da NP com a venda e com a antecipação (antes, restaurar soltava as 3 NPs ligadas). O aviso vermelho "Sem backup há X dias" e o lembrete diário do iCloud saíram: o backup de fora é o do bot. O vermelho agora só aparece se o backup automático do app falhar</div>
