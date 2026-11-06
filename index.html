@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.332.4</title>
+<title>VB - v1.333.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -1668,6 +1668,7 @@ function HIST_carregarAnt(r, semHoje){
      numa operacao reaberta refaz bruto/valor por titulo, nunca a taxa */
   ANT_pisoLigado=true; ANT_pisoModo='titulo'; ANT_brutoTyped=false;
   ANT_currentOperationId = r.id;
+  ANT_ordemChecar(r.id);   /* v1.333.0 */
   ANT_simFlag=!!r.simulacao; ANT_paintSimChip();
   VB_carimboTS = r.created_at||null;
   // Fill all fields first, then recalc once at the end
@@ -8265,7 +8266,7 @@ function ANT_limpar(){
   ANT_titulos=[]; ANT_tituloCounter=0; ANT_simplesStash=null;
   var lt=document.getElementById('ant-listaTitulos'); if(lt) lt.innerHTML='';
   ANT_simFlag=false; ANT_paintSimChip();
-  ANT_currentOperationId = null;
+  ANT_currentOperationId = null; ANT_ordemTrava=false;
   VB_carimboTS = null;
   ANT_updateConfirmarBtnLabel();
   ANT_autoFitLiquido();
@@ -8286,7 +8287,7 @@ function ANT_abrirOverlay(){
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
   var hoje=ANT_getHoje();
   // Sort titles chronologically
-  if(ANT_modoPersonalizado){ ANT_titulos.sort(function(a,b){ var da=ANT_parseDate(a.data),db=ANT_parseDate(b.data); if(!da)return 1; if(!db)return -1; return da-db; }); ANT_renderTitulos(); }
+  try{ ANT_ordenaTitulos(); }catch(e){}   /* v1.333.0 */
   var hd=String(hoje.getDate()).padStart(2,'0'),hm=String(hoje.getMonth()+1).padStart(2,'0'),ha=hoje.getFullYear();
   var VB,n,tj,tl,pm,res=null;
 
@@ -8457,6 +8458,32 @@ function ANT_prepZoom(){
 
 // ===== QR / CARREGAR (Antecipação) =====
 // Lista canônica de títulos (valor+data) — expande o modo simples pra ficar igual ao personalizado
+/* v1.333.0 -- titulos da antecipacao em ordem de vencimento ao gerar tabela, compartilhar e salvar
+   (a NP ja numera por data; com a tela fora de ordem a NP 01 era outra parcela no app). Empate de
+   data mantem a ordem digitada. A ordem e a chave de baixa, pagamento, nota, prorrogacao e repasse
+   (parcela_idx): operacao que ja tem qualquer um desses nunca e reordenada. Contrato/NP nao trava,
+   porque a NP sempre sai por data. Operacao reaberta nasce travada ate a consulta responder. */
+var ANT_ordemTrava=false;
+function ANT_ordemChecar(id){
+  ANT_ordemTrava=true;
+  if(!id || typeof sb==='undefined') return;
+  var k=String(id);
+  function q(t){ return sb.from(t).select('id').eq('op_tab','ant').eq('op_id', k).limit(1); }
+  Promise.all([ q('parcela_baixas'), q('parcela_pagamentos'), q('parcela_notas'),
+    q('parcela_prorroga'), q('repasse_previsto'), q('repasse_adiantado') ]).then(function(res){
+    if(String(ANT_currentOperationId)!==k) return;
+    ANT_ordemTrava=res.some(function(r){ return !r || r.error || (r.data && r.data.length); });
+  }).catch(function(){});
+}
+function ANT_ordenaTitulos(){
+  if(!ANT_modoPersonalizado || ANT_ordemTrava || !ANT_titulos || ANT_titulos.length<2) return false;
+  var ix=ANT_titulos.map(function(t,i){ var d=ANT_parseDate(t.data); return {t:t,i:i,k:d?d.getTime():Infinity}; });
+  ix.sort(function(a,b){ return a.k<b.k?-1:(a.k>b.k?1:a.i-b.i); });
+  if(!ix.some(function(o,j){ return o.i!==j; })) return false;
+  ANT_titulos=ix.map(function(o){ return o.t; });
+  try{ ANT_renderTitulos(); }catch(e){}
+  return true;
+}
 function ANT_payloadTitulos(){
   if(ANT_modoPersonalizado){
     return ANT_titulos.filter(function(t){return ANT_parseBR(t.valor||'0')>0 && t.data;}).map(function(t){ return {v:t.valor, d:t.data, tp:(t.tipo||'deb')}; });
@@ -8765,6 +8792,7 @@ function ANT_confirmarOperacao(btn){
   var n=parseInt(document.getElementById('ant-qtd').value||'0');
   var pm=ANT_parseBR(document.getElementById('ant-prazoMedio').textContent);
   // Sempre grava os títulos expandidos (com datas) — no simples isso preserva o primeiro/próximo vencimento
+  try{ ANT_ordenaTitulos(); }catch(e){}   /* v1.333.0 */
   var titulosPayload = ANT_payloadTitulos();
 
   if(!(VB>0) || !(n>0)){ VB_toast('Preencha a operação antes de confirmar.'); return; }
@@ -8835,7 +8863,7 @@ function ANT_gerarResumoFoto(){
   var taxa=ANT_parseBR(document.getElementById('ant-taxa').value)/100;
   var tar=ANT_parseBR(document.getElementById('ant-tarifa').value)||0;
   var hoje=ANT_getHoje();
-  if(ANT_modoPersonalizado){ ANT_titulos.sort(function(a,b){ var da=ANT_parseDate(a.data),db=ANT_parseDate(b.data); if(!da)return 1; if(!db)return -1; return da-db; }); ANT_renderTitulos(); }
+  try{ ANT_ordenaTitulos(); }catch(e){}   /* v1.333.0 */
   var hd=String(hoje.getDate()).padStart(2,'0'),hm=String(hoje.getMonth()+1).padStart(2,'0'),ha=hoje.getFullYear();
   var VB,n,tj,tl,pm,res=null;
   if(ANT_modoPersonalizado){
@@ -22436,6 +22464,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.333.0</span><span class="cl-ver-date">06/11/2026</span></div>
+      <div class="cl-item">Antecipação: os títulos ficam em ordem de vencimento também ao SALVAR (antes só ao gerar a tabela), então a numeração do app bate com a da nota promissória. Operação que já tem baixa, pagamento, nota, prorrogação ou repasse não é reordenada (antes o GERAR TABELA reordenava até essas)</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.332.4</span><span class="cl-ver-date">06/11/2026</span></div>
       <div class="cl-item">Panorama do cliente, ENTRADA MANUAL: "24 DE 36 EM ABERTO" virou "RESTAM 24 DE 36" (o "24 DE 36" sozinho se lia como o número da parcela)</div>
