@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.333.2</title>
+<title>VB - v1.334.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -15410,6 +15410,17 @@ function REN_folhaVoltar(k){
   ['ren-baixa-ov','ren-nota-ov'].forEach(function(oid){ var o=document.getElementById(oid); if(o) o.style.display='none'; });
   if(k) REN_ficha(k);
 }
+/* v1.334.0 -- parcela atrasada: atalhos PARCELA / HOJE embaixo do valor da baixa. O campo continua
+   abrindo com o que falta (sem juros); HOJE e o VALOR HOJE da ficha (0,2% ao dia). Um toque preenche,
+   no desenho dos atalhos da NOTA. O que entrar acima da parcela vira juro no Fechamento. */
+function REN_bxAtalhos(x, falta){
+  var vh=null; try{ vh=REN_valorHoje(x); }catch(e){ vh=null; }
+  if(!vh || !(vh.valor>falta+0.004)) return '';
+  var f2=function(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var ST='padding:6px 9px;border:0.5px solid var(--ln3);border-radius:20px;background:transparent;color:var(--mu);font-size:10px;letter-spacing:0.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:-apple-system,sans-serif;';
+  var bt=function(rot,v){ return '<button type="button" data-keepkb onpointerdown="event.preventDefault()" onclick="var e=document.getElementById(\'renb-valor\');if(e){e.value=\''+f2(v)+'\';}" style="'+ST+'">'+rot+' '+f2(v)+'</button>'; };
+  return '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px;">'+bt('PARCELA',falta)+bt('HOJE',vh.valor)+'</div>';
+}
 function REN_editBaixa(k){
   if(REN_cache&&REN_cache.semTabela){ VB_toast('Rode o SQL da parcela_baixas primeiro.'); return; }
   var x=REN_cache&&REN_cache.map[k]; if(!x) return;
@@ -15432,6 +15443,7 @@ function REN_editBaixa(k){
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">VALOR RECEBIDO</div><div data-campo="1" style="display:flex;align-items:center;gap:5px;border:0.5px solid var(--ln3);border-radius:10px;background:var(--sf2);padding:10px 9px;"><span style="font-size:12px;color:var(--so);font-weight:600;flex:none;width:22px;">R$</span><input data-selall id="renb-valor" inputmode="decimal" oninput="REC_maskVal(this)" value="'+Number(_falta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--tx);font-size:14px;text-align:center;font-family:-apple-system,sans-serif;padding:0;"><span style="width:22px;flex:none;"></span></div></div>'
     +'<div><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">DATA</div><input data-selall id="renb-data" inputmode="numeric" maxlength="10" onblur="autoCompleteDate(this)" value="'+hojeBR+'" oninput="REC_maskData(this)" style="'+IN+'"></div>'
     +'</div>'
+    +REN_bxAtalhos(x, _falta)
     +'<div style="margin-top:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:3px;text-align:center;">NOTA</div><input id="renb-nota" placeholder="ENCONTRO DE CONTAS" style="'+IN+'">'+VB_notaAtalhos('renb-nota')+'</div>'
     /* com parcial em aberto o botao nao da baixa nenhuma: ele lanca mais um pagamento, e a
        parcela so fecha quando a soma alcanca o valor. O titulo ja dizia isso; o botao, nao. */
@@ -22464,6 +22476,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.334.0</span><span class="cl-ver-date">06/11/2026</span></div>
+      <div class="cl-item">DAR BAIXA em parcela atrasada: embaixo do valor aparecem os atalhos PARCELA e HOJE (valor corrigido, o mesmo do VALOR HOJE da ficha). O campo continua abrindo com o valor da parcela; um toque troca</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.333.2</span><span class="cl-ver-date">06/11/2026</span></div>
       <div class="cl-item">Panorama do cliente: botão de copiar também no EM ATRASO (valor original). Os dois valores de atraso ficam alinhados entre si</div>
