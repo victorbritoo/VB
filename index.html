@@ -83,7 +83,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.334.2</title>
+<title>VB - v1.335.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);font-family:-apple-system,'Helvetica Neue',sans-serif;} .card{background:var(--bg);width:100%;max-width:440px;margin:0 auto;padding:32px 20px 24px;}
@@ -703,6 +703,7 @@ button{ text-transform:inherit; }
     </div>
   </div>
 
+  <div id="fin-carencia" style="display:none;text-align:center;font-size:9px;letter-spacing:1.5px;color:var(--mu2);font-weight:600;margin:-2px 0 6px;"></div>
   <div class="error" id="fin-erro">Preencha todos os campos corretamente.</div>
 
   <div class="field-card" style="margin-bottom:0;padding:8px 16px;">
@@ -1640,7 +1641,7 @@ function HIST_carregarFin(r){
     var pv=Number(r.valor_financiado)||0, pm=Number(r.valor_parcela)||0, nn=Number(r.qtd_parcelas)||0, tx=(Number(r.taxa)||0)/100;
     FIN_degrau='centavo'; FIN_lastEdited='valor'; FIN_lastSolved='parcela';
     if(pv>0 && pm>0 && nn>0 && tx>0){
-      var bruto=FIN_calcPrice(pv, tx, nn), achou=false;
+      var bruto=FIN_calcPrice(pv*VB_finFator(tx, VB_finCarDias(r.data_operacao, r.data_inicio)), tx, nn), achou=false;
       ['centavo','real','cinco'].some(function(d){ if(Math.abs(FIN_ceilStep(bruto,d)-pm)<0.005){ FIN_degrau=d; achou=true; return true; } return false; });
       if(!achou){ FIN_lastEdited='parcela'; FIN_lastSolved='taxa'; }
     }
@@ -5917,6 +5918,29 @@ function autoCompleteDate(el){
 
 function FIN_parseBR(s){ return VB_dinheiroRaw(s); }
 function FIN_formatBR(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* v1.335.0 -- CARENCIA (padrao de mercado da Price com carencia): a conta supunha a 1a parcela 1 mes
+   depois da operacao. Os dias a mais (ou a menos) ate o 1o vencimento rendem juros que entram no saldo,
+   por dia: fator (1+i)^(dias/30). Vale para os dois lados (1a em 20 dias baixa a prestacao). */
+function VB_finCarDias(op, d1){
+  op=String(op||'').slice(0,10); d1=String(d1||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(op) || !/^\d{4}-\d{2}-\d{2}$/.test(d1)) return 0;
+  var base=REN_addMesISO(op,1);
+  return Math.round((VB_isoUTC(d1)-VB_isoUTC(base))/86400000);
+}
+function VB_finFator(i, extra){ return (extra && i>0) ? Math.pow(1+i, extra/30) : 1; }
+function FIN_carDias(){
+  var a=REN_brToISO(((document.getElementById('fin-dataOp')||{}).value)||''), b=REN_brToISO(((document.getElementById('fin-tabelaData')||{}).value)||'');
+  return VB_finCarDias(a, b);
+}
+function FIN_carPinta(){
+  var el=document.getElementById('fin-carencia'); if(!el) return;
+  var a=REN_brToISO(((document.getElementById('fin-dataOp')||{}).value)||''), b=REN_brToISO(((document.getElementById('fin-tabelaData')||{}).value)||'');
+  var ex=FIN_carDias();
+  if(!ex){ el.style.display='none'; el.textContent=''; return; }
+  var tot=Math.round((VB_isoUTC(b)-VB_isoUTC(a))/86400000);
+  el.textContent='1\u00aa EM '+tot+' DIAS \u00b7 '+(ex>0?'+':'\u2212')+Math.abs(ex)+' DIA'+(Math.abs(ex)===1?'':'S')+' DE JUROS NO SALDO';
+  el.style.display='';
+}
 function FIN_calcPrice(PV,i,n){ if(i===0) return PV/n; return PV*(Math.pow(1+i,n)*i)/(Math.pow(1+i,n)-1); }
 
 var FIN_degrau = 'centavo';
@@ -5940,8 +5964,9 @@ function FIN_setDegrau(d){
   if(typeof FIN_saveSession==='function') FIN_saveSession();
 }
 
-function FIN_solveRate(PV, PMT, n){
+function FIN_solveRate(PV, PMT, n, ex){
   if(PMT*n <= PV) return NaN;
+  if(ex){ var lo=0.0000001, hi=1, m=0; for(var t=0;t<200;t++){ m=(lo+hi)/2; var a=PMT*(1-Math.pow(1+m,-n))/m/VB_finFator(m,ex); if(a>PV) lo=m; else hi=m; } return m; }
   var i = 0.01;
   for(var k=0; k<200; k++){
     var f = FIN_calcPrice(PV,i,n) - PMT;
@@ -6014,21 +6039,22 @@ function FIN_update(){
     }
   }
 
+  var EX = FIN_carDias();   /* v1.335.0 carencia */
   // Executa cálculo — se falhar, limpa o campo
   if(solve === 'parcela'){
-    var r = FIN_ceilStep(FIN_calcPrice(PV, i, n), FIN_degrau);
+    var r = FIN_ceilStep(FIN_calcPrice(PV*VB_finFator(i,EX), i, n), FIN_degrau);
     pmtEl.value = (r > 0) ? FIN_formatBR(r) : '';
   } else if(solve === 'valor'){
-    var v = pmt * (1 - Math.pow(1+i, -n)) / i;
+    var v = pmt * (1 - Math.pow(1+i, -n)) / i / VB_finFator(i,EX);
     valEl.value = (v > 0) ? FIN_formatBR(v) : '';
   } else if(solve === 'prazo'){
-    var ratio = PV * i / pmt;
+    var ratio = PV * VB_finFator(i,EX) * i / pmt;
     if(ratio > 0 && ratio < 1){
       var nc = Math.round(-Math.log(1-ratio) / Math.log(1+i));
       nEl.value = (nc > 0 && nc < 600) ? String(nc) : '';
     } else { nEl.value = ''; }
   } else if(solve === 'taxa'){
-    var rate = FIN_solveRate(PV, pmt, n);
+    var rate = FIN_solveRate(PV, pmt, n, EX);
     if(!isNaN(rate) && rate > 0){
       iEl.value = (rate*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     } else { iEl.value = ''; }
@@ -6041,6 +6067,7 @@ function FIN_update(){
   if(pmtV>0 && nV>0 && pvV>0)
     document.getElementById('fin-totalJuros').textContent = FIN_formatBR(pmtV*nV - pvV);
 
+  FIN_carPinta();
   if(FIN_invOn && typeof INV_updateInvestidor==='function') INV_updateInvestidor();
 }
 
@@ -6605,6 +6632,10 @@ FIN_restoreSession();
 })();
 (function(){
   var ftd=document.getElementById('fin-tabelaData');
+  /* v1.335.0: data da operacao e 1o vencimento mexem na prestacao (carencia) */
+  ['fin-dataOp','fin-tabelaData'].forEach(function(id){ var e=document.getElementById(id); if(!e) return;
+    var go=function(){ var v=(e.value||''); if(v.length===10 || v.length===0){ try{ FIN_update(); }catch(_){} } };
+    e.addEventListener('input', function(){ setTimeout(go,0); }); e.addEventListener('blur', function(){ setTimeout(go,0); }); });
   if(ftd) ftd.addEventListener('input',function(){
     var raw=this.value.replace(/[^0-9]/g,'');
     var v='';
@@ -11422,19 +11453,21 @@ function REN_hojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.get
    Centavos: cada juro arredondado, e a ultima parcela fecha o saldo -- a soma dos juros bate
    exatamente com o lucro do card (valor_parcela x N - financiado). */
 var REN_finMap={};
-function VB_finTaxaReal(pv, pm, n){
+function VB_finTaxaReal(pv, pm, n, ex){
   if(!(pv>0 && pm>0 && n>0) || pm*n<=pv+0.005) return 0;
   var lo=0.0000001, hi=1, m=0;
-  for(var t=0;t<200;t++){ m=(lo+hi)/2; var a=pm*(1-Math.pow(1+m,-n))/m; if(a>pv) lo=m; else hi=m; }
+  for(var t=0;t<200;t++){ m=(lo+hi)/2; var a=pm*(1-Math.pow(1+m,-n))/m/VB_finFator(m,ex||0); if(a>pv) lo=m; else hi=m; }
   return m;
 }
 function VB_finPrice(r){
   var pv=Number(r&&r.valor_financiado)||0, pm=Number(r&&r.valor_parcela)||0, n=Number(r&&r.qtd_parcelas)||0;
   if(!(pv>0 && pm>0 && n>0)) return null;
   var d1=(r&&r.data_inicio)?String(r.data_inicio).slice(0,10):'';
-  var i=VB_finTaxaReal(pv, pm, n), sd=pv, L=[];
+  /* v1.335.0: com carencia, o juro da 1a parcela e o do periodo inteiro (operacao ate o 1o vencimento) */
+  var ex=VB_finCarDias(r&&r.data_operacao, d1);
+  var i=VB_finTaxaReal(pv, pm, n, ex), sd=pv, L=[];
   for(var k=0;k<n;k++){
-    var j=Math.round(sd*i*100)/100, a=Math.round((pm-j)*100)/100;
+    var j=(k===0)?Math.round(pv*(VB_finFator(i,ex)*(1+i)-1)*100)/100:Math.round(sd*i*100)/100, a=Math.round((pm-j)*100)/100;
     if(k===n-1){ a=Math.round(sd*100)/100; j=Math.round((pm-a)*100)/100; }
     sd=Math.round((sd-a)*100)/100;
     L.push({k:k, venc:(d1?REN_addMesISO(d1,k):''), pmt:pm, juros:j, amort:a, saldo:Math.max(0,sd)});
@@ -22480,6 +22513,10 @@ function CTR_gerar(ov){
     <div class="cl-handle"></div>
     <div class="cl-title">HISTÓRICO DE MELHORIAS</div>
 
+    <div class="cl-version">
+      <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.335.0</span><span class="cl-ver-date">11/11/2026</span></div>
+      <div class="cl-item">Financiamento: a prestação considera o 1º vencimento. Se a 1ª parcela cai depois de 1 mês, os juros dos dias a mais entram no saldo (por dia); se cai antes, a prestação diminui. Aparece embaixo da prestação: "1ª EM 61 DIAS · +31 DIAS DE JUROS NO SALDO". Prestação digitada à mão continua valendo e a taxa mostra a real. Tabela Price, juros por parcela e Fechamento passam a contar o período da carência na 1ª parcela</div>
+  </div>
     <div class="cl-version">
       <div class="cl-ver-hdr"><span class="cl-ver-num">V: 1.334.2</span><span class="cl-ver-date">11/11/2026</span></div>
       <div class="cl-item">Calendário do iPhone na NOVA DATA da PRORROGAR (abre no vencimento atual) e nos filtros DE/ATÉ do Histórico e dos Sócios. O resto do app continua com data digitada</div>
