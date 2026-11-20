@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.364.0</title>
+<title>VB - v1.365.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23397,7 +23397,7 @@ function MESA_renTitulo(){
 }
 /* alinhamento linha a linha; so mede com as duas listas no topo e guarda as alturas para o resto
    (medido no meio da rolagem errava e abria um vao em cima do TOTAL A PAGAR) */
-var MESA_alinhaCache=null;
+var MESA_alinhaCache={};
 function MESA_alinha(el){
   var f=function(){
     try{
@@ -23411,19 +23411,24 @@ function MESA_alinha(el){
       var chips=null; Array.prototype.some.call(el.querySelectorAll('span'), function(sp){ if(/REN_cpSheet\(''\)/.test(sp.getAttribute('onclick')||'')){ chips=sp.parentElement; return true; } return false; });
       if(chips && R && R.parentNode && !(chips.compareDocumentPosition(R)&Node.DOCUMENT_POSITION_FOLLOWING)){ R.parentNode.insertBefore(chips, R); chips.style.margin='0 0 10px'; }
       var alvos=[[c,logo],[tl,tit],[chips,abas],[R,L]];
-      var mede=(window.scrollY||0)<2 && el.scrollTop<2 && document.body.style.position!=='fixed';
-      var sy=window.scrollY||0, ry=el.scrollTop, cache=[];
+      /* 1.365.0: mede sempre, descontando quanto cada metade desceu (antes so media com as duas no topo e sem folha
+         aberta; fora disso usava a medida guardada de outro estado -- PAGAS, busca -- ou 1px, e a direita subia uns 8 pt).
+         Folha aberta: o body fica fixo com top=-VB_travaY. Teclado aberto: usa a medida guardada DESTE estado. */
+      var vv=window.visualViewport, tecl=!!(vv && vv.height>0 && vv.height<window.innerHeight-120);
+      var mede=!tecl;
+      var sy=(typeof VB_travado!=='undefined' && VB_travado) ? (VB_travaY||0) : (window.scrollY||0), ry=el.scrollTop, cache=[];
+      var ck=(typeof MESA_renDir!=='undefined'?MESA_renDir:'')+'|'+(REN_busca?1:0)+'|'+(REN_buscaOn?1:0), mc=(MESA_alinhaCache||{})[ck];
       alvos.forEach(function(p,k){
         var alvo=p[0], ref=p[1]; if(!alvo||!alvo.parentNode) return;
         var e=document.createElement('div'); e.className='vbm-esp'; e.style.cssText='height:1px;flex:none;'; alvo.parentNode.insertBefore(e, alvo);
         var hgt;
         if(mede && ref){ hgt=1+Math.round((top(ref)+sy)-(top(alvo)+ry)); }
-        else hgt=(MESA_alinhaCache && MESA_alinhaCache[k]!=null) ? MESA_alinhaCache[k] : 1;
+        else hgt=(mc && mc[k]!=null) ? mc[k] : 1;
         /* abaixo de 1: o espacador fica com 1px e puxa para cima com margem negativa */
         if(hgt>=1){ e.style.height=hgt+'px'; } else { e.style.height='1px'; e.style.marginTop=(hgt-1)+'px'; }
         cache[k]=hgt;
       });
-      if(mede) MESA_alinhaCache=cache;
+      if(mede){ MESA_alinhaCache=MESA_alinhaCache||{}; MESA_alinhaCache[ck]=cache; }
     }catch(e){}
   };
   f(); if(window.requestAnimationFrame) requestAnimationFrame(f);
