@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.363.0</title>
+<title>VB - v1.364.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -400,6 +400,10 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa:not(.vb-mesa-home) #ren-body [style*="position:sticky"][style*="top:0"]{ top:var(--fy,0px) !important; }
   /* card cuja ficha esta aberta na direita */
   html.vb-mesa .vbm-sel{ box-shadow:inset 0 0 0 1.5px var(--acc) !important; }
+  /* 1.364.0: ficha aberta na direita fecha pela bolinha com x no alto; o FECHAR de baixo some (pedido do VB) */
+  html.vb-mesa .vbm-fx-oc{ display:none !important; }
+  html.vb-mesa .vbm-fx-pai{ grid-template-columns:minmax(0,1fr) !important; }
+  html.vb-mesa .vbm-fx{ display:block !important; }
 }
 /* 1.342.0: barra no topo, de ponta a ponta: VB (o mesmo logo das telas, leva para a tela inicial) e os 8 botoes da Home */
 #vb-mesa-rail{ display:none; position:fixed; top:0; left:0; right:0; height:70px; z-index:60; flex-direction:row; align-items:center; gap:2px;
@@ -418,6 +422,9 @@ div:has(> #ant-seg-simples){ display:none !important; }
 #vb-mesa-dir{ display:none; position:fixed; top:var(--fy,0px); bottom:0; left:var(--mx,50%); right:0; z-index:50; overflow-y:auto; -webkit-overflow-scrolling:touch;
   background:var(--bg); border-left:0.5px solid var(--ln2); padding:22px 20px 24px; box-sizing:border-box; font-family:-apple-system,sans-serif; }
 #vbm-hist-op{ display:none; position:fixed; top:0; bottom:0; left:0; right:0; z-index:100014; }
+.vbm-fx{ display:none; position:sticky; top:0; height:0; z-index:8; }
+.vbm-fx button{ position:absolute; top:-12px; right:-6px; width:28px; height:28px; border-radius:50%; border:0.5px solid var(--ln3); background:var(--sf2); color:var(--mu2);
+  font-size:15px; line-height:1; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:-apple-system,sans-serif; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 html.vb-mesa #fm-overlay.vbm-auto>div{ padding-left:20px !important; padding-right:20px !important; }
 #vbm-hist-op>div{ background:var(--bg); padding:22px 20px 24px; box-sizing:border-box; font-family:-apple-system,sans-serif; }
 #vb-mesa-escudo{ display:none; position:fixed; top:var(--fy,0px); bottom:0; left:0; width:var(--mx,50%); z-index:100013; background:rgba(0,0,0,0.12); }
@@ -12994,10 +13001,12 @@ function REN_cpOv(oid){
    nao precisa redesenhar a lista. */
 function REN_pgTx(pago, falta){
   var sR=function(v){ return HIST_fmtMoeda(v).replace(/^R\$\s*/,''); };
-  /* 1.357.9: na fechada tenta com R$ (sem dois-pontos); se nao couber, VB_rotFit troca pela versao sem R$ */
-  return '<span class="vb-pg-r">PAGO '+HIST_fmtMoeda(pago)+' \u00b7 RESTA '+HIST_fmtMoeda(falta)+'</span>'
-    +'<span class="vb-pg-f" style="display:none;">PAGO '+sR(pago)+' \u00b7 RESTA '+sR(falta)+'</span>'
-    +'<span class="vb-pg-a">PAGO: '+HIST_fmtMoeda(pago)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</span>';
+  /* 1.364.0 (texto do VB): o numero grande do card e o que RESTA; aqui vai o valor da parcela e o que ja entrou.
+     Na fechada, se nao couber, VB_rotFit troca pela versao sem R$ */
+  var tot=Math.round(((Number(pago)||0)+(Number(falta)||0))*100)/100;
+  return '<span class="vb-pg-r">'+HIST_fmtMoeda(tot)+' \u00b7 PAGO: '+HIST_fmtMoeda(pago)+'</span>'
+    +'<span class="vb-pg-f" style="display:none;">'+sR(tot)+' \u00b7 PAGO: '+sR(pago)+'</span>'
+    +'<span class="vb-pg-a">'+HIST_fmtMoeda(tot)+' \u00b7 PAGO: '+HIST_fmtMoeda(pago)+'</span>';
 }
 function REN_cpCard(c){
   var hoje=REN_hojeISO(), pago=!!c.pago_em, dtv=String(c.venc||'');
@@ -14337,7 +14346,7 @@ function REN_render(){
     var rc=REN_rotCurto(x.rot);
     return '<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;">'
       +'<div onclick="REN_ficha(\''+k+'\')" style="flex:1;min-width:0;cursor:pointer;">'
-      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span class="ren-nm" data-n="'+CLIP_esc(VB_nomeCurto(x.cliente))+'" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+(_al?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(_al?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
+      +'<div style="display:flex;align-items:baseline;font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;"><span style="flex:1;min-width:0;display:flex;align-items:baseline;"><span class="ren-nm" data-n="'+CLIP_esc(VB_nomeCurto(x.cliente))+'" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+CLIP_esc(VB_nomeCurto(x.cliente))+'</span>'+REN_vfa(x.tab)+'</span><span style="white-space:nowrap;flex:none;padding-left:8px;"><span style="color:'+(_al?'var(--red)':'var(--tx)')+';">'+HIST_fmtMoeda(REN_parcial(x)?REN_falta(x):x.valor)+'</span> \u00b7 <span style="font-weight:600;color:'+(_al?'var(--red)':'var(--mu)')+';">'+dt+'</span></span></div>'
       +(function(){
         /* v1.318.0: a parte VB fica SEMPRE na 2a linha, logo embaixo do valor -- valor e parte VB
            numa coluna so. Antes ela ia na ultima linha e descia quando o card ganhava PAGO/RESTA,
@@ -14345,6 +14354,8 @@ function REN_render(){
         var _vb=null; try{ var _oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(_oi){ var _rp=REN_repAlvo(_oi,x); if(_rp>0.004) _vb=Math.round(((Number(x.valor)||0)-_rp)*100)/100; } }catch(e){}
         /* v1.330.2: repassado antes de receber -- a parcela inteira ja e da VB, a parte VB em cinza sai */
         if(_vb!=null && !REN_cache.bx[k] && REN_adiDe(x)) _vb=null;
+        /* v1.364.0: parcial mostra o que RESTA no valor do card (igual as SAIDAS); a parte VB acompanha na mesma proporcao */
+        if(_vb!=null && REN_parcial(x)){ var _vv=Number(x.valor)||0; if(_vv>0) _vb=Math.round(_vb*REN_falta(x)/_vv*100)/100; }
         var VBS=(_vb!=null)?('<span style="flex:none;white-space:nowrap;font-size:9px;letter-spacing:0;font-weight:600;color:var(--so);">('+HIST_fmtMoeda(_vb)+' VB)</span>'):'';
         var L=[];
         if(REN_parcial(x)) L.push({c:'var(--mu2)', t:REN_pgTx(REN_pagoTot(x), REN_falta(x)), mt:1});
@@ -24718,8 +24729,28 @@ function MESA_lsFit(){
     var v=ls; while(v>1 && e.scrollWidth>e.clientWidth+1){ v=Math.max(1,v-0.25); e.style.setProperty('letter-spacing',v+'px','important'); }
   }
 }
+/* 1.364.0: na tela aberta, ficha/folha da direita com um botao FECHAR ganha a bolinha com x no alto e o FECHAR
+   some (so por CSS da MESA; fechado o Duo, tudo volta como era). O x so toca o proprio FECHAR, entao guarda e volta seguem iguais. */
+function MESA_xFechar(){
+  var caixas=[];
+  MESA_DIR.concat(['mer-view-overlay']).forEach(function(id){ if(MESA_vis(id)){ var e=document.getElementById(id); if(e && e.firstElementChild) caixas.push(e.firstElementChild); } });
+  Array.prototype.forEach.call(document.querySelectorAll('.vbm-dirsheet'), function(e){ if(e.style.display!=='none' && e.firstElementChild) caixas.push(e.firstElementChild); });
+  caixas.forEach(function(cx){
+    /* tira a marca antes de medir: FECHAR escondido pelo proprio app (ficha em edicao mostra VOLTAR) nao ganha x */
+    Array.prototype.forEach.call(cx.querySelectorAll('.vbm-fx-oc'), function(b){ b.classList.remove('vbm-fx-oc'); });
+    var fb=null;
+    Array.prototype.forEach.call(cx.querySelectorAll('button'), function(b){ if(!fb && String(b.textContent||'').trim().toUpperCase()==='FECHAR' && b.offsetParent!==null) fb=b; });
+    var x=cx.querySelector(':scope > .vbm-fx');
+    if(!fb){ if(x) x.remove(); return; }
+    fb.classList.add('vbm-fx-oc');
+    var pai=fb.parentElement; if(pai && pai!==cx && pai.querySelectorAll(':scope > button').length>1) pai.classList.add('vbm-fx-pai');
+    if(!x){ x=document.createElement('div'); x.className='vbm-fx'; x.innerHTML='<button type="button" aria-label="Fechar">\u2715</button>'; cx.insertBefore(x, cx.firstChild); x.firstChild.addEventListener('click', function(ev){ ev.stopPropagation(); if(x._fb) x._fb.click(); }); }
+    x._fb=fb;
+  });
+}
 function MESA_tick(){
   if(!MESA_on) return;
+  try{ MESA_xFechar(); }catch(e){}
   try{ MESA_lsFit(); }catch(e){}
   try{ MESA_railAlinha(); }catch(e){}
   try{ MESA_alLiga(); }catch(e){}
