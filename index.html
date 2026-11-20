@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.365.0</title>
+<title>VB - v1.366.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23238,20 +23238,20 @@ function MESA_resumoHome(el){
   /* tudo no padrao da Home: titulo igual ao OPERACOES (10px, espaco 2px, sem traco), card preto
      igual ao A PAGAR (centralizado, rotulo 10px, valor 26px, linha de baixo 11px) */
   /* margem de cima calculada para o HOJE ficar na mesma linha do OPERACOES da esquerda */
-  var h='<div id="vbm-hoje-cab" style="display:flex;align-items:center;justify-content:space-between;margin:62px 4px 7px;">'
+  var h='<div id="vbm-hoje-cab" style="display:flex;align-items:center;justify-content:space-between;margin:'+(MESA_homeMt!=null?MESA_homeMt:8)+'px 4px 7px;">'
     +'<span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">HOJE \u00b7 '+MESA_dataLonga(hoje).toUpperCase()+'</span>'+MESA_olho()+'</div>';
-  h+='<div onclick="MESA_ir(\'ren\')" style="background:var(--acc);border-radius:14px;padding:14px 18px;margin-bottom:14px;cursor:pointer;text-align:center;">'
+  h+='<div onclick="MESA_ir(\'ren\')" style="background:var(--acc);border-radius:14px;padding:14px 18px;margin-bottom:8px;cursor:pointer;text-align:center;">'
     +'<div style="font-size:10px;letter-spacing:2px;color:var(--acc-tx);opacity:.65;font-weight:600;">RECEBIDO HOJE</div>'
     +'<div style="font-size:26px;font-weight:700;color:var(--acc-tx);letter-spacing:-0.5px;margin-top:2px;">'+MESA_hv(rh)+'</div>'
     +'<div style="font-size:11px;letter-spacing:1px;font-weight:600;color:var(--acc-tx);opacity:.65;margin-top:2px;">PAGO HOJE '+MESA_hv(ph)+'</div></div>';
   /* sem nada a pagar ate hoje, o quadro avisa a proxima conta dos proximos 3 dias, apagado -- como o card antigo */
   var qProx=function(){
-    return '<div onclick="HOME_irPagar()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:12px 14px;cursor:pointer;min-width:0;">'
+    return '<div onclick="HOME_irPagar()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;cursor:pointer;min-width:0;">'
       +'<div style="font-size:9px;letter-spacing:2px;font-weight:700;white-space:nowrap;color:var(--so);">A PAGAR \u00b7 PR\u00d3XIMA '+prox.slice(8,10)+'/'+prox.slice(5,7)+'</div>'
       +'<div style="font-size:17px;font-weight:700;margin-top:4px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mu2);">'+MESA_hv(proxV)+'</div></div>';
   };
   var q=function(rot, n, v, red, alvo){
-    return '<div onclick="'+alvo+'" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:12px 14px;cursor:pointer;min-width:0;">'
+    return '<div onclick="'+alvo+'" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;cursor:pointer;min-width:0;">'
       +'<div style="font-size:9px;letter-spacing:2px;font-weight:700;white-space:nowrap;color:'+(red&&n?'var(--red)':'var(--so)')+';">'+rot+' · '+n+'</div>'
       +'<div style="font-size:17px;font-weight:700;margin-top:4px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:'+(red&&n?'var(--red)':'var(--tx)')+';">'+(n?MESA_hv(v):'—')+'</div></div>';
   };
@@ -23261,9 +23261,98 @@ function MESA_resumoHome(el){
     +q('ATRASADO', na, ta, true, "MESA_irAlvo('atr')")
     +q('A REPASSAR', rn, rp, rRed, "MESA_irAlvo('rep')")
     +'</div>';
-  h+='<div onclick="MESA_ir(\'ren\')" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:16px 4px 0;cursor:pointer;font-size:10px;letter-spacing:2px;font-weight:600;color:var(--so);">'
-    +'<span>CARTEIRA</span><span style="white-space:nowrap;letter-spacing:0;font-size:11px;">'+MESA_hv(tot)+((Math.abs(tot-totVB)>0.005)?(' · VB '+MESA_hv(totVB)):'')+'</span></div>';
+  h+=MESA_homeBlocos(ab, tot, totVB, hoje);
   el.innerHTML=h;
+  MESA_homeTopo(); if(window.requestAnimationFrame) requestAnimationFrame(MESA_homeTopo);
+}
+/* ---------- 1.366.0: metade de baixo da Home na tela aberta ----------
+   NOVEMBRO (parcelas que vencem no mes: recebido, vencido ate hoje, total), PROXIMOS DIAS / SEMANAS
+   (entra para cima, sai para baixo, mesma escala; fim de semana entra na segunda -- REN_diaUtil;
+   o que ja venceu fica nos quadros de cima, nao entra na barra), CARTEIRA por tipo e 5 MAIORES.
+   Sem conta de saldo e sem custo do dinheiro (recusados pelo VB). */
+var MESA_homeG='d', MESA_homeMt=null;
+function MESA_homeGset(g){ MESA_homeG=g; MESA_resumo(); }
+function MESA_hk(v){ if(!MESA_ver) return '\u2022\u2022'; var a=Math.abs(Number(v)||0); if(a>=1e6) return (a/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; return VB_kFmt(v); }
+/* o HOJE da direita sobe ate a altura do VB da esquerda (medido; antes era margem fixa de 62) */
+function MESA_homeTopo(){
+  try{
+    if(VB_telaAtual!=='home') return;
+    var d=document.getElementById('vb-mesa-dir'), c=document.getElementById('vbm-hoje-cab'); if(!d||!c) return;
+    var lg=Array.prototype.filter.call(document.querySelectorAll('#screen-home>.card>div'), function(e){ return e.offsetParent && !e.children.length && e.textContent==='VB'; })[0]; if(!lg) return;
+    var rg=document.createRange(); rg.selectNodeContents(lg); var lb=rg.getBoundingClientRect(); if(!lb.height) return;
+    var sy=(typeof VB_travado!=='undefined' && VB_travado)?(VB_travaY||0):(window.scrollY||0);
+    var cur=parseFloat(c.style.marginTop)||0;
+    var alvo=Math.round(cur+(lb.top+sy+6)-(c.getBoundingClientRect().top+d.scrollTop));
+    if(alvo<0) alvo=0; if(alvo>120) return;
+    if(alvo!==cur) c.style.marginTop=alvo+'px';
+    MESA_homeMt=alvo;
+  }catch(e){}
+}
+function MESA_homeBlocos(ab, tot, totVB, hoje){
+  var BOX='background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;min-width:0;cursor:pointer;';
+  var ROT='font-size:9px;letter-spacing:2px;font-weight:700;white-space:nowrap;color:var(--so);';
+  var DIR='font-size:11px;font-weight:700;color:var(--mu2);letter-spacing:0;white-space:nowrap;';
+  var PEQ='font-size:10px;font-weight:600;color:var(--mu2);letter-spacing:0;white-space:nowrap;';
+  var MS=['JANEIRO','FEVEREIRO','MAR\u00c7O','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  var bx=REN_cache.bx||{}, h='';
+  /* --- MES --- */
+  var ym=hoje.slice(0,7), mT=0, mR=0, mV=0, mAtr=0;
+  (REN_cache.itens||[]).forEach(function(x){
+    var v=String(x.venc||'').slice(0,10); if(v.slice(0,7)!==ym) return;
+    var val=Number(x.valor)||0, f=bx[REN_key(x)]?0:REN_falta(x);
+    mT+=val; mR+=Math.max(0,val-f);
+    if(REN_diaUtil(v)<hoje){ mV+=val; mAtr+=f; }
+  });
+  var pct=mT>0?Math.round(100*mR/mT):0, pR=mT>0?Math.max(0,Math.min(100,100*mR/mT)):0, pV=mT>0?Math.max(0,Math.min(100,100*mV/mT)):0;
+  var corV=(mAtr>0.005)?'var(--red)':'var(--mu2)';
+  h+='<div onclick="MESA_ir(\'ren\')" style="margin-top:8px;'+BOX+'">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;"><span style="'+ROT+'">'+MS[Number(ym.slice(5,7))-1]+(mT>0?' \u00b7 '+pct+'% RECEBIDO':'')+'</span><span style="'+DIR+'">'+(mT>0?'FALTA '+MESA_hk(mT-mR)+' \u203a':'\u2014')+'</span></div>'
+    +'<div style="position:relative;margin-top:11px;"><div style="display:flex;gap:2px;height:8px;">'
+    +'<div style="width:'+pR.toFixed(1)+'%;background:var(--acc);border-radius:4px 0 0 4px;"></div><div style="flex:1;background:var(--sf3);border-radius:0 4px 4px 0;"></div></div>'
+    +((mT>0&&mV>0)?'<div style="position:absolute;left:'+pV.toFixed(1)+'%;top:-4px;width:1.5px;height:16px;background:'+corV+';"></div>':'')+'</div>'
+    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px;"><span style="'+PEQ+'">RECEBIDO '+MESA_hk(mR)+'</span><span style="'+PEQ+'color:'+corV+';">VENCIDO '+MESA_hk(mV)+'</span><span style="'+PEQ+'">M\u00caS '+MESA_hk(mT)+'</span></div></div>';
+  /* --- PROXIMOS DIAS / SEMANAS --- */
+  var cols=[], DN=['DOM','SEG','TER','QUA','QUI','SEX','S\u00c1B'], dm=function(i){ return i.slice(8,10)+'/'+i.slice(5,7); };
+  if(MESA_homeG==='s'){
+    var s0=REN_segunda(hoje);
+    for(var k=0;k<4;k++){ var a0=REN_isoMais(s0,7*k), z0=REN_isoMais(a0,6), ini=(k===0)?REN_diaUtil(hoje):REN_isoMais(a0,2); cols.push({de:a0, ate:z0, l1:dm(ini), l2:'A '+dm(z0), hj:k===0, e:0, s:0}); }
+  } else {
+    var d0=REN_diaUtil(hoje);
+    for(var k2=0;k2<6;k2++){ var dd=new Date(Number(d0.slice(0,4)),Number(d0.slice(5,7))-1,Number(d0.slice(8,10))); cols.push({de:d0, ate:d0, l1:(d0===hoje?'HOJE':DN[dd.getDay()]), l2:dm(d0), hj:k2===0, e:0, s:0}); d0=REN_diaUtil(REN_isoMais(d0,1)); }
+  }
+  var poe=function(iso, v, campo){ var ef=REN_diaUtil(iso); if(ef<hoje) return; for(var i=0;i<cols.length;i++){ if(ef>=cols[i].de && ef<=cols[i].ate){ cols[i][campo]+=v; return; } } };
+  ab.forEach(function(x){ var v=String(x.venc||'').slice(0,10); if(v) poe(v, REN_falta(x), 'e'); });
+  (REN_cache.cp||[]).forEach(function(c){ if(c.pago_em) return; var v=String(c.venc||'').slice(0,10); if(!v) return; var f=REN_cpFalta(c); if(f>0.005) poe(v, f, 's'); });
+  var mx=0, tE=0, tS=0, mxS=0; cols.forEach(function(c){ mx=Math.max(mx,c.e,c.s); mxS=Math.max(mxS,c.s); tE+=c.e; tS+=c.s; });
+  var PX=30, alt=function(v){ return (mx>0&&v>0.005)?Math.max(3,Math.round(PX*v/mx)):0; };
+  var pil=function(g,t){ var on=(MESA_homeG===g); return '<span onclick="event.stopPropagation();MESA_homeGset(\''+g+'\')" style="display:inline-block;padding:3px 8px;border-radius:999px;font-size:8.5px;letter-spacing:1px;font-weight:700;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--acc);':'background:var(--sf2);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+t+'</span>'; };
+  var COL='flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;', NUM='font-size:10px;font-weight:700;letter-spacing:0;white-space:nowrap;';
+  h+='<div onclick="MESA_ir(\'ren\')" style="margin-top:8px;'+BOX+'">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;"><span style="display:inline-flex;gap:4px;">'+pil('d','DIAS')+pil('s','SEMANAS')+'</span><span style="'+DIR+'">\u2191 '+MESA_hk(tE)+' \u00b7 \u2193 '+MESA_hk(tS)+' \u203a</span></div>'
+    +'<div style="display:flex;align-items:flex-end;gap:10px;height:'+(PX+16)+'px;margin-top:2px;">'
+    +cols.map(function(c){ return '<div style="'+COL+'justify-content:flex-end;height:100%;"><div style="'+NUM+'color:'+(c.hj?'var(--tx)':'var(--mu2)')+';margin-bottom:2px;">'+(c.e>0.005?MESA_hk(c.e):'\u2014')+'</div><div style="width:100%;max-width:'+(cols.length>4?34:52)+'px;height:'+alt(c.e)+'px;background:'+(c.hj?'var(--acc)':'var(--so2)')+';border-radius:4px 4px 0 0;"></div></div>'; }).join('')
+    +'</div><div style="height:1px;background:var(--mu2);opacity:.6;"></div>'
+    +'<div style="display:flex;align-items:flex-start;gap:10px;height:'+(alt(mxS)+15)+'px;">'
+    +cols.map(function(c){ return '<div style="'+COL+'">'+(c.s>0.005?'<div style="width:100%;max-width:'+(cols.length>4?34:52)+'px;box-sizing:border-box;height:'+alt(c.s)+'px;border:1px solid '+(c.hj?'var(--tx)':'var(--so)')+';border-top:0;border-radius:0 0 4px 4px;background:repeating-linear-gradient(135deg,transparent 0 3px,var(--so2) 3px 4px);"></div><div style="'+NUM+'color:var(--mu2);margin-top:2px;">'+MESA_hk(c.s)+'</div>':'<div style="'+NUM+'color:var(--so);margin-top:2px;">\u2014</div>')+'</div>'; }).join('')
+    +'</div><div style="display:flex;gap:10px;margin-top:2px;">'
+    +cols.map(function(c){ return '<div style="flex:1;min-width:0;text-align:center;font-size:9px;letter-spacing:1px;font-weight:600;white-space:nowrap;color:'+(c.hj?'var(--tx)':'var(--so)')+';">'+c.l1+'<div style="letter-spacing:0;font-weight:500;margin-top:1px;">'+c.l2+'</div></div>'; }).join('')
+    +'</div></div>';
+  /* --- CARTEIRA por tipo | 5 MAIORES --- */
+  var TP=[['fin','FIN','var(--acc)'],['ven','VEN','var(--tx3)'],['ant','ANT','var(--so)'],['man','MAN','var(--so2)']], pt={fin:0,ven:0,ant:0,man:0}, cli={};
+  ab.forEach(function(x){ var f=REN_falta(x), t=(x.tab==='fin'||x.tab==='ven'||x.tab==='ant')?x.tab:'man'; pt[t]+=f; var n=x.cliente||''; if(n) cli[n]=(cli[n]||0)+f; });
+  var tps=TP.filter(function(t){ return pt[t[0]]>0.005; });
+  var top=Object.keys(cli).map(function(n){ return [n,cli[n]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,5), tTop=0; top.forEach(function(t){ tTop+=t[1]; });
+  var hd=function(a,b){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px;"><span style="'+ROT+'letter-spacing:1.5px;">'+a+'</span><span style="'+DIR+'">'+b+' \u203a</span></div>'; };
+  var B2=BOX.replace('padding:9px 14px','padding:9px 12px');
+  h+='<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
+    +'<div onclick="MESA_ir(\'ren\')" style="'+B2+'">'+hd('CARTEIRA', MESA_hk(tot))
+    +'<div style="display:flex;gap:2px;height:8px;margin-top:9px;border-radius:4px;overflow:hidden;">'+(tps.length?tps.map(function(t){ return '<div style="flex:'+Math.max(1,Math.round(pt[t[0]]))+';background:'+t[2]+';"></div>'; }).join(''):'<div style="flex:1;background:var(--sf3);"></div>')+'</div>'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px 10px;margin-top:9px;">'+tps.map(function(t){ return '<div style="display:flex;align-items:center;gap:3px;'+PEQ+'font-size:9.5px;"><span style="width:8px;height:8px;border-radius:2px;background:'+t[2]+';flex:none;"></span><span>'+t[1]+'</span><span style="margin-left:auto;color:var(--tx);">'+MESA_hk(pt[t[0]])+'</span></div>'; }).join('')+'</div>'
+    +'<div style="margin-top:8px;padding-top:6px;border-top:0.5px solid var(--ln2);display:flex;justify-content:space-between;gap:4px;"><span style="'+PEQ+'">'+((tot>0.005&&Math.abs(tot-totVB)>0.005)?('VB '+Math.round(100*totVB/tot)+'%'):'100% VB')+'</span><span style="'+PEQ+'">'+ab.length+' PARCELAS</span></div></div>'
+    +'<div onclick="MESA_ir(\'ren\')" style="'+B2+'">'+hd('5 MAIORES', (tot>0.005&&top.length)?(Math.round(100*tTop/tot)+'%'):'\u2014')
+    +'<div style="margin-top:7px;display:grid;gap:5px;">'+top.map(function(t,i){ return '<div style="display:grid;grid-template-columns:72px minmax(0,1fr) 26px;align-items:center;gap:6px;'+PEQ+'"><span style="overflow:hidden;text-overflow:ellipsis;">'+(MESA_ver?VB_nomeCurto(t[0]):('CLIENTE '+(i+1)))+'</span><span style="height:6px;border-radius:0 3px 3px 0;background:var(--acc);width:'+Math.max(4,Math.round(100*t[1]/top[0][1]))+'%;"></span><span style="text-align:right;color:var(--tx);">'+Math.round(100*t[1]/tot)+'%</span></div>'; }).join('')+'</div></div>'
+    +'</div>';
+  return h;
 }
 /* toque num quadro da Home: abre ENTRADAS ja rolado ate o que importa (hoje, atrasadas, a repassar) */
 function MESA_irAlvo(t){
