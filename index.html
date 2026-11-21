@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.374.0</title>
+<title>VB - v1.375.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23397,7 +23397,7 @@ function MESA_resumoHome(el){
     +q('ATRASADO', na, ta, true, "MESA_irAlvo('atr')")
     +q('A REPASSAR', rn, rp, rRed, "MESA_irAlvo('rep')")
     +'</div>';
-  h+=MESA_homeBlocos(ab, tot, totVB, hoje);
+  h+=MESA_homeBlocos(ab, tot, totVB, hoje, rp);
   el.innerHTML=h;
   MESA_homeTopo(); if(window.requestAnimationFrame) requestAnimationFrame(MESA_homeTopo);
 }
@@ -23424,7 +23424,23 @@ function MESA_homeTopo(){
     MESA_homeMt=alvo;
   }catch(e){}
 }
-function MESA_homeBlocos(ab, tot, totVB, hoje){
+/* 1.375.0 (VB 20/11 23:13): cada bloco da Home leva ao lugar dele. 5 MAIORES -> ENTRADAS/SAIDAS na aba CLIENTES; MES -> panorama em MES;
+   DIAS/SEMANAS -> panorama em SEMANA; CARTEIRA nao leva a lugar nenhum. */
+function MESA_homeVai(q){
+  MESA_ir('ren');
+  var n=0;
+  (function tenta(){
+    n++;
+    if(VB_telaAtual!=='ren') return;
+    if(typeof REN_cache==='undefined' || !REN_cache || !REN_cache.itens){ if(n<40) setTimeout(tenta, 150); return; }
+    try{
+      if(q==='cli'){ REN_setAba('cli'); return; }
+      if(REN_aba!=='aberto') REN_setAba('aberto');
+      REN_panModo=(q==='sem')?'sem':'mes'; REN_painel();
+    }catch(e){}
+  })();
+}
+function MESA_homeBlocos(ab, tot, totVB, hoje, rp){
   var BOX='background:var(--sf);border:0.5px solid var(--ln2);border-radius:14px;padding:9px 14px;min-width:0;cursor:pointer;';
   var ROT='font-size:9px;letter-spacing:2px;font-weight:700;white-space:nowrap;color:var(--so);';
   var DIR='font-size:11px;font-weight:700;color:var(--mu2);letter-spacing:0;white-space:nowrap;';
@@ -23441,12 +23457,12 @@ function MESA_homeBlocos(ab, tot, totVB, hoje){
   });
   var pct=mT>0?Math.round(100*mR/mT):0, pR=mT>0?Math.max(0,Math.min(100,100*mR/mT)):0, pV=mT>0?Math.max(0,Math.min(100,100*mV/mT)):0;
   var corV=(mAtr>0.005)?'var(--red)':'var(--mu2)';
-  h+='<div onclick="MESA_ir(\'ren\')" style="margin-top:8px;'+BOX+'">'
+  h+='<div onclick="MESA_homeVai(\'mes\')" style="margin-top:8px;'+BOX+'">'
     +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;"><span style="'+ROT+'">'+MS[Number(ym.slice(5,7))-1]+(mT>0?' \u00b7 '+pct+'% RECEBIDO':'')+'</span><span style="'+DIR+'">'+(mT>0?'FALTA '+MESA_hk(mT-mR)+' \u203a':'\u2014')+'</span></div>'
     +'<div style="position:relative;margin-top:11px;"><div style="display:flex;gap:2px;height:8px;">'
     +'<div style="width:'+pR.toFixed(1)+'%;background:var(--acc);border-radius:4px 0 0 4px;"></div><div style="flex:1;background:var(--sf3);border-radius:0 4px 4px 0;"></div></div>'
     +((mT>0&&mV>0)?'<div style="position:absolute;left:'+pV.toFixed(1)+'%;top:-4px;width:1.5px;height:16px;background:'+corV+';"></div>':'')+'</div>'
-    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px;"><span style="'+PEQ+'">RECEBIDO '+MESA_hk(mR)+'</span><span style="'+PEQ+'color:'+corV+';">VENCIDO '+MESA_hk(mV)+'</span><span style="'+PEQ+'">M\u00caS '+MESA_hk(mT)+'</span></div></div>';
+    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px;"><span style="'+PEQ+'">RECEBIDO '+MESA_hk(mR)+'</span><span style="'+PEQ+'">VENCEU AT\u00c9 ONTEM '+MESA_hk(mV)+'</span><span style="'+PEQ+'">M\u00caS '+MESA_hk(mT)+'</span></div></div>';
   /* --- PROXIMOS DIAS / SEMANAS --- */
   var cols=[], DN=['DOM','SEG','TER','QUA','QUI','SEX','S\u00c1B'], dm=function(i){ return i.slice(8,10)+'/'+i.slice(5,7); };
   if(MESA_homeG==='s'){
@@ -23456,14 +23472,17 @@ function MESA_homeBlocos(ab, tot, totVB, hoje){
     var d0=REN_diaUtil(hoje);
     for(var k2=0;k2<6;k2++){ var dd=new Date(Number(d0.slice(0,4)),Number(d0.slice(5,7))-1,Number(d0.slice(8,10))); cols.push({de:d0, ate:d0, l1:(d0===hoje?'HOJE':DN[dd.getDay()]), l2:dm(d0), hj:k2===0, e:0, s:0}); d0=REN_diaUtil(REN_isoMais(d0,1)); }
   }
-  var poe=function(iso, v, campo){ var ef=REN_diaUtil(iso); if(ef<hoje) return; for(var i=0;i<cols.length;i++){ if(ef>=cols[i].de && ef<=cols[i].ate){ cols[i][campo]+=v; return; } } };
+  /* 1.375.0 (VB: "o hoje era pra constar o que ta em aberto eu pagar, e os repasses"): a 1a coluna (HOJE / semana corrente) soma o que ja venceu
+     dos dois lados -- atrasado a receber entra, a pagar atrasado e repasse pendente saem. Antes o vencido ficava so nos quadros. */
+  var poe=function(iso, v, campo){ var ef=REN_diaUtil(iso); if(ef<hoje){ if(cols.length) cols[0][campo]+=v; return; } for(var i=0;i<cols.length;i++){ if(ef>=cols[i].de && ef<=cols[i].ate){ cols[i][campo]+=v; return; } } };
   ab.forEach(function(x){ var v=String(x.venc||'').slice(0,10); if(v) poe(v, REN_falta(x), 'e'); });
   (REN_cache.cp||[]).forEach(function(c){ if(c.pago_em) return; var v=String(c.venc||'').slice(0,10); if(!v) return; var f=REN_cpFalta(c); if(f>0.005) poe(v, f, 's'); });
+  if(cols.length && Number(rp)>0.005) cols[0].s+=Number(rp);
   var mx=0, tE=0, tS=0, mxS=0; cols.forEach(function(c){ mx=Math.max(mx,c.e,c.s); mxS=Math.max(mxS,c.s); tE+=c.e; tS+=c.s; });
   var PX=30, alt=function(v){ return (mx>0&&v>0.005)?Math.max(3,Math.round(PX*v/mx)):0; };
   var pil=function(g,t){ var on=(MESA_homeG===g); return '<span onclick="event.stopPropagation();MESA_homeGset(\''+g+'\')" style="display:inline-block;padding:3px 8px;border-radius:999px;font-size:8.5px;letter-spacing:1px;font-weight:700;cursor:pointer;'+(on?'background:var(--acc);color:var(--acc-tx);border:0.5px solid var(--acc);':'background:var(--sf2);color:var(--mu2);border:0.5px solid var(--ln);')+'">'+t+'</span>'; };
   var COL='flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;', NUM='font-size:10px;font-weight:700;letter-spacing:0;white-space:nowrap;';
-  h+='<div onclick="MESA_ir(\'ren\')" style="margin-top:8px;'+BOX+'">'
+  h+='<div onclick="MESA_homeVai(\'sem\')" style="margin-top:8px;'+BOX+'">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;"><span style="display:inline-flex;gap:4px;">'+pil('d','DIAS')+pil('s','SEMANAS')+'</span><span style="'+DIR+'">\u2191 '+MESA_hk(tE)+' \u00b7 \u2193 '+MESA_hk(tS)+' \u203a</span></div>'
     +'<div style="display:flex;align-items:flex-end;gap:10px;height:'+(PX+16)+'px;margin-top:2px;">'
     +cols.map(function(c){ return '<div style="'+COL+'justify-content:flex-end;height:100%;"><div style="'+NUM+'color:'+(c.hj?'var(--tx)':'var(--mu2)')+';margin-bottom:2px;">'+(c.e>0.005?MESA_hk(c.e):'\u2014')+'</div><div style="width:100%;max-width:'+(cols.length>4?34:52)+'px;height:'+alt(c.e)+'px;background:'+(c.hj?'var(--acc)':'var(--so2)')+';border-radius:4px 4px 0 0;"></div></div>'; }).join('')
@@ -23478,14 +23497,14 @@ function MESA_homeBlocos(ab, tot, totVB, hoje){
   ab.forEach(function(x){ var f=REN_falta(x), t=(x.tab==='fin'||x.tab==='ven'||x.tab==='ant')?x.tab:'man'; pt[t]+=f; var n=x.cliente||''; if(n) cli[n]=(cli[n]||0)+f; });
   var tps=TP.filter(function(t){ return pt[t[0]]>0.005; });
   var top=Object.keys(cli).map(function(n){ return [n,cli[n]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,5), tTop=0; top.forEach(function(t){ tTop+=t[1]; });
-  var hd=function(a,b){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px;"><span style="'+ROT+'letter-spacing:1.5px;">'+a+'</span><span style="'+DIR+'">'+b+' \u203a</span></div>'; };
+  var hd=function(a,b,semSeta){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px;"><span style="'+ROT+'letter-spacing:1.5px;">'+a+'</span><span style="'+DIR+'">'+b+(semSeta?'':' \u203a')+'</span></div>'; };
   var B2=BOX.replace('padding:9px 14px','padding:9px 12px');
   h+='<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;">'
-    +'<div onclick="MESA_ir(\'ren\')" style="'+B2+'">'+hd('CARTEIRA', MESA_hk(tot))
+    +'<div style="'+B2.replace('cursor:pointer;','')+'">'+hd('CARTEIRA', MESA_hk(tot), true)
     +'<div style="display:flex;gap:2px;height:8px;margin-top:9px;border-radius:4px;overflow:hidden;">'+(tps.length?tps.map(function(t){ return '<div style="flex:'+Math.max(1,Math.round(pt[t[0]]))+';background:'+t[2]+';"></div>'; }).join(''):'<div style="flex:1;background:var(--sf3);"></div>')+'</div>'
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px 10px;margin-top:9px;">'+tps.map(function(t){ return '<div style="display:flex;align-items:center;gap:3px;'+PEQ+'font-size:9.5px;"><span style="width:8px;height:8px;border-radius:2px;background:'+t[2]+';flex:none;"></span><span>'+t[1]+'</span><span style="margin-left:auto;color:var(--tx);">'+MESA_hk(pt[t[0]])+'</span></div>'; }).join('')+'</div>'
     +'<div style="margin-top:8px;padding-top:6px;border-top:0.5px solid var(--ln2);display:flex;justify-content:space-between;gap:4px;"><span style="'+PEQ+'">'+((tot>0.005&&Math.abs(tot-totVB)>0.005)?('VB '+Math.round(100*totVB/tot)+'%'):'100% VB')+'</span><span style="'+PEQ+'">'+ab.length+' PARCELAS</span></div></div>'
-    +'<div onclick="MESA_ir(\'ren\')" style="'+B2+'">'+hd('5 MAIORES', (tot>0.005&&top.length)?(Math.round(100*tTop/tot)+'%'):'\u2014')
+    +'<div onclick="MESA_homeVai(\'cli\')" style="'+B2+'">'+hd('5 MAIORES', (tot>0.005&&top.length)?(Math.round(100*tTop/tot)+'%'):'\u2014')
     +'<div style="margin-top:6px;display:grid;gap:3px;">'+top.map(function(t,i){ return '<div><div style="display:flex;justify-content:space-between;gap:6px;'+PEQ+'"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;">'+(MESA_ver?VB_nomeCurto(t[0]):('CLIENTE '+(i+1)))+'</span><span style="color:var(--tx);">'+Math.round(100*t[1]/tot)+'%</span></div><div style="height:3px;margin-top:1px;border-radius:2px;background:var(--sf3);"><div style="height:3px;border-radius:2px;background:var(--acc);width:'+Math.max(3,Math.round(100*t[1]/top[0][1]))+'%;"></div></div></div>'; }).join('')+'</div></div>'
     +'</div>';
   return h;
