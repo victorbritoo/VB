@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.376.0</title>
+<title>VB - v1.377.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -599,7 +599,7 @@ html.vb-mesa #fm-overlay.vbm-auto>div{ padding-left:20px !important; padding-rig
 </div>
 
 <div id="mer-view-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100005;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)MER_viewFechar()">
-  <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:80vh;overflow:auto;font-family:-apple-system,sans-serif;">
+  <div style="background:var(--bg);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,18px) 16px 28px;width:100%;max-width:var(--fmw,520px);max-height:var(--fmh,80vh);overflow:auto;font-family:-apple-system,sans-serif;">
     <div id="mer-view-titulo" style="font-size:14px;font-weight:700;color:var(--ink);text-align:center;"></div>
     <div id="mer-view-body" style="margin-top:12px;"></div>
     <button id="mer-view-vender" style="display:none;width:100%;margin-top:12px;padding:9px;border:none;border-radius:14px;background:var(--acc);font-size:12px;letter-spacing:2px;color:var(--acc-tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">VENDER</button>
@@ -23065,7 +23065,10 @@ var MESA_DIR=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro
 var MESA_EDITA=['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cpb-ov','ren-cr-ov'];
 /* 1.371.0 (etapa 2 do plano da tela aberta): folhas que ja moram DENTRO da coluna da direita. Familia migrada entra aqui e sai
    das listas de CSS com !important. Com o Duo fechado elas voltam para o corpo, iguais a antes. */
-var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov'];
+var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay'];
+/* 1.377.0 (VB 20/11 23:13: "card do relogio abre feio"): a ficha do relogio deixa de ser folha de baixo na tela aberta (cinza em cima, botoes
+   cortados embaixo) e ocupa o painel inteiro, como a ficha da PARCELA. Camada 100015, a que ela ja tinha na direita. */
+var MESA_DENTRO_Z={'mer-view-overlay':'100015'};
 /* quem cria a folha chama isto no lugar de document.body.appendChild */
 function MESA_fichaPoe(ov){
   if(!ov) return;
@@ -23077,13 +23080,16 @@ function MESA_fichaEntra(ov){
   var cx=ov.firstElementChild, sy=cx?cx.scrollTop:0;
   if(!ov.classList.contains('vbm-dentro')){
     /* as medidas de tela cheia (fixa, fundo escuro, encostada no pe) ficam guardadas para a volta; dentro da coluna quem manda e o CSS */
-    var dsp=ov.style.display||'none', z=ov.style.zIndex||'100014';
+    var dsp=ov.style.display||'none', z=MESA_DENTRO_Z[ov.id]||ov.style.zIndex||'100014';
     ov.dataset.fora=ov.style.cssText;
     ov.style.cssText='z-index:'+z+';'; ov.style.display=dsp;
     ov.classList.add('vbm-dentro');
     if(cx && cx.dataset && cx.dataset.mhOrig!=null){ cx.style.maxHeight=cx.dataset.mhOrig; delete cx.dataset.mhOrig; }   /* teto do teclado da tela fechada */
   }
-  if(ov.parentNode!==col){ col.appendChild(ov); if(cx) cx.scrollTop=sy; }
+  if(ov.parentNode!==col){
+    if(ov.parentNode===document.body && !ov._vbLugar && ov.dataset.fora!=null && ov.id==='mer-view-overlay'){ ov._vbLugar=document.createComment('vb:'+ov.id); document.body.insertBefore(ov._vbLugar, ov); }   /* folha fixa do HTML volta para o mesmo lugar */
+    col.appendChild(ov); if(cx) cx.scrollTop=sy;
+  }
   if(!ov._vbColObs && window.MutationObserver){ try{ ov._vbColObs=new MutationObserver(MESA_colZ); ov._vbColObs.observe(ov, {attributes:true, attributeFilter:['style']}); }catch(e){} }
   try{ VB_folhaObserva(); }catch(e){}
   MESA_colZ();
@@ -23096,7 +23102,10 @@ function MESA_fichaSai(ov){
     ov.style.cssText=ov.dataset.fora||''; ov.style.display=dsp;
     ov.classList.remove('vbm-dentro');
   }
-  if(ov.parentNode!==document.body){ document.body.appendChild(ov); if(cx) cx.scrollTop=sy; }
+  if(ov.parentNode!==document.body){
+    if(ov._vbLugar && ov._vbLugar.parentNode){ ov._vbLugar.parentNode.insertBefore(ov, ov._vbLugar); ov._vbLugar.remove(); ov._vbLugar=null; } else document.body.appendChild(ov);
+    if(cx) cx.scrollTop=sy;
+  }
 }
 function MESA_fichasMuda(on){
   MESA_DENTRO.forEach(function(id){ var o=document.getElementById(id); if(!o) return; try{ if(on) MESA_fichaEntra(o); else MESA_fichaSai(o); }catch(e){} });
@@ -23115,7 +23124,7 @@ function MESA_fichasMuda(on){
 /* 1.374.0: folha de baixo dentro da coluna. Diferente da ficha (MESA_fichaEntra), ela continua folha de baixo: fundo escuro, encostada
    no pe, caixa de dentro igual. So troca a posicao de tela cheia (fixa, 0/0/0/0) pelo retangulo da coluna e assume a camada que o CSS
    antigo forcava (ficha do relogio 100015, criadas na hora 100016). Na saida devolve exatamente a posicao e a camada de antes. */
-var MESA_BAIXO=['mer-view-overlay'], MESA_BAIXO_Z={'mer-view-overlay':100015};
+var MESA_BAIXO=[], MESA_BAIXO_Z={};   /* 1.377.0: a ficha do relogio virou ficha de painel inteiro (MESA_DENTRO) */
 var MESA_BAIXO_P=['position','top','left','right','bottom','z-index'];
 function MESA_baixoEntra(ov, z, guarda){
   var col=document.getElementById('vb-mesa-col'); if(!col || !ov) return;
