@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.388.0</title>
+<title>VB - v1.389.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23351,7 +23351,7 @@ function MESA_resumo(){
     };
     h+=card('VENCE HOJE', nh, th, false, "MESA_ir('ren')");
     h+=card('ATRASADO', na, ta, true, "MESA_ir('ren')");
-    h+=card('A PAGAR ATÉ HOJE', np, tp, atrP, "MESA_irSaidas()");
+    h+=card('A PAGAR', np, tp, atrP, "MESA_irSaidas()"); /* 1.389.0: rotulo igual ao quadro da Home; a conta segue vencido + vence hoje */
     if(VB_telaAtual==='hist' && typeof FM_abrir==='function'){
       /* 1.386.0 (VB 21/11, opcao 2 da foto): com o Duo aberto os botoes do pe do Historico moram aqui (RELATORIO | FECHAMENTO, BACKUP na linha
          inteira, LOG embaixo); saiu o card FECHAMENTO · MES. Os originais (#hist-rodape e o LOG) somem so na tela aberta, pelo CSS. */
@@ -23462,7 +23462,13 @@ function MESA_homeGset(g){ MESA_homeG=g; MESA_resumo(); }
    Atrasados da Antecipacao e busca geral nao mostram (nao sao operacoes do periodo). Segue a lista: com busca/filtro, soma o que esta listado. */
 function MESA_histBlocos(){
   var tab=(typeof HIST_tabCache!=='undefined')?HIST_tabCache:null, rows=(typeof HIST_rowsCache!=='undefined')?HIST_rowsCache:null;
-  if(!tab || tab==='global' || !rows || !rows.length) return '';
+  if(!tab || tab==='global' || !rows) return '';
+  /* 1.389.0: o card guarda a lista SEM busca e SEM filtro da aba (MESA_histBase) e soma sempre ela; tocar numa barra filtra a lista naquele mes
+     e o card nao encolhe. Lucro de Vendas = LUCRO VB, a mesma regra da barra preta (socio com valor_socio <= custo leva a parte dele). */
+  var _filt=((typeof HIST_hasActiveFilter==='function' && HIST_hasActiveFilter()) || (typeof HIST_searchTerm!=='undefined' && HIST_searchTerm));
+  if(!_filt) MESA_histBase[tab]=rows; else if(MESA_histBase[tab]) rows=MESA_histBase[tab];
+  if(!rows.length) return '';
+  var mSel=(HIST_filter && HIST_filter.meses && HIST_filter.meses.length===1)?HIST_filter.meses[0]:null;
   if(tab==='ant' && typeof HIST_antSub!=='undefined' && HIST_antSub==='atr') return '';
   var temL=(tab!=='pag'), vc=HIST_valCol(tab), hoje=new Date(), ano=String(hoje.getFullYear());
   var meses=[]; for(var k=5;k>=0;k--){ var d=new Date(hoje.getFullYear(),hoje.getMonth()-k,1); meses.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)); }
@@ -23474,6 +23480,7 @@ function MESA_histBlocos(){
     var v=Number(r[vc])||0;
     if(tab==='pag' && !v){ (r.pagamentos||[]).forEach(function(p){ v+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); }); }
     var l=temL?HIST_lucroRow(tab,r):null;
+    if(l!=null && tab==='ven'){ var _vs=Number(r.valor_socio)||0, _c=Number(r.custo)||0; if(r.socio && _vs>0 && _c>0 && _vs<=_c){ var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; l=l*(_pVB/100); } }
     var y=temL?(l!=null?Number(l)||0:0):v;
     if(ym in porMes) porMes[ym]+=y;
     if(ym.slice(0,4)===ano){ nA++; vA+=v; if(l!=null) lA+=Number(l)||0; }
@@ -23483,11 +23490,11 @@ function MESA_histBlocos(){
   var CARD='background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:8px;';
   var ROT='font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);white-space:nowrap;';
   var nomeTab={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'}[tab]||'';
-  var h='<div style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;"><span style="'+ROT+'">'+(temL?'LUCRO POR MÊS':'PAGO POR MÊS')+'</span><span style="'+ROT+'letter-spacing:1.5px;">'+nomeTab+'</span></div>'
+  var h='<div style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;"><span style="'+ROT+'">'+(temL?(tab==='ven'?'LUCRO VB POR MÊS':'LUCRO POR MÊS'):'PAGO POR MÊS')+'</span><span style="'+ROT+'letter-spacing:1.5px;">'+nomeTab+'</span></div>'
     +'<div style="display:flex;align-items:flex-end;gap:8px;height:58px;margin-top:6px;">'
     +meses.map(function(m,i){
-      var v=porMes[m], at=(i===meses.length-1), hp=(mx>0&&v>0)?Math.max(3,Math.round(30*v/mx)):0;
-      return '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">'
+      var v=porMes[m], at=mSel?(m===mSel):(i===meses.length-1), hp=(mx>0&&v>0)?Math.max(3,Math.round(30*v/mx)):0;
+      return '<div onclick="MESA_histMes(\''+m+'\')" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;">'
         +'<span style="font-size:9.5px;font-weight:700;color:'+(at?'var(--tx)':'var(--mu2)')+';white-space:nowrap;letter-spacing:0;margin-bottom:2px;">'+(v>0.5?MESA_hk(v):'\u2014')+'</span>'
         +'<div style="width:100%;max-width:34px;height:'+hp+'px;border-radius:4px;background:'+(at?'var(--acc)':'var(--so2)')+';"></div>'
         +'<span style="font-size:9px;letter-spacing:1px;font-weight:'+(at?'700':'600')+';color:'+(at?'var(--tx)':'var(--so)')+';margin-top:4px;">'+MS[Number(m.slice(5,7))-1]+'</span></div>';
@@ -23495,9 +23502,19 @@ function MESA_histBlocos(){
   var cel=function(r,v){ return '<div style="min-width:0;"><div style="'+ROT+'letter-spacing:1px;">'+r+'</div><div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;letter-spacing:0;margin-top:1px;">'+v+'</div></div>'; };
   /* o ano mora no mesmo card, abaixo de um fio (cabe em 669 sem rolar) */
   h+='<div style="border-top:0.5px solid var(--ln2);margin-top:8px;padding-top:6px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">'
-    +cel('OPER. '+ano,MESA_ver?String(nA):'\u2022\u2022')+cel('VOLUME',MESA_hk(vA))+cel(temL?'LUCRO':'MÉDIA',temL?MESA_hk(lA):MESA_hk(nA?vA/nA:0))+cel(temL?'TICKET':'POR MÊS',temL?MESA_hk(nA?vA/nA:0):MESA_hk(vA/(hoje.getMonth()+1)))
+    +cel('OPER. '+ano,MESA_ver?String(nA):'\u2022\u2022')+cel('VOLUME',MESA_hk(vA))+cel(temL?(tab==='ven'?'LUCRO VB':'LUCRO'):'MÉDIA',temL?MESA_hk(lA):MESA_hk(nA?vA/nA:0))+cel(temL?'LUCRO MÉDIO':'POR MÊS',temL?MESA_hk(nA?lA/nA:0):MESA_hk(vA/(hoje.getMonth()+1)))
     +'</div></div>';
   return h;
+}
+var MESA_histBase={};
+/* 1.389.0: toque numa barra do LUCRO POR MES = filtro daquele mes na lista (o mesmo do funil); tocar de novo no mesmo mes tira o filtro */
+function MESA_histMes(ym){
+  try{
+    if(HIST_filter.meses && HIST_filter.meses.length===1 && HIST_filter.meses[0]===ym){ HIST_filter.meses=[]; }
+    else { HIST_filter.meses=[ym]; HIST_filter.periodo='tudo'; HIST_filter.de=''; HIST_filter.ate=''; }
+    if(typeof HIST_styleFilterUI==='function') HIST_styleFilterUI();
+    HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
+  }catch(e){}
 }
 function MESA_hk(v){ if(!MESA_ver) return '\u2022\u2022'; var a=Math.abs(Number(v)||0); if(a>=1e6) return (a/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; return VB_kFmt(v); }
 /* o HOJE da direita sobe ate a altura do VB da esquerda (medido; antes era margem fixa de 62) */
