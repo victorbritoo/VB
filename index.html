@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.392.0</title>
+<title>VB - v1.393.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23320,6 +23320,8 @@ function MESA_resumo(){
   if(MESA_pagAtivo()){ try{ MESA_pagPinta(true); }catch(e){} return; }
   if(MESA_merAtivo()){ try{ MESA_merPinta(true); }catch(e){} return; }
   if(MESA_cliAtivo()){ try{ MESA_cliPinta(true); }catch(e){} return; }
+  if(MESA_conAtivo()){ try{ MESA_conPinta(true); }catch(e){} return; }
+  if(MESA_socAtivo()){ try{ MESA_socPinta(true); }catch(e){} return; }
   if(MESA_gesAtivo()){ try{ MESA_gesPinta(true); }catch(e){} return; }
   try{ MESA_buscaBarra(); }catch(e){}
   if(VB_telaAtual==='ren'){ try{ MESA_renTitulo(); MESA_renSaidas(el); }catch(e){} return; }
@@ -24378,7 +24380,7 @@ function MESA_antPinta(forca){
   MESA_antSig=MESA_antAssin();
 }
 function MESA_antVazio(el){
-  var cab='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">ANTECIPAÇÕES</span></div>';
+  var cab='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">ANTECIPAÇÃO</span></div>';
   var h='';
   try{
     if(typeof REN_cache!=='undefined' && REN_cache){
@@ -24596,6 +24598,58 @@ function MESA_quitUsa(id){
    Sem cliente aberto: card preto CLIENTES (ativos, a completar) e MAIORES A RECEBER (5). Tocar um cliente
    (esquerda ou direita) abre o PANORAMA na direita; o botao CADASTRO do panorama abre a ficha. */
 var MESA_cliSig=null;
+/* 1.393.0 (VB 21/11 "tudo", incoerencias): CONTRATOS e SOCIOS mostravam o RESUMO geral na direita, sem nada da tela.
+   Agora seguem o desenho de CLIENTES: titulo da tela, card preto e uma lista curta tocavel. */
+var MESA_conSig=null, MESA_socSig=null;
+function MESA_conAtivo(){ return !!(MESA_on && VB_telaAtual==='con'); }
+function MESA_conPinta(forca){
+  if(!MESA_conAtivo()) return;
+  var rows=(typeof CON_rows!=='undefined' && CON_rows)?CON_rows:[];
+  var sig=rows.length+'|'+rows.filter(function(c){ return !c.assinado_em; }).length+'|'+((typeof REN_oculto!=='undefined'&&REN_oculto)?1:0);
+  if(!forca && sig===MESA_conSig) return; MESA_conSig=sig;
+  var el=document.getElementById('vb-mesa-dir'); if(!el) return;
+  var pend=rows.filter(function(c){ return !c.assinado_em; });
+  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">CONTRATOS</span></div>';
+  h+=MESA_merPreto('CONTRATOS', rows.length?(rows.length+' GERADO'+(rows.length===1?'':'S')):'\u2014', pend.length?(pend.length+' SEM ASSINAR'):'TODOS ASSINADOS');
+  h+='<div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:16px 4px 7px;">SEM ASSINAR</div>';
+  if(!pend.length) h+='<div style="text-align:center;color:var(--mu);font-size:11px;margin-top:10px;">Nenhum contrato esperando assinatura.</div>';
+  h+=pend.slice(0,6).map(function(c){
+    var i=rows.indexOf(c), dt=String(c.created_at||'').slice(0,10), d=0; try{ d=Math.floor((Date.now()-new Date(c.created_at).getTime())/86400000); }catch(e){}
+    return '<div onclick="CON_ficha('+i+')" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;cursor:pointer;">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(String(VB_nomeCurto(c.cliente_nome||'')||c.cliente_nome||'').toUpperCase())+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+(Number(c.valor_total)>0?MESA_tot(Number(c.valor_total)):'')+'</span></div>'
+      +'<div style="font-size:10px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+HIST_esc(String(c.descricao||'').toUpperCase())+(dt?(' \u00b7 '+REN_dataCard(dt)):'')+(d>=7?' \u00b7 <span style="color:var(--red);font-weight:700;">'+d+'D</span>':'')+'</div></div>';
+  }).join('');
+  el.innerHTML=h;
+}
+function MESA_socAtivo(){ return !!(MESA_on && VB_telaAtual==='soc'); }
+function MESA_socPinta(forca){
+  if(!MESA_socAtivo()) return;
+  var t={}, tot=0;
+  try{
+    var bx=REN_cache.bx||{};
+    (REN_cache.itens||[]).forEach(function(x){
+      var b=bx[REN_key(x)]; if(!b) return; var f=0; try{ f=REN_repFalta(x,b); }catch(e){} if(!(f>0.005)) return;
+      var oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; var s=String((oi&&oi.socio)||'').trim(); if(!s) s='SEM SÓCIO';
+      var k=s.toUpperCase(), o=t[k]=t[k]||{nome:s,v:0,n:0}; o.v+=f; o.n++; tot+=f;
+    });
+  }catch(e){}
+  var ks=Object.keys(t).sort(function(a,b){ return t[b].v-t[a].v; });
+  var nSoc=(typeof SOC_rows!=='undefined'&&SOC_rows)?SOC_rows.length:0;
+  var sig=ks.length+'|'+Math.round(tot)+'|'+nSoc+'|'+((typeof REN_oculto!=='undefined'&&REN_oculto)?1:0);
+  if(!forca && sig===MESA_socSig) return; MESA_socSig=sig;
+  var el=document.getElementById('vb-mesa-dir'); if(!el) return;
+  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">SÓCIOS</span></div>';
+  h+=MESA_merPreto('A REPASSAR', tot>0.005?MESA_tot(tot):'\u2014', nSoc?(nSoc+' SÓCIO'+(nSoc===1?'':'S')+' CADASTRADO'+(nSoc===1?'':'S')):'NENHUM SÓCIO CADASTRADO');
+  h+='<div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:16px 4px 7px;">A REPASSAR POR SÓCIO</div>';
+  if(!ks.length) h+='<div style="text-align:center;color:var(--mu);font-size:11px;margin-top:10px;">Nada a repassar.</div>';
+  h+=ks.slice(0,6).map(function(k){
+    var o=t[k], sid=null; try{ (SOC_rows||[]).forEach(function(r){ if(String(r.nome||'').trim().toUpperCase()===k && !r._derivado) sid=r.id; }); }catch(e){}
+    return '<div'+(sid!=null?' onclick="SOC_abrir(\''+HIST_esc(String(sid))+'\')"':'')+' style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;'+(sid!=null?'cursor:pointer;':'')+'">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(String(VB_nomeCurto(o.nome)||o.nome).toUpperCase())+'</span><span style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;">'+MESA_tot(o.v)+'</span></div>'
+      +'<div style="font-size:10px;color:var(--mu);margin-top:2px;">'+o.n+' PARCELA'+(o.n===1?'':'S')+'</div></div>';
+  }).join('');
+  el.innerHTML=h;
+}
 function MESA_cliAtivo(){ return !!(MESA_on && VB_telaAtual==='cli'); }
 function MESA_cliAssin(){
   var nb=0; try{ nb=Object.keys(REN_cache.bx||{}).length; }catch(e){}
@@ -25210,6 +25264,8 @@ function MESA_tick(){
   try{ if(MESA_pagAtivo()) MESA_pagPinta(false); else { MESA_pagSig=null; MESA_pagVer=null; } }catch(e){}
   try{ if(MESA_merAtivo()) MESA_merPinta(false); else MESA_merSig=null; }catch(e){}
   try{ if(MESA_cliAtivo()) MESA_cliPinta(false); else MESA_cliSig=null; }catch(e){}
+  try{ if(MESA_conAtivo()) MESA_conPinta(false); else MESA_conSig=null; }catch(e){}
+  try{ if(MESA_socAtivo()) MESA_socPinta(false); else MESA_socSig=null; }catch(e){}
   try{ if(MESA_gesAtivo()) MESA_gesPinta(false); else MESA_gesSig=null; }catch(e){}
   try{ VB_folhaTrava(); }catch(e){}
   try{ MESA_lados(); }catch(e){}
