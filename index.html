@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.369.0</title>
+<title>VB - v1.370.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23779,7 +23779,7 @@ function MESA_medida(){
   /* 1.361.2: volta (tela descida de novo no Duo com a tela repartida, prints 20/11 08:18) -- agora em toda tela, nao so na aberta */
   if(!m){ m=document.createElement('div'); m.id='vbm-medida'; m.style.cssText='position:fixed;left:6px;bottom:4px;z-index:100070;font:9px/1.2 -apple-system,sans-serif;color:#d33;pointer-events:none;letter-spacing:0;'; document.body.appendChild(m); }
   var vv=window.visualViewport;
-  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · E '+Math.round(VB_rolEl()?VB_sy():-1)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA');
+  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · E '+Math.round(VB_rolEl()?VB_sy():-1)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · C '+VB_vpCuras+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA');
   return;
   if(!MESA_on) return;
   var r=document.getElementById('vb-mesa-rail'); if(!r) return;
@@ -23803,7 +23803,21 @@ function MESA_medida(){
    sem folha travada. [Provavel] bug do iOS no modo atalho. Tentativa: ao detectar a altura curta,
    liga viewport-fit=cover (o app pode ocupar a area reservada) e forca o relayout. A linha de medida
    mostra "fix N" e "cov" para o VB mandar o resultado. */
-var VB_vpTent=0;
+var VB_vpTent=0, VB_vpCuras=0;
+function VB_vpCura(){
+  try{
+    var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||'')) return false;   /* digitando: nao mexe */
+    var b=document.body, cx=[], poe=function(e){ if(e && e.scrollTop>0) cx.push([e, e.scrollTop]); };
+    poe(VB_rolEl()); poe(document.getElementById('vb-mesa-dir'));
+    try{ VB_FOLHAS.forEach(function(id){ var o=document.getElementById(id); if(o && o.style.display && o.style.display!=='none'){ poe(o); poe(o.firstElementChild); } }); }catch(e){}
+    var mh=b.style.minHeight, dp=b.style.display;
+    b.style.minHeight='100vh'; b.style.display='none'; void b.offsetHeight; b.style.display=dp; b.style.minHeight=mh;
+    window.scrollTo(0,0);
+    cx.forEach(function(c){ try{ c[0].scrollTop=c[1]; }catch(e){} });
+    VB_vpCuras++;
+    return true;
+  }catch(e){ return false; }
+}
 function VB_vpFix(){
   try{
     if(!(window.navigator && navigator.standalone)) return;
@@ -23813,8 +23827,13 @@ function VB_vpFix(){
     /* 1.355.4: teclado = a area visivel bem menor que a tela do app. A 1.355.2 olhava o campo focado,
        mas no iPhone o campo continua focado depois que o teclado some e a correcao parava de vez. */
     var _vv=window.visualViewport; if(_vv && _vv.height>0 && _vv.height < innerHeight-120) return;   /* 1.353.1: tela no tamanho certo zera a contagem -- cada descida nova ganha 4 tentativas (antes so zerava ao sair do app) */
-    if(VB_vpTent>=4) return;
+    if(VB_vpTent>=6) return;
     VB_vpTent++;
+    /* 1.370.0: MEDIDA de 20/11 21:19 -- 867x587, SY 0, T 4: as 4 trocas de viewport-fit nao devolvem os 82 pt.
+       E o defeito conhecido do app de atalho no iPhone (a area util encolhe e fica assim ate matar o app).
+       O que devolve e obrigar o iPhone a medir de novo: apagar e acender o corpo no mesmo instante (VB_vpCura).
+       Tentativas impares curam; as pares continuam trocando o viewport-fit, como antes. */
+    if(VB_vpTent%2===1){ if(VB_vpCura()){ setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150); return; } }
     var m=document.querySelector('meta[name=viewport]'); if(!m) return;
     var c=m.getAttribute('content')||'';
     if(c.indexOf('viewport-fit=cover')<0) m.setAttribute('content', c+', viewport-fit=cover');
@@ -23827,6 +23846,7 @@ function VB_vpFix(){
   window.addEventListener('resize', f);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; f(); } });
   setTimeout(VB_vpFix, 1500); setInterval(VB_vpFix, 3000);
+  document.addEventListener('focusout', function(){ setTimeout(function(){ VB_vpTent=0; VB_vpFix(); }, 180); }, true);
   /* 1.356.1: corrige no momento em que o teclado fecha, sem esperar a volta de 3 s */
   try{ var _vvT=false; if(window.visualViewport) window.visualViewport.addEventListener('resize', function(){ var t=window.visualViewport.height>0 && window.visualViewport.height < innerHeight-120; if(_vvT && !t){ VB_vpTent=0; setTimeout(VB_vpFix, 120); } _vvT=t; }); }catch(e){}
 })();
