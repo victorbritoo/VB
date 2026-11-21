@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.377.0</title>
+<title>VB - v1.378.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23167,7 +23167,18 @@ function MESA_colZ(){
     if(o.style.display && o.style.display!=='none'){ var v=parseInt(o.style.zIndex)||0; if(v>z) z=v; }
   }
   if(String(col.style.zIndex)!==String(z)) col.style.zIndex=String(z);
+  /* 1.378.0 (VB 20/11 23:32: "quando clica em DOCUMENTOS o card desaparece"): defeito da 1.374.0. Folha de baixo tem fundo transparente; com a
+     coluna erguida, o RESUMO (que mora nela) passava por cima da operacao do Historico / Fechamento / panorama do cliente, que ainda moram no
+     corpo. Enquanto uma dessas estiver a mostra por baixo, o resumo se esconde. Sai junto com MESA_colZ quando elas migrarem. */
+  var d=document.getElementById('vb-mesa-dir');
+  if(d){
+    var porBaixo=false;
+    if(z>50){ for(var k=0;k<MESA_FORA.length;k++){ if(MESA_vis(MESA_FORA[k])){ porBaixo=true; break; } } }
+    var vv=porBaixo?'hidden':'';
+    if(d.style.visibility!==vv) d.style.visibility=vv;
+  }
 }
+var MESA_FORA=['vbm-hist-op','fm-overlay','clip-overlay','vb-foto-overlay'];   /* folhas da direita que ainda moram no corpo */
 /* os mesmos botoes da Home, na mesma ordem e com os mesmos nomes; '-' e o traco entre OPERACOES e GESTAO */
 var MESA_ITENS=[
   ['fin','Financiamentos','<path d="M5 16l1.5-5a2 2 0 0 1 2-1.5h7a2 2 0 0 1 2 1.5L19 16M4 16h16v3H4zM7 19v2M17 19v2"/>'],

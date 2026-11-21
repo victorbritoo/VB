@@ -55,6 +55,15 @@ async function estrutura(arq){const b=await pw.chromium.launch();let falhas=0;co
   const trava=()=>pg.evaluate(()=>document.getElementById('screen-'+VB_telaAtual).style.overflowY||'');
   await pg.evaluate(()=>{document.getElementById('teste-folha').remove();document.getElementById('mer-view-overlay').style.display='none';});await pg.waitForTimeout(300);
   t('fechou tudo: a esquerda solta e a coluna volta para a camada 50',(await trava())===''&&await pg.evaluate(()=>getComputedStyle(document.getElementById('vb-mesa-col')).zIndex)==='50');
+  /* 1.378.0: folha de baixo aberta por cima da operacao do Historico (que ainda mora no corpo): o resumo nao pode cobrir a operacao */
+  await pg.evaluate(()=>{let o=document.getElementById('vbm-hist-op');if(!o){o=document.createElement('div');o.id='vbm-hist-op';document.body.appendChild(o);}o.innerHTML='<div style="background:var(--bg);height:100%">OPERACAO DE TESTE</div>';o.style.display='block';window.__SINT();});await pg.waitForTimeout(500);
+  const hv=()=>pg.evaluate(()=>({dir:getComputedStyle(document.getElementById('vb-mesa-dir')).visibility,op:document.getElementById('vbm-hist-op').style.display,z:getComputedStyle(document.getElementById('vb-mesa-col')).zIndex}));
+  let h1=await hv();t('DOCUMENTOS por cima da operacao do Historico: o resumo se esconde e a operacao continua a mostra',h1.dir==='hidden'&&h1.op==='block',JSON.stringify(h1));
+  await pg.evaluate(()=>{document.getElementById('teste-folha').remove();});await pg.waitForTimeout(600);
+  h1=await hv();t('fechou a folha: resumo de volta, coluna na camada 50',h1.dir==='visible'&&h1.z==='50',JSON.stringify(h1));
+  await pg.evaluate(()=>{document.getElementById('vbm-hist-op').style.display='none';window.__SINT();});await pg.waitForTimeout(500);
+  h1=await hv();t('folha de baixo sem nada do corpo por baixo: o resumo continua aparecendo atras',h1.dir==='visible',JSON.stringify(h1));
+  await pg.evaluate(()=>{document.getElementById('teste-folha').remove();});await pg.waitForTimeout(300);
   /* folha da lista de folhas (ORDENAR dos clientes): prende a esquerda enquanto aberta e solta ao sair da coluna, como antes */
   await pg.evaluate(()=>{showScreen('cli');});await pg.waitForTimeout(600);await pg.evaluate(()=>{CLI_ordAbrir();});await pg.waitForTimeout(400);
   t('ORDENAR aberta: a esquerda fica presa',(await trava())==='hidden');
