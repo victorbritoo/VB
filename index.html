@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.397.0</title>
+<title>VB - v1.398.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -401,6 +401,11 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #fm-overlay button[aria-label="PANORAMA DO LUCRO"]{ right:auto !important; left:0 !important; }
   /* 1.397.0: lupa e olhinho da direita das ENTRADAS/SAIDAS sobem para o meio da linha do titulo (ficavam em cima do fio) */
   html.vb-mesa #vb-mesa-dir > .vbm-rhead > span:last-child{ transform:translateY(-7px); }
+  /* 1.398.0 (VB 21/11 "B e faz"): olhinho no Historico da tela aberta -- esconde a direita, os valores da lista e a barra preta */
+  html.vb-mesa #hist-olho{ display:inline-flex !important; }
+  /* 1.398.0: Cadastros na tela aberta -- linhas com numero e seta (a fechada segue com os 3 botoes) */
+  html.vb-mesa #screen-ges .ges-velho{ display:none !important; }
+  html.vb-mesa #screen-ges .ges-novo{ display:flex !important; }
   /* 1.386.0: os botoes do pe do Historico vao para a direita na tela aberta (MESA_resumo, #vbm-hist-bts) */
   html.vb-mesa #hist-rodape, html.vb-mesa #hist-rodape + button{ display:none !important; }
   /* botoes que moravam na linha do VB passam para a linha do titulo: INVESTIDOR (Fin) e olhinho (Entradas) a direita do titulo;
@@ -1512,6 +1517,7 @@ button{ text-transform:inherit; }
       <div class="logo" onclick="VB_voltarDeTela()" style="cursor:pointer;">VB</div>
       <div class="simulacao-label">HISTÓRICO</div>
     </div>
+    <span id="hist-olho" onclick="HIST_olhoToggle()" title="Esconder os valores" style="display:none;cursor:pointer;padding:0 6px;align-items:center;color:var(--mu2);transform:translateY(-4px);"></span>
   </div>
   <hr class="divider">
 
@@ -1618,9 +1624,13 @@ button{ text-transform:inherit; }
     <div class="simulacao-label">CADASTROS</div>
   </div>
   <hr class="divider">
-  <button onclick="showScreen('soc')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Sócios</span></button>
-  <button onclick="showScreen('cli')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Clientes</span></button>
-  <button onclick="showScreen('con')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Contratos</span></button>
+  <button class="ges-velho" onclick="showScreen('soc')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Sócios</span></button>
+  <button class="ges-velho" onclick="showScreen('cli')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Clientes</span></button>
+  <button class="ges-velho" onclick="showScreen('con')" style="display:flex;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Contratos</span></button>
+  <!-- 1.398.0 (VB 21/11 "fora de padrao", aprovou a foto): linhas no padrao dos cards, com o numero e a seta; os numeros vem de GES_nums -->
+  <button class="ges-novo" onclick="showScreen('cli')" style="display:none;align-items:center;width:100%;padding:13px 14px;border:0.5px solid var(--ln2);border-radius:12px;background:var(--sf);cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;gap:10px;"><span style="flex:1;min-width:0;text-align:left;"><span style="display:block;font-size:12px;letter-spacing:2px;font-weight:700;color:var(--tx);">CLIENTES</span><span id="ges-cli-s" style="display:block;font-size:9px;letter-spacing:1.5px;font-weight:600;color:var(--so);margin-top:3px;min-height:11px;"></span></span><span id="ges-cli-n" style="font-size:17px;font-weight:700;color:var(--tx);"></span><span style="font-size:18px;color:var(--so);font-weight:300;line-height:1;">›</span></button>
+  <button class="ges-novo" onclick="showScreen('soc')" style="display:none;align-items:center;width:100%;padding:13px 14px;border:0.5px solid var(--ln2);border-radius:12px;background:var(--sf);cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;gap:10px;"><span style="flex:1;min-width:0;text-align:left;"><span style="display:block;font-size:12px;letter-spacing:2px;font-weight:700;color:var(--tx);">SÓCIOS</span><span id="ges-soc-s" style="display:block;font-size:9px;letter-spacing:1.5px;font-weight:600;color:var(--so);margin-top:3px;min-height:11px;"></span></span><span id="ges-soc-n" style="font-size:17px;font-weight:700;color:var(--tx);"></span><span style="font-size:18px;color:var(--so);font-weight:300;line-height:1;">›</span></button>
+  <button class="ges-novo" onclick="showScreen('con')" style="display:none;align-items:center;width:100%;padding:13px 14px;border:0.5px solid var(--ln2);border-radius:12px;background:var(--sf);cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;gap:10px;"><span style="flex:1;min-width:0;text-align:left;"><span style="display:block;font-size:12px;letter-spacing:2px;font-weight:700;color:var(--tx);">CONTRATOS</span><span id="ges-con-s" style="display:block;font-size:9px;letter-spacing:1.5px;font-weight:600;color:var(--so);margin-top:3px;min-height:11px;"></span></span><span id="ges-con-n" style="font-size:17px;font-weight:700;color:var(--tx);"></span><span style="font-size:18px;color:var(--so);font-weight:300;line-height:1;">›</span></button>
   <button id="ges-btn-mig" onclick="MIG_abrir()" style="display:none;align-items:center;width:100%;padding:13px 18px;border:0.5px solid var(--ln2);border-radius:14px;background:var(--sf);text-align:left;cursor:pointer;margin-bottom:6px;font-family:-apple-system,sans-serif;"><span style="font-size:19px;font-weight:600;color:var(--tx);flex:1;text-align:center;">Identidade</span></button>
 </div>
 </div>
@@ -23413,7 +23423,7 @@ function MESA_resumo(){
 /* 1.357.3: a pedido do VB o app abre do jeito que ele deixou (padrao: aberto) e nao esconde mais ao ir para segundo plano. */
 var MESA_ver=true; try{ MESA_ver=localStorage.getItem('vb_mesa_ver')!=='0'; }catch(e){}
 function MESA_hv(v){ return MESA_ver?MESA_brl(v):'R$ ••••••'; }
-function MESA_verToggle(){ MESA_ver=!MESA_ver; try{ localStorage.setItem('vb_mesa_ver',MESA_ver?'1':'0'); }catch(e){} MESA_resumo(); }
+function MESA_verToggle(){ MESA_ver=!MESA_ver; try{ localStorage.setItem('vb_mesa_ver',MESA_ver?'1':'0'); }catch(e){} MESA_resumo();  try{ HIST_olhoPinta(); }catch(e){} }
 function MESA_olho(){
   return '<span onclick="event.stopPropagation();MESA_verToggle()" style="cursor:pointer;color:var(--so);display:inline-flex;padding:2px;-webkit-tap-highlight-color:transparent;">'
     +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg></span>';
@@ -23561,6 +23571,31 @@ function MESA_histBlocos(){
   return h;
 }
 var MESA_histBase={};
+/* 1.398.0: olhinho do Historico (so na tela aberta). Usa o MESMO interruptor da direita (MESA_ver). Fechado: todo "R$ 1.234,56" e todo "(14%)"
+   da lista e da barra preta viram bolinhas -- por cima do que foi pintado (observador), sem mexer nas ~40 funcoes que pintam a lista. Abrir = pintar de novo. */
+function HIST_olhoPinta(){
+  var o=document.getElementById('hist-olho'); if(!o) return;
+  o.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg>';
+}
+function HIST_olhoOn(){ return !MESA_ver && document.documentElement.classList.contains('vb-mesa'); }
+function HIST_olhoMascara(raiz){
+  try{
+    if(!HIST_olhoOn() || !raiz) return;
+    var w=document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null), n, L=[];
+    while((n=w.nextNode())) L.push(n);
+    L.forEach(function(t){ var v=t.nodeValue; if(!v || !/\d/.test(v)) return;
+      var z=v.replace(/(R\$\s?)[\u2212-]?[\d.]+,\d{2}/g,'$1\u2022\u2022\u2022\u2022').replace(/\(\s*[\u2212-]?\d+(?:[.,]\d+)?\s*%\s*\)/g,'(\u2022\u2022%)').replace(/[\u2212-]?\d+(?:[.,]\d+)?\s*%\s*A\.M\./gi,'\u2022\u2022% A.M.');
+      if(z!==v) t.nodeValue=z; });
+  }catch(e){}
+}
+function HIST_olhoToggle(){ MESA_verToggle(); HIST_olhoPinta(); try{ if(MESA_ver) HIST_fetch(HIST_searchTerm); else HIST_olhoTudo(); }catch(e){} }
+function HIST_olhoTudo(){ ['hist-lista','hist-total','hist-count'].forEach(function(id){ HIST_olhoMascara(document.getElementById(id)); }); }
+(function(){ var liga=function(){ try{
+    HIST_olhoPinta();
+    ['hist-lista','hist-total','hist-count'].forEach(function(id){ var e=document.getElementById(id); if(!e) return;
+      new MutationObserver(function(){ if(HIST_olhoOn()) HIST_olhoMascara(e); }).observe(e,{childList:true,subtree:true}); });
+  }catch(e){} };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', liga); else liga(); })();
 var MESA_histGeral=false, MESA_histGerRes=null, MESA_histGerMer=null, MESA_histGerT=0, MESA_histGerOn=false, MESA_histGerMemo=null;
 function MESA_histGerBusca(){
   try{
@@ -24582,6 +24617,10 @@ function MESA_gesPinta(forca){
   var soc={}; d.mer.forEach(function(m){ if(m.socio && Number(m.valor_socio)>0) soc[String(m.socio).trim().toUpperCase()]=1; });
   var ns=Object.keys(soc).length, nc=d.con.length, np=d.con.filter(function(c){ return !c.assinado_em; }).length;
   h+=MESA_merPreto('CLIENTES', n+' ATIVO'+(n===1?'':'S'), pend?(pend+' A COMPLETAR'):'CADASTROS COMPLETOS');
+  try{ var _g=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+    _g('ges-cli-n',String(n)); _g('ges-cli-s',pend?(pend+' A COMPLETAR'):'CADASTROS COMPLETOS');
+    _g('ges-soc-n',String(ns)); _g('ges-soc-s','NO ESTOQUE');
+    _g('ges-con-n',String(nc)); _g('ges-con-s',np?(np+' SEM ASSINAR'):'TODOS ASSINADOS'); }catch(e){}
   var meia=function(rot,val,borda){ return '<div style="flex:1;min-width:0;padding:0 '+(borda?'0 0 12px':'12px 0 0')+';'+(borda?'border-left:0.5px solid var(--ln2);':'')+'"><div style="font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+rot+'</div><div style="font-size:15px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;">'+val+'</div></div>'; };
   h+='<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;">'
     +meia('SÓCIOS NO ESTOQUE',String(ns),false)+meia('CONTRATOS',String(nc)+(np?'<span style="font-size:9px;font-weight:700;color:var(--so);letter-spacing:1px;margin-left:6px;">'+np+' SEM ASSINAR</span>':''),true)+'</div>';
