@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.400.0</title>
+<title>VB - v1.401.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -366,10 +366,11 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-mesa-col>.vbm-dentro{ position:absolute; top:0; left:0; right:0; bottom:0; align-items:stretch; justify-content:stretch; animation:none;
     --fmw:none; --fmh:none; --frd:0; --fpt:22px; }
   html.vb-mesa #vb-mesa-col>.vbm-dentro>div{ height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; border-left:0.5px solid var(--ln2); box-sizing:border-box; animation:none; }
-  html.vb-mesa :is(#clip-overlay,#fm-overlay,#vbm-hist-op){
+  /* 1.401.0 (etapa 2, 3a familia): operacao do Historico e Fechamento moram na coluna (MESA_DENTRO); so o panorama do cliente segue aqui */
+  html.vb-mesa :is(#clip-overlay){
     left:var(--mx,50%) !important; right:0 !important; top:var(--fy,0px) !important; bottom:0 !important; width:auto !important;
     background:transparent !important; align-items:stretch !important; justify-content:stretch !important; padding:0 !important; animation:none !important; }
-  html.vb-mesa :is(#clip-overlay,#fm-overlay,#vbm-hist-op)>div{
+  html.vb-mesa :is(#clip-overlay)>div{
     width:100% !important; max-width:none !important; height:100% !important; max-height:none !important; overflow-y:auto !important;
     -webkit-overflow-scrolling:touch; border-radius:0 !important; border-left:0.5px solid var(--ln2) !important; box-sizing:border-box !important;
     padding-top:22px !important; animation:none !important; }
@@ -420,7 +421,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa .fm-rend-val span{ font-size:9px !important; }
   /* 1.347.0 computador: a metade direita nao estica alem de 640 pt (fichas e fotos legiveis) */
   html.vb-mesa.vb-mesa-pc #vb-mesa-col,
-  html.vb-mesa.vb-mesa-pc :is(#clip-overlay,#fm-overlay,#vbm-hist-op,#vb-foto-overlay){
+  html.vb-mesa.vb-mesa-pc :is(#clip-overlay,#vb-foto-overlay){
     right:auto !important; width:min(640px, calc(100vw - var(--mx,50%))) !important; }
   html.vb-mesa.vb-mesa-pc #vb-mesa-dir{ border-right:0.5px solid var(--ln2); }
   html.vb-mesa.vbm-buscando:not(.vb-mesa-home){ --fy:120px; }
@@ -472,7 +473,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
 .vbm-fx button{ position:absolute; top:-12px; right:-6px; width:28px; height:28px; border-radius:50%; border:0.5px solid var(--ln3); background:var(--sf2); color:var(--mu2);
   font-size:15px; line-height:1; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:-apple-system,sans-serif; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 html.vb-mesa #fm-overlay.vbm-auto>div{ padding-left:20px !important; padding-right:20px !important; }
-#vbm-hist-op>div{ background:var(--bg); padding:22px 20px 24px; box-sizing:border-box; font-family:-apple-system,sans-serif; }
+#vbm-hist-op>div{ width:100%; background:var(--bg); padding:22px 20px 24px; box-sizing:border-box; font-family:-apple-system,sans-serif; }
 #vb-mesa-escudo{ display:none; position:fixed; top:var(--fy,0px); bottom:0; left:0; width:var(--mx,50%); z-index:100013; background:rgba(0,0,0,0.12); }
 </style>
 </head>
@@ -532,7 +533,7 @@ html.vb-mesa #fm-overlay.vbm-auto>div{ padding-left:20px !important; padding-rig
   </div>
 </div>
 <div id="fm-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100004;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)FM_fechar()">
-  <div style="background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px 28px;width:100%;max-width:520px;max-height:85vh;overflow:auto;font-family:-apple-system,sans-serif;">
+  <div style="background:var(--bg);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,18px) 16px 28px;width:100%;max-width:var(--fmw,520px);max-height:var(--fmh,85vh);overflow:auto;font-family:-apple-system,sans-serif;">
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px;position:relative;">
       <!-- v1.300.88: PANORAMA DO LUCRO com botao proprio; o toque no card preto continua valendo -->
       <button onclick="FM_panorama()" title="PANORAMA DO LUCRO" aria-label="PANORAMA DO LUCRO" style="position:absolute;right:0;top:0;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);width:34px;height:34px;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:var(--tx);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="13" x2="3" y2="8"/><line x1="8" y1="13" x2="8" y2="4"/><line x1="13" y1="13" x2="13" y2="6"/><line x1="1.5" y1="14.5" x2="14.5" y2="14.5"/></svg></button>
@@ -23125,7 +23126,7 @@ var MESA_DIR=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro
 var MESA_EDITA=['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cpb-ov','ren-cr-ov'];
 /* 1.371.0 (etapa 2 do plano da tela aberta): folhas que ja moram DENTRO da coluna da direita. Familia migrada entra aqui e sai
    das listas de CSS com !important. Com o Duo fechado elas voltam para o corpo, iguais a antes. */
-var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay'];
+var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay','vbm-hist-op','fm-overlay'];   /* 1.401.0: + operacao do Historico e Fechamento */
 /* 1.377.0 (VB 20/11 23:13: "card do relogio abre feio"): a ficha do relogio deixa de ser folha de baixo na tela aberta (cinza em cima, botoes
    cortados embaixo) e ocupa o painel inteiro, como a ficha da PARCELA. Camada 100015, a que ela ja tinha na direita. */
 var MESA_DENTRO_Z={'mer-view-overlay':'100015'};
@@ -23147,7 +23148,7 @@ function MESA_fichaEntra(ov){
     if(cx && cx.dataset && cx.dataset.mhOrig!=null){ cx.style.maxHeight=cx.dataset.mhOrig; delete cx.dataset.mhOrig; }   /* teto do teclado da tela fechada */
   }
   if(ov.parentNode!==col){
-    if(ov.parentNode===document.body && !ov._vbLugar && ov.dataset.fora!=null && ov.id==='mer-view-overlay'){ ov._vbLugar=document.createComment('vb:'+ov.id); document.body.insertBefore(ov._vbLugar, ov); }   /* folha fixa do HTML volta para o mesmo lugar */
+    if(ov.parentNode===document.body && !ov._vbLugar && ov.dataset.fora!=null && (ov.id==='mer-view-overlay'||ov.id==='fm-overlay')){ ov._vbLugar=document.createComment('vb:'+ov.id); document.body.insertBefore(ov._vbLugar, ov); }   /* folha fixa do HTML volta para o mesmo lugar */
     col.appendChild(ov); if(cx) cx.scrollTop=sy;
   }
   if(!ov._vbColObs && window.MutationObserver){ try{ ov._vbColObs=new MutationObserver(MESA_colZ); ov._vbColObs.observe(ov, {attributes:true, attributeFilter:['style']}); }catch(e){} }
@@ -23238,7 +23239,7 @@ function MESA_colZ(){
     if(d.style.visibility!==vv) d.style.visibility=vv;
   }
 }
-var MESA_FORA=['vbm-hist-op','fm-overlay','clip-overlay','vb-foto-overlay'];   /* folhas da direita que ainda moram no corpo */
+var MESA_FORA=['clip-overlay','vb-foto-overlay'];   /* folhas da direita que ainda moram no corpo */
 /* os mesmos botoes da Home, na mesma ordem e com os mesmos nomes; '-' e o traco entre OPERACOES e GESTAO */
 var MESA_ITENS=[
   ['fin','Financiamentos','<path d="M5 16l1.5-5a2 2 0 0 1 2-1.5h7a2 2 0 0 1 2 1.5L19 16M4 16h16v3H4zM7 19v2M17 19v2"/>'],
@@ -24053,7 +24054,7 @@ function MESA_histOp(idx){
   var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(!r) return;
   var row=document.querySelector('#hist-lista [data-idx="'+idx+'"]'); var tab=row?row.getAttribute('data-tab'):null; if(!tab) return;
   var ov=document.getElementById('vbm-hist-op');
-  if(!ov){ ov=document.createElement('div'); ov.id='vbm-hist-op'; document.body.appendChild(ov); }
+  if(!ov){ ov=document.createElement('div'); ov.id='vbm-hist-op'; MESA_fichaPoe(ov); }
   var tit=''; try{ tit=row.querySelector('.hist-tl').textContent.trim(); }catch(e){}
   var l2=''; try{ var a=row.children; for(var i=0;i<a.length;i++){ if(a[i].className!=='hist-tl' && a[i].className!=='hist-acts' && !/^hist-(exp|stamp)/.test(a[i].id||'')){ l2+=a[i].outerHTML; } } }catch(e){}
   var ex=document.getElementById('hist-exp-'+idx);
