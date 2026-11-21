@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.398.0</title>
+<title>VB - v1.399.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -402,7 +402,6 @@ div:has(> #ant-seg-simples){ display:none !important; }
   /* 1.397.0: lupa e olhinho da direita das ENTRADAS/SAIDAS sobem para o meio da linha do titulo (ficavam em cima do fio) */
   html.vb-mesa #vb-mesa-dir > .vbm-rhead > span:last-child{ transform:translateY(-7px); }
   /* 1.398.0 (VB 21/11 "B e faz"): olhinho no Historico da tela aberta -- esconde a direita, os valores da lista e a barra preta */
-  html.vb-mesa #hist-olho{ display:inline-flex !important; }
   /* 1.398.0: Cadastros na tela aberta -- linhas com numero e seta (a fechada segue com os 3 botoes) */
   html.vb-mesa #screen-ges .ges-velho{ display:none !important; }
   html.vb-mesa #screen-ges .ges-novo{ display:flex !important; }
@@ -23348,7 +23347,10 @@ function MESA_resumo(){
   if(!MESA_on) return;
   var el=document.getElementById('vb-mesa-dir'); if(!el) return;
   /* mesmo cabecalho da Home: estilo do OPERACOES, sem traco, na mesma altura em todas as telas */
-  var cab='<div style="display:flex;align-items:center;justify-content:space-between;margin:62px 4px 7px;min-height:21px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">RESUMO</span></div>';
+  var cab='<div style="display:flex;align-items:center;justify-content:space-between;margin:62px 4px 7px;min-height:21px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">RESUMO</span>'
+    /* 1.399.0 (VB 21/11 "olhim do historico mesmo local do entradas"): o olhinho do Historico mora no canto direito do titulo da DIREITA, como nas ENTRADAS/SAIDAS */
+    +((typeof VB_telaAtual!=='undefined' && VB_telaAtual==='hist')?'<span onclick="HIST_olhoToggle()" title="Esconder os valores" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 6px;margin:-6px 0;color:var(--mu2);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg></span>':'')
+    +'</div>';
   if(typeof REN_cache==='undefined' || !REN_cache){
     /* primeira carga: espera a sessao subir, como o card A PAGAR da Home */
     if(((window.performance&&performance.now)?performance.now():1e9)-MESA_t0<1500){ el.innerHTML=cab; setTimeout(MESA_resumo, 1600); return; }
