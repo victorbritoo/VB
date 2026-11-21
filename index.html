@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.373.0</title>
+<title>VB - v1.374.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -380,8 +380,9 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-toast{ left:calc(var(--mx,50%) / 2 + 50%) !important; z-index:100060 !important; top:calc(var(--fy,54px) + 12px) !important; bottom:auto !important; }   /* 1.355.2: no alto da direita, sem cobrir botao de folha */
   html.vb-mesa :is(#vb-c2-overlay,#vb-sair-overlay,#vb-name-overlay){ padding-left:var(--mx,50%) !important; box-sizing:border-box !important; }
   /* 1.341.1: ficha do relogio e folhas de baixo (DOCUMENTOS, NP, CONTRATO...) abrem na metade direita, por cima da ficha da operacao */
-  html.vb-mesa #mer-view-overlay{ top:var(--fy,0px) !important; left:var(--mx,50%) !important; z-index:100015 !important; }
-  html.vb-mesa .vbm-dirsheet{ top:var(--fy,0px) !important; left:var(--mx,50%) !important; z-index:100016 !important; }
+  /* 1.374.0 (etapa 2, 2a familia): a ficha do relogio e as folhas de baixo criadas na hora moram DENTRO da coluna da direita, ainda como folha
+     de baixo (fundo escuro, encostada no pe). Sem !important: ao entrar perdem so a posicao de tela cheia (MESA_baixoEntra). */
+  html.vb-mesa #vb-mesa-col>.vbm-baixo{ position:absolute; top:0; left:0; right:0; bottom:0; }
   /* Fechamento na direita: RENDIMENTO DO CAPITAL numa linha */
   html.vb-mesa .fm-rend-lbl{ white-space:nowrap; letter-spacing:1.4px !important; min-width:0; overflow:hidden; text-overflow:ellipsis; }
   /* 1.356.1: o valor e o "era x%" nao descem mais de linha na direita */
@@ -396,7 +397,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa .fm-rend-val span{ font-size:9px !important; }
   /* 1.347.0 computador: a metade direita nao estica alem de 640 pt (fichas e fotos legiveis) */
   html.vb-mesa.vb-mesa-pc #vb-mesa-col,
-  html.vb-mesa.vb-mesa-pc :is(#clip-overlay,#fm-overlay,#vbm-hist-op,#vb-foto-overlay,#mer-view-overlay,.vbm-dirsheet){
+  html.vb-mesa.vb-mesa-pc :is(#clip-overlay,#fm-overlay,#vbm-hist-op,#vb-foto-overlay){
     right:auto !important; width:min(640px, calc(100vw - var(--mx,50%))) !important; }
   html.vb-mesa.vb-mesa-pc #vb-mesa-dir{ border-right:0.5px solid var(--ln2); }
   html.vb-mesa.vbm-buscando:not(.vb-mesa-home){ --fy:120px; }
@@ -23096,16 +23097,62 @@ function MESA_fichaSai(ov){
 }
 function MESA_fichasMuda(on){
   MESA_DENTRO.forEach(function(id){ var o=document.getElementById(id); if(!o) return; try{ if(on) MESA_fichaEntra(o); else MESA_fichaSai(o); }catch(e){} });
+  /* 1.374.0: folhas de baixo (ficha do relogio + as criadas na hora, marcadas .vbm-dirsheet) */
+  try{
+    if(on){
+      MESA_BAIXO.forEach(function(id){ var o=document.getElementById(id); if(o) MESA_baixoEntra(o, MESA_BAIXO_Z[id]||100016, true); });
+      Array.prototype.slice.call(document.body.children).forEach(function(n){ if(n.classList && n.classList.contains('vbm-dirsheet')) MESA_baixoEntra(n, 100016, true); });
+    } else {
+      var col=document.getElementById('vb-mesa-col');
+      if(col) Array.prototype.slice.call(col.children).forEach(function(n){ if(n.classList && n.classList.contains('vbm-baixo')) MESA_baixoSai(n); });
+    }
+  }catch(e){}
   MESA_colZ();
+}
+/* 1.374.0: folha de baixo dentro da coluna. Diferente da ficha (MESA_fichaEntra), ela continua folha de baixo: fundo escuro, encostada
+   no pe, caixa de dentro igual. So troca a posicao de tela cheia (fixa, 0/0/0/0) pelo retangulo da coluna e assume a camada que o CSS
+   antigo forcava (ficha do relogio 100015, criadas na hora 100016). Na saida devolve exatamente a posicao e a camada de antes. */
+var MESA_BAIXO=['mer-view-overlay'], MESA_BAIXO_Z={'mer-view-overlay':100015};
+var MESA_BAIXO_P=['position','top','left','right','bottom','z-index'];
+function MESA_baixoEntra(ov, z, guarda){
+  var col=document.getElementById('vb-mesa-col'); if(!col || !ov) return;
+  if(!ov.classList.contains('vbm-baixo')){
+    ov.dataset.fora=ov.style.cssText;
+    ['position','top','left','right','bottom'].forEach(function(p){ ov.style.removeProperty(p); });
+    ov.style.zIndex=String(z||100016);
+    ov.classList.add('vbm-baixo');
+  }
+  if(ov.parentNode!==col){
+    var cx=ov.firstElementChild, sy=cx?cx.scrollTop:0;
+    if(guarda && !ov._vbLugar && ov.parentNode===document.body){ ov._vbLugar=document.createComment('vb:'+ov.id); ov.parentNode.insertBefore(ov._vbLugar, ov); }   /* quem ja estava no corpo quando o Duo abriu (folhas fixas do HTML) volta para o mesmo lugar */
+    col.appendChild(ov); if(cx) cx.scrollTop=sy;
+  }
+  if(!ov._vbColObs && window.MutationObserver){ try{ ov._vbColObs=new MutationObserver(MESA_colZ); ov._vbColObs.observe(ov, {attributes:true, attributeFilter:['style']}); }catch(e){} }
+  MESA_colZ();
+}
+function MESA_baixoSai(ov){
+  if(!ov) return;
+  if(ov.classList.contains('vbm-baixo')){
+    var t=document.createElement('div'); t.style.cssText=ov.dataset.fora||'';
+    MESA_BAIXO_P.forEach(function(p){ var v=t.style.getPropertyValue(p); if(v) ov.style.setProperty(p, v); else ov.style.removeProperty(p); });
+    ov.classList.remove('vbm-baixo');
+  }
+  var col=document.getElementById('vb-mesa-col');
+  if(col && ov.parentNode===col){
+    var cx=ov.firstElementChild, sy=cx?cx.scrollTop:0;
+    if(ov._vbLugar && ov._vbLugar.parentNode){ ov._vbLugar.parentNode.insertBefore(ov, ov._vbLugar); ov._vbLugar.remove(); ov._vbLugar=null; }
+    else document.body.appendChild(ov);
+    if(cx) cx.scrollTop=sy;
+  }
 }
 /* PROVISORIO ate a ultima familia migrar: a coluna sobe para a camada da ficha mais alta que estiver aberta dentro dela, para a ordem
    com as folhas que ainda ficam no corpo (panorama do cliente, foto, ficha do relogio, dialogos) continuar a mesma de antes. Sem ficha: 50. */
 function MESA_colZ(){
   var col=document.getElementById('vb-mesa-col'); if(!col) return;
   var z=50;
-  for(var i=0;i<MESA_DENTRO.length;i++){
-    var o=document.getElementById(MESA_DENTRO[i]);
-    if(o && o.parentNode===col && MESA_vis(MESA_DENTRO[i])){ var v=parseInt(o.style.zIndex)||0; if(v>z) z=v; }
+  for(var i=0;i<col.children.length;i++){   /* 1.374.0: qualquer folha que more na coluna (fichas e folhas de baixo) */
+    var o=col.children[i]; if(o.id==='vb-mesa-dir' || !o.style) continue;
+    if(o.style.display && o.style.display!=='none'){ var v=parseInt(o.style.zIndex)||0; if(v>z) z=v; }
   }
   if(String(col.style.zIndex)!==String(z)) col.style.zIndex=String(z);
 }
@@ -23155,6 +23202,8 @@ function MESA_monta(){
   }).join('');
   document.body.appendChild(r);
   var col=document.createElement('div'); col.id='vb-mesa-col'; document.body.appendChild(col);   /* 1.371.0: coluna da direita */
+  /* 1.374.0: folha criada na hora agora entra e sai da COLUNA, nao do corpo: e a coluna que avisa a trava do fundo e a camada */
+  try{ if(window.MutationObserver) new MutationObserver(function(){ try{ VB_folhaTrava(); }catch(e){} try{ MESA_colZ(); }catch(e){} }).observe(col, {childList:true}); }catch(e){}
   var d=document.createElement('div'); d.id='vb-mesa-dir'; col.appendChild(d);
   var s=document.createElement('div'); s.id='vb-mesa-escudo';
   s.addEventListener('click', function(){ try{ VB_toast('Feche a folha antes.'); }catch(e){} });
@@ -25102,7 +25151,11 @@ function MESA_ehFolha(n){
   return z>=10000 && z<200000;
 }
 (function(){
-  function marca(n){ if(MESA_ehFolha(n)) n.classList.add('vbm-dirsheet'); }
+  function marca(n){
+    if(MESA_ehFolha(n)){ n.classList.add('vbm-dirsheet'); if(MESA_on){ try{ MESA_baixoEntra(n, 100016); }catch(e){} } return; }
+    /* 1.374.0: folha que ja morou na coluna e foi posta de novo no corpo por quem a criou: com o Duo aberto volta para a coluna; fechado, recupera a posicao de tela cheia */
+    if(n && n.nodeType===1 && n.classList && n.classList.contains('vbm-baixo')){ try{ if(MESA_on) MESA_baixoEntra(n, parseInt(n.style.zIndex)||100016); else MESA_baixoSai(n); }catch(e){} }
+  }
   function init(){
     try{ Array.prototype.forEach.call(document.body.children, marca); }catch(e){}
     try{ new MutationObserver(function(ms){ ms.forEach(function(m){ Array.prototype.forEach.call(m.addedNodes, marca); }); }).observe(document.body, {childList:true}); }catch(e){}
