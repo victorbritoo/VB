@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.372.0</title>
+<title>VB - v1.373.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23833,7 +23833,7 @@ function MESA_medida(){
   /* 1.361.2: volta (tela descida de novo no Duo com a tela repartida, prints 20/11 08:18) -- agora em toda tela, nao so na aberta */
   if(!m){ m=document.createElement('div'); m.id='vbm-medida'; m.style.cssText='position:fixed;left:6px;bottom:4px;z-index:100070;font:9px/1.2 -apple-system,sans-serif;color:#d33;pointer-events:none;letter-spacing:0;'; document.body.appendChild(m); }
   var vv=window.visualViewport;
-  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · E '+Math.round(VB_rolEl()?VB_sy():-1)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · C '+VB_vpCuras+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA')+' · R '+VB_vpRec+(VB_vpUlt?(' · ULT '+VB_vpUlt):'');
+  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · E '+Math.round(VB_rolEl()?VB_sy():-1)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · C '+VB_vpCuras+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA')+' · R '+VB_vpRec+' · J '+VB_vpJaN+(VB_vpUlt?(' · ULT '+VB_vpUlt):'');
   return;
   if(!MESA_on) return;
   var r=document.getElementById('vb-mesa-rail'); if(!r) return;
@@ -23862,15 +23862,20 @@ var VB_vpTent=0, VB_vpCuras=0;
    com campos -- quem derruba e o teclado fechando. Duas coisas: (1) a cura age NA HORA em que o teclado some e em que o tamanho muda
    (VB_vpJa), sem os 120-300 ms de espera; as esperas antigas ficam como reserva. (2) a MEDIDA mostra a ultima cura: quem disparou,
    altura antes>depois, ms desde o teclado sumir; e R = vezes em que a cura NAO pode agir porque ainda havia campo com cursor. */
-var VB_vpUlt='', VB_vpRec=0, VB_vpKbFim=0, VB_vpCuraT=0;
+var VB_vpUlt='', VB_vpRec=0, VB_vpKbFim=0, VB_vpCuraT=0, VB_vpJaN=0;   /* 1.373.0: VB_vpJaN = curas na hora desta descida (teto 2) */
 function VB_vpTeclado(){ var v=window.visualViewport; return !!(v && v.height>0 && v.height < innerHeight-120); }
 function VB_vpJa(g){
   try{
     if(!(window.navigator && navigator.standalone)) return;
     if(innerWidth<860 || innerWidth>875) return;
-    if(innerHeight>=640 || VB_vpTeclado()) return;
+    if(innerHeight>=640){ VB_vpJaN=0; return; }
+    if(VB_vpTeclado()) return;
+    /* 1.373.0: prints de 20/11 22:35-22:36 -- ULT TAM 587>669 e C de 1 para 9 em um minuto. A cura na hora funciona, mas nao tinha teto:
+       o iPhone manda varios avisos de tamanho seguidos (abrir o Duo) e cada um curava de novo = varios piscas. Agora no maximo 2 por descida;
+       o teto zera quando a altura volta, quando o teclado some e ao voltar para o app. A reserva (VB_vpFix) segue com o teto dela. */
+    if(VB_vpJaN>=2) return;
     if(Date.now()-VB_vpCuraT<80) return;   /* sem rajada */
-    if(VB_vpCura(g)) setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
+    if(VB_vpCura(g)) VB_vpJaN++, setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
   }catch(e){}
 }
 function VB_vpCura(g){
@@ -23894,12 +23899,13 @@ function VB_vpFix(g){
   try{
     if(!(window.navigator && navigator.standalone)) return;
     if(innerWidth<860 || innerWidth>875) return;
-    if(innerHeight>=640){ VB_vpTent=0; return; }
+    if(innerHeight>=640){ VB_vpTent=0; VB_vpJaN=0; return; }
     /* 1.355.2: teclado aberto tambem encolhe a altura -- nao e tela descida; mexer no viewport enquanto digita fazia a tela descer */
     /* 1.355.4: teclado = a area visivel bem menor que a tela do app. A 1.355.2 olhava o campo focado,
        mas no iPhone o campo continua focado depois que o teclado some e a correcao parava de vez. */
     var _vv=window.visualViewport; if(_vv && _vv.height>0 && _vv.height < innerHeight-120) return;   /* 1.353.1: tela no tamanho certo zera a contagem -- cada descida nova ganha 4 tentativas (antes so zerava ao sair do app) */
     if(VB_vpTent>=6) return;
+    if(Date.now()-VB_vpCuraT<1000) return;   /* 1.373.0: acabou de curar -- da 1 s para a altura voltar antes de a reserva tentar (sem gastar tentativa) */
     VB_vpTent++;
     /* 1.370.0: MEDIDA de 20/11 21:19 -- 867x587, SY 0, T 4: as 4 trocas de viewport-fit nao devolvem os 82 pt.
        E o defeito conhecido do app de atalho no iPhone (a area util encolhe e fica assim ate matar o app).
@@ -23916,11 +23922,11 @@ function VB_vpFix(g){
 (function(){
   var f=function(){ VB_vpJa('TAM'); setTimeout(function(){ VB_vpFix('TAM+300'); }, 300); };
   window.addEventListener('resize', f);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; f(); } });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=0; f(); } });
   setTimeout(VB_vpFix, 1500); setInterval(VB_vpFix, 3000);
   document.addEventListener('focusout', function(){ setTimeout(function(){ VB_vpTent=0; VB_vpFix('FOCO+180'); }, 180); }, true);
   /* 1.356.1: corrige no momento em que o teclado fecha, sem esperar a volta de 3 s */
-  try{ var _vvT=false; if(window.visualViewport) window.visualViewport.addEventListener('resize', function(){ var t=window.visualViewport.height>0 && window.visualViewport.height < innerHeight-120; if(_vvT && !t){ VB_vpKbFim=Date.now(); VB_vpTent=0; VB_vpJa('TECL'); setTimeout(function(){ VB_vpJa('TECL+50'); }, 50); setTimeout(function(){ VB_vpFix('TECL+120'); }, 120); } _vvT=t; }); }catch(e){}
+  try{ var _vvT=false; if(window.visualViewport) window.visualViewport.addEventListener('resize', function(){ var t=window.visualViewport.height>0 && window.visualViewport.height < innerHeight-120; if(_vvT && !t){ VB_vpKbFim=Date.now(); VB_vpTent=0; VB_vpJaN=0; VB_vpJa('TECL'); setTimeout(function(){ VB_vpJa('TECL+50'); }, 50); setTimeout(function(){ VB_vpFix('TECL+120'); }, 120); } _vvT=t; }); }catch(e){}
 })();
 var MESA_histVolta=null;
 function MESA_histRetoma(v, n){

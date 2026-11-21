@@ -19,8 +19,11 @@ let a=await est();t('altura certa (669): nenhuma cura',a.c===0,JSON.stringify({c
 await pg.setViewportSize({width:867,height:587});await pg.waitForTimeout(90);
 let c=await est();t('altura caiu para 587: cura em menos de 0,1 s, pelo aviso de tamanho',c.c===1&&/^TAM 587>/.test(c.ult),JSON.stringify({c:c.c,ult:c.ult}));
 t('a cura guarda a rolagem das duas caixas',c.esq===a.esq&&c.dir===a.dir,JSON.stringify({esq:[a.esq,c.esq],dir:[a.dir,c.dir]}));
+/* rajada de avisos de tamanho com a altura ainda encolhida (abrir o Duo): nao pode curar a cada aviso */
+for(let i=0;i<12;i++){await pg.evaluate(()=>window.dispatchEvent(new Event('resize')));await pg.waitForTimeout(100);}
+let r=await est();t('12 avisos de tamanho seguidos: no maximo 2 curas na hora e 1 da reserva depois de 1 s (eram 13)',r.c<=3,JSON.stringify({c:r.c}));
 await pg.waitForTimeout(22000);c=await est();
-t('altura que nao volta: para depois de poucas tentativas (sem piscar para sempre)',c.c<=4&&c.tent>=6,JSON.stringify({c:c.c,tent:c.tent}));
+t('altura que nao volta: para depois de poucas tentativas (sem piscar para sempre)',c.c<=5&&c.tent>=6,JSON.stringify({c:c.c,tent:c.tent}));
 t('MEDIDA mostra R e ULT',/ · R \d+ · ULT TAM/.test(c.med)||/ULT /.test(c.med),c.med.slice(-60));
 /* com campo em foco a cura nao age e conta em R */
 await pg.setViewportSize({width:867,height:669});await pg.waitForTimeout(500);
