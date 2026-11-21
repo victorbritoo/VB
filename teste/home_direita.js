@@ -54,8 +54,11 @@ const vbm=await pg.evaluate(()=>{const hoje=REN_hojeISO(),ym=hoje.slice(0,7);con
   const itens=[it(1,ym+'-05',715000),it(2,ym+'-27',317000)];const bx={},prev={};bx[REN_key(itens[0])]=1;prev[REN_key(itens[0])]=243000;prev[REN_key(itens[1])]=108000;
   REN_cache={itens,bx,pags:{},opInfo:{},cp:[],prev};MESA_resumo();
   const d=document.getElementById('vb-mesa-dir');const sp=[...d.querySelectorAll('span')].find(e=>/^RECEBIDO /.test(e.textContent)&&e.parentElement.children.length===2);
+  const topo=sp.parentElement.parentElement.firstElementChild;const tr=topo.getBoundingClientRect(),cr=sp.parentElement.parentElement.getBoundingClientRect();
+  const tt=topo.innerText.replace(/\s+/g,' '),tc=topo.scrollWidth<=topo.clientWidth+1&&tr.right<=cr.right+1&&[...topo.children].every(c=>c.getBoundingClientRect().height<22);
   const t1=d.innerText.replace(/\s+/g,' ');REN_cache.prev={};MESA_resumo();const t2=d.innerText.replace(/\s+/g,' ');
-  return {com:sp.parentElement.innerText.replace(/\s+/g,' '),cabe:sp.parentElement.scrollWidth<=sp.parentElement.clientWidth+1,sem:/\(VB /.test(t2)};});
+  return {topo:tt,topoCabe:tc,com:sp.parentElement.innerText.replace(/\s+/g,' '),cabe:sp.parentElement.scrollWidth<=sp.parentElement.clientWidth+1,sem:/\(VB /.test(t2)};});
+t('FALTA com a parte do VB: FALTA 317K (VB 209K) cabendo numa linha',/FALTA 317K \(VB 209K\)/.test(vbm.topo)&&vbm.topoCabe,JSON.stringify({t:vbm.topo,c:vbm.topoCabe}));
 t('MES com socio: RECEBIDO 715K (VB 472K) e MES 1,03M (VB 681K); sem socio, sem parenteses',/RECEBIDO 715K \(VB 472K\)/.test(vbm.com)&&/MÊS 1,03M \(VB 681K\)/.test(vbm.com)&&vbm.cabe&&!vbm.sem,JSON.stringify(vbm));
 if(FOTO) await pg.screenshot({path:FOTO});
 await b.close();console.log(falhas?'FALHOU':'OK');process.exit(falhas?1:0);})();
