@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.395.0</title>
+<title>VB - v1.396.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -16164,12 +16164,8 @@ function FM_calcMes(ym, res, _merMap){
       lucroBruto:dAnt.luc+dFin.luc+venLucVB+_proJ,
       lucroTotal:dAnt.luc+dFin.luc+venLucVB+_proJ-_juT, nOps:(dAnt.n+dFin.n+dVen.n+_proN)};
 }
-function FM_load(){
-  var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
-  document.getElementById('fm-titulo').textContent=FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear();
-  var body=document.getElementById('fm-body');
-  body.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:16px;">Carregando...</div>';
-  Promise.all([
+/* 1.396.0: a busca do fechamento virou funcao -- o GERAL do LUCRO POR MES (direita do Historico) usa a mesma, para dar o mesmo numero */
+function FM_fetchRes(){ return Promise.all([
     sb.from('antecipacoes').select('*').limit(10000),
     sb.from('financiamentos_hist').select('*').limit(10000),
     sb.from('vendas').select('*').limit(10000),
@@ -16184,7 +16180,13 @@ function FM_load(){
     sb.from('mercadoria_custos').select('mercadoria_id,valor,data,descricao,cobrar').limit(20000),
     sb.from('mercadorias').select('id,descricao').limit(20000),
     sb.from('contas_receber').select('id,lote,ordem,venc,valor,devedor,descricao,num_ini,num_tot').limit(20000)   /* res[11] -- v1.323.0: juros das entradas manuais */
-  ]).then(function(res){
+  ]); }
+function FM_load(){
+  var ym=FM_ref.getFullYear()+'-'+('0'+(FM_ref.getMonth()+1)).slice(-2);
+  document.getElementById('fm-titulo').textContent=FM_MESES[FM_ref.getMonth()]+' '+FM_ref.getFullYear();
+  var body=document.getElementById('fm-body');
+  body.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;padding:16px;">Carregando...</div>';
+  FM_fetchRes().then(function(res){
     var _merMap={};
     ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) _merMap[String(m.venda_id)]=m.data_compra||null; });
     FM_res=res; FM_merMap=_merMap;
@@ -23496,11 +23498,12 @@ function MESA_histBlocos(){
   var meses=[]; for(var k=5;k>=0;k--){ var d=new Date(hoje.getFullYear(),hoje.getMonth()-k,1); meses.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)); }
   var porMes={}; meses.forEach(function(m){ porMes[m]=0; });
   var nA=0, vA=0, lA=0;
-  /* 1.395.0 (VB 21/11 "faz"): toque no nome da aba alterna ABA <-> GERAL. GERAL soma Financiamento, Antecipacao e Vendas (Vendas com LUCRO VB);
-     Pagamentos fora. As abas ainda nao abertas sao buscadas uma vez (MESA_histGerBusca) e o card repinta quando chegam. */
-  var ger=!!MESA_histGeral, tab0=tab, fontes=[[tab,rows]];
-  if(ger){ fontes=[]; ['fin','ant','ven'].forEach(function(t){ var rr=(t===tab0)?rows:(MESA_histGer[t]||null); if(rr) fontes.push([t,rr]); }); MESA_histGerBusca(tab0); }
-  fontes.forEach(function(F){ tab=F[0]; vc=HIST_valCol(tab);
+  /* 1.396.0 (VB 21/11 "faz e explica depois"): GERAL = o LUCRO TOTAL do FECHAMENTO de cada mes (FM_calcMes: antecipacao e financiamento
+     pro rata dia, vendas com lucro VB, prorrogacoes, menos juros pagos) -- o mesmo numero do Fechamento, nao a soma por data da operacao
+     da 1.395.0 (dava dois "lucros do mes" diferentes no app). Seletor ABA | GERAL visivel; no GERAL o toque na barra abre o Fechamento do mes. */
+  var ger=!!MESA_histGeral, tab0=tab, fontes=[[tab,rows]], G=null;
+  if(ger){ G=MESA_histGerCalc(meses, ano, hoje); if(!G) MESA_histGerBusca(); }
+  if(!ger) fontes.forEach(function(F){ tab=F[0]; vc=HIST_valCol(tab);
   F[1].forEach(function(r){
     var rt=r._tab||tab; if((rt==='ant'||rt==='ven'||rt==='fin') && VB_ehSimulacao(r)) return;
     if(tab==='ant' && (Number(r.valor_liquido)||0)>(Number(r.valor_bruto)||0)) return;   /* atrasado da antecipacao nao e operacao do periodo */
@@ -23514,38 +23517,58 @@ function MESA_histBlocos(){
     if(ym in porMes) porMes[ym]+=y;
     if(ym.slice(0,4)===ano){ nA++; vA+=v; if(l!=null) lA+=Number(l)||0; }
   }); }); tab=tab0;
+  if(ger && G){ porMes=G.porMes; nA=G.n; vA=G.vol; lA=G.luc; }
   var MS=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
   var mx=0; meses.forEach(function(m){ mx=Math.max(mx,porMes[m]); });
   var CARD='background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:8px;';
   var ROT='font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);white-space:nowrap;';
   var nomeTab={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'}[tab]||'';
-  var h='<div style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;"><span style="'+ROT+'">'+(temL?((tab==='ven'&&!ger)?'LUCRO VB POR MÊS':'LUCRO POR MÊS'):'PAGO POR MÊS')+'</span><span onclick="MESA_histGeral=!MESA_histGeral;MESA_resumo();" style="'+ROT+'letter-spacing:1.5px;cursor:pointer;padding:6px 0 6px 12px;margin:-6px 0;'+(ger?'color:var(--tx);':'')+'">'+(ger?'GERAL':nomeTab)+' \u21c4</span></div>'
+  var h='<div style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;"><span style="'+ROT+'">'+((tab==='ven'&&!ger)?'LUCRO VB POR MÊS':'LUCRO POR MÊS')+'</span>'
+    +'<span style="display:inline-flex;border:0.5px solid var(--ln2);border-radius:8px;overflow:hidden;margin:-3px 0;flex-shrink:0;">'
+    +[[0,nomeTab],[1,'GERAL']].map(function(o){ var on=(!!o[0]===ger); return '<span onclick="MESA_histGeral='+(o[0]?'true':'false')+';MESA_resumo();" style="font-size:8.5px;letter-spacing:1px;font-weight:700;padding:4px 7px;cursor:pointer;white-space:nowrap;'+(on?'background:var(--acc);color:var(--acc-tx);':'color:var(--so);')+'">'+o[1]+'</span>'; }).join('')
+    +'</span></div>'
     +'<div style="display:flex;align-items:flex-end;gap:8px;height:58px;margin-top:6px;">'
     +meses.map(function(m,i){
       var v=porMes[m], at=mSel?(m===mSel):(i===meses.length-1), hp=(mx>0&&v>0)?Math.max(3,Math.round(30*v/mx)):0;
-      return '<div onclick="MESA_histMes(\''+m+'\')" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;">'
-        +'<span style="font-size:9.5px;font-weight:700;color:'+(at?'var(--tx)':'var(--mu2)')+';white-space:nowrap;letter-spacing:0;margin-bottom:2px;">'+(v>0.5?MESA_hk(v):'\u2014')+'</span>'
+      return '<div onclick="'+(ger?'MESA_histFecha':'MESA_histMes')+'(\''+m+'\')" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;">'
+        +'<span style="font-size:9.5px;font-weight:700;color:'+(at?'var(--tx)':'var(--mu2)')+';white-space:nowrap;letter-spacing:0;margin-bottom:2px;">'+(Math.abs(v)>0.5?MESA_hk(v):'\u2014')+'</span>'
         +'<div style="width:100%;max-width:34px;height:'+hp+'px;border-radius:4px;background:'+(at?'var(--acc)':'var(--so2)')+';"></div>'
         +'<span style="font-size:9px;letter-spacing:1px;font-weight:'+(at?'700':'600')+';color:'+(at?'var(--tx)':'var(--so)')+';margin-top:4px;">'+MS[Number(m.slice(5,7))-1]+'</span></div>';
     }).join('')+'</div>';
   var cel=function(r,v){ return '<div style="min-width:0;"><div style="'+ROT+'letter-spacing:1px;">'+r+'</div><div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;letter-spacing:0;margin-top:1px;">'+v+'</div></div>'; };
   /* o ano mora no mesmo card, abaixo de um fio (cabe em 669 sem rolar) */
   h+='<div style="border-top:0.5px solid var(--ln2);margin-top:8px;padding-top:6px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">'
-    +cel('OPER. '+ano,MESA_ver?String(nA):'\u2022\u2022')+cel('VOLUME',MESA_hk(vA))+cel(temL?((tab==='ven'&&!ger)?'LUCRO VB':'LUCRO'):'MÉDIA',temL?MESA_hk(lA):MESA_hk(nA?vA/nA:0))+cel(temL?'LUCRO MÉDIO':'POR MÊS',temL?MESA_hk(nA?lA/nA:0):MESA_hk(vA/(hoje.getMonth()+1)))
+    +cel('OPER. '+ano,MESA_ver?String(nA):'\u2022\u2022')+cel('VOLUME',MESA_hk(vA))+cel((tab==='ven'&&!ger)?'LUCRO VB':'LUCRO',MESA_hk(lA))+(ger?cel('MÉDIA/MÊS',MESA_hk(lA/(hoje.getMonth()+1))):cel('LUCRO MÉDIO',MESA_hk(nA?lA/nA:0)))
     +'</div></div>';
   return h;
 }
 var MESA_histBase={};
-var MESA_histGeral=false, MESA_histGer={}, MESA_histGerT=0, MESA_histGerOn=false;
-function MESA_histGerBusca(menos){
+var MESA_histGeral=false, MESA_histGerRes=null, MESA_histGerMer=null, MESA_histGerT=0, MESA_histGerOn=false, MESA_histGerMemo=null;
+function MESA_histGerBusca(){
   try{
-    if(MESA_histGerOn || (MESA_histGerT && Date.now()-MESA_histGerT<60000 && ['fin','ant','ven'].every(function(t){ return t===menos || MESA_histGer[t]; }))) return;
-    MESA_histGerOn=true;
-    Promise.all(['fin','ant','ven'].map(function(t){
-      return sb.from(HIST_tabela(t)).select('*').order('created_at',{ascending:false}).limit(500).then(function(res){ if(!res.error) MESA_histGer[t]=res.data||[]; }).catch(function(){});
-    })).then(function(){ MESA_histGerOn=false; MESA_histGerT=Date.now(); if(MESA_histGeral && VB_telaAtual==='hist') try{ MESA_resumo(); }catch(e){} });
+    if(MESA_histGerOn) return; MESA_histGerOn=true;
+    FM_fetchRes().then(function(res){
+      var mm={}; ((res[4]&&res[4].data)||[]).forEach(function(m){ if(m.venda_id) mm[String(m.venda_id)]=m.data_compra||null; });
+      MESA_histGerRes=res; MESA_histGerMer=mm; MESA_histGerT=Date.now(); MESA_histGerMemo=null; MESA_histGerOn=false;
+      if(MESA_histGeral && VB_telaAtual==='hist') try{ MESA_resumo(); }catch(e){}
+    }).catch(function(){ MESA_histGerOn=false; });
   }catch(e){ MESA_histGerOn=false; }
 }
+function MESA_histGerCalc(meses, ano, hoje){
+  try{
+    if(!MESA_histGerRes) return null;
+    if(Date.now()-MESA_histGerT>60000) MESA_histGerBusca();   /* passou 1 min: busca de novo por tras e repinta */
+    var chave=meses.join(',')+'|'+MESA_histGerT; if(MESA_histGerMemo && MESA_histGerMemo.k===chave) return MESA_histGerMemo.v;
+    var memo={}, c=function(ym){ return memo[ym]||(memo[ym]=FM_calcMes(ym, MESA_histGerRes, MESA_histGerMer)); };
+    var G={porMes:{}, n:0, vol:0, luc:0};
+    meses.forEach(function(m){ G.porMes[m]=c(m).lucroTotal||0; });
+    for(var i=0;i<=hoje.getMonth();i++){ var x=c(ano+'-'+('0'+(i+1)).slice(-2));
+      G.luc+=x.lucroTotal||0; G.n+=(x.ant.novos||0)+(x.fin.novos||0)+(x.ven.n||0); G.vol+=(x.ant.tot||0)+(x.fin.tot||0)+(x.ven.tot||0); }
+    MESA_histGerMemo={k:chave, v:G}; return G;
+  }catch(e){ return null; }
+}
+/* no GERAL a barra abre o Fechamento daquele mes (e o mesmo numero) */
+function MESA_histFecha(ym){ try{ FM_abrir(); FM_ref=new Date(+ym.slice(0,4), +ym.slice(5,7)-1, 1); FM_load(); }catch(e){} }
 /* 1.389.0: toque numa barra do LUCRO POR MES = filtro daquele mes na lista (o mesmo do funil); tocar de novo no mesmo mes tira o filtro */
 function MESA_histMes(ym){
   try{
