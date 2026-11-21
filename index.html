@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.391.0</title>
+<title>VB - v1.392.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -392,6 +392,10 @@ div:has(> #ant-seg-simples){ display:none !important; }
   /* 1.381.0 (VB 21/11 "A"): na tela aberta o VB da faixa de cima basta; o VB de cada pagina some e fica so o titulo.
      Fin e Entradas tem um botao na mesma linha do VB (investidor, olhinho): ele fica a direita. Tela fechada e Home nao mudam. */
   html.vb-mesa:not(.vb-mesa-home) .vb-screen>.card .logo{ display:none !important; }
+  /* 1.392.0 (VB 21/11 "RESUMO fora de padrao", escolheu A por foto): o titulo da direita (RESUMO, ANTECIPACOES, VENDAS...) usa a letra
+     do titulo da esquerda (.simulacao-label: 11px, espaco 5, --mu, 500) e o mesmo fio embaixo (.divider). Home e Entradas/Saidas nao tem titulo. */
+  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp) > span:first-child{ font-size:11px !important; letter-spacing:5px !important; color:var(--mu) !important; font-weight:500 !important; margin-left:6px; }
+  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp){ border-bottom:0.5px solid var(--ln0); padding-bottom:6px; }
   /* 1.386.0: os botoes do pe do Historico vao para a direita na tela aberta (MESA_resumo, #vbm-hist-bts) */
   html.vb-mesa #hist-rodape, html.vb-mesa #hist-rodape + button{ display:none !important; }
   /* botoes que moravam na linha do VB passam para a linha do titulo: INVESTIDOR (Fin) e olhinho (Entradas) a direita do titulo;
@@ -23519,6 +23523,11 @@ function MESA_histMes(ym){
     HIST_updateFilterUIState(); HIST_fetch(HIST_searchTerm);
   }catch(e){}
 }
+/* 1.392.0 (VB 21/11 "quando clica na imagem da simulacao nasce por tras"): as 5 telas de tabela/foto que moravam DENTRO da tela
+   (fin, ven, ven-estoque, ant, pag) vao para o corpo: com o Duo aberto a tela e uma caixa fixa com rolagem, e o iPhone cortava a
+   tabela na metade esquerda, por tras da coluna da direita. Sao position:fixed de tela cheia; no corpo ficam por cima de tudo. */
+(function(){ var mv=function(){ ['fin-overlayTabela','ven-estoqueOverlay','ven-overlayTabela','ant-overlayTabela','pag-overlayTabela'].forEach(function(id){ var e=document.getElementById(id); if(e && e.parentElement!==document.body && e.closest('.vb-screen')) document.body.appendChild(e); }); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', mv); else mv(); })();
 function MESA_hk(v){ if(!MESA_ver) return '\u2022\u2022'; var a=Math.abs(Number(v)||0); if(a>=1e6) return (a/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; return VB_kFmt(v); }
 /* o HOJE da direita sobe ate a altura do VB da esquerda (medido; antes era margem fixa de 62) */
 function MESA_homeTopo(){
