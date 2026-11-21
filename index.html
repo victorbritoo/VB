@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.385.0</title>
+<title>VB - v1.386.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -392,6 +392,8 @@ div:has(> #ant-seg-simples){ display:none !important; }
   /* 1.381.0 (VB 21/11 "A"): na tela aberta o VB da faixa de cima basta; o VB de cada pagina some e fica so o titulo.
      Fin e Entradas tem um botao na mesma linha do VB (investidor, olhinho): ele fica a direita. Tela fechada e Home nao mudam. */
   html.vb-mesa:not(.vb-mesa-home) .vb-screen>.card .logo{ display:none !important; }
+  /* 1.386.0: os botoes do pe do Historico vao para a direita na tela aberta (MESA_resumo, #vbm-hist-bts) */
+  html.vb-mesa #hist-rodape, html.vb-mesa #hist-rodape + button{ display:none !important; }
   /* botoes que moravam na linha do VB passam para a linha do titulo: INVESTIDOR (Fin) e olhinho (Entradas) a direita do titulo;
      ORDENAR/BUSCA/+ (Estoque, Clientes, Socios) ja eram presos no canto: o cabecalho ganha a altura deles e o titulo centra na linha */
   html.vb-mesa #screen-fin>.card>div:first-child, html.vb-mesa #screen-ren>.card>div:first-child{ float:right; margin:0 0 0 8px !important; }
@@ -23349,10 +23351,15 @@ function MESA_resumo(){
     h+=card('ATRASADO', na, ta, true, "MESA_ir('ren')");
     h+=card('A PAGAR ATÉ HOJE', np, tp, atrP, "MESA_irSaidas()");
     if(VB_telaAtual==='hist' && typeof FM_abrir==='function'){
-      var _fmM=''; try{ var _fn=new Date(); _fmM=String(HIST_mesLabel(_fn.getFullYear()+'-'+('0'+(_fn.getMonth()+1)).slice(-2))).split(' ')[0].toUpperCase(); }catch(e){}
-      h+='<div onclick="FM_abrir()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 12px;margin-top:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
-        +'<span style="font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);">FECHAMENTO'+(_fmM?' · '+_fmM:'')+'</span>'
-        +'<span style="display:flex;align-items:center;"><span style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--tx);">ABRIR</span>'+MESA_SETA+'</span></div>';
+      /* 1.386.0 (VB 21/11, opcao 2 da foto): com o Duo aberto os botoes do pe do Historico moram aqui (RELATORIO | FECHAMENTO, BACKUP na linha
+         inteira, LOG embaixo); saiu o card FECHAMENTO · MES. Os originais (#hist-rodape e o LOG) somem so na tela aberta, pelo CSS. */
+      var _bt=function(fn,ic,tx,preto,col){ return '<button type="button" onclick="'+fn+'" style="'+(col?'grid-column:1 / -1;':'')+'padding:12px 4px;border:0.5px solid var(--lnk);border-radius:12px;background:'+(preto?'var(--acc)':'var(--sf)')+';color:'+(preto?'var(--acc-tx)':'var(--tx)')+';font-size:11.5px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;">'+ic+tx+'</button>'; };
+      var _sv=function(p){ return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; };
+      h+='<div id="vbm-hist-bts" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;">'
+        +_bt('VB_relatorioMenu()',_sv('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/>'),'RELATÓRIO',false,false)
+        +_bt('FM_abrir()',_sv('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>'),'FECHAMENTO',false,false)
+        +_bt('VB_backupMenu()',_sv('<path d="M6.5 18a4.5 4.5 0 0 1-1-8.9A5.5 5.5 0 0 1 17 8.5a4 4 0 0 1 .9 9.4"/><path d="M12 16V9"/><path d="M9 12l3-3 3 3"/>'),'BACKUP',true,true)
+        +'</div><button type="button" onclick="LOG_abrir()" style="display:block;width:100%;padding:8px;border:none;background:transparent;cursor:pointer;margin-top:2px;font-family:-apple-system,sans-serif;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">LOG DE ALTERAÇÕES</span></button>';
     }
     el.innerHTML=cab+h;
   }catch(e){}
