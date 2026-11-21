@@ -24,7 +24,7 @@ const r=await pg.evaluate(()=>{
   const dias=txt(); MESA_homeGset('s'); const sem=txt(); MESA_homeGset('d');
   const cartEl=[...d.querySelectorAll('span')].find(e=>e.textContent==='CARTEIRA').parentElement.parentElement, maiEl=[...d.querySelectorAll('span')].find(e=>e.textContent==='5 MAIORES').parentElement.parentElement;
   const cart=!cartEl.getAttribute('onclick')&&!/›/.test(cartEl.firstElementChild.textContent)&&/MESA_homeVai\('cli'\)/.test(maiEl.getAttribute('onclick')||'');
-  const cabeMes=[...d.querySelectorAll('span')].filter(e=>/VENCEU/.test(e.textContent)).every(e=>e.parentElement.scrollWidth<=e.parentElement.clientWidth+1);
+  const cabeMes=[...d.querySelectorAll('span')].filter(e=>/^RECEBIDO /.test(e.textContent)).every(e=>e.parentElement.scrollWidth<=e.parentElement.clientWidth+1);
   MESA_homeTopo();
   const cab=document.getElementById('vbm-hoje-cab'), lg=[...document.querySelectorAll('#screen-home>.card>div')].filter(e=>e.offsetParent&&!e.children.length&&e.textContent==='VB')[0];
   const rg=document.createRange(); rg.selectNodeContents(lg);
@@ -38,7 +38,7 @@ t('segunda soma sabado (40K+24,8K=64,8K)',/64,8K/.test(r.dias));
 /* 1.375.0: a 1a coluna soma o que ja venceu dos dois lados (antes ficava so nos quadros) */
 t('a pagar da segunda 25K; a pagar vencido 28K sai na 1a coluna',/25K/.test(r.dias)&&/\b28K\b/.test(r.dias.split('CARTEIRA')[0].split('DIAS SEMANAS')[1]||''));
 t('1a coluna entra 115K (110,3K de hoje + 5,1K atrasado); total 180K entra e 53K sai',/\b115K\b/.test((r.dias.split('DIAS SEMANAS')[1]||'').split('CARTEIRA')[0])&&/↑ 180K · ↓ 53K/.test(r.dias));
-t('MES: VENCEU ATE ONTEM no lugar de VENCIDO (o atraso fica no quadro ATRASADO)',/VENCEU ATÉ ONTEM/.test(r.dias)&&!/VENCIDO/.test(r.dias),'');
+t('MES: so RECEBIDO, MES e FALTA (sem VENCIDO, sem VENCEU ATE ONTEM, sem traco)',!/VENCEU|VENCIDO/.test(r.dias)&&/RECEBIDO [\d,.KM]+ MÊS/.test(r.dias)&&/FALTA/.test(r.dias),'');
 t('CARTEIRA sem seta e sem toque; 5 MAIORES leva a CLIENTES',r.cart===true,'');
 t('semanas: total que entra igual ao dos dias',(r.dias.match(/↑ ([\d,.KM]+)/)||[])[1]===(r.sem.match(/↑ ([\d,.KM]+)/)||[])[1]||r.segEhOutraSemana===false, (r.dias.match(/↑ [^›]+/)||[''])[0]+' | '+(r.sem.match(/↑ [^›]+/)||[''])[0]);
 t('carteira e 5 maiores',/CARTEIRA 3,38M/.test(r.dias)&&/5 MAIORES/.test(r.dias)&&/EPSILON/.test(r.dias), '');
