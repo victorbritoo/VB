@@ -29,7 +29,8 @@ t('MEDIDA mostra R e ULT',/ · R \d+ · ULT TAM/.test(c.med)||/ULT /.test(c.med)
 const v0=await est();await pg.evaluate(()=>{window.__tr=[];const m=document.querySelector('meta[name=viewport]');new MutationObserver(()=>window.__tr.push(Date.now())).observe(m,{attributes:true});window.__t0=Date.now();document.dispatchEvent(new Event('visibilitychange'));});await pg.waitForTimeout(450);const vA=await pg.evaluate(()=>({n:window.__tr.length,ms:window.__tr[0]-window.__t0,ult:VB_vpUlt}));await pg.waitForTimeout(2200);const v1=await est();
 /* 1.390.0: na volta a TROCA do viewport-fit vem primeiro (video de 21/11: so ela devolve a altura) e alterna com a cura */
 t('volta ao app com a tela baixa: troca do viewport-fit antes de 0,45 s',vA.n>=1&&vA.ms<450&&/VOLTA-T/.test(vA.ult),JSON.stringify(vA));
-t('volta ao app com a tela baixa: 2 a 4 curas em 2,6 s',v1.c-v0.c>=2&&v1.c-v0.c<=4,JSON.stringify({curas:v1.c-v0.c,ult:v1.ult}));
+/* 1.394.0: na volta NENHUMA cura (ela pisca e nao devolve); a troca repete a cada 0,45 s ate a altura voltar */
+t('volta ao app com a tela baixa: nenhuma cura e 4+ trocas em 2,6 s',v1.c-v0.c===0&&/VOLTA-T[4-9] /.test(v1.ult),JSON.stringify({curas:v1.c-v0.c,ult:v1.ult}));
 await pg.setViewportSize({width:867,height:669});await pg.waitForTimeout(300);const v2=await est();await pg.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await pg.waitForTimeout(2600);const v3=await est();
 t('volta ao app com a altura certa: nenhuma cura',v3.c===v2.c,JSON.stringify({c:[v2.c,v3.c]}));
 /* com campo em foco a cura nao age e conta em R */

@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.393.0</title>
+<title>VB - v1.394.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -378,6 +378,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-foto-overlay{ top:var(--fy,0px) !important; left:var(--mx,50%) !important; right:0 !important; border-left:0.5px solid var(--ln2); box-sizing:border-box; }
   /* avisos e dialogos fora da dobra: toast e ALTERACOES FEITAS / RENOMEAR centrados na metade direita */
   html.vb-mesa #vb-toast{ left:calc(var(--mx,50%) / 2 + 50%) !important; z-index:100060 !important; top:calc(var(--fy,54px) + 12px) !important; bottom:auto !important; }   /* 1.355.2: no alto da direita, sem cobrir botao de folha */
+  html.vb-mesa #vb-toast.vb-toast-cheio{ left:50% !important; top:auto !important; bottom:84px !important; }   /* 1.394.0: com camada de tela cheia, no pe da tela inteira */
   html.vb-mesa :is(#vb-c2-overlay,#vb-sair-overlay,#vb-name-overlay){ padding-left:var(--mx,50%) !important; box-sizing:border-box !important; }
   /* 1.341.1: ficha do relogio e folhas de baixo (DOCUMENTOS, NP, CONTRATO...) abrem na metade direita, por cima da ficha da operacao */
   /* 1.374.0 (etapa 2, 2a familia): a ficha do relogio e as folhas de baixo criadas na hora moram DENTRO da coluna da direita, ainda como folha
@@ -5645,6 +5646,19 @@ function VB_toast(msg){
       document.body.appendChild(t);
     }
     t.textContent=msg;
+    /* 1.394.0: Duo aberto -- com uma camada de tela cheia por cima (tabela da foto, visualizador, foto), o aviso vai
+       para o pe da tela inteira, no vazio abaixo dos botoes; sem ela, no alto da direita (regra da 1.355.2). */
+    var _vbTP=function(){ try{
+      var ch=false;
+      if(document.documentElement.classList.contains('vb-mesa')){
+        var k=document.body.children, W=innerWidth, H=innerHeight;
+        for(var i=0;i<k.length&&!ch;i++){ var e=k[i]; if(e===t) continue;
+          var cs=getComputedStyle(e); if(cs.position!=='fixed'||cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0) continue;
+          var r=e.getBoundingClientRect(); if(r.left<=1&&r.width>=W-2&&r.top<=1&&r.height>=H*0.9&&(parseInt(cs.zIndex)||0)>=1000) ch=true; }
+      }
+      t.classList.toggle('vb-toast-cheio', ch);
+    }catch(e){} };
+    _vbTP(); try{ requestAnimationFrame(_vbTP); }catch(e){}
     t.style.opacity='1';
     clearTimeout(t._vbT);
     t._vbT=setTimeout(function(){ t.style.opacity='0'; }, 2200);
@@ -24054,7 +24068,7 @@ function MESA_medida(){
    sem folha travada. [Provavel] bug do iOS no modo atalho. Tentativa: ao detectar a altura curta,
    liga viewport-fit=cover (o app pode ocupar a area reservada) e forca o relayout. A linha de medida
    mostra "fix N" e "cov" para o VB mandar o resultado. */
-var VB_vpTent=0, VB_vpCuras=0;
+var VB_vpTent=0, VB_vpCuras=0, VB_vpVoltaT=0, VB_vpVoltaI=0;
 /* 1.371.1: o VB ve a tela PISCAR (20/11 22:18): a descida aparece por um instante ate a cura agir. C foi de 5 a 16 em 3 minutos de teste
    com campos -- quem derruba e o teclado fechando. Duas coisas: (1) a cura age NA HORA em que o teclado some e em que o tamanho muda
    (VB_vpJa), sem os 120-300 ms de espera; as esperas antigas ficam como reserva. (2) a MEDIDA mostra a ultima cura: quem disparou,
@@ -24078,6 +24092,7 @@ function VB_vpJa(g){
 function VB_vpCura(g){
   try{
     var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||'')){ VB_vpRec++; return false; }   /* digitando: nao mexe */
+    if(VB_vpVoltaT && Date.now()-VB_vpVoltaT<15000) return false;   /* 1.394.0: na volta ao app a cura nao devolve e pisca -- so a troca */
     var _h0=innerHeight, _t0=Date.now(), _kf=VB_vpKbFim;
     var b=document.body, cx=[], poe=function(e){ if(e && e.scrollTop>0) cx.push([e, e.scrollTop]); };
     poe(VB_rolEl()); poe(document.getElementById('vb-mesa-dir'));
@@ -24101,6 +24116,7 @@ function VB_vpFix(g){
     /* 1.355.4: teclado = a area visivel bem menor que a tela do app. A 1.355.2 olhava o campo focado,
        mas no iPhone o campo continua focado depois que o teclado some e a correcao parava de vez. */
     var _vv=window.visualViewport; if(_vv && _vv.height>0 && _vv.height < innerHeight-120) return;   /* 1.353.1: tela no tamanho certo zera a contagem -- cada descida nova ganha 4 tentativas (antes so zerava ao sair do app) */
+    if(VB_vpVoltaT && Date.now()-VB_vpVoltaT<12000) return;   /* 1.394.0: a volta tem o proprio ritmo de trocas */
     if(VB_vpTent>=6) return;
     if(Date.now()-VB_vpCuraT<1000) return;   /* 1.373.0: acabou de curar -- da 1 s para a altura voltar antes de a reserva tentar (sem gastar tentativa) */
     VB_vpTent++;
@@ -24115,12 +24131,12 @@ function VB_vpFix(g){
 /* 1.390.0: video do VB de 21/11 16:03 (sair e voltar, Duo aberto), lido quadro a quadro na MEDIDA: a tela volta JA em 587; as curas da volta
    (C 16, 17, 18) e a da ronda (T 1, C 19) NAO devolvem; quem devolve e a troca do viewport-fit (T 2 -> 867x669), so que ela vinha por ultimo,
    ~9 s depois. Na volta ao app a troca passa a vir PRIMEIRO (0,25 s) e alterna com a cura. A troca virou funcao e aparece no ULT da MEDIDA. */
-function VB_vpTroca(g){
+function VB_vpTroca(g, longa){
   try{
     var m=document.querySelector('meta[name=viewport]'); if(!m) return false;
     var c=m.getAttribute('content')||'', _h0=innerHeight;
     if(c.indexOf('viewport-fit=cover')<0) m.setAttribute('content', c+', viewport-fit=cover');
-    else { m.setAttribute('content', c.replace(', viewport-fit=cover','')); setTimeout(function(){ m.setAttribute('content', c); }, 60); }
+    else { m.setAttribute('content', c.replace(', viewport-fit=cover','')); setTimeout(function(){ m.setAttribute('content', c); }, longa?220:60); }
     VB_vpCuraT=Date.now(); VB_vpUlt=String(g||'TROCA')+' '+_h0+'>?';
     setTimeout(function(){ window.scrollTo(0,0); try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
     setTimeout(function(){ VB_vpUlt=String(g||'TROCA')+' '+_h0+'>'+innerHeight; try{ MESA_medida(); }catch(e){} }, 260);
@@ -24141,7 +24157,21 @@ function VB_vpTroca(g){
     if(VB_vpCura('VOLTA')) setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
   }catch(e){} };
   /* 1.390.0: na volta, troca do viewport-fit aos 0,25 e 1,3 s; cura aos 0,7 e 2,0 s. Para na primeira que devolver a altura. */
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=2; [[250,1],[700,0],[1300,1],[2000,0]].forEach(function(x){ setTimeout(function(){ volta(x[1]); }, x[0]); }); } });
+  /* 1.394.0: video do VB de 21/11 16:39 -- na volta, VOLTA-T aos 0,25 e 1,3 s deram 587>587, as curas (VOLTA, RONDA) tambem, e a troca da ronda
+     (~9 s) devolveu. A mesma troca falha cedo e pega tarde: o iPhone so aceita medir de novo depois de um tempo que varia. E a cura apaga e acende
+     o corpo (e o PISCA que o VB ve) sem devolver nada na volta. Agora, na volta: NENHUMA cura por 15 s; a troca repete a cada 0,45 s (alternando a
+     curta e a longa) ate a altura voltar ou dar 12 s. O ULT mostra a tentativa e os segundos desde a volta: VOLTA-T7 3.2S 587>669. */
+  document.addEventListener('visibilitychange', function(){ if(document.hidden){ clearInterval(VB_vpVoltaI); return; }
+    VB_vpTent=0; VB_vpJaN=2; VB_vpVoltaT=Date.now(); var n=0; clearInterval(VB_vpVoltaI);
+    var tk=function(){ try{
+      var dt=Date.now()-VB_vpVoltaT;
+      if(dt>12000 || !(window.navigator && navigator.standalone) || innerWidth<860 || innerWidth>875){ clearInterval(VB_vpVoltaI); return; }
+      if(innerHeight>=640){ if(dt>1500) clearInterval(VB_vpVoltaI); return; }   /* a descida pode chegar um pouco depois da volta */
+      if(VB_vpTeclado()) return; var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||'')) return;
+      n++; VB_vpTroca('VOLTA-T'+n+' '+(dt/1000).toFixed(1)+'S', n%2===0);
+    }catch(e){} };
+    setTimeout(tk, 250); VB_vpVoltaI=setInterval(tk, 450);
+  });
   setTimeout(VB_vpFix, 1500); setInterval(VB_vpFix, 3000);
   document.addEventListener('focusout', function(){ setTimeout(function(){ VB_vpTent=0; VB_vpFix('FOCO+180'); }, 180); }, true);
   /* 1.356.1: corrige no momento em que o teclado fecha, sem esperar a volta de 3 s */
