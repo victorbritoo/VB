@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.379.0</title>
+<title>VB - v1.380.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -388,7 +388,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
   /* 1.356.1: o valor e o "era x%" nao descem mais de linha na direita */
   /* 1.357.0: na tela aberta o total do Estoque ja esta na direita; o card preto fica so no fim da lista, sem cobrir pecas */
   html.vb-mesa #mer-total-wrap{ position:static !important; }
-  html.vb-mesa #hist-total{ position:static !important; }
+  /* 1.380.0: a barra preta do Historico volta a ficar fixa no pe na tela aberta (o fechamento nao abre mais sozinho na direita) */
   /* 1.357.6: CONFIRMAR OPERACAO preso no pe da esquerda (sugestao do designer, liberada pelo VB): rolando o formulario longo, o botao fica a vista */
   html.vb-mesa :is(#fin-btnConfirmar,#ant-btnConfirmar,#pag-btnConfirmar,#ven-btnConfirmar){ position:sticky; bottom:10px; z-index:6; box-shadow:0 0 0 6px var(--bg), 0 -8px 14px 6px var(--bg); }
   html.vb-mesa #mer-total.enc{ padding-top:10px !important; padding-bottom:10px !important; }
@@ -23340,6 +23340,12 @@ function MESA_resumo(){
     h+=card('VENCE HOJE', nh, th, false, "MESA_ir('ren')");
     h+=card('ATRASADO', na, ta, true, "MESA_ir('ren')");
     h+=card('A PAGAR ATÉ HOJE', np, tp, atrP, "MESA_irSaidas()");
+    if(VB_telaAtual==='hist' && typeof FM_abrir==='function'){
+      var _fmM=''; try{ var _fn=new Date(); _fmM=String(HIST_mesLabel(_fn.getFullYear()+'-'+('0'+(_fn.getMonth()+1)).slice(-2))).split(' ')[0].toUpperCase(); }catch(e){}
+      h+='<div onclick="FM_abrir()" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:10px 12px;margin-top:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+        +'<span style="font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);">FECHAMENTO'+(_fmM?' · '+_fmM:'')+'</span>'
+        +'<span style="display:flex;align-items:center;"><span style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--tx);">ABRIR</span>'+MESA_SETA+'</span></div>';
+    }
     el.innerHTML=cab+h;
   }catch(e){}
 }
@@ -23714,8 +23720,7 @@ function MESA_cliTopo(){
   return best;
 }
 function MESA_padrao(){
-  /* Historico sem operacao tocada: o FECHAMENTO do mes na direita */
-  if(VB_telaAtual==='hist' && typeof FM_abrir==='function') return {id:'fm-overlay', key:'fm', abre:function(){ FM_abrir(); }};
+  /* 1.380.0: o Historico nao abre mais o FECHAMENTO sozinho (pedido do VB 20/11): a direita fica no RESUMO, com um card que abre o fechamento */
   if(VB_telaAtual!=='ren' || typeof REN_cache==='undefined' || !REN_cache) return null;
   var a=(typeof REN_aba!=='undefined')?REN_aba:'aberto';
   /* 1.346.0: entradas na esquerda, SAIDAS fixas na direita (#vb-mesa-dir); o panorama abre pelo card preto.
@@ -24013,7 +24018,15 @@ function VB_vpFix(g){
 (function(){
   var f=function(){ VB_vpJa('TAM'); setTimeout(function(){ VB_vpFix('TAM+300'); }, 300); };
   window.addEventListener('resize', f);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=0; f(); } });
+  /* 1.380.0: prints de 20/11 23:42-23:45 -- ao sair e voltar o app fica baixo uns segundos (ULT RONDA 587>587, T 1): no instante da volta
+     a altura ainda esta certa, o iPhone encolhe logo depois e a primeira cura nao pega; so a ronda de 3 s resolvia. Agora, na volta,
+     a cura tenta de novo aos 0,4 / 0,9 / 1,5 / 2,2 s, so enquanto a altura estiver baixa (para na primeira que devolver). */
+  var volta=function(){ try{
+    if(!(window.navigator && navigator.standalone)) return; if(innerWidth<860 || innerWidth>875) return; if(innerHeight>=640) return;
+    if(VB_vpTeclado()) return; if(Date.now()-VB_vpCuraT<300) return;
+    if(VB_vpCura('VOLTA')) setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
+  }catch(e){} };
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=0; f(); [400,900,1500,2200].forEach(function(ms){ setTimeout(volta, ms); }); } });
   setTimeout(VB_vpFix, 1500); setInterval(VB_vpFix, 3000);
   document.addEventListener('focusout', function(){ setTimeout(function(){ VB_vpTent=0; VB_vpFix('FOCO+180'); }, 180); }, true);
   /* 1.356.1: corrige no momento em que o teclado fecha, sem esperar a volta de 3 s */

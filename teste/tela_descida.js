@@ -25,6 +25,11 @@ let r=await est();t('12 avisos de tamanho seguidos: no maximo 2 curas na hora e 
 await pg.waitForTimeout(22000);c=await est();
 t('altura que nao volta: para depois de poucas tentativas (sem piscar para sempre)',c.c<=5&&c.tent>=6,JSON.stringify({c:c.c,tent:c.tent}));
 t('MEDIDA mostra R e ULT',/ · R \d+ · ULT TAM/.test(c.med)||/ULT /.test(c.med),c.med.slice(-60));
+/* 1.380.0: voltar para o app com a altura baixa -- a cura insiste nos primeiros 2,2 s em vez de esperar a ronda de 3 s */
+const v0=await est();await pg.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await pg.waitForTimeout(2600);const v1=await est();
+t('volta ao app com a tela baixa: de 3 a 7 curas em 2,6 s, a ultima marcada VOLTA ou RONDA',v1.c-v0.c>=3&&v1.c-v0.c<=7,JSON.stringify({curas:v1.c-v0.c,ult:v1.ult}));
+await pg.setViewportSize({width:867,height:669});await pg.waitForTimeout(300);const v2=await est();await pg.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await pg.waitForTimeout(2600);const v3=await est();
+t('volta ao app com a altura certa: nenhuma cura',v3.c===v2.c,JSON.stringify({c:[v2.c,v3.c]}));
 /* com campo em foco a cura nao age e conta em R */
 await pg.setViewportSize({width:867,height:669});await pg.waitForTimeout(500);
 await pg.evaluate(()=>{REN_crSheet();});await pg.waitForTimeout(600);
