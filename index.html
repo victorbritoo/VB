@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.396.0</title>
+<title>VB - v1.397.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -395,8 +395,12 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa:not(.vb-mesa-home) .vb-screen>.card .logo{ display:none !important; }
   /* 1.392.0 (VB 21/11 "RESUMO fora de padrao", escolheu A por foto): o titulo da direita (RESUMO, ANTECIPACOES, VENDAS...) usa a letra
      do titulo da esquerda (.simulacao-label: 11px, espaco 5, --mu, 500) e o mesmo fio embaixo (.divider). Home e Entradas/Saidas nao tem titulo. */
-  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp) > span:first-child{ font-size:11px !important; letter-spacing:5px !important; color:var(--mu) !important; font-weight:500 !important; margin-left:6px; }
-  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp){ border-bottom:0.5px solid var(--ln0); padding-bottom:6px; }
+  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp):not(.vbm-rhead) > span:first-child{ font-size:11px !important; letter-spacing:5px !important; color:var(--mu) !important; font-weight:500 !important; margin-left:6px; }
+  html.vb-mesa:not(.vb-mesa-home) #vb-mesa-dir > div:first-child:not(.vbm-esp):not(.vbm-rhead){ border-bottom:0.5px solid var(--ln0); padding-bottom:6px; }
+  /* 1.397.0 (print do VB 21/11 17:00): no Fechamento da direita o x de fechar caia em cima do botao do PANORAMA -- o botao vai para o canto esquerdo */
+  html.vb-mesa #fm-overlay button[aria-label="PANORAMA DO LUCRO"]{ right:auto !important; left:0 !important; }
+  /* 1.397.0: lupa e olhinho da direita das ENTRADAS/SAIDAS sobem para o meio da linha do titulo (ficavam em cima do fio) */
+  html.vb-mesa #vb-mesa-dir > .vbm-rhead > span:last-child{ transform:translateY(-7px); }
   /* 1.386.0: os botoes do pe do Historico vao para a direita na tela aberta (MESA_resumo, #vbm-hist-bts) */
   html.vb-mesa #hist-rodape, html.vb-mesa #hist-rodape + button{ display:none !important; }
   /* botoes que moravam na linha do VB passam para a linha do titulo: INVESTIDOR (Fin) e olhinho (Entradas) a direita do titulo;
@@ -2806,10 +2810,22 @@ function VB_backupMenu(){
         var best=(!local || new Date(remoto)>new Date(local)) ? remoto : local;
         VB_bkpUltimoRender(best);
       }
+      /* 1.397.0 (VB 21/11 "nao consegue puxar o backup diario?"): a copia automatica do dia (vb_backups) e a do bot (vb_meta.ultimo_backup_bot,
+         se o bot gravar) tambem contam -- vale a mais nova, com a origem ao lado. O vermelho so aparece se NENHUMA for recente. */
+      var _man=(res && res.data && res.data.valor)||VB_lerBackupLocal()||null;
+      Promise.all([
+        sb.from('vb_backups').select('created_at').order('created_at',{ascending:false}).limit(1),
+        sb.from('vb_meta').select('valor').eq('chave','ultimo_backup_bot').maybeSingle()
+      ]).then(function(r){
+        var c=[[_man,'']], a=(r[0]&&r[0].data&&r[0].data[0])?r[0].data[0].created_at:null, b=(r[1]&&r[1].data)?r[1].data.valor:null;
+        if(a) c.push([a,' (AUTOMÁTICO)']); if(b) c.push([b,' (BOT)']);
+        c=c.filter(function(x){ return x[0] && !isNaN(new Date(x[0]).getTime()); }).sort(function(x,y){ return new Date(y[0])-new Date(x[0]); });
+        if(c.length) VB_bkpUltimoRender(c[0][0], c[0][1]);
+      }).catch(function(){});
     });
   }catch(e){}
 }
-function VB_bkpUltimoRender(iso){
+function VB_bkpUltimoRender(iso, origem){
   var el=document.getElementById('vb-bkp-ultimo'); if(!el) return;
   if(!iso){ el.textContent='Nenhum backup feito ainda'; el.style.color='var(--red)'; return; }
   var d=new Date(iso);
@@ -2817,7 +2833,7 @@ function VB_bkpUltimoRender(iso){
   var pp=function(n){return ('0'+n).slice(-2);};
   var txt='Último backup: '+pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear()+' '+pp(d.getHours())+':'+pp(d.getMinutes());
   var dias=Math.floor((Date.now()-d.getTime())/86400000);
-  el.textContent=txt;
+  el.textContent=txt+(origem||'');
   el.style.color = dias>=7 ? 'var(--red)' : 'var(--so)';
 }
 function VB_backupMenuFechar(){ var ov=document.getElementById('vb-backup-menu'); if(ov) ov.style.display='none'; }
@@ -5971,6 +5987,8 @@ function VB_tapShield(ms){
 }
 function showScreen(name){
   VB_tapShield(350);
+  /* 1.397.0 (VB 21/11): entrar no Historico vindo de outra tela volta o LUCRO POR MES para a aba (o GERAL e uma espiada) */
+  try{ if(name==='hist' && VB_telaAtual!=='hist' && typeof MESA_histGeral!=='undefined') MESA_histGeral=false; }catch(e){}
   /* MER_reabrirId so deve sobreviver a ida-e-volta mer<->ven (venda em andamento ou
      "abrir venda" a partir da ficha). Qualquer outra tela no meio (home, hist, etc.)
      encerra essa intencao — sem isso, uma ficha de dias atras reabria sozinha ao
@@ -23378,7 +23396,7 @@ function MESA_resumo(){
     if(VB_telaAtual==='hist' && typeof FM_abrir==='function'){
       /* 1.386.0 (VB 21/11, opcao 2 da foto): com o Duo aberto os botoes do pe do Historico moram aqui (RELATORIO | FECHAMENTO, BACKUP na linha
          inteira, LOG embaixo); saiu o card FECHAMENTO · MES. Os originais (#hist-rodape e o LOG) somem so na tela aberta, pelo CSS. */
-      var _bt=function(fn,ic,tx,preto,col){ return '<button type="button" onclick="'+fn+'" style="'+(col?'grid-column:1 / -1;':'')+'padding:9px 4px;border:0.5px solid var(--lnk);border-radius:12px;background:'+(preto?'var(--acc)':'var(--sf)')+';color:'+(preto?'var(--acc-tx)':'var(--tx)')+';font-size:11.5px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;">'+ic+tx+'</button>'; };
+      var _bt=function(fn,ic,tx,preto,col){ return '<button type="button" onclick="'+fn+'" style="'+(col?'grid-column:1 / -1;':'')+'padding:9px 4px;border:'+(preto?'none':'1px solid var(--ln2)')+';border-radius:12px;background:'+(preto?'var(--acc)':'var(--sf)')+';color:'+(preto?'var(--acc-tx)':'var(--tx)')+';font-size:11.5px;letter-spacing:1px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;">'+ic+tx+'</button>'; };
       var _sv=function(p){ return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; };
       try{ h+=MESA_histBlocos(); }catch(e){}
       h+='<div id="vbm-hist-bts" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;">'
