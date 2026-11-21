@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.380.0</title>
+<title>VB - v1.381.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -389,6 +389,14 @@ div:has(> #ant-seg-simples){ display:none !important; }
   /* 1.357.0: na tela aberta o total do Estoque ja esta na direita; o card preto fica so no fim da lista, sem cobrir pecas */
   html.vb-mesa #mer-total-wrap{ position:static !important; }
   /* 1.380.0: a barra preta do Historico volta a ficar fixa no pe na tela aberta (o fechamento nao abre mais sozinho na direita) */
+  /* 1.381.0 (VB 21/11 "A"): na tela aberta o VB da faixa de cima basta; o VB de cada pagina some e fica so o titulo.
+     Fin e Entradas tem um botao na mesma linha do VB (investidor, olhinho): ele fica a direita. Tela fechada e Home nao mudam. */
+  html.vb-mesa:not(.vb-mesa-home) .vb-screen>.card .logo{ display:none !important; }
+  /* botoes que moravam na linha do VB passam para a linha do titulo: INVESTIDOR (Fin) e olhinho (Entradas) a direita do titulo;
+     ORDENAR/BUSCA/+ (Estoque, Clientes, Socios) ja eram presos no canto: o cabecalho ganha a altura deles e o titulo centra na linha */
+  html.vb-mesa #screen-fin>.card>div:first-child, html.vb-mesa #screen-ren>.card>div:first-child{ float:right; margin:0 0 0 8px !important; }
+  html.vb-mesa :is(#screen-fin,#screen-ren)>.card>.simulacao-label + *{ clear:both; }
+  html.vb-mesa :is(#screen-mer,#screen-cli,#screen-soc)>.card>div:first-child{ min-height:36px; display:flex; align-items:center; }
   /* 1.357.6: CONFIRMAR OPERACAO preso no pe da esquerda (sugestao do designer, liberada pelo VB): rolando o formulario longo, o botao fica a vista */
   html.vb-mesa :is(#fin-btnConfirmar,#ant-btnConfirmar,#pag-btnConfirmar,#ven-btnConfirmar){ position:sticky; bottom:10px; z-index:6; box-shadow:0 0 0 6px var(--bg), 0 -8px 14px 6px var(--bg); }
   html.vb-mesa #mer-total.enc{ padding-top:10px !important; padding-bottom:10px !important; }
@@ -23477,13 +23485,19 @@ function MESA_homeBlocos(ab, tot, totVB, hoje, rp){
   var MS=['JANEIRO','FEVEREIRO','MAR\u00c7O','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   var bx=REN_cache.bx||{}, h='';
   /* --- MES --- */
-  var ym=hoje.slice(0,7), mT=0, mR=0, mV=0, mAtr=0;
+  var ym=hoje.slice(0,7), mT=0, mR=0, mV=0, mAtr=0, mTV=0, mRV=0;
   (REN_cache.itens||[]).forEach(function(x){
     var v=String(x.venc||'').slice(0,10); if(v.slice(0,7)!==ym) return;
     var val=Number(x.valor)||0, f=bx[REN_key(x)]?0:REN_falta(x);
     mT+=val; mR+=Math.max(0,val-f);
+    /* 1.381.0 (VB 21/11 "1"): parte do VB = parcela menos o repasse devido (gravado na baixa; senao o combinado/proporcional),
+       a mesma regra do (R$ X VB) dos cards; no recebido, na proporcao do que entrou */
+    var rp=0; try{ var _b=bx[REN_key(x)]; if(_b && typeof _b==='object') rp=REN_repDe(x,_b); else { var _pv=REN_repPrev(x), _oi=REN_cache.opInfo&&REN_cache.opInfo[x.tab+'|'+x.opId]; if(_pv!=null) rp=_pv; else if(_oi) rp=Number(REN_repAlvo(_oi,x))||0; } }catch(e){}
+    var pv=(val>0)?Math.max(0,Math.min(1,(val-rp)/val)):1;
+    mTV+=val*pv; mRV+=Math.max(0,val-f)*pv;
     if(REN_diaUtil(v)<hoje){ mV+=val; mAtr+=f; }
   });
+  var _vbP=function(t,v){ return (Math.abs(t-v)>0.5)?(' <span style="opacity:0.6;">(VB '+MESA_hk(v)+')</span>'):''; };
   var pct=mT>0?Math.round(100*mR/mT):0, pR=mT>0?Math.max(0,Math.min(100,100*mR/mT)):0, pV=mT>0?Math.max(0,Math.min(100,100*mV/mT)):0;
   var corV=(mAtr>0.005)?'var(--red)':'var(--mu2)';
   h+='<div onclick="MESA_homeVai(\'mes\')" style="margin-top:8px;'+BOX+'">'
@@ -23491,7 +23505,7 @@ function MESA_homeBlocos(ab, tot, totVB, hoje, rp){
     +'<div style="position:relative;margin-top:11px;"><div style="display:flex;gap:2px;height:8px;">'
     +'<div style="width:'+pR.toFixed(1)+'%;background:var(--acc);border-radius:4px 0 0 4px;"></div><div style="flex:1;background:var(--sf3);border-radius:0 4px 4px 0;"></div></div>'
     +'</div>'   /* 1.379.0 (VB 20/11 23:40 "tira"): sem o traco e sem VENCEU ATE ONTEM -- o card diz so recebido, total do mes e quanto falta; atraso fica no quadro ATRASADO */
-    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px;"><span style="'+PEQ+'">RECEBIDO '+MESA_hk(mR)+'</span><span style="'+PEQ+'">M\u00caS '+MESA_hk(mT)+'</span></div></div>';
+    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-top:6px;"><span style="'+PEQ+'">RECEBIDO '+MESA_hk(mR)+_vbP(mR,mRV)+'</span><span style="'+PEQ+'">M\u00caS '+MESA_hk(mT)+_vbP(mT,mTV)+'</span></div></div>';
   /* --- PROXIMOS DIAS / SEMANAS --- */
   var cols=[], DN=['DOM','SEG','TER','QUA','QUI','SEX','S\u00c1B'], dm=function(i){ return i.slice(8,10)+'/'+i.slice(5,7); };
   if(MESA_homeG==='s'){

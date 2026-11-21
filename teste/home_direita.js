@@ -8,6 +8,8 @@ const ARQ=path.join(__dirname,'..','index.html'), FOTO=process.argv[2];
 (async()=>{const b=await pw.chromium.launch();const pg=await(await b.newContext({viewport:{width:867,height:669},deviceScaleFactor:2})).newPage();let falhas=0;
 pg.on('pageerror',e=>{falhas++;console.log('ERRO JS',String(e).slice(0,160));});
 await pg.route('**/*',r=>{const u=r.request().url();if(u.includes('supabase-js'))return r.fulfill({body:FAKE,contentType:'text/javascript'});if(u.startsWith('file:'))return r.continue();return r.abort();});
+/* 1.381.0: relogio fixo numa sexta (20/11/2026 12h): as contas de DIAS mudam no fim de semana e o teste falhava no sabado */
+try{ await pg.clock.setFixedTime(new Date('2026-11-20T15:00:00Z')); }catch(e){}
 await pg.goto('file://'+ARQ);await pg.waitForTimeout(2500);
 await pg.evaluate(()=>showScreen('home'));await pg.waitForTimeout(900);
 const r=await pg.evaluate(()=>{
@@ -47,5 +49,13 @@ t('HOJE na altura do VB',Math.abs(r.dCab-6)<=1,'dif '+r.dCab);
 t('cabe em 669 sem rolar',r.fundo<=669&&!r.rola,'fundo '+r.fundo);
 t('sem rolagem lateral',!r.lado);
 t('linha do MES cabe sem estourar',r.cabeMes===true);
+/* 1.381.0: parte do VB entre parenteses no RECEBIDO e no MES (parcela menos o repasse devido) */
+const vbm=await pg.evaluate(()=>{const hoje=REN_hojeISO(),ym=hoje.slice(0,7);const it=(i,venc,valor)=>({tab:'ven',opId:i,idx:0,cliente:'C'+i,venc,valor});
+  const itens=[it(1,ym+'-05',715000),it(2,ym+'-27',317000)];const bx={},prev={};bx[REN_key(itens[0])]=1;prev[REN_key(itens[0])]=243000;prev[REN_key(itens[1])]=108000;
+  REN_cache={itens,bx,pags:{},opInfo:{},cp:[],prev};MESA_resumo();
+  const d=document.getElementById('vb-mesa-dir');const sp=[...d.querySelectorAll('span')].find(e=>/^RECEBIDO /.test(e.textContent)&&e.parentElement.children.length===2);
+  const t1=d.innerText.replace(/\s+/g,' ');REN_cache.prev={};MESA_resumo();const t2=d.innerText.replace(/\s+/g,' ');
+  return {com:sp.parentElement.innerText.replace(/\s+/g,' '),cabe:sp.parentElement.scrollWidth<=sp.parentElement.clientWidth+1,sem:/\(VB /.test(t2)};});
+t('MES com socio: RECEBIDO 715K (VB 472K) e MES 1,03M (VB 681K); sem socio, sem parenteses',/RECEBIDO 715K \(VB 472K\)/.test(vbm.com)&&/MÊS 1,03M \(VB 681K\)/.test(vbm.com)&&vbm.cabe&&!vbm.sem,JSON.stringify(vbm));
 if(FOTO) await pg.screenshot({path:FOTO});
 await b.close();console.log(falhas?'FALHOU':'OK');process.exit(falhas?1:0);})();
