@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.389.0</title>
+<title>VB - v1.390.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23349,7 +23349,8 @@ function MESA_resumo(){
         +'<span style="font-size:9px;letter-spacing:2px;font-weight:700;color:'+(red&&n?'var(--red)':'var(--so)')+';">'+rot+(n?' · '+n:'')+'</span>'
         +'<span style="display:flex;align-items:center;"><span style="font-size:15px;font-weight:700;color:'+(red&&n?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+(n?MESA_tot(v):'—')+'</span>'+MESA_SETA+'</span></div>';
     };
-    h+=card('VENCE HOJE', nh, th, false, "MESA_ir('ren')");
+ /* 1.390.0 (VB 21/11: "vence parece que e pra eu pagar"): rotulo igual ao quadro da Home */
+    h+=card('A RECEBER HOJE', nh, th, false, "MESA_ir('ren')");
     h+=card('ATRASADO', na, ta, true, "MESA_ir('ren')");
     h+=card('A PAGAR', np, tp, atrP, "MESA_irSaidas()"); /* 1.389.0: rotulo igual ao quadro da Home; a conta segue vencido + vence hoje */
     if(VB_telaAtual==='hist' && typeof FM_abrir==='function'){
@@ -24095,12 +24096,23 @@ function VB_vpFix(g){
        O que devolve e obrigar o iPhone a medir de novo: apagar e acender o corpo no mesmo instante (VB_vpCura).
        Tentativas impares curam; as pares continuam trocando o viewport-fit, como antes. */
     if(VB_vpTent%2===1){ if(VB_vpCura(typeof g==='string'?g:'RONDA')){ setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150); return; } }
-    var m=document.querySelector('meta[name=viewport]'); if(!m) return;
-    var c=m.getAttribute('content')||'';
+    VB_vpTroca('TROCA');
+  }catch(e){}
+}
+/* 1.390.0: video do VB de 21/11 16:03 (sair e voltar, Duo aberto), lido quadro a quadro na MEDIDA: a tela volta JA em 587; as curas da volta
+   (C 16, 17, 18) e a da ronda (T 1, C 19) NAO devolvem; quem devolve e a troca do viewport-fit (T 2 -> 867x669), so que ela vinha por ultimo,
+   ~9 s depois. Na volta ao app a troca passa a vir PRIMEIRO (0,25 s) e alterna com a cura. A troca virou funcao e aparece no ULT da MEDIDA. */
+function VB_vpTroca(g){
+  try{
+    var m=document.querySelector('meta[name=viewport]'); if(!m) return false;
+    var c=m.getAttribute('content')||'', _h0=innerHeight;
     if(c.indexOf('viewport-fit=cover')<0) m.setAttribute('content', c+', viewport-fit=cover');
     else { m.setAttribute('content', c.replace(', viewport-fit=cover','')); setTimeout(function(){ m.setAttribute('content', c); }, 60); }
+    VB_vpCuraT=Date.now(); VB_vpUlt=String(g||'TROCA')+' '+_h0+'>?';
     setTimeout(function(){ window.scrollTo(0,0); try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
-  }catch(e){}
+    setTimeout(function(){ VB_vpUlt=String(g||'TROCA')+' '+_h0+'>'+innerHeight; try{ MESA_medida(); }catch(e){} }, 260);
+    return true;
+  }catch(e){ return false; }
 }
 (function(){
   var f=function(){ VB_vpJa('TAM'); setTimeout(function(){ VB_vpFix('TAM+300'); }, 300); };
@@ -24108,12 +24120,15 @@ function VB_vpFix(g){
   /* 1.380.0: prints de 20/11 23:42-23:45 -- ao sair e voltar o app fica baixo uns segundos (ULT RONDA 587>587, T 1): no instante da volta
      a altura ainda esta certa, o iPhone encolhe logo depois e a primeira cura nao pega; so a ronda de 3 s resolvia. Agora, na volta,
      a cura tenta de novo aos 0,4 / 0,9 / 1,5 / 2,2 s, so enquanto a altura estiver baixa (para na primeira que devolver). */
-  var volta=function(){ try{
+  var volta=function(troca){ try{
     if(!(window.navigator && navigator.standalone)) return; if(innerWidth<860 || innerWidth>875) return; if(innerHeight>=640) return;
-    if(VB_vpTeclado()) return; if(Date.now()-VB_vpCuraT<300) return;
+    if(VB_vpTeclado()) return; if(Date.now()-VB_vpCuraT<200) return;
+    var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||'')) return;
+    if(troca){ VB_vpTroca('VOLTA-T'); return; }
     if(VB_vpCura('VOLTA')) setTimeout(function(){ try{ MESA_dobra(); MESA_medida(); }catch(e){} }, 150);
   }catch(e){} };
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=0; f(); [400,900,1500,2200].forEach(function(ms){ setTimeout(volta, ms); }); } });
+  /* 1.390.0: na volta, troca do viewport-fit aos 0,25 e 1,3 s; cura aos 0,7 e 2,0 s. Para na primeira que devolver a altura. */
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ VB_vpTent=0; VB_vpJaN=2; [[250,1],[700,0],[1300,1],[2000,0]].forEach(function(x){ setTimeout(function(){ volta(x[1]); }, x[0]); }); } });
   setTimeout(VB_vpFix, 1500); setInterval(VB_vpFix, 3000);
   document.addEventListener('focusout', function(){ setTimeout(function(){ VB_vpTent=0; VB_vpFix('FOCO+180'); }, 180); }, true);
   /* 1.356.1: corrige no momento em que o teclado fecha, sem esperar a volta de 3 s */
