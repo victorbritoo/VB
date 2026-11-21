@@ -48,6 +48,8 @@ async function estrutura(arq){const b=await pw.chromium.launch();let falhas=0;co
     const o=await onde(id);t('aberta '+n+': dentro da coluna, no retangulo dela, encostada no pe, fundo escuro',!!o&&o.pai==='vb-mesa-col'&&o.pos==='absolute'&&o.igual&&o.pe&&/rgba\(0, 0, 0, 0\.[34]/.test(o.fundo),o&&JSON.stringify({pai:o.pai,pos:o.pos,z:o.z,igual:o.igual,pe:o.pe,fundo:o.fundo}));}
   /* ordem: sintetica (100016) por cima do relogio (100015) */
   t('folha criada na hora fica por cima da ficha do relogio',await pg.evaluate(()=>{const s=document.getElementById('teste-folha'),r=s.firstElementChild.getBoundingClientRect();return s.contains(document.elementFromPoint(r.left+r.width/2,r.top+20));}));
+  /* 1.376.0: visualizador de tela cheia do contrato abre por cima da folha da coluna (camada lida do proprio app) */
+  t('visualizador do contrato fica por cima da folha de baixo',await pg.evaluate(()=>{const z=(CTR_viewerPDF.toString().match(/z-index:(\d+)/)||[])[1];const v=document.createElement('div');v.id='teste-visor';v.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:'+z+';display:flex;flex-direction:column;';document.body.appendChild(v);const d=document.getElementById('vb-mesa-col').getBoundingClientRect();const e=document.elementFromPoint(d.left+d.width/2,d.bottom-40);const ok=(e===v)&&v.parentElement===document.body;v.remove();return ok;}));
   /* fechar a folha criada na hora: sai da coluna, a esquerda destrava */
   const trava=()=>pg.evaluate(()=>document.getElementById('screen-'+VB_telaAtual).style.overflowY||'');
   await pg.evaluate(()=>{document.getElementById('teste-folha').remove();document.getElementById('mer-view-overlay').style.display='none';});await pg.waitForTimeout(300);

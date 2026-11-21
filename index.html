@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.375.0</title>
+<title>VB - v1.376.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -21581,6 +21581,9 @@ function CTR_shareEscolha(docxBlob, fname, desc){
     }).catch(function(e){ ov.remove(); VB_erro(e&&e.message||e,'N\u00e3o gerou o PDF. Tente de novo.'); });
   });
 }
+/* 1.376.0 (print do VB 20/11 23:10): os visualizadores de tela cheia do contrato (vb-ctr-view, vb-ctr-vass, vb-ctr-prev) nasciam na camada
+   10080, abaixo da folha CONTRATO na tela aberta (100016): a folha cobria a metade direita do documento. Passam para 100020, a mesma do
+   visualizador da NP (np-view), que ja abria por cima. Dialogos (100028) e toast (100060) continuam acima. */
 function CTR_viewerPDF(docxBlob, fname, aoFechar, desc){
   VB_toast('Montando o documento\u2026');
   docxBlob.arrayBuffer().then(function(ab){ return CTR_docxParse(new Uint8Array(ab)); })
@@ -21588,7 +21591,7 @@ function CTR_viewerPDF(docxBlob, fname, aoFechar, desc){
     var old=document.getElementById('vb-ctr-view'); if(old) old.remove();
     var ov=document.createElement('div');
     ov.id='vb-ctr-view';
-    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10080;display:flex;flex-direction:column;';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100020;display:flex;flex-direction:column;';
     var inner='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;">';
     pgs.forEach(function(cv){ inner+='<img src="'+cv.toDataURL('image/jpeg',0.8)+'" style="display:block;width:100%;max-width:520px;margin:0 auto 10px;border-radius:6px;">'; });
     inner+='</div>'
@@ -21625,7 +21628,7 @@ function CTR_viewerAssinado(blob, nome){
     var old=document.getElementById('vb-ctr-vass'); if(old) old.remove();
     var ov=document.createElement('div');
     ov.id='vb-ctr-vass';
-    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10080;display:flex;flex-direction:column;';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100020;display:flex;flex-direction:column;';
     ov.innerHTML='<div id="ctrva-pgs" style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 10px 12px;"></div>'
       +'<div style="background:var(--sf);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:-apple-system,sans-serif;">'
       +'<button id="ctrva-fechar" style="padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;">FECHAR</button>'
@@ -21838,7 +21841,7 @@ function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
   body=body.replace('[[IMG]]', fotoURL?('<img src="'+fotoURL+'" style="width:100%;border-radius:4px;margin:8px 0;">'):'');
   var ov=document.createElement('div');
   ov.id='vb-ctr-prev';
-  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:10080;display:flex;flex-direction:column;';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:100020;display:flex;flex-direction:column;';
   ov.innerHTML='<div style="flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 12px 12px;">'
     +'<div style="max-width:520px;margin:0 auto;background:#fff;color:#111;border-radius:10px;padding:22px 20px;font-family:Calibri,-apple-system,sans-serif;font-size:12.5px;line-height:1.45;text-align:justify;">'
     +'<style>#vb-ctr-prev p{margin:0 0 2px;} #vb-ctr-prev .sp{height:9px;} #vb-ctr-prev .it{margin:0 0 6px 14px;text-indent:-8px;}</style>'
