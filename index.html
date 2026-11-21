@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.368.0</title>
+<title>VB - v1.369.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -402,6 +402,16 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-mesa-dir [style*="position:sticky"][style*="top:0"]{ top:-22px !important; }
   /* 1.368.0: a direita no fim da lista nao passa mais o gesto para a esquerda */
   html.vb-mesa #vb-mesa-dir{ overscroll-behavior:contain; }
+  /* ===== 1.369.0 MOLDURA: na tela aberta a PAGINA nao rola mais. A tela da esquerda vira uma caixa presa
+     (do pe da barra ate o fim, largura da metade esquerda) com rolagem propria, igual a direita. Antes a
+     esquerda rolava a pagina e a direita era uma caixa presa por cima: o iPhone confundia os dois toques,
+     o que e preso sumia durante o deslize e o fundo tinha de ser travado com o corpo fixo (suspeito da tela
+     descida). Desliga com VB_ROL2=false (uma linha). A tela fechada nao tem nada disto. */
+  html.vb-mesa.vb-rol2 #screen-home, html.vb-mesa.vb-rol2 .vb-screen{ position:fixed; top:var(--fy,0px); bottom:0; left:0; width:var(--mx,50%); min-height:0;
+    overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; z-index:61; background:var(--bg); box-sizing:border-box; }
+  html.vb-mesa.vb-rol2 #screen-home>.card, html.vb-mesa.vb-rol2 .vb-screen>.card{ padding-top:22px; }
+  html.vb-mesa.vb-rol2.vb-mesa-home #screen-home>.card{ padding-top:32px; }
+  html.vb-mesa.vb-rol2:not(.vb-mesa-home) #ren-body [style*="position:sticky"][style*="top:0"]{ top:0 !important; }
   /* card cuja ficha esta aberta na direita */
   html.vb-mesa .vbm-sel{ box-shadow:inset 0 0 0 1.5px var(--acc) !important; }
   /* 1.364.0: ficha aberta na direita fecha pela bolinha com x no alto; o FECHAR de baixo some (pedido do VB) */
@@ -5988,7 +5998,7 @@ function showScreen(name){
   VB_screenTs = Date.now();
   var _elEnt=document.getElementById('screen-'+name);
   if(_elEnt){ _elEnt.classList.remove('vb-enter'); void _elEnt.offsetWidth; _elEnt.classList.add('vb-enter'); }
-  window.scrollTo(0,0);
+  window.scrollTo(0,0); VB_rolaPara(0);
 }
 function VB_voltarDeTela(){
   // Chamado pelo logo VB em cada módulo
@@ -6283,7 +6293,7 @@ function FIN_setModo(modo){
     if(bQuit)bQuit.style.cssText=off;
     if(invT) invT.style.visibility='visible';
   }
-  window.scrollTo(0,0);
+  VB_rolaPara(0);
 }
 
 function FIN_titleCase(s){ return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}); }
@@ -7208,7 +7218,7 @@ function VEN_repetirParcela(btn){
   VEN_parcelas.push(novo);
   VEN_modoPersonalizado=true;
   VEN_renderParcelas(); VEN_syncFromParcelas(); VEN_mostrarLista(true);
-  if(btn && _ry0!=null){ try{ var _ry1=btn.getBoundingClientRect().top; var _rd=_ry1-_ry0; if(_rd) window.scrollBy(0,_rd); }catch(e){} }
+  if(btn && _ry0!=null){ try{ var _ry1=btn.getBoundingClientRect().top; var _rd=_ry1-_ry0; if(_rd) VB_rolaMais(_rd); }catch(e){} }
 }
 
 function VEN_popularParcelas(){
@@ -7371,7 +7381,7 @@ function VEN_removerParcela(id, btn){
   VEN_modoPersonalizado=true;
   VEN_renderParcelas();
   VEN_syncFromParcelas();
-  if(_nextId!=null && _y0!=null){ try{ var _lst=document.getElementById('ven-listaParcelas'); var _tg=_lst&&_lst.querySelector('[data-xid="'+_nextId+'"]'); if(_tg){ var _dd=_tg.getBoundingClientRect().top-_y0; if(_dd) window.scrollBy(0,_dd); } }catch(e){} }
+  if(_nextId!=null && _y0!=null){ try{ var _lst=document.getElementById('ven-listaParcelas'); var _tg=_lst&&_lst.querySelector('[data-xid="'+_nextId+'"]'); if(_tg){ var _dd=_tg.getBoundingClientRect().top-_y0; if(_dd) VB_rolaMais(_dd); } }catch(e){} }
   if(_mid) VB_toast('Relógio segue no estoque — trate na mão.');
 }
 
@@ -12403,8 +12413,27 @@ function REN_repDefSocioPrim(oi, x){
 /* overscroll-behavior nao segura o gesto no Safari iOS: enquanto a folha esta aberta o corpo
    da pagina fica travado em position:fixed, guardando e devolvendo a posicao do scroll */
 var VB_travaY=0, VB_travado=false;
+/* 1.369.0: quem rola. Tela aberta com a moldura: a caixa da tela atual. Fora disso: a pagina (como sempre). */
+var VB_ROL2=true, VB_travaPane=null;
+function VB_rolEl(){ try{ if(VB_ROL2 && typeof MESA_on!=='undefined' && MESA_on) return document.getElementById('screen-'+VB_telaAtual)||null; }catch(e){} return null; }
+function VB_sy(){ var e=VB_rolEl(); if(e) return e.scrollTop||0; return (typeof VB_travado!=='undefined' && VB_travado)?(VB_travaY||0):(window.scrollY||window.pageYOffset||0); }
+function VB_rolTopo(){ var e=VB_rolEl(); return e?e.getBoundingClientRect().top:0; }
+function VB_rolaPara(y, suave){
+  var e=VB_rolEl(); y=Math.max(0, Number(y)||0);
+  if(e){ if(suave && e.scrollTo){ try{ e.scrollTo({top:y, behavior:'smooth'}); return; }catch(x){} } e.scrollTop=y; return; }
+  if(suave) window.scrollTo({top:y, behavior:'smooth'}); else window.scrollTo(0, y);
+}
+function VB_rolaMais(d){ var e=VB_rolEl(); if(e) e.scrollTop+=d; else window.scrollBy(0, d); }
+/* ultima posicao da caixa da esquerda: ao fechar o Duo o CSS da moldura sai antes do JS, e a caixa ja nao informa onde estava */
+var VB_rolY=0;
+window.addEventListener('scroll', function(ev){ try{ var e=VB_rolEl(); if(e && ev.target===e) VB_rolY=e.scrollTop||0; }catch(x){} }, {passive:true, capture:true});
+function VB_travaSolta(){ if(VB_travaPane){ try{ VB_travaPane.style.overflowY=''; }catch(e){} VB_travaPane=null; } }
 function VB_travaFundo(on){
   if(on && typeof MESA_soDireita==='function' && MESA_soDireita()) on=false;   /* v1.338.0: na MESA a folha da metade direita nao trava a lista */
+  /* 1.369.0: com a moldura a pagina nao rola, entao nao ha corpo para prender: a folha que cobre a esquerda so para a caixa da esquerda */
+  var _p=VB_rolEl();
+  if(_p && !VB_travado){ if(on){ if(VB_travaPane!==_p){ VB_travaSolta(); _p.style.overflowY='hidden'; VB_travaPane=_p; } } else VB_travaSolta(); return; }
+  if(!on) VB_travaSolta();
   var b=document.body;
   if(on && !VB_travado){
     VB_travaY=window.scrollY||window.pageYOffset||0; VB_travado=true;
@@ -12426,7 +12455,7 @@ function REN_irMes(ym){
   function pula(){
     var el=document.getElementById((cp?'cpmes-':'renmes-')+ym);
     if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
-    else window.scrollTo({top:0, behavior:'smooth'});
+    else VB_rolaPara(0, true);
   }
   var destino=cp?'cp':'aberto';
   /* a trava devolve o scroll antigo; so depois disso o pulo para o mes faz sentido */
@@ -16966,7 +16995,7 @@ function SOC_editar(id){
   SOC_editId=r.id;
   document.getElementById('soc-nome').value=r.nome||'';
   document.getElementById('soc-tel').value=r.telefone||'';
-  SOC_updateAddBtn(); SOC_toggleForm(true); window.scrollTo(0,0);
+  SOC_updateAddBtn(); SOC_toggleForm(true); VB_rolaPara(0);
 }
 function SOC_cancelEdit(){
   SOC_editId=null;
@@ -23102,7 +23131,7 @@ function MESA_fechaLeitura(){
 function MESA_ir(s){
   if(MESA_editando()){ try{ VB_toast('Feche a folha antes.'); }catch(e){} return; }
   MESA_fechaLeitura();
-  if(VB_telaAtual===s){ window.scrollTo(0,0); return; }
+  if(VB_telaAtual===s){ VB_rolaPara(0); return; }
   /* a faixa faz o mesmo que o botao da Home (PIN_request): tela de operacao com operacao SALVA
      carregada nasce limpa, e o Historico nasce no mes atual. Aplicado na hora de abrir a tela,
      inclusive quando a ida passa por ALTERACOES FEITAS. */
@@ -23284,7 +23313,7 @@ function MESA_homeTopo(){
     var d=document.getElementById('vb-mesa-dir'), c=document.getElementById('vbm-hoje-cab'); if(!d||!c) return;
     var lg=Array.prototype.filter.call(document.querySelectorAll('#screen-home>.card>div'), function(e){ return e.offsetParent && !e.children.length && e.textContent==='VB'; })[0]; if(!lg) return;
     var rg=document.createRange(); rg.selectNodeContents(lg); var lb=rg.getBoundingClientRect(); if(!lb.height) return;
-    var sy=(typeof VB_travado!=='undefined' && VB_travado)?(VB_travaY||0):(window.scrollY||0);
+    var sy=VB_sy();
     var cur=parseFloat(c.style.marginTop)||0;
     var alvo=Math.round(cur+(lb.top+sy+6)-(c.getBoundingClientRect().top+d.scrollTop));
     if(alvo<0) alvo=0; if(alvo>120) return;
@@ -23382,7 +23411,7 @@ function MESA_irAlvo(t){
         if(el && t==='atr' && el.previousElementSibling) el=el.previousElementSibling;
       }
     }catch(e){}
-    if(el){ window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top+window.scrollY-16)); return; }
+    if(el){ VB_rolaPara(el.getBoundingClientRect().top-VB_rolTopo()+VB_sy()-16); return; }
     if(n<25) setTimeout(tenta, 150);
   })();
 }
@@ -23479,6 +23508,7 @@ function MESA_mesLiga(ev){
   if(!alvo){ try{ VB_toast('Nada '+(ent?'a pagar':'a receber')+' nesse mês.'); }catch(e){} return; }
   var bar=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fy'))||0;
   if(ent){ var d=document.getElementById('vb-mesa-dir'); d.scrollTo({top:Math.max(0, alvo.getBoundingClientRect().top-d.getBoundingClientRect().top+d.scrollTop-4), behavior:'smooth'}); }
+  else if(VB_rolEl()) VB_rolaPara(alvo.getBoundingClientRect().top-VB_rolTopo()+VB_sy()-4, true);
   else window.scrollTo({top:Math.max(0, alvo.getBoundingClientRect().top+(window.scrollY||0)-bar-4), behavior:'smooth'});
   try{ alvo.style.transition='background 0.6s'; alvo.style.background='var(--sf2)'; setTimeout(function(){ alvo.style.background=''; }, 900); }catch(e){}
 }
@@ -23509,7 +23539,7 @@ function MESA_alinha(el){
          Folha aberta: o body fica fixo com top=-VB_travaY. Teclado aberto: usa a medida guardada DESTE estado. */
       var vv=window.visualViewport, tecl=!!(vv && vv.height>0 && vv.height<window.innerHeight-120);
       var mede=!tecl;
-      var sy=(typeof VB_travado!=='undefined' && VB_travado) ? (VB_travaY||0) : (window.scrollY||0), ry=el.scrollTop, cache=[];
+      var sy=VB_sy(), ry=el.scrollTop, cache=[];
       var ck=(typeof MESA_renDir!=='undefined'?MESA_renDir:'')+'|'+(REN_busca?1:0)+'|'+(REN_buscaOn?1:0), mc=(MESA_alinhaCache||{})[ck];
       alvos.forEach(function(p,k){
         var alvo=p[0], ref=p[1]; if(!alvo||!alvo.parentNode) return;
@@ -23749,7 +23779,7 @@ function MESA_medida(){
   /* 1.361.2: volta (tela descida de novo no Duo com a tela repartida, prints 20/11 08:18) -- agora em toda tela, nao so na aberta */
   if(!m){ m=document.createElement('div'); m.id='vbm-medida'; m.style.cssText='position:fixed;left:6px;bottom:4px;z-index:100070;font:9px/1.2 -apple-system,sans-serif;color:#d33;pointer-events:none;letter-spacing:0;'; document.body.appendChild(m); }
   var vv=window.visualViewport;
-  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA');
+  m.textContent='MEDIDA '+innerWidth+'×'+innerHeight+' · VV '+(vv?Math.round(vv.width)+'×'+Math.round(vv.height)+' top '+Math.round(vv.offsetTop)+' pt '+Math.round(vv.pageTop):'-')+' · SY '+Math.round(window.scrollY||0)+' · E '+Math.round(VB_rolEl()?VB_sy():-1)+' · SCR '+screen.width+'×'+screen.height+' · T '+VB_vpTent+' · RAIL '+Math.round((document.getElementById('vb-mesa-rail')||{getBoundingClientRect:function(){return{top:-1};}}).getBoundingClientRect().top)+' · B '+Math.round(document.body.getBoundingClientRect().top)+' · HS '+Math.round(document.documentElement.scrollTop||0)+' · '+(MESA_on?'ABERTA':'FECHADA');
   return;
   if(!MESA_on) return;
   var r=document.getElementById('vb-mesa-rail'); if(!r) return;
@@ -23812,9 +23842,9 @@ function MESA_histRetoma(v, n){
   }
   var pronto=(achou!==null) || (!v.id && document.querySelector('#hist-lista [data-idx]'));
   if(!pronto){ if(n<30) setTimeout(function(){ MESA_histRetoma(v, n+1); }, 100); return; }
-  window.scrollTo(0, v.y||0);
+  VB_rolaPara(v.y||0);
   if(achou!==null){ try{ MESA_histOp(achou); }catch(e){} }
-  setTimeout(function(){ if(VB_telaAtual==='hist') window.scrollTo(0, v.y||0); }, 600);
+  setTimeout(function(){ if(VB_telaAtual==='hist') VB_rolaPara(v.y||0); }, 600);
 }
 /* ---------- FINANCIAMENTO na tela aberta (v1.343.0) ----------
    Direita = SIMULACAO: resumo (total de juros, total financiado, taxa e taxa real, 1o vencimento;
@@ -24769,7 +24799,7 @@ function MESA_lados(){
   var sc=document.getElementById('screen-'+t); if(!sc) return;
   var lab=sc.querySelector('.simulacao-label'); if(!lab) return;
   var lr=lab.getBoundingClientRect(); if(!lr.height) return;
-  var sy=window.scrollY||0, labC=lr.top+sy+lr.height/2, labB=lr.bottom+sy;
+  var sy=VB_sy(), labC=lr.top+sy+lr.height/2, labB=lr.bottom+sy;
   var first=null;
   sc.querySelectorAll('*').forEach(function(e){
     if(e===lab || e.contains(lab)) return;
@@ -24884,11 +24914,13 @@ function MESA_liga(on){
   if(!on){ var _md=document.getElementById('vbm-medida'); if(_md) _md.remove(); }   /* MEDIDA provisoria so na tela aberta */
   try{ MESA_dobra(); }catch(e){}
   if(on===MESA_on) return;
+  var _yAnt=0; try{ _yAnt=on?VB_sy():(VB_ROL2?VB_rolY:VB_sy()); }catch(e){}   /* 1.369.0: onde a tela estava, no jeito de rolar que esta saindo */
+  if(!on){ try{ VB_travaSolta(); }catch(e){} }
   MESA_on=on;
   if(!on){ try{ MESA_ladosLimpa(); }catch(e){} }
   if(on){
     MESA_monta();
-    document.documentElement.classList.add('vb-mesa');
+    document.documentElement.classList.add('vb-mesa'); if(VB_ROL2){ document.documentElement.classList.add('vb-rol2'); try{ window.scrollTo(0,0); VB_rolaPara(_yAnt); VB_rolY=_yAnt; }catch(e){} } setTimeout(function(){ try{ VB_folhaTrava(); }catch(e){} }, 0);
     MESA_railPinta(); MESA_resumo();
     if(!MESA_tk) MESA_tk=setInterval(MESA_tick, 400);
     /* 1.349.4: ida e volta -- card expandido no Historico (fechado) vira operacao na direita ao abrir o Duo */
@@ -24897,7 +24929,7 @@ function MESA_liga(on){
       if(_ex!==null){ try{ HIST_toggleExp(_ex, {stopPropagation:function(){}}); }catch(e){} try{ MESA_histOp(_ex); }catch(e){} }
     }
   } else {
-    document.documentElement.classList.remove('vb-mesa');
+    document.documentElement.classList.remove('vb-mesa'); document.documentElement.classList.remove('vb-rol2'); try{ window.scrollTo(0,_yAnt); }catch(e){} setTimeout(function(){ try{ VB_folhaTrava(); }catch(e){} }, 0);
     document.documentElement.classList.remove('vb-mesa-home');
     if(MESA_tk){ clearInterval(MESA_tk); MESA_tk=null; }
     var s=document.getElementById('vb-mesa-escudo'); if(s) s.style.display='none';
@@ -24927,7 +24959,7 @@ function MESA_liga(on){
     /* 1.341.2: saindo do Historico pela operacao da direita (ABRIR, QUITAR...), guarda onde estava;
        voltando pelo VB/VOLTAR (nao pela faixa, que entra limpa), reabre a mesma operacao na direita e a mesma rolagem */
     if(MESA_on && prev==='hist' && name!=='hist' && name!=='home'){
-      MESA_histVolta={id:(MESA_sel&&MESA_sel.charAt(0)==='h')?MESA_sel.slice(2):null, y:window.scrollY||0};
+      MESA_histVolta={id:(MESA_sel&&MESA_sel.charAt(0)==='h')?MESA_sel.slice(2):null, y:VB_sy()};
     } else if(MESA_on && name!=='hist'){ MESA_histVolta=null; }
     var _volta=(MESA_on && name==='hist' && prev!=='hist' && MESA_pendNova!=='hist' && MESA_histVolta)?MESA_histVolta:null;
     if(MESA_on && name==='hist') MESA_histVolta=null;
