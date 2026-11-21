@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.371.1</title>
+<title>VB - v1.372.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -13319,36 +13319,31 @@ function REN_cpFicha(id){
   var c=REN_cpDe(id); if(!c){ REN_cpSheet(id); return; }
   var ov=REN_cpOv('ren-cp-ov');
   var RT='font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;margin-bottom:2px;text-align:center;';
-  var VL='font-size:14px;font-weight:700;color:var(--tx);text-align:center;text-transform:uppercase;';
   var BT='width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;';
   var ja=REN_cpPagoTot(c), falta=REN_cpFalta(c), pago=!!c.pago_em;
   var dBR=(c.venc)?String(c.venc).slice(0,10).split('-').reverse().join('/'):'\u2014';
-  function cel(r,v,cor,peq){ return '<div><div style="'+RT+'">'+r+'</div><div style="'+VL+(peq?'font-size:12px;':'')+(cor?('color:'+cor+';'):'')+'">'+v+'</div></div>'; }
   var _irF=REN_cpIrmas(c), _nmF=REN_cpNm(c,_irF);
-  var st=pago?('PAGA \u00b7 '+String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7)):(ja>0?'PARCIAL':(String(c.venc||'')<REN_hojeISO()?'ATRASADA':(String(c.venc||'').slice(0,10)===REN_hojeISO()?'VENCE HOJE':'A VENCER')));
-  var stCor=pago?'var(--mu)':((ja>0||String(c.venc||'').slice(0,10)<=REN_hojeISO())?'var(--red)':'var(--tx)');
-  var s='<div style="width:100%;max-width:var(--fmw,460px);max-height:var(--fmh,88vh);overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,18px) 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
-    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">CONTA</div>'
-    +cel('CREDOR', CLIP_esc(String(c.credor||'\u2014')))
-    +(REN_rotCurto(c.descricao)?('<div style="margin-top:8px;">'+cel('DESCRI\u00c7\u00c3O', CLIP_esc(REN_rotCurto(c.descricao)))+'</div>'):'')
+  /* 1.372.0: a ficha da CONTA usa o desenho da ficha da PARCELA (VB 20/11: "ficha de saida e diferente"): fundo --sf, folga 14,
+     letra 12/600, CREDOR pelo apelido numa linha so (nome completo quebrava em duas), VALOR e VENCIMENTO vermelhos na atrasada,
+     dias de atraso no rotulo do STATUS. CREDOR e DESCRICAO ficam um embaixo do outro: lado a lado o nome do relogio cortava. */
+  var _hjS=REN_hojeISO(), _vS=String(c.venc||'').slice(0,10), _atr=(!pago && !(ja>0) && !!_vS && _vS<_hjS);
+  var _dd=_atr?Math.max(1,Math.floor((new Date(_hjS+'T00:00:00')-new Date(_vS+'T00:00:00'))/86400000)):0;
+  var st=pago?('PAGA \u00b7 '+String(c.pago_em).slice(8,10)+'/'+String(c.pago_em).slice(5,7)):(ja>0?'PARCIAL':(_atr?'ATRASADA':(_vS===_hjS?'VENCE HOJE':'A VENCER')));
+  var stRed=!pago && (ja>0 || (!!_vS && _vS<=_hjS)), _stRot=_atr?('STATUS \u00b7 '+_dd+'D'):'STATUS';
+  function blo(lbl,v,red){ return '<div style="margin-bottom:4px;min-width:0;text-align:center;"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+lbl+'</div><div style="font-size:12px;color:'+(red?'var(--red)':'var(--tx)')+';font-weight:600;margin-top:1px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v+'</div></div>'; }
+  var _ds=REN_rotCurto(c.descricao);
+  var s='<div style="width:100%;max-width:var(--fmw,460px);max-height:var(--fmh,88vh);overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,14px) 16px calc(14px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+    +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:8px;">CONTA</div>'
+    +blo('CREDOR', CLIP_esc(VB_nomeCurto(String(c.credor||'\u2014'))))+(_ds?blo('DESCRI\u00c7\u00c3O', CLIP_esc(_ds)):'')
     +(_nmF
-      ? ('<div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1.2fr) minmax(0,0.9fr) minmax(0,1fr);gap:4px;margin-top:10px;">'
-        +cel('VALOR', HIST_fmtMoeda(Number(c.valor)||0),null,1)
-        +cel('VENCIMENTO', dBR,null,1)
-        +cel('PARCELA', _nmF,null,1)
-        +cel('STATUS', st, stCor,1)
-        +'</div>')
-      : ('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px;">'
-        +cel('VALOR', HIST_fmtMoeda(Number(c.valor)||0))
-        +cel('VENCIMENTO', dBR)
-        +cel('STATUS', st, stCor)
-        +'</div>'))
+      ? ('<div style="display:grid;grid-template-columns:1.1fr 1fr 0.8fr 1fr;gap:2px 8px;">'+blo('VALOR', HIST_fmtMoeda(Number(c.valor)||0), _atr)+blo('VENCIMENTO', dBR, _atr)+blo('PARCELA', _nmF)+blo(_stRot, st, stRed)+'</div>')
+      : ('<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:2px 8px;">'+blo('VALOR', HIST_fmtMoeda(Number(c.valor)||0), _atr)+blo('VENCIMENTO', dBR, _atr)+blo(_stRot, st, stRed)+'</div>'))
     +((!pago && ja>0)?('<div style="text-align:center;font-size:12px;color:var(--mu2);font-weight:600;margin-top:8px;">PAGO: '+HIST_fmtMoeda(ja)+' \u00b7 RESTA: '+HIST_fmtMoeda(falta)+'</div>'):'')
     +(c.nota?('<div style="text-align:center;font-size:11px;color:var(--tx2);font-weight:600;margin-top:8px;text-transform:uppercase;">'+CLIP_esc(c.nota)+'</div>'):'')
     +((String(c.origem_tab||'')==='juros')?('<div style="text-align:center;font-size:9px;letter-spacing:1px;color:var(--so);margin-top:8px;">JUROS DA CONTA</div>'):'')
     +((Number(c.juros)>0)?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 10px;margin-top:10px;">'
-        +cel('JUROS', HIST_fmtMoeda(Number(c.juros)), null, 1)
-        +cel('AMORTIZA\u00c7\u00c3O', HIST_fmtMoeda(Math.max(0,(Number(c.valor)||0)-Number(c.juros))), null, 1)
+        +blo('JUROS', HIST_fmtMoeda(Number(c.juros)), null, 1)
+        +blo('AMORTIZA\u00c7\u00c3O', HIST_fmtMoeda(Math.max(0,(Number(c.valor)||0)-Number(c.juros))), null, 1)
         +'</div>'):'')
     +(function(){
         /* leitura, nunca deducao: o valor da conta continua sendo o que sai da conta bancaria */
@@ -13358,8 +13353,8 @@ function REN_cpFicha(id){
         var _vt=Number(c.valor)||0, _sv=Number(c.socio_valor)||0;
         function _pc(v){ return (_vt>0)?(' ('+(v/_vt*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)'):''; }
         return '<div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:4px 10px;margin-top:10px;">'
-          +cel('S\u00d3CIO \u00b7 '+CLIP_esc(String(c.socio_nome||'').toUpperCase()), HIST_fmtMoeda(_sv)+_pc(_sv), null, 1)
-          +cel('VB', HIST_fmtMoeda(_pv)+_pc(_pv), null, 1)
+          +blo('S\u00d3CIO \u00b7 '+CLIP_esc(String(c.socio_nome||'').toUpperCase()), HIST_fmtMoeda(_sv)+_pc(_sv), null, 1)
+          +blo('VB', HIST_fmtMoeda(_pv)+_pc(_pv), null, 1)
           +'</div>';
       })();
   /* PARCELAS DA COMPRA: mesma linha do tempo da ficha das entradas, colunas de largura fixa */
@@ -14769,13 +14764,13 @@ function REN_ficha(k, exp){
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
     MESA_fichaPoe(ov);
   }
-  function bloco(lbl,v,red,esq){ return '<div style="margin-bottom:4px;min-width:0;text-align:'+(esq?'left':'center')+';"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;">'+lbl+'</div><div style="font-size:12px;color:'+(red?'var(--red)':'var(--tx)')+';font-weight:600;margin-top:1px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v+'</div></div>'; }
+  function bloco(lbl,v,red,esq){ return '<div style="margin-bottom:4px;min-width:0;text-align:'+(esq?'left':'center')+';"><div style="font-size:8px;letter-spacing:1px;color:var(--so);font-weight:700;white-space:nowrap;">'+lbl+'</div><div style="font-size:12px;color:'+(red?'var(--red)':'var(--tx)')+';font-weight:600;margin-top:1px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v+'</div></div>'; }
   /* o else do PARCIAL zerava a cadeia inteira: RECEBIDA, ATRASADA e VENCE HOJE viravam A VENCER.
      Uma cadeia so, do mais decidido para o menos. */
-  var status, red=false;
+  var status, red=false, _stRot='STATUS';   /* 1.372.0: os dias de atraso vao no rotulo (STATUS . 5D), como o VALOR HOJE . 1,0% */
   if(b) status='RECEBIDA';
   else if(REN_pagoTot(x)>0) status='PARCIAL';
-  else if(x.venc<hoje){ var dd=Math.max(1,Math.floor((new Date(hoje+'T00:00:00')-new Date(x.venc+'T00:00:00'))/86400000)); status='ATRASADA \u00b7 '+dd+'D'; red=true; }
+  else if(x.venc<hoje){ var dd=Math.max(1,Math.floor((new Date(hoje+'T00:00:00')-new Date(x.venc+'T00:00:00'))/86400000)); status='ATRASADA'; _stRot='STATUS \u00b7 '+dd+'D'; red=true; }
   else if(x.prorrogada) status='PRORROGADA';   /* prazo que VB vendeu, nao atraso do cliente */
   else if(x.venc===hoje) status='<b>VENCE HOJE</b>';
   else status='A VENCER';
@@ -14875,7 +14870,7 @@ function REN_ficha(k, exp){
       _vCel='<span onclick="event.stopPropagation();REN_copia(\''+_fr+'\',\'Frase de cobran\u00e7a copiada \u2014 \u00e9 s\u00f3 colar no WhatsApp.\')" style="cursor:pointer;">'+HIST_fmtMoeda(x.valor)+' <span style="font-size:10px;color:var(--so);">\u29c9</span></span>';
     }
   }
-  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 0.8fr 1fr;gap:2px 8px;">'+bloco('VALOR',_vCel,red)+bloco('VENCIMENTO',_venc,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+bloco('STATUS',status,red)+'</div>';
+  hh+='<div style="display:grid;grid-template-columns:1.1fr 1fr 0.8fr 1fr;gap:2px 8px;">'+bloco('VALOR',_vCel,red)+bloco('VENCIMENTO',_venc,red)+bloco(REN_termo(x.tab,false,true),REN_nm(x))+bloco(_stRot,status,red)+'</div>';
   /* VALOR HOJE: so existe quando ha atraso correndo e sobra a receber. Toque copia a frase pronta
      pro WhatsApp, texto puro: "O valor fica R$ 2.222,00 dia 22/09." -- data de HOJE, que e o
      dia em que esse valor vale. A antecipacao atrasada tem a frase dela e nao muda. */
