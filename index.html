@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.399.0</title>
+<title>VB - v1.400.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -14785,6 +14785,7 @@ function REN_privAplica(){
 function REN_privToggle(){
   REN_oculto=!REN_oculto;
   try{ localStorage.setItem('vb_ren_oculto', REN_oculto?'1':'0'); }catch(e){}
+  try{ MESA_ver=!REN_oculto; localStorage.setItem('vb_mesa_ver',MESA_ver?'1':'0'); if(typeof MESA_on!=='undefined' && MESA_on && VB_telaAtual!=='ren') MESA_resumo(); }catch(e){}   /* 1.400.0: um interruptor so (Home, Entradas, Historico, Estoque) */
   try{ REN_render(); }catch(e){ REN_privAplica(); }
 }
 (function(){ var _r0=REN_render; REN_render=function(){ var r=_r0.apply(this, arguments); try{ REN_privAplica(); }catch(e){} return r; }; })();
@@ -23349,7 +23350,7 @@ function MESA_resumo(){
   /* mesmo cabecalho da Home: estilo do OPERACOES, sem traco, na mesma altura em todas as telas */
   var cab='<div style="display:flex;align-items:center;justify-content:space-between;margin:62px 4px 7px;min-height:21px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">RESUMO</span>'
     /* 1.399.0 (VB 21/11 "olhim do historico mesmo local do entradas"): o olhinho do Historico mora no canto direito do titulo da DIREITA, como nas ENTRADAS/SAIDAS */
-    +((typeof VB_telaAtual!=='undefined' && VB_telaAtual==='hist')?'<span onclick="HIST_olhoToggle()" title="Esconder os valores" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 6px;margin:-6px 0;color:var(--mu2);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg></span>':'')
+    +((typeof VB_telaAtual!=='undefined' && VB_telaAtual==='hist')?VB_grandesIcone():'')
     +'</div>';
   if(typeof REN_cache==='undefined' || !REN_cache){
     /* primeira carga: espera a sessao subir, como o card A PAGAR da Home */
@@ -23424,8 +23425,10 @@ function MESA_resumo(){
    toda vez que o app vai para segundo plano. Independente do olhinho das ENTRADAS/SAIDAS. */
 /* 1.357.3: a pedido do VB o app abre do jeito que ele deixou (padrao: aberto) e nao esconde mais ao ir para segundo plano. */
 var MESA_ver=true; try{ MESA_ver=localStorage.getItem('vb_mesa_ver')!=='0'; }catch(e){}
+try{ if(typeof REN_oculto!=='undefined') MESA_ver=!REN_oculto; }catch(e){}   /* 1.400.0: um interruptor so */
 function MESA_hv(v){ return MESA_ver?MESA_brl(v):'R$ ••••••'; }
-function MESA_verToggle(){ MESA_ver=!MESA_ver; try{ localStorage.setItem('vb_mesa_ver',MESA_ver?'1':'0'); }catch(e){} MESA_resumo();  try{ HIST_olhoPinta(); }catch(e){} }
+/* 1.400.0 (VB 21/11 "olhim da home comandando todos"): um interruptor so -- o olhinho da Home e o mesmo das Entradas, Historico e Estoque (REN_oculto); MESA_ver segue o REN_oculto */
+function MESA_verToggle(){ VB_grandesToggle(); }
 function MESA_olho(){
   return '<span onclick="event.stopPropagation();MESA_verToggle()" style="cursor:pointer;color:var(--so);display:inline-flex;padding:2px;-webkit-tap-highlight-color:transparent;">'
     +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg></span>';
@@ -23513,7 +23516,8 @@ function MESA_homeGset(g){ MESA_homeG=g; MESA_resumo(); }
    LUCRO POR MES (6 meses, mes atual em preto) e o ANO (operacoes, volume, lucro, ticket medio). Mesmas contas da barra preta:
    volume = HIST_valCol, lucro = HIST_lucroRow, mes = HIST_dataNeg; simulacao nao soma. Pagamentos nao tem lucro: mostra o pago por mes.
    Atrasados da Antecipacao e busca geral nao mostram (nao sao operacoes do periodo). Segue a lista: com busca/filtro, soma o que esta listado. */
-function MESA_histBlocos(){
+function MESA_histBlocos(){ var _v=MESA_ver; MESA_ver=true; try{ return MESA_histBlocos0(); } finally{ MESA_ver=_v; } }   /* 1.400.0: o LUCRO POR MES fica a vista com o olhinho fechado */
+function MESA_histBlocos0(){
   var tab=(typeof HIST_tabCache!=='undefined')?HIST_tabCache:null, rows=(typeof HIST_rowsCache!=='undefined')?HIST_rowsCache:null;
   if(!tab || tab==='global' || !rows) return '';
   /* 1.389.0: o card guarda a lista SEM busca e SEM filtro da aba (MESA_histBase) e soma sempre ela; tocar numa barra filtra a lista naquele mes
@@ -23553,7 +23557,7 @@ function MESA_histBlocos(){
   var CARD='background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-top:8px;';
   var ROT='font-size:9px;letter-spacing:2px;font-weight:700;color:var(--so);white-space:nowrap;';
   var nomeTab={ant:'ANTECIPAÇÃO',fin:'FINANCIAMENTO',ven:'VENDAS',pag:'PAGAMENTOS'}[tab]||'';
-  var h='<div style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;"><span style="'+ROT+'">'+((tab==='ven'&&!ger)?'LUCRO VB POR MÊS':'LUCRO POR MÊS')+'</span>'
+  var h='<div data-vbm-livre="1" style="'+CARD+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;"><span style="'+ROT+'">'+((tab==='ven'&&!ger)?'LUCRO VB POR MÊS':'LUCRO POR MÊS')+'</span>'
     +'<span style="display:inline-flex;border:0.5px solid var(--ln2);border-radius:8px;overflow:hidden;margin:-3px 0;flex-shrink:0;">'
     +[[0,nomeTab],[1,'GERAL']].map(function(o){ var on=(!!o[0]===ger); return '<span onclick="MESA_histGeral='+(o[0]?'true':'false')+';MESA_resumo();" style="font-size:8.5px;letter-spacing:1px;font-weight:700;padding:4px 7px;cursor:pointer;white-space:nowrap;'+(on?'background:var(--acc);color:var(--acc-tx);':'color:var(--so);')+'">'+o[1]+'</span>'; }).join('')
     +'</span></div>'
@@ -23579,7 +23583,7 @@ function HIST_olhoPinta(){
   var o=document.getElementById('hist-olho'); if(!o) return;
   o.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+(MESA_ver?'':'<line x1="3" y1="3" x2="21" y2="21"/>')+'</svg>';
 }
-function HIST_olhoOn(){ return !MESA_ver && document.documentElement.classList.contains('vb-mesa'); }
+function HIST_olhoOn(){ return false; }   /* 1.400.0 (VB 21/11 "tudo ao contrario"): a lista NAO esconde mais -- o olhinho fecha os numeros grandes (VB_grandes) */
 function HIST_olhoMascara(raiz){
   try{
     if(!HIST_olhoOn() || !raiz) return;
@@ -23590,7 +23594,45 @@ function HIST_olhoMascara(raiz){
       if(z!==v) t.nodeValue=z; });
   }catch(e){}
 }
-function HIST_olhoToggle(){ MESA_verToggle(); HIST_olhoPinta(); try{ if(MESA_ver) HIST_fetch(HIST_searchTerm); else HIST_olhoTudo(); }catch(e){} }
+function HIST_olhoToggle(){ VB_grandesToggle(); }
+/* 1.400.0 (VB 21/11 17:35 "olhim fechado tudo ao contrario... botar no estoque tambem pra fechar os numeros grandes"):
+   o olhinho do Historico e do Estoque e o MESMO das ENTRADAS/SAIDAS (REN_oculto). Fecha os NUMEROS GRANDES:
+   Historico = o RESUMO da direita (card preto e os 3 cards); o LUCRO POR MES, a lista e a barra preta ficam a vista.
+   Estoque = o card preto e o card SOCIOS | VB da direita e a barra preta do total da esquerda; a lista fica a vista. */
+function VB_grandesIcone(){
+  return '<span onclick="VB_grandesToggle()" title="Esconder os números grandes" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 6px;margin:-6px 0;color:var(--mu2);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/>'+((typeof REN_oculto!=='undefined'&&REN_oculto)?'<line x1="3" y1="3" x2="21" y2="21"/>':'')+'</svg></span>';
+}
+function VB_grandesToggle(){
+  try{ REN_privToggle(); }catch(e){}
+  MESA_ver=!REN_oculto; try{ localStorage.setItem('vb_mesa_ver',MESA_ver?'1':'0'); }catch(e){}
+  try{ MESA_merSig=null; MESA_resumo(); }catch(e){}
+  try{ if(VB_telaAtual==='mer' && !REN_oculto) MER_render(); }catch(e){}
+  VB_grandesMascara();
+}
+function VB_grandesTexto(raiz, pula){
+  if(!raiz) return;
+  var w=document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null), n, L=[];
+  while((n=w.nextNode())){ if(pula && n.parentElement && n.parentElement.closest(pula)) continue; L.push(n); }
+  L.forEach(function(t){ var v=t.nodeValue; if(!v || !/\d/.test(v)) return;
+    var z=v.replace(/(R\$\s?)[\u2212\u2013-]?\s?[\d.]+,\d{2}/g,'$1\u2022\u2022\u2022\u2022').replace(/\b\d+(?:[.,]\d+)?\s?[KM]\b/g,'\u2022\u2022');
+    if(z!==v) t.nodeValue=z; });
+}
+function VB_grandesMascara(){
+  try{
+    if(!(typeof REN_oculto!=='undefined' && REN_oculto) || !document.documentElement.classList.contains('vb-mesa')) return;
+    var d=document.getElementById('vb-mesa-dir');
+    if(VB_telaAtual==='hist'){ VB_grandesTexto(d, '[data-vbm-livre]'); }
+    else if(VB_telaAtual==='mer'){
+      if(d) Array.prototype.slice.call(d.children,0,3).forEach(function(c){ VB_grandesTexto(c); });
+      VB_grandesTexto(document.getElementById('mer-total'));
+    }
+  }catch(e){}
+}
+(function(){ var liga=function(){ try{
+    ['vb-mesa-dir','mer-total'].forEach(function(id){ var e=document.getElementById(id); if(!e) return;
+      new MutationObserver(function(){ VB_grandesMascara(); }).observe(e,{childList:true,subtree:true}); });
+  }catch(e){} };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', liga); else liga(); })();
 function HIST_olhoTudo(){ ['hist-lista','hist-total','hist-count'].forEach(function(id){ HIST_olhoMascara(document.getElementById(id)); }); }
 (function(){ var liga=function(){ try{
     HIST_olhoPinta();
@@ -24871,7 +24913,7 @@ function MESA_merPinta(forca){
   var el=document.getElementById('vb-mesa-dir'); if(!el) return;
   var rows=MER_rows||[];
   var vend=(MER_tab==='vendida');
-  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+(vend?'VENDIDOS':'ESTOQUE')+'</span></div>';
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;">'+(vend?'VENDIDOS':'ESTOQUE')+'</span>'+VB_grandesIcone()+'</div>';
   var meias='';
   if(!vend){
     var est=rows.filter(function(r){ return (r.status||'estoque')==='estoque'; });
