@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.390.0</title>
+<title>VB - v1.391.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -23471,6 +23471,7 @@ function MESA_histBlocos(){
   if(!rows.length) return '';
   var mSel=(HIST_filter && HIST_filter.meses && HIST_filter.meses.length===1)?HIST_filter.meses[0]:null;
   if(tab==='ant' && typeof HIST_antSub!=='undefined' && HIST_antSub==='atr') return '';
+  if(tab==='pag') return '';   /* 1.391.0 (VB 21/11 "faz"): Pagamentos sao contas correntes, nao operacoes por mes -- sem card */
   var temL=(tab!=='pag'), vc=HIST_valCol(tab), hoje=new Date(), ano=String(hoje.getFullYear());
   var meses=[]; for(var k=5;k>=0;k--){ var d=new Date(hoje.getFullYear(),hoje.getMonth()-k,1); meses.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)); }
   var porMes={}; meses.forEach(function(m){ porMes[m]=0; });
@@ -23481,6 +23482,7 @@ function MESA_histBlocos(){
     var v=Number(r[vc])||0;
     if(tab==='pag' && !v){ (r.pagamentos||[]).forEach(function(p){ v+=(p.cr?-1:1)*(PAG_parseBR(p.valor||'0')||0); }); }
     var l=temL?HIST_lucroRow(tab,r):null;
+    if(tab==='fin' && l!=null && Math.abs(Number(l)||0)<0.005) return;   /* 1.391.0: financiamento sem juros (acordo) nao e operacao nova: fora do card */
     if(l!=null && tab==='ven'){ var _vs=Number(r.valor_socio)||0, _c=Number(r.custo)||0; if(r.socio && _vs>0 && _c>0 && _vs<=_c){ var _pVB=(r.lucro_vb_pct!=null)?Number(r.lucro_vb_pct):50; l=l*(_pVB/100); } }
     var y=temL?(l!=null?Number(l)||0:0):v;
     if(ym in porMes) porMes[ym]+=y;
