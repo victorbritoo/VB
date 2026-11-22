@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.408.2</title>
+<title>VB - v1.408.3</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -411,6 +411,8 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa :is(#screen-mer,#screen-cli,#screen-soc)>.card>div:first-child{ min-height:36px; display:flex; align-items:center; }
   /* 1.357.6: CONFIRMAR OPERACAO preso no pe da esquerda (sugestao do designer, liberada pelo VB): rolando o formulario longo, o botao fica a vista */
   html.vb-mesa :is(#fin-btnConfirmar,#ant-btnConfirmar,#pag-btnConfirmar,#ven-btnConfirmar){ position:sticky; bottom:10px; z-index:6; box-shadow:0 0 0 6px var(--bg), 0 -8px 14px 6px var(--bg); }
+  /* 1.408.3 (VB 22/11 16:12): digitando com o teclado aberto, o CONFIRMAR preso no pe cobria o campo -- volta para o lugar dele no fim do formulario */
+  html.vb-mesa.vb-tecl :is(#fin-btnConfirmar,#ant-btnConfirmar,#pag-btnConfirmar,#ven-btnConfirmar){ position:static; box-shadow:none; }
   html.vb-mesa #mer-total.enc{ padding-top:10px !important; padding-bottom:10px !important; }
   html.vb-mesa #mer-total.enc .mer-tot-x{ display:inline !important; }
   html.vb-mesa .fm-rend-val{ white-space:nowrap; flex:none; margin-left:8px; }
@@ -11374,6 +11376,7 @@ function MESA_teclVer(kbForca){
     var vv=window.visualViewport, kb=kbForca;
     if(kb==null){ if(!vv || !(vv.height>0)) return; kb=Math.round(innerHeight-vv.height-vv.offsetTop); if(!(kb>=150)) kb=0; }
     var ae=document.activeElement, dig=!!(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName||''));
+    document.documentElement.classList.toggle('vb-tecl', !!(dig && kb));
     var sc=null;
     if(dig && kb){ var p=ae.parentElement; while(p && p!==document.body){ var oy=getComputedStyle(p).overflowY; if((oy==='auto'||oy==='scroll') && p.clientHeight>0){ sc=p; break; } p=p.parentElement; } }
     if(MESA_teclCx && MESA_teclCx!==sc){ MESA_teclCx.style.paddingBottom=MESA_teclCx._pb0||''; MESA_teclCx=null; }
