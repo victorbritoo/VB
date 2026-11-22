@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.407.0</title>
+<title>VB - v1.408.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -11350,10 +11350,24 @@ function VB_cliCarregar(cb){
   }).catch(function(){ cb(VB_cliBase||[]); });
 }
 function VB_cliSugPos(el,b){
+  b._el=el;
   var r=el.getBoundingClientRect(), sx=window.pageXOffset||0, sy=window.pageYOffset||0;
   b.style.left=Math.max(8,r.left+sx)+'px'; b.style.top=(r.bottom+sy+4)+'px';
   b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
 }
+/* 1.408.0: na tela aberta cada metade e uma caixa que rola sozinha; a sugestao e absoluta no corpo e ficava parada
+   quando a caixa rolava. Agora ela segue o campo a cada rolagem (qualquer caixa); some se o campo sair da caixa. */
+document.addEventListener('scroll', function(){
+  try{
+    if(!MESA_on) return;
+    var b=document.getElementById('vb-cli-sug'); if(!b || b.style.display==='none' || !b._el) return;
+    var el=b._el; if(!document.body.contains(el)){ b.style.display='none'; return; }
+    var r=el.getBoundingClientRect(), p=el.parentElement, cx=null;
+    while(p && p!==document.body){ var oy=getComputedStyle(p).overflowY; if(oy==='auto'||oy==='scroll'){ cx=p; break; } p=p.parentElement; }
+    if(cx){ var c=cx.getBoundingClientRect(); if(r.bottom<c.top || r.top>c.bottom){ b.style.display='none'; return; } }
+    VB_cliSugPos(el,b);
+  }catch(e){}
+}, true);
 function VB_cliSugBox(){
   var b=document.getElementById('vb-cli-sug');
   if(!b){ b=document.createElement('div'); b.id='vb-cli-sug';
