@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.402.0</title>
+<title>VB - v1.403.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -366,17 +366,12 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-mesa-col>.vbm-dentro{ position:absolute; top:0; left:0; right:0; bottom:0; align-items:stretch; justify-content:stretch; animation:none;
     --fmw:none; --fmh:none; --frd:0; --fpt:22px; }
   html.vb-mesa #vb-mesa-col>.vbm-dentro>div{ height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; border-left:0.5px solid var(--ln2); box-sizing:border-box; animation:none; }
-  /* 1.401.0 (etapa 2, 3a familia): operacao do Historico e Fechamento moram na coluna (MESA_DENTRO); so o panorama do cliente segue aqui */
-  html.vb-mesa :is(#clip-overlay){
-    left:var(--mx,50%) !important; right:0 !important; top:var(--fy,0px) !important; bottom:0 !important; width:auto !important;
-    background:transparent !important; align-items:stretch !important; justify-content:stretch !important; padding:0 !important; animation:none !important; }
-  html.vb-mesa :is(#clip-overlay)>div{
-    width:100% !important; max-width:none !important; height:100% !important; max-height:none !important; overflow-y:auto !important;
-    -webkit-overflow-scrolling:touch; border-radius:0 !important; border-left:0.5px solid var(--ln2) !important; box-sizing:border-box !important;
-    padding-top:22px !important; animation:none !important; }
+  /* 1.403.0 (etapa 2, ultima familia): panorama do cliente e foto moram na coluna (MESA_DENTRO); sairam as regras com !important.
+     A foto nao tem caixa de dentro: ela mesma rola, com o fundo e a folga que tinha no inline. */
+  html.vb-mesa #vb-mesa-col>#vb-foto-overlay{ background:var(--bg); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:32px 16px 40px; border-left:0.5px solid var(--ln2); box-sizing:border-box; }
+  html.vb-mesa #vb-mesa-col>#vb-foto-overlay>div{ height:auto; overflow:visible; border-left:0; }
   /* o padrao da direita (panorama) fica por baixo de qualquer card que abrir */
   html.vb-mesa .vbm-auto{ z-index:100012 !important; }
-  html.vb-mesa #vb-foto-overlay{ top:var(--fy,0px) !important; left:var(--mx,50%) !important; right:0 !important; border-left:0.5px solid var(--ln2); box-sizing:border-box; }
   /* avisos e dialogos fora da dobra: toast e ALTERACOES FEITAS / RENOMEAR centrados na metade direita */
   html.vb-mesa #vb-toast{ left:calc(var(--mx,50%) / 2 + 50%) !important; z-index:100060 !important; top:calc(var(--fy,54px) + 12px) !important; bottom:auto !important; }   /* 1.355.2: no alto da direita, sem cobrir botao de folha */
   html.vb-mesa #vb-toast.vb-toast-cheio{ left:50% !important; top:auto !important; bottom:84px !important; }   /* 1.394.0: com camada de tela cheia, no pe da tela inteira */
@@ -420,8 +415,7 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa .fm-rend-val{ white-space:nowrap; flex:none; margin-left:8px; }
   html.vb-mesa .fm-rend-val span{ font-size:9px !important; }
   /* 1.347.0 computador: a metade direita nao estica alem de 640 pt (fichas e fotos legiveis) */
-  html.vb-mesa.vb-mesa-pc #vb-mesa-col,
-  html.vb-mesa.vb-mesa-pc :is(#clip-overlay,#vb-foto-overlay){
+  html.vb-mesa.vb-mesa-pc #vb-mesa-col{
     right:auto !important; width:min(640px, calc(100vw - var(--mx,50%))) !important; }
   html.vb-mesa.vb-mesa-pc #vb-mesa-dir{ border-right:0.5px solid var(--ln2); }
   html.vb-mesa.vbm-buscando:not(.vb-mesa-home){ --fy:120px; }
@@ -5469,7 +5463,8 @@ function VB_fotoPreview(canvas, fname, comPDF){
   var bp=document.getElementById('vb-foto-pdf');
   if(bp) bp.style.display=comPDF?'block':'none';
   var ov=document.getElementById('vb-foto-overlay');
-  if(ov.parentNode!==document.body) document.body.appendChild(ov); // nunca ficar preso dentro de uma tela escondida
+  if(MESA_on) MESA_fichaPoe(ov);   /* 1.403.0: Duo aberto, a foto mora na coluna da direita */
+  else if(ov.parentNode!==document.body) document.body.appendChild(ov); // nunca ficar preso dentro de uma tela escondida
   ov.style.display='block'; ov.scrollTop=0;
 }
 /* A mesma imagem, embrulhada em PDF. Foto ganha no WhatsApp porque aparece na conversa sem
@@ -11515,9 +11510,9 @@ function CLIP_abrir(nome, cliId, voltarK){
        de quem o chamou. */
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100035;display:none;align-items:flex-end;justify-content:center;';
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.style.display='none'; });
-    document.body.appendChild(ov);
+    MESA_fichaPoe(ov);
   }
-  ov.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--mu);font-size:12px;padding:20px;">Carregando...</div></div>';
+  ov.innerHTML='<div style="width:100%;max-width:var(--fmw,520px);background:var(--bg);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,18px) 16px 18px;font-family:-apple-system,sans-serif;"><div style="text-align:center;color:var(--mu);font-size:12px;padding:20px;">Carregando...</div></div>';
   ov.style.display='flex';
   Promise.all([
     sb.from('antecipacoes').select('id,cliente,nome,cliente_id,valor_bruto,valor_liquido,tarifa,taxa,titulos,data_operacao,created_at,simulacao,prazo_medio').limit(10000),
@@ -11657,7 +11652,7 @@ function CLIP_abrir(nome, cliId, voltarK){
       +'</div>';
     }
     function ln(esq, dir, red){ return '<div class="vb-val" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;"><span style="color:var(--mu);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+esq+'</span><span style="font-weight:700;color:'+(red?'var(--red)':'var(--tx)')+';white-space:nowrap;">'+dir+'</span></div>'; }
-    var hh='<div style="width:100%;max-width:520px;background:var(--bg);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
+    var hh='<div style="width:100%;max-width:var(--fmw,520px);background:var(--bg);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,18px) 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:var(--fmh,85vh);overflow:auto;-webkit-overflow-scrolling:touch;font-family:-apple-system,sans-serif;">';
     /* apelido e o padrao de exibicao no app inteiro; nome completo so em contrato,
        cadastro do cliente e relatorio -- onde ele e o nome legal, nao um rotulo */
     hh+='<div style="text-align:center;font-size:15px;font-weight:700;color:var(--ink);text-transform:uppercase;">'+CLIP_esc(VB_nomeCurto(alvo))+'</div>';
@@ -23126,7 +23121,7 @@ var MESA_DIR=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro
 var MESA_EDITA=['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cpb-ov','ren-cr-ov'];
 /* 1.371.0 (etapa 2 do plano da tela aberta): folhas que ja moram DENTRO da coluna da direita. Familia migrada entra aqui e sai
    das listas de CSS com !important. Com o Duo fechado elas voltam para o corpo, iguais a antes. */
-var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay','vbm-hist-op','fm-overlay'];   /* 1.401.0: + operacao do Historico e Fechamento */
+var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay','vbm-hist-op','fm-overlay','clip-overlay','vb-foto-overlay'];   /* 1.401.0: + operacao do Historico e Fechamento; 1.403.0: + panorama do cliente e foto */
 /* 1.377.0 (VB 20/11 23:13: "card do relogio abre feio"): a ficha do relogio deixa de ser folha de baixo na tela aberta (cinza em cima, botoes
    cortados embaixo) e ocupa o painel inteiro, como a ficha da PARCELA. Camada 100015, a que ela ja tinha na direita. */
 var MESA_DENTRO_Z={'mer-view-overlay':'100015'};
@@ -23148,7 +23143,7 @@ function MESA_fichaEntra(ov){
     if(cx && cx.dataset && cx.dataset.mhOrig!=null){ cx.style.maxHeight=cx.dataset.mhOrig; delete cx.dataset.mhOrig; }   /* teto do teclado da tela fechada */
   }
   if(ov.parentNode!==col){
-    if(ov.parentNode===document.body && !ov._vbLugar && ov.dataset.fora!=null && (ov.id==='mer-view-overlay'||ov.id==='fm-overlay')){ ov._vbLugar=document.createComment('vb:'+ov.id); document.body.insertBefore(ov._vbLugar, ov); }   /* folha fixa do HTML volta para o mesmo lugar */
+    if(ov.parentNode===document.body && !ov._vbLugar && ov.dataset.fora!=null && (ov.id==='mer-view-overlay'||ov.id==='fm-overlay'||ov.id==='vb-foto-overlay')){ ov._vbLugar=document.createComment('vb:'+ov.id); document.body.insertBefore(ov._vbLugar, ov); }   /* folha fixa do HTML volta para o mesmo lugar */
     col.appendChild(ov); if(cx) cx.scrollTop=sy;
   }
   if(!ov._vbColObs && window.MutationObserver){ try{ ov._vbColObs=new MutationObserver(MESA_colZ); ov._vbColObs.observe(ov, {attributes:true, attributeFilter:['style']}); }catch(e){} }
@@ -23228,18 +23223,10 @@ function MESA_colZ(){
     if(o.style.display && o.style.display!=='none'){ var v=parseInt(o.style.zIndex)||0; if(v>z) z=v; }
   }
   if(String(col.style.zIndex)!==String(z)) col.style.zIndex=String(z);
-  /* 1.378.0 (VB 20/11 23:32: "quando clica em DOCUMENTOS o card desaparece"): defeito da 1.374.0. Folha de baixo tem fundo transparente; com a
-     coluna erguida, o RESUMO (que mora nela) passava por cima da operacao do Historico / Fechamento / panorama do cliente, que ainda moram no
-     corpo. Enquanto uma dessas estiver a mostra por baixo, o resumo se esconde. Sai junto com MESA_colZ quando elas migrarem. */
-  var d=document.getElementById('vb-mesa-dir');
-  if(d){
-    var porBaixo=false;
-    if(z>50){ for(var k=0;k<MESA_FORA.length;k++){ if(MESA_vis(MESA_FORA[k])){ porBaixo=true; break; } } }
-    var vv=porBaixo?'hidden':'';
-    if(d.style.visibility!==vv) d.style.visibility=vv;
-  }
+  /* 1.403.0: o recolhimento do resumo (1.378.0) saiu -- toda folha da direita mora na coluna e cobre o resumo por cima.
+     A coluna continua subindo de camada: a ficha do cliente (100030) e os dialogos (100028) ainda moram no corpo. */
+  var d=document.getElementById('vb-mesa-dir'); if(d && d.style.visibility) d.style.visibility='';
 }
-var MESA_FORA=['clip-overlay','vb-foto-overlay'];   /* folhas da direita que ainda moram no corpo */
 /* os mesmos botoes da Home, na mesma ordem e com os mesmos nomes; '-' e o traco entre OPERACOES e GESTAO */
 var MESA_ITENS=[
   ['fin','Financiamentos','<path d="M5 16l1.5-5a2 2 0 0 1 2-1.5h7a2 2 0 0 1 2 1.5L19 16M4 16h16v3H4zM7 19v2M17 19v2"/>'],
