@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.408.0</title>
+<title>VB - v1.408.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -11354,7 +11354,18 @@ function VB_cliSugPos(el,b){
   var r=el.getBoundingClientRect(), sx=window.pageXOffset||0, sy=window.pageYOffset||0;
   b.style.left=Math.max(8,r.left+sx)+'px'; b.style.top=(r.bottom+sy+4)+'px';
   b.style.minWidth=Math.min(r.width,320)+'px'; b.style.maxWidth='calc(100vw - 16px)';
+  /* 1.408.1 (VB 22/11, prints 15:52: "nem da pra ver a lista"): campo perto do teclado -- a lista caia embaixo dele.
+     Se nao cabe entre o campo e o teclado (visualViewport) e cabe em cima, abre EM CIMA do campo. */
+  try{
+    var esc=(b.style.display==='none'||!b.style.display); if(esc){ b.style.visibility='hidden'; b.style.display='block'; }
+    var alt=b.offsetHeight||0; if(esc){ b.style.display='none'; b.style.visibility=''; }
+    var vv=window.visualViewport, fundo=vv&&vv.height>0?(vv.offsetTop+vv.height):innerHeight;
+    var topo=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fy'))||0;
+    if(alt && r.bottom+4+alt>fundo-6 && r.top-4-alt>=topo+6) b.style.top=(r.top+sy-4-alt)+'px';
+  }catch(e){}
 }
+/* 1.408.1: teclado abrindo ou fechando com a lista a mostra -- refaz a posicao */
+try{ if(window.visualViewport) window.visualViewport.addEventListener('resize', function(){ try{ var b=document.getElementById('vb-cli-sug'); if(b && b.style.display!=='none' && b._el && document.body.contains(b._el)) VB_cliSugPos(b._el,b); }catch(e){} }); }catch(e){}
 /* 1.408.0: na tela aberta cada metade e uma caixa que rola sozinha; a sugestao e absoluta no corpo e ficava parada
    quando a caixa rolava. Agora ela segue o campo a cada rolagem (qualquer caixa); some se o campo sair da caixa. */
 document.addEventListener('scroll', function(){
