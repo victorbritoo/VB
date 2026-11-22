@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.408.3</title>
+<title>VB - v1.408.4</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -11362,6 +11362,7 @@ function VB_cliSugPos(el,b){
     var esc=(b.style.display==='none'||!b.style.display); if(esc){ b.style.visibility='hidden'; b.style.display='block'; }
     var alt=b.offsetHeight||0; if(esc){ b.style.display='none'; b.style.visibility=''; }
     var vv=window.visualViewport, fundo=vv&&vv.height>0?(vv.offsetTop+vv.height):innerHeight;
+    if(innerHeight-fundo>=150) fundo-=60;   /* 1.408.4: teclado aberto -- a barra flutuante dele cobria o ultimo nome da lista */
     var topo=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fy'))||0;
     if(alt && r.bottom+4+alt>fundo-6 && r.top-4-alt>=topo+6) b.style.top=(r.top+sy-4-alt)+'px';
   }catch(e){}
@@ -11374,7 +11375,7 @@ function MESA_teclVer(kbForca){
   try{
     if(!MESA_on) return;
     var vv=window.visualViewport, kb=kbForca;
-    if(kb==null){ if(!vv || !(vv.height>0)) return; kb=Math.round(innerHeight-vv.height-vv.offsetTop); if(!(kb>=150)) kb=0; }
+    if(kb==null){ if(!vv || !(vv.height>0)) return; kb=Math.round(innerHeight-vv.height-vv.offsetTop); if(!(kb>=150)) kb=0; else MESA_teclKbUlt=kb; }
     var ae=document.activeElement, dig=!!(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName||''));
     document.documentElement.classList.toggle('vb-tecl', !!(dig && kb));
     var sc=null;
@@ -11383,15 +11384,21 @@ function MESA_teclVer(kbForca){
     if(!sc) return;
     if(MESA_teclCx!==sc){ sc._pb0=sc.style.paddingBottom; MESA_teclCx=sc; }
     var pb0=parseFloat(getComputedStyle(sc).paddingBottom)||0; if(pb0<kb) sc.style.paddingBottom=kb+'px';
-    if((window.scrollY||0)>0) window.scrollTo(0,0);
-    var fundo=(kbForca!=null?innerHeight-kb:(vv.offsetTop+vv.height))-12, r=ae.getBoundingClientRect(), c=sc.getBoundingClientRect();
+    /* 1.408.4: o iPhone empurrava a pagina (vv.offsetTop) e a barra de cima sumia -- devolve a pagina ao topo e mede de novo */
+    if((window.scrollY||0)>0 || (kbForca==null && vv && vv.offsetTop>0)){ window.scrollTo(0,0); if(!MESA_teclVolta){ MESA_teclVolta=1; setTimeout(function(){ MESA_teclVolta=0; MESA_teclVer(); }, 60); } }
+    /* 1.408.4: -60 = barra flutuante do teclado (setas, PREENCHER AUTOMATICAMENTE, ✓), que fica por cima do conteudo */
+    var fundo=(kbForca!=null?innerHeight-kb:(vv.offsetTop+vv.height))-12-60, r=ae.getBoundingClientRect(), c=sc.getBoundingClientRect();
     if(r.bottom>fundo) sc.scrollTop+=Math.ceil(r.bottom-fundo);
     else if(r.top<c.top+8) sc.scrollTop-=Math.ceil(c.top+8-r.top);
+    try{ var sb=document.getElementById('vb-cli-sug'); if(sb && sb.style.display!=='none' && sb._el===ae) VB_cliSugPos(ae,sb); }catch(e){}
   }catch(e){}
 }
-var MESA_teclCx=null;
+var MESA_teclCx=null, MESA_teclKbUlt=340, MESA_teclVolta=0;   /* 1.408.4: teclado do Duo aberto ~336 (print 22/11 16:12) */
 try{
-  if(window.visualViewport){ window.visualViewport.addEventListener('resize', function(){ MESA_teclVer(); setTimeout(function(){ MESA_teclVer(); }, 120); }); }
+  if(window.visualViewport){ window.visualViewport.addEventListener('resize', function(){ MESA_teclVer(); setTimeout(function(){ MESA_teclVer(); }, 120); });
+    window.visualViewport.addEventListener('scroll', function(){ if(MESA_on && document.documentElement.classList.contains('vb-tecl')) MESA_teclVer(); try{ var b=document.getElementById('vb-cli-sug'); if(b && b.style.display!=='none' && b._el && document.body.contains(b._el)) VB_cliSugPos(b._el,b); }catch(e){} }); }
+  /* 1.408.4: ja no toque, antes do teclado subir, poe o campo acima da altura do ultimo teclado -- assim o iPhone nao precisa empurrar a pagina */
+  document.addEventListener('focusin', function(ev){ try{ var t=ev.target; if(MESA_on && t && /^(INPUT|TEXTAREA)$/.test(t.tagName||'') && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(t.type||'')) MESA_teclVer(MESA_teclKbUlt); }catch(e){} }, true);
   document.addEventListener('focusin', function(){ setTimeout(function(){ MESA_teclVer(); }, 350); setTimeout(function(){ MESA_teclVer(); }, 700); }, true);
   document.addEventListener('focusout', function(){ setTimeout(function(){ MESA_teclVer(); }, 200); }, true);
 }catch(e){}
