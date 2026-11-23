@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.412.1</title>
+<title>VB - v1.412.2</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -11407,6 +11407,7 @@ function MESA_teclVer(kbForca){
     if((window.scrollY||0)>0 || (kbForca==null && vv && vv.offsetTop>0)){ window.scrollTo(0,0); if(!MESA_teclVolta){ MESA_teclVolta=1; setTimeout(function(){ MESA_teclVolta=0; MESA_teclVer(); }, 60); } }
     /* 1.408.4: -60 = barra flutuante do teclado (setas, PREENCHER AUTOMATICAMENTE, ✓), que fica por cima do conteudo */
     var fundo=(kbForca!=null?innerHeight-kb:(vv.offsetTop+vv.height))-12-60, r=ae.getBoundingClientRect(), c=sc.getBoundingClientRect();
+    fundo=Math.min(fundo, c.bottom-8);   /* 1.412.2: a folha presa no alto termina antes do teclado: o campo tem de caber dentro dela */
     if(r.bottom>fundo) sc.scrollTop+=Math.ceil(r.bottom-fundo);
     else if(r.top<c.top+8) sc.scrollTop-=Math.ceil(c.top+8-r.top);
     try{ var sb=document.getElementById('vb-cli-sug'); if(sb && sb.style.display!=='none' && sb._el===ae) VB_cliSugPos(ae,sb); }catch(e){}
@@ -12138,27 +12139,24 @@ function VB_tecladoAjusta(){
     for(var i=0;i<VB_FOLHAS.length;i++){
       var e=document.getElementById(VB_FOLHAS[i]); if(!e) continue;
       var st=String(e.getAttribute('style')||'');
-      if(!/align-items\s*:\s*flex-end/.test(st)) continue;
+      if(!/align-items\s*:\s*flex-end/.test(st) && !e.dataset.teclTopo) continue;
       var ch=e.firstElementChild;
       var aberta=!!(e.style.display && e.style.display!=='none');
       var aqui=digitando && e.contains(ae);
       if(!aberta || !aqui || (!kb && !_mesa)){
         if(e.style.paddingBottom) e.style.paddingBottom='';
+        if(e.dataset.teclTopo){ e.style.paddingTop=''; e.style.alignItems=''; if(ch) ch.style.boxSizing=''; delete e.dataset.teclTopo; }
         if(ch && ch.dataset && ch.dataset.mhOrig!=null){ ch.style.maxHeight=ch.dataset.mhOrig; delete ch.dataset.mhOrig; }
         continue;
       }
       if(_mesa && ch){
-        /* 1.412.1 (video do VB 23/11 12:32): por conta de folga a folha subiu demais e passou do alto da coluna.
-           Agora mede de verdade: o pe da folha vai para 68 acima do alto do teclado (60 da barra flutuante + 8)
-           e o alto dela nao passa do alto da coluna; o que nao couber rola dentro da folha. */
+        /* 1.412.2 (videos do VB 23/11 12:32 e 12:40: empurrar pelo pe errava no iPhone). Na tela aberta, digitando,
+           a folha de baixo PRENDE NO ALTO da coluna e termina acima da barra do teclado; o campo rola dentro dela. */
         if(ch.dataset.mhOrig==null) ch.dataset.mhOrig=ch.style.maxHeight||'';
-        var _vb=kb?(vv.offsetTop+vv.height):(window.innerHeight-MESA_teclKbUlt), _alvo=_vb-68;
-        var _col=document.getElementById('vb-mesa-col'), _topo=Math.max(e.getBoundingClientRect().top, _col&&e.parentElement===_col?_col.getBoundingClientRect().top:0)+8;
-        ch.style.maxHeight=Math.max(160, Math.round(_alvo-_topo))+'px';
-        for(var _it=0;_it<3;_it++){
-          var _B=ch.getBoundingClientRect().bottom, _d=_B-_alvo; if(Math.abs(_d)<1) break;
-          e.style.paddingBottom=Math.max(0, Math.round((parseFloat(e.style.paddingBottom)||0)+_d))+'px';
-        }
+        e.style.paddingBottom=''; e.style.alignItems='flex-start'; e.style.paddingTop='8px'; e.dataset.teclTopo='1';
+        ch.style.boxSizing='border-box';
+        var _fim=(kb?(vv.offsetTop+vv.height):(window.innerHeight-MESA_teclKbUlt))-12-60;
+        ch.style.maxHeight=Math.max(160, Math.round(_fim-e.getBoundingClientRect().top-8))+'px';
         continue;
       }
       e.style.paddingBottom=kb+'px';
