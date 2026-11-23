@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.412.2</title>
+<title>VB - v1.412.3</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -11407,7 +11407,18 @@ function MESA_teclVer(kbForca){
     if((window.scrollY||0)>0 || (kbForca==null && vv && vv.offsetTop>0)){ window.scrollTo(0,0); if(!MESA_teclVolta){ MESA_teclVolta=1; setTimeout(function(){ MESA_teclVolta=0; MESA_teclVer(); }, 60); } }
     /* 1.408.4: -60 = barra flutuante do teclado (setas, PREENCHER AUTOMATICAMENTE, ✓), que fica por cima do conteudo */
     var fundo=(kbForca!=null?innerHeight-kb:(vv.offsetTop+vv.height))-12-60, r=ae.getBoundingClientRect(), c=sc.getBoundingClientRect();
-    fundo=Math.min(fundo, c.bottom-8);   /* 1.412.2: a folha presa no alto termina antes do teclado: o campo tem de caber dentro dela */
+    /* 1.412.3 (print do VB 23/11 13:49: a folha presa no alto passava por tras do teclado -- a altura que o iPhone
+       informa nao bateu). Na folha presa no alto nao depende de medir o teclado: o campo vai para perto do alto da folha
+       (ate 140 abaixo dela), e uma folga de meia tela no pe deixa ate o ultimo campo subir. */
+    var _ovT=sc.parentElement;
+    if(_ovT && _ovT.dataset && _ovT.dataset.teclTopo){
+      var _pbT=Math.round(window.innerHeight*0.5); if((parseFloat(sc.style.paddingBottom)||0)<_pbT) sc.style.paddingBottom=_pbT+'px';
+      if(r.top>c.top+140) sc.scrollTop+=Math.ceil(r.top-(c.top+140));
+      else if(r.top<c.top+8) sc.scrollTop-=Math.ceil(c.top+8-r.top);
+      try{ var _sbT=document.getElementById('vb-cli-sug'); if(_sbT && _sbT.style.display!=='none' && _sbT._el===ae) VB_cliSugPos(ae,_sbT); }catch(e){}
+      return;
+    }
+    fundo=Math.min(fundo, c.bottom-8);
     if(r.bottom>fundo) sc.scrollTop+=Math.ceil(r.bottom-fundo);
     else if(r.top<c.top+8) sc.scrollTop-=Math.ceil(c.top+8-r.top);
     try{ var sb=document.getElementById('vb-cli-sug'); if(sb && sb.style.display!=='none' && sb._el===ae) VB_cliSugPos(ae,sb); }catch(e){}
