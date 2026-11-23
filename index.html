@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.412.0</title>
+<title>VB - v1.412.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -12130,7 +12130,7 @@ function VB_tecladoAjusta(){
        aconteca o que acontecer com a altura da tela. */
     var ae=document.activeElement;
     var digitando=!!(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||''));
-    /* 1.412.0 (print do VB 23/11 12:16, NOVA PECA no Duo aberto: o CUSTO ficava atras da barra do teclado):
+    /* 1.412.0/1.412.1 (print do VB 23/11 12:16, NOVA PECA no Duo aberto: o CUSTO ficava atras da barra do teclado):
        na tela aberta a folha de baixo sobe ja no toque (antes do teclado chegar, com a altura do ultimo
        teclado) e sobe mais 60 da barra flutuante do teclado (setas e OK). Sem isso o iPhone empurrava a
        pagina, a barra de cima sumia e o campo parava atras da barra flutuante. */
@@ -12147,11 +12147,24 @@ function VB_tecladoAjusta(){
         if(ch && ch.dataset && ch.dataset.mhOrig!=null){ ch.style.maxHeight=ch.dataset.mhOrig; delete ch.dataset.mhOrig; }
         continue;
       }
-      var _k=_mesa?((kb||MESA_teclKbUlt)+60):kb;
-      e.style.paddingBottom=_k+'px';
+      if(_mesa && ch){
+        /* 1.412.1 (video do VB 23/11 12:32): por conta de folga a folha subiu demais e passou do alto da coluna.
+           Agora mede de verdade: o pe da folha vai para 68 acima do alto do teclado (60 da barra flutuante + 8)
+           e o alto dela nao passa do alto da coluna; o que nao couber rola dentro da folha. */
+        if(ch.dataset.mhOrig==null) ch.dataset.mhOrig=ch.style.maxHeight||'';
+        var _vb=kb?(vv.offsetTop+vv.height):(window.innerHeight-MESA_teclKbUlt), _alvo=_vb-68;
+        var _col=document.getElementById('vb-mesa-col'), _topo=Math.max(e.getBoundingClientRect().top, _col&&e.parentElement===_col?_col.getBoundingClientRect().top:0)+8;
+        ch.style.maxHeight=Math.max(160, Math.round(_alvo-_topo))+'px';
+        for(var _it=0;_it<3;_it++){
+          var _B=ch.getBoundingClientRect().bottom, _d=_B-_alvo; if(Math.abs(_d)<1) break;
+          e.style.paddingBottom=Math.max(0, Math.round((parseFloat(e.style.paddingBottom)||0)+_d))+'px';
+        }
+        continue;
+      }
+      e.style.paddingBottom=kb+'px';
       if(ch && ch.dataset){
         if(ch.dataset.mhOrig==null) ch.dataset.mhOrig=ch.style.maxHeight||'';
-        ch.style.maxHeight=Math.max(200, Math.round(_mesa?(e.getBoundingClientRect().height-_k-16):(vv.height-16)))+'px';
+        ch.style.maxHeight=Math.max(200, Math.round(vv.height-16))+'px';
       }
     }
   }catch(e){}
