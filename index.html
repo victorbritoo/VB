@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.412.3</title>
+<title>VB - v1.413.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -13564,7 +13564,10 @@ function REN_cpFicha(id){
       +'<span style="color:'+(pago?'var(--mu)':'var(--red)')+';">'+(pago?'QUITADA':('RESTA '+HIST_fmtMoeda(falta)))+'</span></div></div>';
   }
   s+=(!pago?('<button onclick="REN_cpBaixaSheet(\''+String(c.id)+'\')" style="width:100%;padding:9px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:12px;font-family:-apple-system,sans-serif;">'+(ja>0?'REGISTRAR PAGAMENTO':'DAR BAIXA')+'</button>'):'')
-    +'<button onclick="REN_cpSheet(\''+String(c.id)+'\')" style="'+BT+(pago?'margin-top:12px;':'')+'">EDITAR</button>'
+    +(L.length?('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;'+(pago?'margin-top:6px;':'')+'">'
+        +'<button onclick="REN_cpSheet(\''+String(c.id)+'\')" style="'+BT+'">EDITAR</button>'
+        +'<button onclick="REN_cpFoto(\''+String(c.id)+'\')" style="'+BT+'">EXTRATO</button></div>')
+      :('<button onclick="REN_cpSheet(\''+String(c.id)+'\')" style="'+BT+(pago?'margin-top:12px;':'')+'">EDITAR</button>'))
     +'<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
     +'<button onclick="REN_cpExcluir(this,\''+String(c.id)+'\')" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:transparent;color:var(--so2);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">EXCLUIR</button>'
     +'<button onclick="document.getElementById(\'ren-cp-ov\').style.display=\'none\'" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:6px;font-family:-apple-system,sans-serif;">FECHAR</button>'
@@ -13576,6 +13579,29 @@ function REN_cpFicha(id){
      REN_cpForm zera junto: sem isso, voltar do EDITAR deixava a foto do formulario viva e um
      toque fora da ficha acusava ALTERACOES FEITAS numa tela sem campo. */
   REN_cpEditId=''; REN_cpForm=null;
+}
+/* 1.413.0 (VB 23/11): EXTRATO da conta = a mesma foto de PAGAMENTOS (VALOR TOTAL = valor da parcela, cada
+   pagamento uma linha com a nota, TOTAL PAGO e SALDO) e a frase "Saldo: R$ X." copiada. Gera em silencio pelo
+   HIST_imgPag (nao mexe no que estiver aberto em PAGAMENTOS) e abre no visor de foto. */
+function REN_cpFoto(id){
+  var c=REN_cpDe(id); if(!c) return;
+  var L=REN_cpPagsDe(c);
+  var r={ valor_total:Number(c.valor)||0, pagamentos:L.map(function(pg){
+    var d=String(pg.data||'').slice(0,10).split('-').reverse().join('/').slice(0,5);
+    return { desc:String(pg.nota||('PAGAMENTO '+d)).toUpperCase(), valor:PAG_formatBR(Number(pg.valor)||0) }; }) };
+  var fr0=PAG_frase, src=null, fr='';
+  try{ src=HIST_imgPag(r); fr=PAG_frase; }catch(e){ src=null; } finally{ PAG_frase=fr0; }
+  if(!src){ VB_toast('Não consegui gerar a foto.'); return; }
+  var nome='VB - '+String(REN_rotCurto(c.descricao)||'PAGAMENTOS').replace(/[\/\\:*?"<>|]/g,'').slice(0,60)+'.jpg';
+  var im=new Image();
+  im.onload=function(){
+    var cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
+    var g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height); g.drawImage(im,0,0);
+    VB_fotoPreview(cv, nome, false);
+    VB_fotoFrase=fr||'';   /* depois do preview, que zera: o COMPARTILHAR copia de novo */
+    if(fr){ try{ REN_copia(fr, 'Frase copiada — é só colar na legenda da foto.'); }catch(e){} }   /* depois da foto aberta: o aviso vai para o pe da direita */
+  };
+  im.src=src;
 }
 function REN_cpSheet(id){
   if(REN_cache&&REN_cache.cpErro){ VB_toast('Rode o SQL da contas_pagar primeiro.'); return; }

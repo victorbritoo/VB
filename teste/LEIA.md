@@ -18,3 +18,5 @@ Nenhum dado real aqui. Teste novo de um assunto entra nesta pasta e fica.
 `node teste/busca_estoque.js` confere a busca do Estoque por palavra ("SKY JU" acha "SKY-DWELLER JUBILEE", sem acento, qualquer ordem, "Nada encontrado.").
 
 `node teste/teclado_folha.js` simula o teclado na NOVA PEÇA (1148x807 aberta e 400x800 fechada): na aberta a folha sobe no toque e o campo fica acima do teclado + 60 da barra flutuante; na fechada nada muda.
+
+`node teste/extrato_conta.js [PASTA]` confere o EXTRATO da conta (SAÍDAS): botão só com pagamento, foto de PAGAMENTOS com as notas, frase "Saldo: R$ X." copiada, PAGAMENTOS aberto intacto.
