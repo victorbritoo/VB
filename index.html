@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.409.0</title>
+<title>VB - v1.410.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -1050,6 +1050,24 @@ button{ text-transform:inherit; }
         <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
           <span style="font-size:11px;color:var(--mu2);">R$</span>
           <span style="font-size:18px;font-weight:700;color:var(--tx);" id="quit-desconto">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1.410.0: VENCIDAS corrigidas + TOTAL (so quando o QUITAR trouxe parcela vencida) -->
+    <div id="quit-atraso-row" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:3px;">
+      <div class="field-card" style="padding:8px 14px;text-align:center;">
+        <div id="quit-atraso-rot" style="font-size:8px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:5px;">ATRASADO CORRIGIDO</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:var(--mu2);">R$</span>
+          <span style="font-size:18px;font-weight:700;color:var(--tx);" id="quit-atraso">—</span>
+        </div>
+      </div>
+      <div class="field-card" style="padding:8px 14px;text-align:center;">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--mu2);font-weight:500;margin-bottom:5px;">TOTAL A PAGAR</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:2px;">
+          <span style="font-size:11px;color:var(--mu2);">R$</span>
+          <span style="font-size:18px;font-weight:700;color:var(--tx);" id="quit-pagar">—</span>
         </div>
       </div>
     </div>
@@ -15173,7 +15191,7 @@ function REN_ficha(k, exp){
   /* DAR BAIXA e o que voce faz em quase toda abertura e continua largo e sozinho. Estas tres
      sao raras: lado a lado, a folha encurta duas linhas sem achatar a acao principal. */
   /* parcela baixada e leitura: os tres botoes encolhem e se juntam, porque a acao ja aconteceu */
-  var _qFin=(x.tab==='fin' && !b);
+  var _qFin=((x.tab==='fin') || (x.tab==='cr' && REN_CR_FIN.indexOf(String(x.opId))>=0)) && !b;
   hh+='<div style="display:grid;grid-template-columns:'+(_qFin?'1fr 1fr 1fr 1fr':'1fr 1fr 1fr')+';gap:'+(b?'4px':'6px')+';margin-top:'+(b?'4px':'6px')+';">'
     /* a folha de nota nao fecha mais a ficha: ela abre POR CIMA (100025 sobre 100014), entao
        tocar fora volta pra ficha e nao pra lista. Na parcela baixada o botao passa a mexer na
@@ -19775,9 +19793,45 @@ function QUIT_calc(){
   return {pmt:pmt,n:n,taxa:taxa,dateProx:dateProx,dateQuit:dateQuit,quit:quit,desc:desc,total:total};
 }
 
+/* 1.410.0: QUITAR com parcela vencida. A quitacao = parcelas A VENCER trazidas a valor presente (2%)
+   + parcelas VENCIDAS pelo VALOR HOJE (0,2% ao dia, juro simples), corrigidas ate a data da quitacao.
+   QUIT_atraso guarda as vencidas de quem abriu pelo QUITAR; LIMPAR apaga. */
+var QUIT_atraso=null;
+/* entradas manuais importadas do sistema antigo que sao financiamento (lote). Nao entra lote novo. */
+var REN_CR_FIN=['98a155dc-d8a6-4779-8e7f-f2fc13dd0850','f00e0130-79d6-47ad-ac4d-86fc6ea9ccf7','54605ba4-dba2-4ead-b917-7df9497d77fc','73f4e7f8-9923-46f8-a45b-7e711ead4a43','29cc3664-fa3a-4fa4-aad2-e9434b863cc8','4c9f6f8d-815c-4771-81ce-630b6db1fe4b','bc9af65d-512a-42bb-98dc-e984ceac5a30','a103457f-ab0b-4bd9-b1af-cefa2f0ac1f6','ea05ca9f-ac40-4043-a0a0-e1e6b6c3eb34','9588ee80-2624-4c32-a210-94c8347cee45','eece56de-9ede-4e13-997d-84d2bd7f4c87','bb9066e3-b149-4ab9-8d7c-2b86970c88b4','baca6d9f-4d0f-4882-adcf-6b2f117cdcfe','74842311-2044-4f57-a080-b927ec27a340','fde2105f-c88e-49c2-952b-8a41e1f94aa8','03fdea24-7c1b-4816-8639-03f217a7bc74','639ab9ce-2923-42ee-9ed3-d51e26c20509','a0611507-d35d-4704-ab50-58fc94ec2448','ab58be69-d23d-4cbf-9773-8506858eb876','19047eab-f8dd-400b-888d-0a1333d1eb35','991125b1-9fd1-433d-a90d-73658d302ae7','365e248d-73aa-4f65-ac03-50f86fff6984','0ff164a7-e26a-4d83-b108-db2d6d33ca59','3eb83f17-bd4c-453a-a149-d1c3bbb68e75'];
+function QUIT_abertosREN(tab, opId){
+  var bx=(REN_cache&&REN_cache.bx)||{};
+  return ((REN_cache&&REN_cache.itens)||[]).filter(function(x){ return x.tab===tab && String(x.opId)===String(opId) && !bx[REN_key(x)] && REN_falta(x)>0.005; })
+    .sort(function(a,b){ return a.venc<b.venc?-1:a.venc>b.venc?1:(a.idx-b.idx); });
+}
+function QUIT_prefill(its, pmt, taxa){
+  var hoje=REN_hojeISO(), br=function(iso){ var q=String(iso).slice(0,10).split('-'); return q[2]+'/'+q[1]+'/'+q[0]; };
+  var at=its.filter(function(x){ return x.venc && x.venc<hoje; }), av=its.filter(function(x){ return !(x.venc && x.venc<hoje); });
+  QUIT_atraso=at.length?{itens:at}:null;
+  var sv=function(id,v){ var el=document.getElementById(id); if(el) el.value=v; };
+  sv('quit-dataQuit', br(hoje));
+  sv('quit-dataProx', av.length?br(av[0].venc):'');
+  sv('quit-qtd', String(av.length));
+  sv('quit-parcela', QUIT_formatBR(Number(pmt)||0));
+  sv('quit-taxa', taxa||'2,00');
+  try{ QUIT_update(); }catch(e){}
+}
+function QUIT_calcAt(){
+  var r=QUIT_calc(), A=QUIT_atraso; if(!A) return r;
+  var dq=QUIT_parseDD(document.getElementById('quit-dataQuit').value); if(!dq) return null;
+  if(!r){
+    if(parseInt(document.getElementById('quit-qtd').value||'0')!==0) return null;
+    r={pmt:QUIT_parseBR(document.getElementById('quit-parcela').value)||0, n:0, taxa:QUIT_parseBR(document.getElementById('quit-taxa').value)||0, dateProx:null, dateQuit:dq, quit:0, desc:0, total:0};
+  }
+  var iso=dq.getFullYear()+'-'+('0'+(dq.getMonth()+1)).slice(-2)+'-'+('0'+dq.getDate()).slice(-2), s=0;
+  A.itens.forEach(function(x){ var v=REN_valorHoje(x, iso); s+=v?v.valor:REN_falta(x); });
+  r.atraso=Math.round(s*100)/100; r.atrasoN=A.itens.length; r.pagar=r.quit+r.atraso;
+  return r;
+}
+
 var QUIT_avisou=false;
 function QUIT_update(){
-  var r=QUIT_calc();
+  var r=QUIT_calcAt();
   if(!r){
     document.getElementById('quit-result').style.display='none';
     try{ var _dp=QUIT_parseDD(document.getElementById('quit-dataProx').value), _dq=QUIT_parseDD(document.getElementById('quit-dataQuit').value);
@@ -19791,8 +19845,12 @@ function QUIT_update(){
   document.getElementById('quit-desconto').textContent=QUIT_formatBR(r.desc);
 
   var dqDisp=String(r.dateQuit.getDate()).padStart(2,'0')+'/'+String(r.dateQuit.getMonth()+1).padStart(2,'0')+'/'+r.dateQuit.getFullYear();
-  var msg = 'Valor para quitação: R$ '+QUIT_formatBR(r.quit)+' em '+dqDisp+'.';
+  var msg = 'Valor para quitação: R$ '+QUIT_formatBR(r.atrasoN?r.pagar:r.quit)+' em '+dqDisp+'.';
   document.getElementById('quit-msgWpp').textContent=msg;
+  var _ar=document.getElementById('quit-atraso-row');
+  if(_ar){ _ar.style.display=r.atrasoN?'grid':'none';
+    if(r.atrasoN){ document.getElementById('quit-atraso-rot').textContent='ATRASADO · '+r.atrasoN+' PARC.';
+      document.getElementById('quit-atraso').textContent=QUIT_formatBR(r.atraso); document.getElementById('quit-pagar').textContent=QUIT_formatBR(r.pagar); } }
   document.getElementById('quit-result').style.display='block';
 }
 
@@ -19851,6 +19909,7 @@ function QUIT_limpar(){
   var dq=document.getElementById('quit-dataQuit');
   if(dq) dq.value=(''+hoje.getDate()).padStart(2,'0')+'/'+(''+(hoje.getMonth()+1)).padStart(2,'0')+'/'+hoje.getFullYear();
   document.getElementById('quit-result').style.display='none';
+  QUIT_atraso=null;
   try{ MESA_quitSel=null; }catch(e){}
 }
 
@@ -19867,10 +19926,10 @@ function QUIT_codeStr(){
 }
 
 function QUIT_compartilhar(){
-  var r=QUIT_calc();
+  var r=QUIT_calcAt();
   if(!r){ VB_toast('Preencha todos os campos.'); return; }
   var dqStr=String(r.dateQuit.getDate()).padStart(2,'0')+'/'+String(r.dateQuit.getMonth()+1).padStart(2,'0')+'/'+r.dateQuit.getFullYear();
-  var dpStr=String(r.dateProx.getDate()).padStart(2,'0')+'/'+String(r.dateProx.getMonth()+1).padStart(2,'0')+'/'+r.dateProx.getFullYear();
+  var dpStr=!r.dateProx?'—':String(r.dateProx.getDate()).padStart(2,'0')+'/'+String(r.dateProx.getMonth()+1).padStart(2,'0')+'/'+r.dateProx.getFullYear();
   var taxaStr=r.taxa.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% a.m.';
 
   // Código + QR
@@ -19883,7 +19942,7 @@ function QUIT_compartilhar(){
   var headerH=68, card1H=88, card2H=76, card3H=78, cardGap=5, bottomPad=12;
   var qrTopPad=10, qrBottomPad=8;
   var qrBlockH = 0; // QR removido (v1.60.0)
-  var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + qrBlockH + bottomPad;
+  var H = headerH + card1H + cardGap + card2H + cardGap + card3H + cardGap + (r.atrasoN?card3H+cardGap:0) + qrBlockH + bottomPad;
 
   var cv=document.createElement('canvas');
   cv.width=W*esc; cv.height=H*esc;
@@ -19932,6 +19991,12 @@ function QUIT_compartilhar(){
   olk('VALOR QUITAÇÃO',cardL+18,vy+12,'left');   ov('R$ '+QUIT_formatBR(r.quit),cardL+18,vy+30,'left');
   olk('DESCONTO OBTIDO',cardR-18,vy+12,'right'); ov('R$ '+QUIT_formatBR(r.desc),cardR-18,vy+30,'right');
   y+=card3H+cardGap;
+  if(r.atrasoN){
+    card(y,card3H); vy=y+12;
+    olk('ATRASADO CORRIGIDO',cardL+18,vy+12,'left'); ov('R$ '+QUIT_formatBR(r.atraso),cardL+18,vy+30,'left');
+    olk('TOTAL A PAGAR',cardR-18,vy+12,'right');     ov('R$ '+QUIT_formatBR(r.pagar),cardR-18,vy+30,'right');
+    y+=card3H+cardGap;
+  }
 
   // QR solto no rodapé, sem card e sem legenda
   if(qrOk){
@@ -22533,6 +22598,15 @@ function FIN_priceSheet(r, P, pg){
 function FIN_quitarAbrir(idx){ var r=HIST_rowsCache[idx]; if(r) FIN_quitarDe(r, 'hist'); }
 /* da ficha da parcela: fecha a ficha e, ao voltar pras ENTRADAS, ela reabre (REN_fichaVoltar) */
 function REN_quitar(opId, k){
+  var _x=REN_cache&&REN_cache.map&&REN_cache.map[k];
+  if(_x && _x.tab==='cr'){
+    var ab=QUIT_abertosREN('cr', opId); if(!ab.length){ VB_toast('Todas as parcelas já foram pagas.'); return; }
+    var fo0=document.getElementById('ren-ficha-ov'); if(fo0) fo0.style.display='none';
+    REN_fichaVoltar=k||null; VB_telaAnterior='ren';
+    showScreen('fin'); FIN_setModo('quit');
+    QUIT_prefill(ab, ab[0].valor, '2,00');
+    return;
+  }
   var r=REN_finMap[String(opId)]; if(!r){ VB_toast('Financiamento não encontrado.'); return; }
   var fo=document.getElementById('ren-ficha-ov'); if(fo) fo.style.display='none';
   REN_fichaVoltar=k||null;
@@ -22547,13 +22621,9 @@ function FIN_quitarDe(r, volta){
     var br=function(iso){ var q=String(iso).slice(0,10).split('-'); return q[2]+'/'+q[1]+'/'+q[0]; };
     VB_telaAnterior=volta||'hist';
     showScreen('fin'); FIN_setModo('quit');
-    var sv=function(id,v){ var el=document.getElementById(id); if(el) el.value=v; };
-    sv('quit-dataQuit', br(REN_hojeISO()));
-    sv('quit-dataProx', br(ab[0].venc));
-    sv('quit-qtd', String(ab.length));
-    sv('quit-parcela', QUIT_formatBR(Number(r.valor_parcela)));
-    sv('quit-taxa', '2,00');
-    try{ QUIT_update(); }catch(e){}
+    var its=ab.map(function(L){ var x={tab:'fin', opId:String(r.id), idx:L.k, venc:L.venc, valor:Number(r.valor_parcela)||L.pmt};
+      var c=REN_cache&&REN_cache.map&&REN_cache.map[REN_key(x)]; return c||x; });
+    QUIT_prefill(its, Number(r.valor_parcela), '2,00');
   });
 }
 function CTR_finAbrir(idx){
@@ -24750,12 +24820,12 @@ function MESA_quitAssin(){
 function MESA_quitOps(){
   var hoje=REN_hojeISO(), bx=(REN_cache&&REN_cache.bx)||{}, t={};
   ((REN_cache&&REN_cache.itens)||[]).forEach(function(x){
-    if(x.tab!=='fin' || bx[REN_key(x)]) return; if(!(REN_falta(x)>0.005)) return;
-    var o=t[x.opId]=t[x.opId]||{id:x.opId,cli:x.cliente,rot:x.rot,pmt:x.valor,n:0,prox:null,atr:0};
+    if(!(x.tab==='fin' || (x.tab==='cr' && REN_CR_FIN.indexOf(String(x.opId))>=0)) || bx[REN_key(x)]) return; if(!(REN_falta(x)>0.005)) return;
+    var o=t[x.opId]=t[x.opId]||{id:x.opId,tab:x.tab,cli:x.cliente,rot:x.rot,pmt:x.valor,n:0,prox:null,atr:0};
     if(x.venc<hoje){ o.atr++; return; }
     o.n++; if(!o.prox || x.venc<o.prox) o.prox=x.venc;
   });
-  return Object.keys(t).map(function(k){ return t[k]; }).filter(function(o){ return o.n>0; }).sort(function(a,b){ return a.prox<b.prox?-1:a.prox>b.prox?1:0; });
+  return Object.keys(t).map(function(k){ return t[k]; }).filter(function(o){ return o.n>0 || o.atr>0; }).sort(function(a,b){ var pa=a.prox||'0', pb=b.prox||'0'; return pa<pb?-1:pa>pb?1:0; });
 }
 function MESA_quitPinta(forca){
   if(!MESA_quitAtivo()) return;
@@ -24763,15 +24833,16 @@ function MESA_quitPinta(forca){
   if(!forca && sig===MESA_quitSig) return;
   MESA_quitSig=sig;
   var el=document.getElementById('vb-mesa-dir'); if(!el) return;
-  var r=null; try{ r=QUIT_calc(); }catch(e){}
+  var r=null; try{ r=QUIT_calcAt(); }catch(e){}
   if(!r){ MESA_quitVazio(el); MESA_quitSig=MESA_quitAssin(); return; }
-  var cel=MESA_venCel, i=r.taxa/100, f=Math.round((r.dateProx-r.dateQuit)/86400000)/30;
+  var cel=MESA_venCel, i=r.taxa/100, f=r.dateProx?Math.round((r.dateProx-r.dateQuit)/86400000)/30:0;
   var op=null; if(MESA_quitSel){ MESA_quitOps().forEach(function(o){ if(o.id===MESA_quitSel) op=o; }); }
   var h='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;flex:none;">QUITAÇÃO</span>'
     +'<span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(op?HIST_esc(String(VB_nomeCurto(op.cli)||op.cli).toUpperCase()):'')+'</span></div>'
     +'<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">'
     +cel('VALOR QUITAÇÃO',MESA_brl(r.quit))+cel('DESCONTO',MESA_brl(r.desc))
     +cel('PARCELAS',r.n+'X '+MESA_brl(r.pmt))+cel('TAXA',FIN_formatBR(r.taxa)+'% A.M.')
+    +(r.atrasoN?cel('ATRASADO CORRIGIDO · '+r.atrasoN,MESA_brl(r.atraso))+cel('TOTAL A PAGAR',MESA_brl(r.pagar)):'')
     +'</div>';
   var rows='';
   for(var k=0;k<r.n;k++){
@@ -24803,7 +24874,7 @@ function MESA_quitVazio(el){
   h+=ops.map(function(o){
     var nm=String(o.rot||'FINANCIAMENTO').toUpperCase(), cli=String(VB_nomeCurto(o.cli)||o.cli||'').toUpperCase();
     return '<div onclick="MESA_quitUsa(\''+String(o.id).replace(/'/g,'')+'\')" style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:9px 12px;margin-bottom:6px;cursor:pointer;">'
-      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(nm)+'</span><span style="font-size:10px;color:var(--so);white-space:nowrap;flex:none;">'+MESA_dt(o.prox)+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;"><span style="font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(nm)+'</span><span style="font-size:10px;color:var(--so);white-space:nowrap;flex:none;">'+(o.prox?MESA_dt(o.prox):'VENCIDO')+'</span></div>'
       +'<div style="font-size:10px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.n+'X '+MESA_brl(o.pmt)+(cli&&cli!==nm?' · '+HIST_esc(cli):'')+(o.atr?' · <span style="color:var(--red);font-weight:700;">'+o.atr+' ATRASADA'+(o.atr===1?'':'S')+'</span>':'')+'</div></div>';
   }).join('');
   el.innerHTML=h;
@@ -24815,12 +24886,8 @@ function MESA_quitVazio(el){
 function MESA_quitUsa(id){
   var op=null; MESA_quitOps().forEach(function(o){ if(String(o.id)===String(id)) op=o; }); if(!op) return;
   MESA_quitSel=String(op.id);
-  var p=op.prox.split('-');
-  document.getElementById('quit-dataProx').value=p[2]+'/'+p[1]+'/'+p[0];
-  document.getElementById('quit-qtd').value=String(op.n);
-  document.getElementById('quit-parcela').value=QUIT_formatBR(op.pmt);
-  var tx=MESA_quitTx[String(op.id)]; if(tx!=null) document.getElementById('quit-taxa').value=QUIT_formatBR(tx);   /* 1.356.2: taxa 0 do contrato vem 0 (sem desconto) */
-  try{ QUIT_update(); }catch(e){}
+  var tx=MESA_quitTx[String(op.id)];   /* 1.356.2: taxa 0 do contrato vem 0 (sem desconto) */
+  QUIT_prefill(QUIT_abertosREN(op.tab||'fin', op.id), op.pmt, (op.tab!=='cr' && tx!=null)?QUIT_formatBR(tx):'2,00');
   MESA_quitPinta(true);
 }
 /* ---------- CLIENTES na tela aberta (v1.355.0) ----------
