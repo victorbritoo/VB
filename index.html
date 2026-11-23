@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.411.0</title>
+<title>VB - v1.412.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -10378,6 +10378,7 @@ function MER_passagem(r){
   for(var i=0;i<iguais.length;i++){ if(String(iguais[i].id)===String(r.id)) return i+1; }
   return 0;
 }
+/* 1.412.0 (VB 23/11): o selo 2a PASSAGEM saiu do card da lista; a passagem fica so na ficha (PASSAGENS ANTERIORES). */
 function MER_seloPassagem(r){
   var n=MER_passagem(r); if(n<2) return '';
   return ' <span style="display:inline-block;background:var(--sf3);color:var(--so);font-size:8px;font-weight:700;border-radius:8px;padding:1px 6px;vertical-align:1px;letter-spacing:0.5px;">'+n+'\u00aa PASSAGEM</span>';
@@ -11416,7 +11417,7 @@ try{
   if(window.visualViewport){ window.visualViewport.addEventListener('resize', function(){ MESA_teclVer(); setTimeout(function(){ MESA_teclVer(); }, 120); });
     window.visualViewport.addEventListener('scroll', function(){ if(MESA_on && document.documentElement.classList.contains('vb-tecl')) MESA_teclVer(); try{ var b=document.getElementById('vb-cli-sug'); if(b && b.style.display!=='none' && b._el && document.body.contains(b._el)) VB_cliSugPos(b._el,b); }catch(e){} }); }
   /* 1.408.4: ja no toque, antes do teclado subir, poe o campo acima da altura do ultimo teclado -- assim o iPhone nao precisa empurrar a pagina */
-  document.addEventListener('focusin', function(ev){ try{ var t=ev.target; if(MESA_on && t && /^(INPUT|TEXTAREA)$/.test(t.tagName||'') && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(t.type||'')) MESA_teclVer(MESA_teclKbUlt); }catch(e){} }, true);
+  document.addEventListener('focusin', function(ev){ try{ var t=ev.target; if(MESA_on && t && /^(INPUT|TEXTAREA)$/.test(t.tagName||'') && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(t.type||'')){ try{ VB_tecladoAjusta(); }catch(e){} MESA_teclVer(MESA_teclKbUlt); } }catch(e){} }, true);
   document.addEventListener('focusin', function(){ setTimeout(function(){ MESA_teclVer(); }, 350); setTimeout(function(){ MESA_teclVer(); }, 700); }, true);
   document.addEventListener('focusout', function(){ setTimeout(function(){ MESA_teclVer(); }, 200); }, true);
 }catch(e){}
@@ -12129,6 +12130,11 @@ function VB_tecladoAjusta(){
        aconteca o que acontecer com a altura da tela. */
     var ae=document.activeElement;
     var digitando=!!(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName||''));
+    /* 1.412.0 (print do VB 23/11 12:16, NOVA PECA no Duo aberto: o CUSTO ficava atras da barra do teclado):
+       na tela aberta a folha de baixo sobe ja no toque (antes do teclado chegar, com a altura do ultimo
+       teclado) e sobe mais 60 da barra flutuante do teclado (setas e OK). Sem isso o iPhone empurrava a
+       pagina, a barra de cima sumia e o campo parava atras da barra flutuante. */
+    var _mesa=(typeof MESA_on!=='undefined' && MESA_on);
     for(var i=0;i<VB_FOLHAS.length;i++){
       var e=document.getElementById(VB_FOLHAS[i]); if(!e) continue;
       var st=String(e.getAttribute('style')||'');
@@ -12136,15 +12142,16 @@ function VB_tecladoAjusta(){
       var ch=e.firstElementChild;
       var aberta=!!(e.style.display && e.style.display!=='none');
       var aqui=digitando && e.contains(ae);
-      if(!aberta || !kb || !aqui){
+      if(!aberta || !aqui || (!kb && !_mesa)){
         if(e.style.paddingBottom) e.style.paddingBottom='';
         if(ch && ch.dataset && ch.dataset.mhOrig!=null){ ch.style.maxHeight=ch.dataset.mhOrig; delete ch.dataset.mhOrig; }
         continue;
       }
-      e.style.paddingBottom=kb+'px';
+      var _k=_mesa?((kb||MESA_teclKbUlt)+60):kb;
+      e.style.paddingBottom=_k+'px';
       if(ch && ch.dataset){
         if(ch.dataset.mhOrig==null) ch.dataset.mhOrig=ch.style.maxHeight||'';
-        ch.style.maxHeight=Math.max(200, Math.round(vv.height-16))+'px';
+        ch.style.maxHeight=Math.max(200, Math.round(_mesa?(e.getBoundingClientRect().height-_k-16):(vv.height-16)))+'px';
       }
     }
   }catch(e){}
@@ -17296,7 +17303,7 @@ function MER_render(){
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="MER_abrir(\''+r.id+'\')">'
         +(((_global?((r.status||'estoque')==='vendida'):(MER_tab==='vendida'))&&r.data_venda)
           ? ('<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
-              +'<span class="vb-tfit" style="font-size:12px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)'), MER_seloPassagem(r)+(function(){
+              +'<span class="vb-tfit" style="font-size:12px;font-weight:700;color:var(--ink);min-width:0;">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)'), (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;
@@ -17305,7 +17312,7 @@ function MER_render(){
           })())+'</span>'
               +'<span style="font-size:10px;color:var(--so);font-weight:600;white-space:nowrap;">'+MER_fmtData(r.data_venda)+'</span>'
             +'</div>')
-          : ('<div class="vb-tfit" style="font-size:12px;font-weight:700;color:var(--ink);">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)'), MER_seloPassagem(r)+(function(){
+          : ('<div class="vb-tfit" style="font-size:12px;font-weight:700;color:var(--ink);">'+VB_glueBadge((MER_tituloLista(r)||'(sem descrição)'), (function(){
             if(!r.socio||!(Number(r.valor_socio)>0)||!(Number(r.custo)>0)) return '';
             var _vv=r.venda_id?MER_vendasMap[r.venda_id]:null;
             var _pctL=_vv?_vv.lucro_vb_pct:null;

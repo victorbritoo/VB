@@ -16,3 +16,5 @@ Nenhum dado real aqui. Teste novo de um assunto entra nesta pasta e fica.
 `node teste/quitar.js [arquivo.html] [PASTA]` confere o QUITAR: botão só nas entradas manuais que são financiamento, vencidas pelo valor de hoje + a vencer descontadas, total e mensagem, só vencidas, LIMPAR; com PASTA fotografa a tela e a foto.
 
 `node teste/busca_estoque.js` confere a busca do Estoque por palavra ("SKY JU" acha "SKY-DWELLER JUBILEE", sem acento, qualquer ordem, "Nada encontrado.").
+
+`node teste/teclado_folha.js` simula o teclado na NOVA PEÇA (1148x807 aberta e 400x800 fechada): na aberta a folha sobe no toque e o campo fica acima do teclado + 60 da barra flutuante; na fechada nada muda.
