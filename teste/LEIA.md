@@ -14,3 +14,5 @@ Nenhum dado real aqui. Teste novo de um assunto entra nesta pasta e fica.
 `node teste/clip_foto.js PASTA [arquivo.html]` fotografa o panorama do cliente e a foto (com folha de baixo e com aviso) em 373, 469, 867 e 1280; `--estrutura` confere que moram na coluna da direita com o Duo aberto e voltam para o corpo ao fechar.
 
 `node teste/quitar.js [arquivo.html] [PASTA]` confere o QUITAR: botão só nas entradas manuais que são financiamento, vencidas pelo valor de hoje + a vencer descontadas, total e mensagem, só vencidas, LIMPAR; com PASTA fotografa a tela e a foto.
+
+`node teste/busca_estoque.js` confere a busca do Estoque por palavra ("SKY JU" acha "SKY-DWELLER JUBILEE", sem acento, qualquer ordem, "Nada encontrado.").

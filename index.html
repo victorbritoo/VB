@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.410.0</title>
+<title>VB - v1.411.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -17205,8 +17205,13 @@ function MER_render(){
   var rows=MER_rows.filter(function(r){ return _global || (r.status||'estoque')===MER_tab; });
   rows=MER_ordena(rows);
   if(termo){
+    /* 1.411.0: cada palavra vale sozinha, em qualquer ordem, sem acento e sem hifen/ponto/aspas:
+       "SKY JU" acha "SKY-DWELLER JUBILEE". */
+    var _nb=function(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-.,"'\u201c\u201d\/]+/g,' '); };
+    var _pal=_nb(termo).split(/\s+/).filter(Boolean);
     rows=rows.filter(function(r){
-      return [r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; });
+      var t=' '+_nb([r.descricao,r.fornecedor,r.socio,r.pagamento].join(' '))+' ';
+      return _pal.every(function(p){ return t.indexOf(p)>=0; });
     });
   }
   if(_global){
@@ -17237,7 +17242,7 @@ function MER_render(){
     ? ('<div onclick="MER_setTab(\''+_outra+'\')" style="margin:14px auto 4px;max-width:300px;text-align:center;padding:11px 14px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:1.5px;font-weight:600;cursor:pointer;">TAMB\u00c9M: '+_nOutra+' '+(_outra==='vendida'?(_nOutra===1?'VENDIDO':'VENDIDOS'):'EM ESTOQUE')+(_vOutra>0?(' \u00b7 R$ '+MER_fmtBR(_vOutra)):'')+' \u2192</div>')
     : '';
   if(!rows.length){
-    lista.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;margin-top:24px;">'+(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.')+'</div>'+_pilhaOutra;
+    lista.innerHTML='<div style="text-align:center;color:var(--mu);font-size:12px;margin-top:24px;">'+(termo?'Nada encontrado.':(MER_tab==='estoque'?'Nada em estoque.':'Nenhuma vendida ainda.'))+'</div>'+_pilhaOutra;
   } else {
     var html='';
     var _gAtu=null;
