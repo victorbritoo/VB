@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.413.2</title>
+<title>VB - v1.414.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -417,10 +417,8 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #mer-total.enc .mer-tot-x{ display:inline !important; }
   html.vb-mesa .fm-rend-val{ white-space:nowrap; flex:none; margin-left:8px; }
   html.vb-mesa .fm-rend-val span{ font-size:9px !important; }
-  /* 1.347.0 computador: a metade direita nao estica alem de 640 pt (fichas e fotos legiveis) */
-  html.vb-mesa.vb-mesa-pc #vb-mesa-col{
-    right:auto !important; width:min(640px, calc(100vw - var(--mx,50%))) !important; }
-  html.vb-mesa.vb-mesa-pc #vb-mesa-dir{ border-right:0.5px solid var(--ln2); }
+  /* 1.414.0 (VB 25/11): no computador as duas metades sao iguais, lado a lado, ate a borda (saiu o teto de 640 da 1.347.0
+     e a faixa cinza vazia a direita). O Duo nao muda. */
   html.vb-mesa.vbm-buscando:not(.vb-mesa-home){ --fy:120px; }
   /* 1.348.0 ENTRADAS/SAIDAS: lupa e olho foram para a direita (valem para os dois lados);
      cabecalhos de mes grudam embaixo da barra (top:0 ficava escondido atras dela) */
@@ -25640,8 +25638,8 @@ function MESA_dobra(){
   var de=document.documentElement, iw=window.innerWidth, st=!!(window.navigator && navigator.standalone);
   var pc=!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
   de.classList.toggle('vb-mesa-pc', pc);
-  /* 1.347.0 computador: a esquerda com a largura da do Duo (476 pt) e a direita com o resto, ate 640 pt */
-  if(pc) de.style.setProperty('--mx', '476px');
+  /* 1.414.0 computador: metade e metade (--mx 50%, o padrao). Antes (1.347.0) a esquerda tinha 476 e a direita ia ate 640. */
+  if(pc) de.style.setProperty('--mx', Math.round(iw/2)+'px');   /* em px: o 50% de reserva vira metade da metade dentro da tela */
   else if(st && iw>=860 && iw<=875) de.style.setProperty('--mx', (951/2)+'px'); else de.style.removeProperty('--mx');
 }
 function MESA_liga(on){
