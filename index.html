@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.413.1</title>
+<title>VB - v1.413.2</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -5624,7 +5624,7 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
-var VB_VER_DATA='23/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
+var VB_VER_DATA='25/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
 (function(){ /* badge deriva do <title> (versao) e de VB_VER_DATA (data; antes a 1a entrada do changelog).
    Precisa rodar DEPOIS do documento montado: este script vive no meio do body e o
    changelog so aparece milhares de linhas abaixo — rodando na hora, o seletor da data
@@ -11390,9 +11390,13 @@ function VB_cliSugPos(el,b){
    (a pagina nao rola), entao o iPhone empurrava a pagina, o app devolvia a pagina para o topo e o campo sumia de novo.
    Agora quem rola e a propria caixa do campo: ganha folga embaixo do tamanho do teclado e sobe ate o campo ficar
    12 acima dele. Sem teclado, a folga sai. Tela fechada nao muda. */
+/* 1.413.2 (VB 25/11, no computador: tocar num campo da DAR BAIXA/NOTA fazia a folha "fechar e abrir"):
+   sem teclado na tela (computador, mouse) nada de preparar teclado -- a conta do teclado do iPhone subia o campo
+   no toque e devolvia logo depois. So aparelho de toque entra. */
+function VB_tecTela(){ try{ return (navigator.maxTouchPoints||0)>0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches); }catch(e){ return false; } }
 function MESA_teclVer(kbForca){
   try{
-    if(!MESA_on) return;
+    if(!MESA_on || !VB_tecTela()) return;
     var vv=window.visualViewport, kb=kbForca;
     if(kb==null){ if(!vv || !(vv.height>0)) return; kb=Math.round(innerHeight-vv.height-vv.offsetTop); if(!(kb>=150)) kb=0; else MESA_teclKbUlt=kb; }
     var ae=document.activeElement, dig=!!(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName||''));
@@ -12146,7 +12150,7 @@ function VB_tecladoAjusta(){
        na tela aberta a folha de baixo sobe ja no toque (antes do teclado chegar, com a altura do ultimo
        teclado) e sobe mais 60 da barra flutuante do teclado (setas e OK). Sem isso o iPhone empurrava a
        pagina, a barra de cima sumia e o campo parava atras da barra flutuante. */
-    var _mesa=(typeof MESA_on!=='undefined' && MESA_on);
+    var _mesa=(typeof MESA_on!=='undefined' && MESA_on && VB_tecTela());
     for(var i=0;i<VB_FOLHAS.length;i++){
       var e=document.getElementById(VB_FOLHAS[i]); if(!e) continue;
       var st=String(e.getAttribute('style')||'');
