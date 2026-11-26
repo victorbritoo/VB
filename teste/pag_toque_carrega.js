@@ -1,5 +1,5 @@
 /* VB 1.415.5 - PAGAMENTOS na tela aberta: tocar num pagamento em aberto da direita carrega a folha da esquerda;
-   o que estava na esquerda com valor e mudanca e salvo antes (sem pergunta); a direita vira RESUMO com ENCERRAR.
+   o que estava na esquerda com valor e mudanca e salvo antes (sem pergunta); a direita vira RESUMO (sem ENCERRAR desde a 1.415.8: so no Historico).
    (o banco falso devolve update sem linhas: confere que o update foi mandado; a troca so acontece no banco de verdade.)
    Uso: node teste/pag_toque_carrega.js [PASTA]. Dado falso. */
 const path=require('path'),fs=require('fs');const pw=require('/opt/node-tools/node_modules/playwright-core');
@@ -26,7 +26,7 @@ const r=await pg.evaluate(()=>new Promise(res=>{
     },700);
   },400);}));
 console.log(w,JSON.stringify(r));
-if(!(r.lista&&r.t1.tela==='pag'&&r.t1.total==='1.000,00'&&r.t1.nome==='DOC TESTE'&&r.t1.op==='P9'&&r.t1.resumo&&r.t1.encerrar&&r.upd>=1&&!r.pergunta)){falhas++;console.log('FALHA',w);}
+if(!(r.lista&&r.t1.tela==='pag'&&r.t1.total==='1.000,00'&&r.t1.nome==='DOC TESTE'&&r.t1.op==='P9'&&r.t1.resumo&&!r.t1.encerrar&&r.upd>=1&&!r.pergunta)){falhas++;console.log('FALHA',w);}
 if(PASTA){fs.mkdirSync(PASTA,{recursive:true});await pg.screenshot({path:path.join(PASTA,'pagtoque_'+w+'.png')});}
 await pg.context().close();}
 await b.close();console.log(e?'ERROS '+e:'sem erro de JS',falhas?'FALHAS '+falhas:'tudo ok');process.exit(e||falhas?1:0);})();
