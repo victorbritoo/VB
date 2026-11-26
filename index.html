@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.2</title>
+<title>VB - v1.415.3</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -24300,6 +24300,9 @@ function MESA_histOp(idx){
       +'<div style="font-size:14px;font-weight:700;color:var(--ink);line-height:1.2;">'+HIST_esc(tit)+'</div>'
       +'<div style="margin-top:4px;">'+l2+'</div>'
       +(det?('<div style="margin-top:10px;padding-top:8px;border-top:0.5px solid var(--ln3);">'+det+'</div>'):'')
+      /* 1.415.3 (VB 26/11: "como eu abro esse pagamento do historico para lancar mais coisas?"): o PAGAMENTO nao tem detalhe
+         (e o lapis so renomeia), entao a direita ficava sem botao de abrir. Sem ABRIR no detalhe, poe o ABRIR aqui. */
+      +((det.indexOf('HIST_abrirOperacao')<0)?('<button onclick="HIST_abrirOperacao('+idx+')" style="display:block;width:100%;margin-top:10px;padding:9px;border:0.5px solid var(--ln);border-radius:10px;background:var(--sf);font-size:10px;letter-spacing:1px;color:var(--tx);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">'+(tab==='pag'?'ABRIR PAGAMENTO':tab==='ven'?'ABRIR VENDA':tab==='fin'?'ABRIR':'ABRIR OPERAÇÃO')+'</button>'):'')
     +'</div>'
     +'<div id="vbm-hist-foto" style="margin-top:12px;text-align:center;color:var(--mu);font-size:11px;">Gerando a foto...</div>'
     +'<button onclick="document.getElementById(\'vbm-hist-op\').style.display=\'none\';" style="display:block;width:100%;margin-top:12px;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;">FECHAR</button>'
@@ -25230,7 +25233,7 @@ function MESA_pagPinta(forca){
   MESA_pagVer=null;
   var cel=MESA_venCel, soma=MESA_pagSoma(PAG_pagamentos), sd=tot-soma;
   var nm=MESA_fv('pag-nome').trim().toUpperCase();
-  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;flex:none;">SIMULAÇÃO</span>'
+  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 4px 6px;"><span style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;flex:none;">RESUMO</span>'   /* 1.415.3 (VB 26/11): pagamento nao e simulacao */
     +'<span style="font-size:10px;letter-spacing:1px;color:var(--so);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+HIST_esc(nm)+'</span></div>'
     +'<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">'
     +cel('TOTAL',tot>0?MESA_brl(tot):'—')+cel('LANÇADO',MESA_brl(soma))
