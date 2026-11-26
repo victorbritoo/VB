@@ -1,4 +1,4 @@
-/* VB 1.415.0 - PAGAMENTO da antecipacao: abre PAGAMENTOS com NOME = operacao e VALOR TOTAL = liquido; pergunta se PAGAMENTOS ja tem algo.
+/* VB 1.415.0 - PAGAMENTO da antecipacao: abre PAGAMENTOS com NOME = operacao e VALOR TOTAL = liquido; salva o que estava aberto em PAGAMENTOS (1.415.1) e abre o novo.
    Uso: node teste/pag_da_ant.js [PASTA]. Dado falso. */
 const path=require('path'),fs=require('fs');const pw=require('/opt/node-tools/node_modules/playwright-core');
 const FAKE=fs.readFileSync(path.join(__dirname,'fake.js'),'utf8');const PASTA=process.argv[2]||null;
@@ -13,11 +13,10 @@ const r=await pg.evaluate(()=>new Promise(res=>{
   const html=HIST_buildRow?'' :'';
   VB_pagDeAnt(op);
   setTimeout(()=>{const t1={tela:VB_telaAtual,total:document.getElementById('pag-total').value,nome:document.getElementById('pag-nome').value};
-    const ov0=document.querySelector('#vb-c2-overlay');
-    VB_pagDeAnt(Object.assign({},op,{valor_liquido:1000}));
-    setTimeout(()=>{const ov=document.getElementById('vb-c2-overlay');res({t1,pergunta:!!(ov&&ov.style.display!=='none'&&ov.innerText.indexOf('SUBSTITUIR')>=0),total2:document.getElementById('pag-total').value});},400);},500);}));
+    VB_pagDeAnt(Object.assign({},op,{nome:'SEGUNDA',valor_liquido:1000}));
+    setTimeout(()=>{const ov=document.getElementById('vb-c2-overlay');res({t1,pergunta:!!(ov&&ov.style.display!=='none'),salvos:(__DB.pagamentos||[]).map(x=>x.nome+':'+x.valor_total),total2:document.getElementById('pag-total').value,nome2:document.getElementById('pag-nome').value});},1500);},500);}));
 console.log(w,JSON.stringify(r));
-if(!(r.t1.tela==='pag'&&r.t1.total==='132.050,85'&&r.t1.nome==='OPERACAO TESTE'&&r.pergunta&&r.total2==='132.050,85')){falhas++;console.log('FALHA',w);}
+if(!(r.t1.tela==='pag'&&r.t1.total==='132.050,85'&&r.t1.nome==='OPERACAO TESTE'&&!r.pergunta&&r.salvos.join()==='OPERACAO TESTE:132050.85'&&r.total2==='1.000,00'&&r.nome2==='SEGUNDA')){falhas++;console.log('FALHA',w);}
 if(PASTA){fs.mkdirSync(PASTA,{recursive:true});await pg.screenshot({path:path.join(PASTA,'pag_'+w+'.png')});}
 await pg.context().close();}
 await b.close();console.log(e?'ERROS '+e:'sem erro de JS',falhas?'FALHAS '+falhas:'tudo ok');process.exit(e||falhas?1:0);})();

@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.0</title>
+<title>VB - v1.415.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2000,7 +2000,7 @@ function HIST_carregarVen(r){
   showScreen('ven');
 }
 /* 1.415.0: PAGAMENTO da antecipacao. Lancamento novo em PAGAMENTOS: NOME = nome da operacao, VALOR TOTAL = liquido.
-   Se PAGAMENTOS ja tem algo digitado ou aberto, pergunta antes de substituir. */
+   O que estava aberto em PAGAMENTOS e salvo antes (sem pergunta; 1.415.1). */
 function HIST_pagDaAnt(idx){ var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(r) VB_pagDeAnt(r); }
 function VB_pagDeAnt(r){
   var liq=Number(r&&r.valor_liquido)||0; if(!(liq>0)){ VB_toast('Operação sem valor líquido.'); return; }
@@ -2013,10 +2013,20 @@ function VB_pagDeAnt(r){
     VB_telaAnterior=VB_telaAtual||'hist';
     showScreen('pag');
   };
-  var temAlgo=!!PAG_currentOperationId || !!String((document.getElementById('pag-total')||{}).value||'').trim()
-    || (PAG_pagamentos||[]).some(function(p){ return (Number(PAG_parseBR?PAG_parseBR(p.valor):0)||0)!==0 || String(p.desc||'').trim(); });
-  if(temAlgo) VB_confirm2('PAGAMENTOS já tem um lançamento aberto.', 'SUBSTITUIR', 'CANCELAR', function(ok){ if(ok) vai(); });
-  else vai();
+  /* 1.415.1 (VB 26/11: "como eu sei se substituo? salva o anterior e abre o novo, nem me pergunta"):
+     sem pergunta. Ja salvo e sem mudanca -> so abre o novo. Com valor e mudanca nao salva -> SALVA (o mesmo
+     PAG_confirmarOperacao do botao, que tambem loga) e abre o novo. Sem nenhum valor (so nome ou descricao) -> descarta. */
+  var temValor=(PAG_parseBR(String((document.getElementById('pag-total')||{}).value||''))>0)
+    || (PAG_pagamentos||[]).some(function(p){ return (PAG_parseBR(p.valor)||0)>0; });
+  var mudou=PAG_currentOperationId ? (PAG_assinatura()!==PAG_snapshot) : temValor;
+  if(!mudou || !temValor){ vai(); return; }
+  var antes=PAG_snapshot, t0=Date.now();
+  PAG_nomeChecked=true; try{ PAG_confirmarOperacao(document.getElementById('pag-btnConfirmar')); }catch(e){} PAG_nomeChecked=false;
+  var iv=setInterval(function(){
+    var salvo=(PAG_snapshot!==antes && PAG_snapshot===PAG_assinatura());
+    if(salvo){ clearInterval(iv); vai(); setTimeout(function(){ VB_toast('O pagamento que estava aberto foi salvo no Histórico.'); }, 300); return; }
+    if(Date.now()-t0>8000){ clearInterval(iv); VB_toast('Não consegui salvar o pagamento aberto. Ele continua em PAGAMENTOS.'); }
+  }, 150);
 }
 function HIST_carregarPag(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
@@ -20852,7 +20862,7 @@ function CLI_fichaRender(){
     +'<div style="display:grid;grid-template-columns:1.3fr 1.3fr 56px;gap:6px;margin-top:6px;">'+campo('bairro','BAIRRO')+campo('cidade','CIDADE')+campo('uf','UF')+'</div>'
     +(_ocultaEnd?'</div><div id="clif-semcep" onclick="CLI_fichaReveal()" style="text-align:center;font-size:9px;letter-spacing:1.5px;color:var(--mu);font-weight:600;cursor:pointer;padding:6px 0 2px;">ENDEREÇO SEM CEP</div>':'')
     +(CLI_fichaEdit?('<div style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:6px;">'+campo('nacionalidade','NACIONALIDADE',1)+'</div>'):'');
-  ov.innerHTML='<div style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
+  ov.innerHTML='<div style="width:100%;max-width:var(--fmw,460px);max-height:var(--fmh,88vh);overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--sf);border-radius:var(--frd,18px 18px 0 0);padding:var(--fpt,16px) 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:10px;">'+(CLI_fichaNovoMode?'NOVO CLIENTE':'FICHA DO CLIENTE')+'</div>'
     +body
     +(CLI_fichaEdit
@@ -20861,7 +20871,7 @@ function CLI_fichaRender(){
         +'<button onclick="CLIP_abrir(((CLI_rows[CLI_fichaIdx]||{}).nome)||\'\')" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">PANORAMA</button>')
     +'<button id="clif-fechar" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">FECHAR</button>'
     +'</div>';
-  document.body.appendChild(ov);
+  if(MESA_on) MESA_fichaPoe(ov); else document.body.appendChild(ov);   /* 1.415.1: tela aberta = mora na coluna da direita, inteira */
   setTimeout(function(){ try{ CLI_fichaFit(); }catch(e){} }, 0);
   if(_stub && CLI_resRows===null){ try{ CLI_resFetchSilent(); }catch(e){} }
   ov.addEventListener('click',function(e){ if(e.target===ov) CLI_fichaFechar(ov); });
@@ -23352,7 +23362,7 @@ var MESA_DIR=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro
 var MESA_EDITA=['ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cpb-ov','ren-cr-ov'];
 /* 1.371.0 (etapa 2 do plano da tela aberta): folhas que ja moram DENTRO da coluna da direita. Familia migrada entra aqui e sai
    das listas de CSS com !important. Com o Duo fechado elas voltam para o corpo, iguais a antes. */
-var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay','vbm-hist-op','fm-overlay','clip-overlay','vb-foto-overlay'];   /* 1.401.0: + operacao do Historico e Fechamento; 1.403.0: + panorama do cliente e foto */
+var MESA_DENTRO=['ren-ficha-ov','ren-baixa-ov','ren-prev-ov','ren-nota-ov','ren-pro-ov','ren-cp-ov','ren-cpb-ov','ren-cr-ov','ren-pan-ov','mer-view-overlay','vbm-hist-op','fm-overlay','clip-overlay','vb-foto-overlay','vb-clif-sheet'];   /* 1.415.1: + ficha do cliente (VB 26/11: "ficou pequenininha" no computador) */   /* 1.401.0: + operacao do Historico e Fechamento; 1.403.0: + panorama do cliente e foto */
 /* 1.377.0 (VB 20/11 23:13: "card do relogio abre feio"): a ficha do relogio deixa de ser folha de baixo na tela aberta (cinza em cima, botoes
    cortados embaixo) e ocupa o painel inteiro, como a ficha da PARCELA. Camada 100015, a que ela ja tinha na direita. */
 var MESA_DENTRO_Z={'mer-view-overlay':'100015'};
