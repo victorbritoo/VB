@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.414.2</title>
+<title>VB - v1.414.3</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -16203,8 +16203,10 @@ function FM_calcMes(ym, res, _merMap){
     var rendMes=(_rCM>0)?(_rL/_rCM*100):null;
     // capital VB parado no estoque hoje (consignados fora, capital do sócio abatido) — conta 1 mês parado
     var _estCap=0;
+    /* 1.414.3 (VB 26/11 "ok"): o parado na peca e a compra MAIS os gastos marcados para cobrar (o dinheiro que saiu) */
+    var _gCob={}; ((res[9]&&res[9].data)||[]).forEach(function(g){ if(g.cobrar){ var k=String(g.mercadoria_id); _gCob[k]=(_gCob[k]||0)+(Number(g.valor)||0); } });
     ((res[5]&&res[5].data)||[]).forEach(function(m){
-      var c3=Number(m.custo)||0; if(!(c3>0)) return;
+      var c3=(Number(m.custo)||0)+(m.id!=null?(_gCob[String(m.id)]||0):0); if(!(c3>0)) return;
       if(VB_consigVen(m.socio, m.valor_socio, m.custo, null)) return;
       var vs3=Number(m.valor_socio)||0;
       var temS3=(m.socio&&vs3>0&&vs3<=c3);
@@ -16340,7 +16342,7 @@ function FM_fetchRes(){ return Promise.all([
     sb.from('vendas').select('*').limit(10000),
     sb.from('pagamentos').select('*').limit(10000),
     sb.from('mercadorias').select('venda_id,data_compra').not('venda_id','is',null).limit(10000),
-    sb.from('mercadorias').select('custo,valor_socio,socio,status').eq('status','estoque').limit(10000),
+    sb.from('mercadorias').select('id,custo,valor_socio,socio,status').eq('status','estoque').limit(10000),   /* 1.414.3: id para somar os gastos a cobrar (res[9]) */
     /* origem_tab, credor e descricao entram aqui porque o bloco JUROS PAGOS agrupa por banco:
        sem origem_tab a checagem de juros nunca era verdadeira e o valor caia em SAIDAS. */
     sb.from('contas_pagar').select('valor,venc,pago_em,valor_pago,origem_tab,credor,descricao,juros').limit(10000),
