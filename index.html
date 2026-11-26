@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.414.0</title>
+<title>VB - v1.414.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -5622,7 +5622,7 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
-var VB_VER_DATA='25/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
+var VB_VER_DATA='26/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
 (function(){ /* badge deriva do <title> (versao) e de VB_VER_DATA (data; antes a 1a entrada do changelog).
    Precisa rodar DEPOIS do documento montado: este script vive no meio do body e o
    changelog so aparece milhares de linhas abaixo — rodando na hora, o seletor da data
@@ -18983,6 +18983,9 @@ function VEN_abrirEstoque(){
     });
     lista.innerHTML=html;
     VEN_estoqueCache=rows;
+    /* 1.414.1 (VB 26/11): sem passar pelo Estoque antes, os gastos ainda nao tinham chegado e a lista mostrava o custo
+       sem eles (68.000 no lugar de 68.250). Carrega os gastos e desenha de novo. */
+    if(!MER_gastosLoad && !VEN_abrirEstoque._g){ VEN_abrirEstoque._g=1; MER_gastosCarrega(function(){ VEN_abrirEstoque._g=0; var o2=document.getElementById('ven-estoqueOverlay'); if(o2 && o2.style.display!=='none' && MER_gastosLoad) VEN_abrirEstoque(); }); }
   });
 }
 var VEN_estoqueCache=[];
