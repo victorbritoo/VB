@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.6</title>
+<title>VB - v1.415.7</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2004,6 +2004,22 @@ function HIST_carregarVen(r){
 function HIST_pagDaAnt(idx){ var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(r) VB_pagDeAnt(r); }
 function VB_pagDeAnt(r){
   var liq=Number(r&&r.valor_liquido)||0; if(!(liq>0)){ VB_toast('Operação sem valor líquido.'); return; }
+  /* 1.415.7 (VB 26/11: "cliquei em pagamento ... nao achou"): a operacao que ja tem pagamento abre o
+     dela em vez de criar outro vazio. Ja aberto em PAGAMENTOS com o mesmo nome -> so mostra. Salvo no
+     Historico com o mesmo nome -> salva o que esta aberto (se precisar) e carrega o salvo. Senao, novo. */
+  var _nomeOp=String(r.nome||r.cliente||'').toUpperCase().trim();
+  var _pnA=document.getElementById('pag-nome');
+  if(_nomeOp && _pnA && String(_pnA.value||'').toUpperCase().trim()===_nomeOp){ VB_telaAnterior=VB_telaAtual||'hist'; showScreen('pag'); return; }
+  var _telaVolta=VB_telaAtual||'hist';
+  var _novo=function(){ VB_pagSalvaE(vai); };
+  if(_nomeOp){
+    sb.from('pagamentos').select('*').ilike('nome', _nomeOp.replace(/[\\%_]/g,'\\$&')).order('created_at',{ascending:false}).limit(1).then(function(res){
+      var ex=(res && !res.error && res.data && res.data[0]) || null;
+      if(!ex){ _novo(); return; }
+      VB_pagSalvaE(function(){ HIST_carregarPag(ex); VB_telaAnterior=_telaVolta; });
+    }).catch(function(){ _novo(); });
+    /* vai() e definida abaixo (hoisting de var: atribuida antes do then rodar) */
+  }
   var vai=function(){
     try{ PAG_limpar(); }catch(e){}
     document.getElementById('pag-total').value=PAG_formatBR(liq);
@@ -2016,7 +2032,7 @@ function VB_pagDeAnt(r){
   /* 1.415.1 (VB 26/11: "como eu sei se substituo? salva o anterior e abre o novo, nem me pergunta"):
      sem pergunta. Ja salvo e sem mudanca -> so abre o novo. Com valor e mudanca nao salva -> SALVA (o mesmo
      PAG_confirmarOperacao do botao, que tambem loga) e abre o novo. Sem nenhum valor (so nome ou descricao) -> descarta. */
-  VB_pagSalvaE(vai);
+  if(!_nomeOp) VB_pagSalvaE(vai);
 }
 /* 1.415.5: salva o que esta aberto em PAGAMENTOS (se tem valor e mudou) e so depois roda vai(). Sem pergunta. */
 function VB_pagSalvaE(vai){
