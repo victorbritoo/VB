@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.414.1</title>
+<title>VB - v1.414.2</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -10610,7 +10610,7 @@ function MER_ordSet(k){
 function MER_ordena(rows){
   var r=rows.slice();
   function d(x){ return x.data_compra?String(x.data_compra):''; }
-  function c(x){ return Number(x.custo)||0; }
+  function c(x){ return MER_custoCheio(x)||Number(x.custo)||0; }   /* 1.414.2: ordena pelo custo que aparece no card */
   if(MER_ord==='data_asc'){ r.sort(function(a,b){ return d(a)<d(b)?-1:d(a)>d(b)?1:0; }); }
   else if(MER_ord==='preco_desc'){ r.sort(function(a,b){ return c(b)-c(a); }); }
   else if(MER_ord==='preco_asc'){ r.sort(function(a,b){ return c(a)-c(b); }); }
@@ -10808,7 +10808,8 @@ function SOC_abrir(id){
     sb.from('vendas').select('*').ilike('socio', nome),
     sb.from('financiamentos_hist').select('*').eq('tem_investidor', true).ilike('investidor_nome', nome),
     sb.from('mercadorias').select('*').ilike('socio', nome),
-    (REN_cache?null:REN_abrir())   /* v1.319.0: o bloco ENTRADAS le o REN_cache */
+    (REN_cache?null:REN_abrir()),   /* v1.319.0: o bloco ENTRADAS le o REN_cache */
+    (MER_gastosLoad?null:new Promise(function(ok){ MER_gastosCarrega(ok); }))   /* 1.414.2: custo das pecas do socio com os gastos a cobrar */
   ]).then(function(res){
     var vendas=(res[0].error?[]:(res[0].data||[]));
     var fins=(res[1].error?[]:(res[1].data||[]));
@@ -10823,7 +10824,7 @@ function SOC_abrir(id){
     mers.sort(function(x,y){ var a2=String(x.data_compra||''), b2=String(y.data_compra||''); return a2===b2?0:(a2<b2?1:-1); });
     var eOps=[], custoE=0, capE=0;
     mers.forEach(function(m){
-      var c2=Number(m.custo)||0, vs2=Number(m.valor_socio)||0;
+      var c2=MER_custoCheio(m)||Number(m.custo)||0, vs2=Number(m.valor_socio)||0;
       eOps.push({nome:(m.descricao||'—'), data:HIST_fmtData(String(m.data_compra||'').slice(0,10)), dias:(m.data_compra?MER_dias(m.data_compra):null), custo:c2, capital:vs2, consig:VB_consigVen(m.socio, m.valor_socio, m.custo, null)});
       custoE+=c2; capE+=vs2;
     });
@@ -17291,7 +17292,7 @@ function MER_render(){
       if((r.status||'estoque')!==_outra) return;
       if(![r.descricao,r.fornecedor,r.socio,r.pagamento].some(function(v){ return v&&(''+v).toLowerCase().indexOf(termo)>=0; })) return;
       _nOutra++;
-      if(_outra==='estoque'){ _vOutra+=Number(r.custo)||0; }
+      if(_outra==='estoque'){ _vOutra+=MER_custoCheio(r)||Number(r.custo)||0; }   /* 1.414.2: custo cheio, igual ao total do Estoque */
       else { var _v=r.venda_id?MER_vendasMap[r.venda_id]:null; if(_v) _vOutra+=Number(_v.valor_total)||0; }
     });
   }
@@ -17317,7 +17318,7 @@ function MER_render(){
       var val=0;
       lista2.forEach(function(x){
         if(vend){ var v=x.venda_id?MER_vendasMap[x.venda_id]:null; if(v) val+=Number(v.valor_total)||0; }
-        else val+=Number(x.custo)||0;
+        else val+=MER_custoCheio(x)||Number(x.custo)||0;   /* 1.414.2: custo cheio */
       });
       return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 4px 4px;">'
         +'<span style="font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;">'+(vend?'VENDIDOS':'EM ESTOQUE')+' \u00b7 '+lista2.length+'</span>'
@@ -25496,6 +25497,8 @@ function MESA_venEstFecha(){ MESA_venEst=false; MESA_venPinta(true); }
       MESA_venEstCarregando=false;
       if(res.error){ VB_toast('Erro ao carregar o estoque.'); return; }
       VEN_estoqueCache=res.data||[]; MESA_venPinta(true);
+      /* 1.414.2: a lista da tela aberta tambem mostrava o custo sem os gastos a cobrar se o Estoque nao tinha sido aberto */
+      if(!MER_gastosLoad) MER_gastosCarrega(function(){ if(MESA_venEst) MESA_venPinta(true); });
     });
   };
   var _fe=VEN_fecharEstoque;
