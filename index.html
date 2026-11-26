@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.414.3</title>
+<title>VB - v1.414.4</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -10404,6 +10404,9 @@ function MER_pctLive(){
    marcado COBRAR entra no custo, e o PRECO SUGERIDO sobe sozinho antes de o VB abrir a boca.
    Gasto NAO COBRAR nao toca no preco (caso tipico da consignada, onde ele ganha sem investir),
    mas continua registrado: ele quer saber quanto essa escolha custa no ano. */
+/* 1.414.4 (VB 26/11, WET SUB 105X): numero de parcela/titulo com 2 digitos ate 99 e inteiro de 100 em diante.
+   O ('0'+n).slice(-2) cortava 100 em 00 e 105 em 05. */
+function VB_n2(n){ n=Number(n); if(!isFinite(n)) return String(n); n=Math.round(n); return (n>=0 && n<10)?('0'+n):String(n); }
 var MER_gastos={}, MER_gastosErro='', MER_gastosLoad=false;
 function MER_gastosDe(id){ return (MER_gastos[String(id)]||[]); }
 function MER_gastoTotal(id, soCobrar){
@@ -12461,7 +12464,7 @@ function REN_copia(txt, msg){
   }catch(e){ VB_toast('N\u00e3o consegui copiar.'); }
 }
 function REN_nm(x){ if(x && x.tab==='cr' && !(Number(x.tot)>1)) return ''; /* titulo solto nao tem o que contar */
-  var _d=(x.dnum!=null?x.dnum:x.idx); return ('0'+(_d+1)).slice(-2)+' de '+('0'+x.tot).slice(-2); }
+  var _d=(x.dnum!=null?x.dnum:x.idx); return VB_n2(_d+1)+' de '+VB_n2(x.tot); }
 /* Repasse combinado de antemao para uma parcela ainda em aberto. Null = nao foi combinado nada,
    entao vale o proporcional. */
 /* Pagamentos de uma parcela. Baixa antiga (sem linhas) conta como um pagamento unico,
@@ -13396,7 +13399,7 @@ function REN_cpNumAj(g){
 function REN_cpNm(c, g){
   g=g||REN_cpIrmas(c); var aj=REN_cpNumAj(g); if(g.length<2 && !aj.tem) return '';
   var i=0; g.forEach(function(y,j){ if(String(y.id)===String(c.id)) i=j; });
-  return ('0'+(i+1+aj.ini)).slice(-2)+' DE '+('0'+aj.tot).slice(-2);
+  return VB_n2(i+1+aj.ini)+' DE '+VB_n2(aj.tot);
 }
 function REN_cpVoltarGuard(id){
   function volta(){ REN_cpFicha(id); }
@@ -15294,7 +15297,7 @@ function REN_cobrarCanvas(k){
   var linhas=irmas.map(function(y){
     var kb=REN_key(y), yb=REN_cache.bx[kb], pago=REN_pagoTot(y)||0;
     var _ob=y.obs||((y.tab==='cr'&&REN_cache.notas)?REN_cache.notas[kb]:'');   /* v1.302.2: na entrada manual a nota da parcela vai na foto */
-    var L={num:('0'+((y.dnum!=null?y.dnum:y.idx)+1)).slice(-2), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(_ob?('('+String(_ob).toUpperCase()+')'):'')};
+    var L={num:VB_n2((y.dnum!=null?y.dnum:y.idx)+1), venc:dBR(y.venc), atual:(kb===k), sub:'', obs:(_ob?('('+String(_ob).toUpperCase()+')'):'')};
     if(yb){ L.valor=Number(yb.valor_recebido)||y.valor; L.st='PAGO '+dCur(yb.recebido_em||y.venc)+' ✓'; L.pago=true; L.resta=0; }
     else {
       L.valor=y.valor; L.resta=Math.round((y.valor-pago)*100)/100;
@@ -16283,7 +16286,7 @@ function FM_calcMes(ym, res, _merMap){
             var pd=g.slice().sort(function(a2,b2){ var va=String(a2.venc||''), vb=String(b2.venc||''); if(va!==vb) return va<vb?-1:1; return (Number(a2.ordem)||0)-(Number(b2.ordem)||0); });
             var g0=g[0]||{}, nI=(Number(g0.num_ini)>1)?(Number(g0.num_ini)-1):0, nT=(Number(g0.num_tot)>=g.length+nI)?Number(g0.num_tot):(g.length+nI);
             g.forEach(function(c,i){
-              var dn=pd.indexOf(c)+nI+1, p2=function(n){ return ('0'+n).slice(-2); };
+              var dn=pd.indexOf(c)+nI+1, p2=VB_n2;
               res._proMap['cr|'+L+'|'+(Number(c.ordem)||i)]={tab:'cr', valor:Number(c.valor)||0,
                 cliente:String(c.devedor||c.descricao||'\u2014').toUpperCase(),
                 nm:String(c.descricao||'ENTRADA MANUAL')+(nT>1?(' \u00b7 '+p2(dn)+' DE '+p2(nT)):'')};
@@ -17686,7 +17689,7 @@ function MER_abrir(id){
       if(arr.length<=3){
         txt=arr.map(function(c){
           var d=String(c.venc||'').split('-');
-          var dm=(d.length===3)?(d[2]+'/'+d[1]):'';
+          var dm=(d.length===3)?(d[2]+'/'+d[1]+(d[0]!==String(new Date().getFullYear())?('/'+d[0]):'')):'';   /* 1.414.4: ano quando nao e o corrente */
           return VB_kFmt(Number(c.valor)||0)+(dm?(' ('+dm+')'):'')+(c.pago_em?'\u2713':'');
         }).join(' + ');
       } else {
@@ -21303,7 +21306,7 @@ function NP_emissao(r){
   var s=String(r.data_operacao||r.created_at||'').slice(0,10).split('-');
   return {d:+s[2], m:+s[1], y:+s[0]};
 }
-function NP_dd2(n){ return ('0'+n).slice(-2); }
+function NP_dd2(n){ return VB_n2(n); }   /* 1.414.4: nota 100/105 nao vira 00/05 */
 function NP_fmtDt(dt){ return NP_dd2(dt.d)+'/'+NP_dd2(dt.m)+'/'+dt.y; }
 function NP_vazio(){ return {tipo:'pf', emit:{nome:'',doc:'',end:''}, reps:[{nome:'',cpf:''}], avs:[], ben:'com'}; }
 function NP_abrir(idx){ NP_abrirR(HIST_rowsCache&&HIST_rowsCache[idx]); }
@@ -22083,7 +22086,7 @@ function CTR_itensLinhas(parcelas, dataVendaBR){
       return [[1,'01 (Uma)'],[0,' Parcela de '],[1,vTxt],[0,(aVista?' À Vista dia ':' com vencimento dia ')+g[0].d+'.']];
     }
     var last=CTR_dparse(g[n-1].d);
-    return [[1,('0'+n).slice(-2)+' ('+CTR_extInt(n).toUpperCase()+')'],[0,' parcelas mensais no valor de '],[1,vTxt],[0,', sendo primeiro vencimento dia '],[1,g[0].d+' ('+CTR_dataExt(dt)+')'],[0,' e subsequentes para a mesma data nos meses subsequentes, com a última destas para o mês de '],[1,CTR_MESES[last.m-1]+' de '+last.y],[0,'. (Vide Tabela).']];
+    return [[1,VB_n2(n)+' ('+CTR_extInt(n).toUpperCase()+')'],[0,' parcelas mensais no valor de '],[1,vTxt],[0,', sendo primeiro vencimento dia '],[1,g[0].d+' ('+CTR_dataExt(dt)+')'],[0,' e subsequentes para a mesma data nos meses subsequentes, com a última destas para o mês de '],[1,CTR_MESES[last.m-1]+' de '+last.y],[0,'. (Vide Tabela).']];
   });
 }
 function CTR_preview(vals, parcelas, dvBR, fotoURL, file, blob){
@@ -22438,7 +22441,7 @@ function CTR_itensClausula(parcelas, dataVendaBR){
       xml+=CTR_item([[1,'01 (Uma)'],[0,' Parcela de '],[1,vTxt],[0,(aVista?' À Vista dia ':' com vencimento dia ')+g[0].d+'.']]);
     } else {
       var last=CTR_dparse(g[n-1].d);
-      xml+=CTR_item([[1,('0'+n).slice(-2)+' ('+CTR_extInt(n).toUpperCase()+')'],[0,' parcelas mensais no valor de '],[1,vTxt],[0,', sendo primeiro vencimento dia '],[1,g[0].d+' ('+CTR_dataExt(dt)+')'],[0,' e subsequentes para a mesma data nos meses subsequentes, com a última destas para o mês de '],[1,CTR_MESES[last.m-1]+' de '+last.y],[0,'. (Vide Tabela).']]);
+      xml+=CTR_item([[1,VB_n2(n)+' ('+CTR_extInt(n).toUpperCase()+')'],[0,' parcelas mensais no valor de '],[1,vTxt],[0,', sendo primeiro vencimento dia '],[1,g[0].d+' ('+CTR_dataExt(dt)+')'],[0,' e subsequentes para a mesma data nos meses subsequentes, com a última destas para o mês de '],[1,CTR_MESES[last.m-1]+' de '+last.y],[0,'. (Vide Tabela).']]);
     }
   });
   return xml;
@@ -22640,7 +22643,7 @@ function FIN_priceSheet(r, P, pg){
     var paga=!!pg[L.k], atual=(L.k===prox);
     var cor=paga?'var(--so)':'var(--tx)', pes=atual?'700':'500';
     rows+='<div style="'+G+'padding:4px 0;border-top:0.5px solid var(--ln3);font-size:11px;color:'+cor+';font-weight:'+pes+';">'
-      +'<span>'+('0'+(L.k+1)).slice(-2)+'</span>'
+      +'<span>'+VB_n2(L.k+1)+'</span>'
       +'<span>'+(L.venc?(L.venc.slice(5,7)+'/'+L.venc.slice(2,4)):'')+'</span>'
       +'<span style="text-align:right;">'+f(L.juros)+'</span>'
       +'<span style="text-align:right;">'+f(L.amort)+'</span>'
@@ -24918,7 +24921,7 @@ function MESA_quitPinta(forca){
   for(var k=0;k<r.n;k++){
     var d=VB_mesData(r.dateProx,k), v=(k===0&&f<1)?r.pmt:r.pmt/Math.pow(1+i,f+k);
     var ds=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+(d.getFullYear()!==new Date().getFullYear()?'/'+String(d.getFullYear()).slice(2):'');
-    rows+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:4px 0;'+(k?'border-top:0.5px solid var(--ln3);':'')+'"><span style="color:var(--mu);white-space:nowrap;">'+('0'+(k+1)).slice(-2)+' · '+ds+'</span><span style="color:var(--tx);font-weight:700;white-space:nowrap;">'+MESA_brl(v)+'</span></div>';
+    rows+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:4px 0;'+(k?'border-top:0.5px solid var(--ln3);':'')+'"><span style="color:var(--mu);white-space:nowrap;">'+VB_n2(k+1)+' · '+ds+'</span><span style="color:var(--tx);font-weight:700;white-space:nowrap;">'+MESA_brl(v)+'</span></div>';
   }
   h+='<div style="font-size:10px;letter-spacing:2px;color:var(--so);font-weight:600;margin:16px 4px 7px;">VALOR HOJE DE CADA PARCELA</div>'
     +'<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:6px 14px;">'+rows+'</div>';
