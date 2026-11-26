@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.4</title>
+<title>VB - v1.415.5</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2016,6 +2016,10 @@ function VB_pagDeAnt(r){
   /* 1.415.1 (VB 26/11: "como eu sei se substituo? salva o anterior e abre o novo, nem me pergunta"):
      sem pergunta. Ja salvo e sem mudanca -> so abre o novo. Com valor e mudanca nao salva -> SALVA (o mesmo
      PAG_confirmarOperacao do botao, que tambem loga) e abre o novo. Sem nenhum valor (so nome ou descricao) -> descarta. */
+  VB_pagSalvaE(vai);
+}
+/* 1.415.5: salva o que esta aberto em PAGAMENTOS (se tem valor e mudou) e so depois roda vai(). Sem pergunta. */
+function VB_pagSalvaE(vai){
   var temValor=(PAG_parseBR(String((document.getElementById('pag-total')||{}).value||''))>0)
     || (PAG_pagamentos||[]).some(function(p){ return (PAG_parseBR(p.valor)||0)>0; });
   var mudou=PAG_currentOperationId ? (PAG_assinatura()!==PAG_snapshot) : temValor;
@@ -25247,7 +25251,8 @@ function MESA_pagPinta(forca){
     +'<div style="background:var(--sf);border:0.5px solid var(--ln2);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">'
     +cel('TOTAL',tot>0?MESA_brl(tot):'—')+cel('LANÇADO',MESA_brl(soma))
     +cel('SALDO',MESA_pagSaldoTxt(tot,soma),(tot>0&&sd<-0.005)?'var(--red)':null)+cel('LANÇAMENTOS',String(linhas.length))
-    +'</div>';
+    +'</div>'
+    +(PAG_currentOperationId?('<button onclick="MESA_pagEncerra()" style="'+MESA_BTN+'width:100%;margin-top:8px;">ENCERRAR</button>'):'');   /* 1.415.5: pagamento salvo aberto na esquerda */
   var src=null, img=document.getElementById('pag-tabelaImagem'), antes=img?img.getAttribute('src'):null, disp=img?img.style.display:'', _t=window.VB_toast;
   try{ window.VB_toast=function(){}; VB_silentGen=true; PAG_compartilhar(); }catch(e){} finally{ VB_silentGen=false; window.VB_toast=_t; }
   if(img && img.src && img.src.indexOf('data:')===0 && img.getAttribute('src')!==antes) src=img.src;
@@ -25305,7 +25310,12 @@ function MESA_pagIrHist(){
   HIST_tabAtual='pag'; try{ localStorage.setItem('vb_hist_tab','pag'); }catch(e){}
   showScreen('hist'); HIST_loadTab('pag'); VB_telaAnterior=de;
 }
-function MESA_pagToque(i){ var r=MESA_pagUlt&&MESA_pagUlt[i]; if(!r) return; MESA_pagVer=r; MESA_pagPinta(true); }
+/* 1.415.5 (VB 26/11: "clicar na operacao da direita ja puxa pro lado esquerdo"): tocar no pagamento em aberto
+   carrega a folha da esquerda (o que estava nela e foi mudado e salvo antes, sem pergunta) e a direita vira o RESUMO. */
+function MESA_pagToque(i){
+  var r=MESA_pagUlt&&MESA_pagUlt[i]; if(!r) return;
+  VB_pagSalvaE(function(){ MESA_pagVer=null; var ant=VB_telaAnterior; HIST_carregarPag(r); VB_telaAnterior=ant; MESA_pagSig=null; MESA_pagPinta(true); });
+}
 function MESA_pagFecha(){ MESA_pagVer=null; MESA_pagPinta(true); }
 function MESA_pagOp(el, r){
   var cel=MESA_venCel;
@@ -25344,7 +25354,9 @@ function MESA_pagAbreVer(){
   var ant=VB_telaAnterior; HIST_carregarPag(r); VB_telaAnterior=ant;
 }
 function MESA_pagEncerra(){
-  var r=MESA_pagVer; if(!r) return;
+  var r=MESA_pagVer;
+  if(!r && PAG_currentOperationId){ r=(MESA_pagUlt||[]).filter(function(x){ return x.id===PAG_currentOperationId; })[0]||{id:PAG_currentOperationId, nome:MESA_fv('pag-nome'), encerrado_em:null}; }
+  if(!r) return;
   var fecha=!r.encerrado_em, quando=fecha?VB_carimbo():null;
   sb.from('pagamentos').update({encerrado_em:quando}).eq('id',r.id).then(function(res){
     if(res.error){ VB_erro(res.error, fecha?'Não consegui encerrar.':'Não consegui reabrir.'); return; }
