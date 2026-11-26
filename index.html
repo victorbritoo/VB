@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.5</title>
+<title>VB - v1.415.6</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2249,7 +2249,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
       + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button>'; }
     h += '</div>';
     /* 1.415.0 (VB 26/11): PAGAMENTO embaixo, na antecipacao -- abre PAGAMENTOS ja com o liquido como VALOR TOTAL */
-    if(tab==='ant'){ h += '<div style="margin-top:6px;margin-left:-23px;"><button onclick="event.stopPropagation();HIST_pagDaAnt('+idx+')" style="'+_btnCss+';width:100%;">PAGAMENTO</button></div>'; }
+    if(tab==='ant' && !(HIST_rowsCache&&HIST_rowsCache[idx]&&HIST_rowsCache[idx].simulacao)){ h += '<div style="margin-top:6px;margin-left:-23px;"><button onclick="event.stopPropagation();HIST_pagDaAnt('+idx+')" style="'+_btnCss+';width:100%;">PAGAMENTO</button></div>'; }
 
     h += '</div>';
   }
@@ -24854,7 +24854,7 @@ function MESA_antOp(el, r){
     +'<button onclick="MESA_antAbreVer()" style="'+B+'">ABRIR OPERAÇÃO</button>'
     +'<button onclick="MESA_antNP()" style="'+B+'">NP</button>'
     +'</div>'
-    +'<button onclick="if(MESA_antVer) VB_pagDeAnt(MESA_antVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'   /* 1.415.0 */
+    +((r&&r.simulacao)?'':('<button onclick="if(MESA_antVer) VB_pagDeAnt(MESA_antVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'))   /* 1.415.0; 1.415.6: simulacao nao tem */
     +'</div>'
     +'<div id="vbm-ant-foto" style="margin-top:12px;text-align:center;color:var(--mu);font-size:11px;">Gerando a foto...</div>'
     +'<button onclick="MESA_antFecha()" style="display:block;width:100%;margin-top:12px;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
