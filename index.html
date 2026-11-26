@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.414.5</title>
+<title>VB - v1.415.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -1999,6 +1999,25 @@ function HIST_carregarVen(r){
   VB_telaAnterior = 'hist';
   showScreen('ven');
 }
+/* 1.415.0: PAGAMENTO da antecipacao. Lancamento novo em PAGAMENTOS: NOME = nome da operacao, VALOR TOTAL = liquido.
+   Se PAGAMENTOS ja tem algo digitado ou aberto, pergunta antes de substituir. */
+function HIST_pagDaAnt(idx){ var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(r) VB_pagDeAnt(r); }
+function VB_pagDeAnt(r){
+  var liq=Number(r&&r.valor_liquido)||0; if(!(liq>0)){ VB_toast('Operação sem valor líquido.'); return; }
+  var vai=function(){
+    try{ PAG_limpar(); }catch(e){}
+    document.getElementById('pag-total').value=PAG_formatBR(liq);
+    var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value=String(r.nome||r.cliente||'').toUpperCase();
+    PAG_render(); PAG_update(); PAG_saveSession(); PAG_updateConfirmarBtnLabel();
+    try{ VB_dirtyPaintTela('pag'); }catch(e){}
+    VB_telaAnterior=VB_telaAtual||'hist';
+    showScreen('pag');
+  };
+  var temAlgo=!!PAG_currentOperationId || !!String((document.getElementById('pag-total')||{}).value||'').trim()
+    || (PAG_pagamentos||[]).some(function(p){ return (Number(PAG_parseBR?PAG_parseBR(p.valor):0)||0)!==0 || String(p.desc||'').trim(); });
+  if(temAlgo) VB_confirm2('PAGAMENTOS já tem um lançamento aberto.', 'SUBSTITUIR', 'CANCELAR', function(ok){ if(ok) vai(); });
+  else vai();
+}
 function HIST_carregarPag(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   PAG_currentOperationId = r.id;
@@ -2215,6 +2234,8 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
       + '<button onclick="event.stopPropagation();FIN_priceAbrir('+idx+')" style="'+_btnCss+'">PRICE</button>'
       + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button>'; }
     h += '</div>';
+    /* 1.415.0 (VB 26/11): PAGAMENTO embaixo, na antecipacao -- abre PAGAMENTOS ja com o liquido como VALOR TOTAL */
+    if(tab==='ant'){ h += '<div style="margin-top:6px;margin-left:-23px;"><button onclick="event.stopPropagation();HIST_pagDaAnt('+idx+')" style="'+_btnCss+';width:100%;">PAGAMENTO</button></div>'; }
 
     h += '</div>';
   }
@@ -24804,7 +24825,9 @@ function MESA_antOp(el, r){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;">'
     +'<button onclick="MESA_antAbreVer()" style="'+B+'">ABRIR OPERAÇÃO</button>'
     +'<button onclick="MESA_antNP()" style="'+B+'">NP</button>'
-    +'</div></div>'
+    +'</div>'
+    +'<button onclick="if(MESA_antVer) VB_pagDeAnt(MESA_antVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'   /* 1.415.0 */
+    +'</div>'
     +'<div id="vbm-ant-foto" style="margin-top:12px;text-align:center;color:var(--mu);font-size:11px;">Gerando a foto...</div>'
     +'<button onclick="MESA_antFecha()" style="display:block;width:100%;margin-top:12px;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
   el.innerHTML=h;
