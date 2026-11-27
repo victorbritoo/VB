@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.416.0</title>
+<title>VB - v1.416.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -21877,7 +21877,10 @@ function CTR_shareEscolha(docxBlob, fname, desc){
   var old=document.getElementById('vb-ctr-sh'); if(old) old.remove();
   var ov=document.createElement('div');
   ov.id='vb-ctr-sh';
-  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:10090;display:flex;align-items:flex-end;justify-content:center;';
+  /* 1.416.1 (VB 27/11 "nao ta prestando o compartilhar"): a escolha PDF/WORD nascia em 10090, por tras do visualizador do contrato (100020).
+     Fica no corpo (data-vb-corpo: nao vira folha da coluna) e acima do visualizador, abaixo dos dialogos (100028) e do aviso. */
+  ov.setAttribute('data-vb-corpo','1');
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:100024;display:flex;align-items:flex-end;justify-content:center;';
   ov.innerHTML='<div style="width:100%;max-width:460px;background:var(--sf);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,sans-serif;">'
     +'<div style="text-align:center;font-size:11px;letter-spacing:2px;color:var(--tx);font-weight:600;margin-bottom:12px;">COMPARTILHAR</div>'
     +'<button id="ctrsh-pdf" style="width:100%;padding:9px;border:none;border-radius:12px;background:var(--acc);color:var(--acc-tx);font-size:11px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-bottom:7px;font-family:-apple-system,sans-serif;">PDF</button>'
@@ -25819,7 +25822,7 @@ function MESA_liga(on){
 /* 1.341.1: folha de baixo criada na hora (fixa, tela toda, alinhada embaixo) ganha a marca vbm-dirsheet:
    com o Duo aberto ela vai para a metade direita (CSS); fechado, nada muda */
 function MESA_ehFolha(n){
-  if(!n || n.nodeType!==1 || !n.style || n.id==='vb-mesa-dir' || (n.id && MESA_DIR.indexOf(n.id)>=0)) return false;
+  if(!n || n.nodeType!==1 || !n.style || n.id==='vb-mesa-dir' || (n.id && MESA_DIR.indexOf(n.id)>=0) || (n.getAttribute && n.getAttribute('data-vb-corpo'))) return false;
   var st=n.style;
   if(st.position!=='fixed' || st.alignItems!=='flex-end') return false;
   var z=parseInt(st.zIndex)||0;
