@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.417.0</title>
+<title>VB - v1.417.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -5516,6 +5516,7 @@ function HIST_renderRows(tab, rows){
       if(chev) chev.style.transform='rotate(90deg)';
     }
   });
+  if(HIST_voltaY!=null && VB_telaAtual==='hist'){ var _vy=HIST_voltaY; HIST_voltaY=null; try{ VB_rolaPara(_vy); if(window.requestAnimationFrame) requestAnimationFrame(function(){ VB_rolaPara(_vy); }); }catch(e){} }
 }
 var HIST_rowsCache=[], HIST_npOk={};
 var HIST_tabCache='';
@@ -6076,6 +6077,7 @@ function VB_tapShield(ms){
 }
 function showScreen(name){
   VB_tapShield(350);
+  try{ if(VB_telaAtual==='hist' && name!=='hist') HIST_saiY=VB_sy(); }catch(e){}   /* 1.417.1: onde a lista estava, para o VB voltar ao mesmo lugar */
   /* 1.397.0 (VB 21/11): entrar no Historico vindo de outra tela volta o LUCRO POR MES para a aba (o GERAL e uma espiada) */
   try{ if(name==='hist' && VB_telaAtual!=='hist' && typeof MESA_histGeral!=='undefined') MESA_histGeral=false; }catch(e){}
   /* MER_reabrirId so deve sobreviver a ida-e-volta mer<->ven (venda em andamento ou
@@ -6152,8 +6154,13 @@ function VB_voltarDeTela(){
     var ov=document.getElementById('vb-sair-overlay'); if(ov) ov.style.display='flex';
     return;
   }
-  showScreen(VB_telaAnterior||'home');
+  /* 1.417.1 (VB 27/11: "clicar no VB para voltar deveria voltar para o historico com o card expandido, do jeito que estava"):
+     tela aberta a partir do Historico (PAGAMENTO, ABRIR OPERACAO...) volta pelo VB com os cards abertos e na mesma altura da lista */
+  var _dest=VB_telaAnterior||'home';
+  if(_dest==='hist' && VB_telaAtual!=='hist'){ HIST_manterExp=true; HIST_voltaY=HIST_saiY; }
+  showScreen(_dest);
 }
+var HIST_saiY=null, HIST_voltaY=null;
 
 var VB_WM_IMG = (function(){
   var img = new Image();
