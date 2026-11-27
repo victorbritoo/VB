@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.417.1</title>
+<title>VB - v1.417.2</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2772,6 +2772,33 @@ function VB_updateBackupStatus(){
    procurando nada. Mostra so ATRASADO e HOJE: e o que muda o que ele faz agora. Sete dias vira
    paisagem, fica aceso quase sempre e para de ser lido -- o fim de todo aviso que grita demais.
    Sem nada vencendo, a linha nao aparece: linha vazia e ruido. */
+/* 1.417.2 (VB 27/11, tela de fora do Duo: "o de baixo ta muito sem espaco, o de cima muito com espaco"): na tela fechada e baixa
+   (ate 760 de altura) a folga de cima e a de baixo da Home ficam IGUAIS: (altura da tela - conteudo) / 2, minimo 12, maximo 32.
+   Antes: 32 em cima e o pe cortado (com o A PAGAR o conteudo passava a tela em 25). Versao e lua acompanham a folga de cima. */
+function HOME_folga(){
+  try{
+    var c=document.querySelector('#screen-home>.card'); if(!c) return;
+    var bd=document.getElementById('vb-versao-badge'), dk=document.getElementById('vb-dark-btn');
+    var liga=!document.documentElement.classList.contains('vb-mesa') && window.innerWidth<840 && window.innerHeight<=760;
+    var pt=32, pb=24;
+    if(liga){
+      var ks=Array.prototype.filter.call(c.children, function(e){ return e.offsetHeight>0 && getComputedStyle(e).position!=='absolute'; });
+      if(!ks.length) return;
+      var mb=parseFloat(getComputedStyle(ks[ks.length-1]).marginBottom)||0;
+      var alto=ks[ks.length-1].getBoundingClientRect().bottom+mb-ks[0].getBoundingClientRect().top;
+      var f=Math.floor((window.innerHeight-alto)/2); f=Math.max(12, Math.min(32, f)); pt=f; pb=f;
+    }
+    var ptx=liga?pt+'px':'', pbx=liga?pb+'px':'';
+    if(c.style.paddingTop!==ptx) c.style.paddingTop=ptx;
+    if(c.style.paddingBottom!==pbx) c.style.paddingBottom=pbx;
+    if(bd){ var t1=(pt-2)+'px'; if(bd.style.top!==t1) bd.style.top=t1; }
+    if(dk){ var t2=(pt+30)+'px'; if(dk.style.top!==t2) dk.style.top=t2; }
+  }catch(e){}
+}
+(function(){ var liga=function(){ HOME_folga(); var c=document.querySelector('#screen-home>.card');
+    if(c && window.ResizeObserver){ new ResizeObserver(function(){ HOME_folga(); }).observe(c); }
+    window.addEventListener('resize', HOME_folga); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', liga); else liga(); })();
 function HOME_irPagar(){ HOME_pagarIr=true; PIN_request('ren'); }
 var HOME_pagarIr=false;
 /* Hierarquia do card: ATRASADO+HOJE sao donos (valor grande, vermelho se atrasado). Sem nada
