@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.415.8</title>
+<title>VB - v1.416.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -4214,7 +4214,7 @@ function VB_apelidoNomes(termo){
   var nomes=[];
   Object.keys(VB_apelidos).forEach(function(nm){
     var ap=String(VB_apelidos[nm]||'').toUpperCase();
-    if(ap && ap.indexOf(t)>=0 && nomes.indexOf(nm)<0) nomes.push(nm);
+    if(ap && (ap.indexOf(t)>=0 || VB_casaPal(ap, t)) && nomes.indexOf(nm)<0) nomes.push(nm);
   });
   return nomes.slice(0,8); /* trava pro filtro nao virar um texto gigante */
 }
@@ -5673,7 +5673,7 @@ function VB_darkToggle(){
   VB_darkApply(on);
 }
 try{ if(localStorage.getItem('vb_dark')==='1') VB_darkApply(true); }catch(e){}
-var VB_VER_DATA='26/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
+var VB_VER_DATA='27/11/2026'; /* 1.362.0: data da versao (o changelog saiu do HTML). Atualizar a cada versao, junto com o <title>. */
 (function(){ /* badge deriva do <title> (versao) e de VB_VER_DATA (data; antes a 1a entrada do changelog).
    Precisa rodar DEPOIS do documento montado: este script vive no meio do body e o
    changelog so aparece milhares de linhas abaixo — rodando na hora, o seletor da data
@@ -11505,6 +11505,12 @@ document.addEventListener('scroll', function(){
     VB_cliSugPos(el,b);
   }catch(e){}
 }, true);
+/* 1.416.0 (VB 27/11: "Adri Mi ja era para encontrar"): campo com sugestao casa por PALAVRA --
+   cada palavra digitada basta estar no texto, em qualquer ordem, sem acento (igual a busca de clientes) */
+function VB_casaPal(texto, termo){
+  var t=VB_cliNorm(termo); if(!t) return false; var n=VB_cliNorm(texto);
+  return t.split(/\s+/).every(function(w){ return !w || n.indexOf(w)>=0; });
+}
 function VB_cliSugBox(){
   var b=document.getElementById('vb-cli-sug');
   if(!b){ b=document.createElement('div'); b.id='vb-cli-sug';
@@ -11528,10 +11534,8 @@ function VB_cliAttach(inputId, extras){
       var _ex=[]; try{ if(extras){ var _vist={}; (lista||[]).forEach(function(c){ _vist[VB_cliNorm(c.nome)]=1; });
         (extras()||[]).forEach(function(nm){ var k=VB_cliNorm(nm); if(k && !_vist[k]){ _vist[k]=1; _ex.push({nome:nm}); } }); } }catch(e){}
       var hits=_ex.concat(lista||[]).filter(function(c){
-        var n=VB_cliNorm(c.nome);
-        if(n.indexOf(termo)>=0 && n!==termo) return true;
-        var a=VB_cliNorm(c.apelido||'');
-        return !!a && a.indexOf(termo)>=0 && n!==termo;
+        var n=VB_cliNorm(c.nome); if(n===termo) return false;
+        return VB_casaPal(c.nome+' | '+(c.apelido||''), termo);
       }).slice(0,6);
       if(!hits.length){ b.style.display='none'; return; }
       b.innerHTML=hits.map(function(c){
@@ -18812,8 +18816,7 @@ function MER_sugHits(tipo, termo){
   rows.forEach(function(r){
     var cx=MER_sugCtx(r), ref=String(r.ref||'').trim(), mo=String(cx.modelo||'').trim();
     if(!ref || !mo) return;
-    var campo=VB_cliNorm(tipo==='ref'?ref:mo);
-    if(campo.indexOf(t)<0) return;
+    if(!VB_casaPal(tipo==='ref'?ref:mo, t)) return;
     var k=VB_cliNorm(ref)+'|'+VB_cliNorm(mo); if(vistos[k]) return; vistos[k]=1;
     out.push({ref:ref, modelo:mo, marca:(r.marca||'')});
   });
@@ -18866,7 +18869,7 @@ function MER_marcasSug(v){
   var cont={}; try{ (MER_rows||[]).forEach(function(r){ var m=String(r.marca||'').toUpperCase(); if(m) cont[m]=(cont[m]||0)+1; }); }catch(e){}
   var lista=Object.keys(cont).sort(function(a,b){ return cont[b]-cont[a]; });
   MER_MARCAS_PADRAO.forEach(function(m){ if(lista.indexOf(m)<0 && m!=='AUDEMARS PIGUET' && m!=='TAG HEUER') lista.push(m); });
-  return lista.filter(function(m){ return m.indexOf(v)===0 && m!==v; }).slice(0,6).map(function(m){ return {marca:m, n:cont[m]||0}; });
+  return lista.filter(function(m){ return m!==v && (m.indexOf(v)===0 || VB_casaPal(m, v)); }).slice(0,6).map(function(m){ return {marca:m, n:cont[m]||0}; });
 }
 /* 1.360.2: comecou pelo MODELO e deixou a MARCA vazia -> a marca vem das pecas ja cadastradas com o mesmo comeco
    (SUBMARINER -> ROLEX). So preenche se a marca estiver vazia e o historico for unanime. */
