@@ -27,12 +27,12 @@ const r=await pg.evaluate(()=>{
   const cartEl=[...d.querySelectorAll('span')].find(e=>e.textContent==='CARTEIRA').parentElement.parentElement, maiEl=[...d.querySelectorAll('span')].find(e=>e.textContent==='5 MAIORES').parentElement.parentElement;
   const cart=!cartEl.getAttribute('onclick')&&!/›/.test(cartEl.firstElementChild.textContent)&&/MESA_homeVai\('cli'\)/.test(maiEl.getAttribute('onclick')||'');
   const cabeMes=[...d.querySelectorAll('span')].filter(e=>/^RECEBIDO /.test(e.textContent)).every(e=>e.parentElement.scrollWidth<=e.parentElement.clientWidth+1);
-  MESA_homeTopo();
+  /* 1.418.0: MESA_homeTopo saiu (HOJE fixo a 14) */
   const cab=document.getElementById('vbm-hoje-cab'), lg=[...document.querySelectorAll('#screen-home>.card>div')].filter(e=>e.offsetParent&&!e.children.length&&e.textContent==='VB')[0];
   const rg=document.createRange(); rg.selectNodeContents(lg);
   const ult=d.lastElementChild.getBoundingClientRect();
   const dCab=Math.round(cab.getBoundingClientRect().top-rg.getBoundingClientRect().top);
-  MESA_ver=false; MESA_resumo(); const oculto=txt(); MESA_ver=true; MESA_resumo(); MESA_homeTopo();
+  MESA_ver=false; MESA_resumo(); const oculto=txt(); MESA_ver=true; MESA_resumo();
   return {cart,cabeMes,dias,sem,oculto,segEhOutraSemana:REN_segunda(seg)!==REN_segunda(hoje),dCab,fundo:Math.round(ult.bottom),rola:d.scrollHeight>d.clientHeight+1,lado:d.scrollWidth>d.clientWidth+1};
 });
 const t=(n,ok,det)=>{if(!ok)falhas++;console.log(ok?'ok   ':'FALHA',n,det||'');};

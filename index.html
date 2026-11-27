@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.417.2</title>
+<title>VB - v1.418.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -357,6 +357,28 @@ div:has(> #ant-seg-simples){ display:none !important; }
   html.vb-mesa #vb-mesa-dir{ display:block; }
   html.vb-mesa #screen-home>.card, html.vb-mesa .vb-screen>.card{ box-sizing:border-box; width:calc(var(--mx,50%) - var(--fx)); max-width:none; margin-left:var(--fx); margin-right:0; padding-top:calc(var(--fy,0px) + 22px); }
   html.vb-mesa.vb-mesa-home #screen-home>.card{ padding-top:32px; }
+  /* 1.418.0 (etapa 3 da tela aberta): ALINHAMENTO PELA GRADE. Cada tela tem duas linhas fixas, medidas do alto da coluna:
+     --glc = meio do subtitulo da esquerda (FINANCIAMENTOS, ESTOQUE...) e --gfb = alto do 1o bloco da esquerda. O 1o bloco da
+     direita fica centrado na --glc e o 2o comeca na --gfb. Antes o MESA_lados media a tela a cada troca e a cada tique.
+     Numeros iguais em 867, 1183x595 e 1280 (medidos na 1.417.2). ENTRADAS/SAIDAS e Home tem regra propria. */
+  html.vb-mesa{ --glc:29px; --gfb:51px; --gmx:999px; }
+  html.vb-mesa[data-vbt=fin]{ --gfb:48px; }
+  html.vb-mesa[data-vbt=hist]{ --gfb:53px; }
+  html.vb-mesa[data-vbt=con]{ --gfb:63px; }
+  html.vb-mesa[data-vbt=mer], html.vb-mesa[data-vbt=cli]{ --glc:37px; --gfb:69px; }
+  html.vb-mesa[data-vbt=soc]{ --glc:37px; --gfb:85px; --gmx:23px; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-dir{ padding-top:calc(var(--glc) - 10px) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-dir>:first-child{ margin-top:0 !important; margin-bottom:min(var(--gmx), max(4px, calc(var(--gfb) - var(--glc) - 11px))) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-dir>:first-child + *{ margin-top:0 !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#fm-overlay>div:first-child{ padding-top:calc(var(--glc) - 17px) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#fm-overlay>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *){ margin-top:0 !important; margin-bottom:max(4px, calc(var(--gfb) - var(--glc) - 17px)) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#fm-overlay>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *) + *{ margin-top:0 !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#clip-overlay>div:first-child{ padding-top:calc(var(--glc) - 9px) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#clip-overlay>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *){ margin-top:0 !important; margin-bottom:max(4px, calc(var(--gfb) - var(--glc) - 10px)) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#clip-overlay>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *) + *{ margin-top:0 !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#vbm-hist-op>div:first-child{ padding-top:calc(var(--glc) - 6px) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#vbm-hist-op>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *){ margin-top:0 !important; margin-bottom:max(4px, calc(var(--gfb) - var(--glc) - 6px)) !important; }
+  html.vb-mesa:not([data-vbt=ren]):not([data-vbt=home]) #vb-mesa-col>#vbm-hist-op>div:first-child>:is(:first-child:not(.vbm-fx), .vbm-fx + *) + *{ margin-top:0 !important; }
   /* o card preto A PAGAR sai da esquerda: o quadro A PAGAR da direita faz o papel dele; a esquerda fica so com o menu */
   html.vb-mesa #home-pagar{ display:none !important; }
   /* 1.371.0 (etapa 2): as 9 folhas de ENTRADAS/SAIDAS (MESA_DENTRO) moram DENTRO da coluna da direita (#vb-mesa-col), por cima do
@@ -6169,6 +6191,7 @@ function showScreen(name){
   if(name==='ren'){ REN_buscaOn=false; REN_busca=''; REN_bset=''; REN_tipo=''; REN_sort='data'; REN_aba=(HOME_pagarIr?'cp':'aberto'); HOME_pagarIr=false; REN_abrir(); VB_telaAnterior='home'; }
   if(name==='mer'){ MER_ord='data_desc'; var _ob=document.getElementById('mer-ord-toggle'); if(_ob){ _ob.style.background='var(--sf)'; _ob.style.color='var(--tx)'; _ob.style.borderColor='var(--ln)'; } }
   VB_telaAtual = name;
+  try{ document.documentElement.setAttribute('data-vbt', name); }catch(e){}   /* 1.418.0: a grade da tela aberta le a tela atual */
   VB_screenTs = Date.now();
   var _elEnt=document.getElementById('screen-'+name);
   if(_elEnt){ _elEnt.classList.remove('vb-enter'); void _elEnt.offsetWidth; _elEnt.classList.add('vb-enter'); }
@@ -23844,14 +23867,13 @@ function MESA_resumoHome(el){
     +'</div>';
   h+=MESA_homeBlocos(ab, tot, totVB, hoje, rp);
   el.innerHTML=h;
-  MESA_homeTopo(); if(window.requestAnimationFrame) requestAnimationFrame(MESA_homeTopo);
 }
 /* ---------- 1.366.0: metade de baixo da Home na tela aberta ----------
    NOVEMBRO (parcelas que vencem no mes: recebido, vencido ate hoje, total), PROXIMOS DIAS / SEMANAS
    (entra para cima, sai para baixo, mesma escala; fim de semana entra na segunda -- REN_diaUtil;
    o que ja venceu fica nos quadros de cima, nao entra na barra), CARTEIRA por tipo e 5 MAIORES.
    Sem conta de saldo e sem custo do dinheiro (recusados pelo VB). */
-var MESA_homeG='d', MESA_homeMt=null;
+var MESA_homeG='d', MESA_homeMt=14;   /* 1.418.0: o HOJE fica 14 abaixo do alto (medido; antes o MESA_homeTopo media a cada pintura) */
 function MESA_homeGset(g){ MESA_homeG=g; MESA_resumo(); }
 /* 1.388.0 (VB 21/11 "a lateral direita esta vazia", "faz tua sugestao"): direita do Historico com o desempenho da aba escolhida.
    LUCRO POR MES (6 meses, mes atual em preto) e o ANO (operacoes, volume, lucro, ticket medio). Mesmas contas da barra preta:
@@ -24022,21 +24044,6 @@ function MESA_histMes(ym){
 (function(){ var mv=function(){ ['fin-overlayTabela','ven-estoqueOverlay','ven-overlayTabela','ant-overlayTabela','pag-overlayTabela'].forEach(function(id){ var e=document.getElementById(id); if(e && e.parentElement!==document.body && e.closest('.vb-screen')) document.body.appendChild(e); }); };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', mv); else mv(); })();
 function MESA_hk(v){ if(!MESA_ver) return '\u2022\u2022'; var a=Math.abs(Number(v)||0); if(a>=1e6) return (a/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'M'; return VB_kFmt(v); }
-/* o HOJE da direita sobe ate a altura do VB da esquerda (medido; antes era margem fixa de 62) */
-function MESA_homeTopo(){
-  try{
-    if(VB_telaAtual!=='home') return;
-    var d=document.getElementById('vb-mesa-dir'), c=document.getElementById('vbm-hoje-cab'); if(!d||!c) return;
-    var lg=Array.prototype.filter.call(document.querySelectorAll('#screen-home>.card>div'), function(e){ return e.offsetParent && !e.children.length && e.textContent==='VB'; })[0]; if(!lg) return;
-    var rg=document.createRange(); rg.selectNodeContents(lg); var lb=rg.getBoundingClientRect(); if(!lb.height) return;
-    var sy=VB_sy();
-    var cur=parseFloat(c.style.marginTop)||0;
-    var alvo=Math.round(cur+(lb.top+sy+6)-(c.getBoundingClientRect().top+d.scrollTop));
-    if(alvo<0) alvo=0; if(alvo>120) return;
-    if(alvo!==cur) c.style.marginTop=alvo+'px';
-    MESA_homeMt=alvo;
-  }catch(e){}
-}
 /* 1.375.0 (VB 20/11 23:13): cada bloco da Home leva ao lugar dele. 5 MAIORES -> ENTRADAS/SAIDAS na aba CLIENTES; MES -> panorama em MES;
    DIAS/SEMANAS -> panorama em SEMANA; CARTEIRA nao leva a lugar nenhum. */
 function MESA_homeVai(q){
@@ -24287,14 +24294,13 @@ function MESA_alinha(el){
       alvos.forEach(function(p,k){
         var alvo=p[0], ref=p[1]; if(!alvo||!alvo.parentNode) return;
         var e=document.createElement('div'); e.className='vbm-esp'; e.style.cssText='height:1px;flex:none;'; alvo.parentNode.insertBefore(e, alvo);
-        var hgt;
-        if(mede && ref){ hgt=1+Math.round((top(ref)+sy)-(top(alvo)+ry)); }
-        else hgt=(mc && mc[k]!=null) ? mc[k] : 1;
+        /* 1.418.0: pela grade -- numeros fixos (medidos na 1.417.2 em 867, 1183 e 1280): o titulo SAIDAS sobe 26; nas SAIDAS PAGAS
+           (sem a fileira de chips) o card preto desce 36 para ficar na linha do card preto da esquerda */
+        var hgt=[0,-26,0,(MESA_renDir==='cpp'?36:0)][k];
         /* abaixo de 1: o espacador fica com 1px e puxa para cima com margem negativa */
         if(hgt>=1){ e.style.height=hgt+'px'; } else { e.style.height='1px'; e.style.marginTop=(hgt-1)+'px'; }
         cache[k]=hgt;
       });
-      if(mede){ MESA_alinhaCache=MESA_alinhaCache||{}; MESA_alinhaCache[ck]=cache; }
     }catch(e){}
   };
   f(); if(window.requestAnimationFrame) requestAnimationFrame(f);
@@ -25678,55 +25684,7 @@ function MESA_finShare(){
   if(!img || !img.src || img.src.indexOf('data:')!==0){ VB_toast('Preencha os dados antes de compartilhar.'); return; }
   VB_compartilharImg('fin-tabelaImagem','FIN','fin-tabelaDesc');
 }
-/* 1.351.0: alinhamento das duas metades (padrao das ENTRADAS/SAIDAS) -- o primeiro bloco da direita
-   (rotulo, ou a barra do mes no Historico) fica centrado na linha do subtitulo da esquerda
-   (FINANCIAMENTOS, VENDAS...) e o segundo bloco comeca na altura do primeiro bloco da esquerda.
-   Roda a cada troca de conteudo da direita (MutationObserver, antes de desenhar) e no tick. */
-var MESA_alObs=null;
-var MESA_ladosMex=[];
-/* fechando o Duo: devolve o que o alinhamento mexeu (o Fechamento volta a ser a folha de baixo) */
-function MESA_ladosLimpa(){ MESA_ladosMex.forEach(function(e){ try{ var o=e._vbOrig||{}; e.style.removeProperty('margin-top'); e.style.removeProperty('margin-bottom'); e.style.removeProperty('padding-top'); if(o.mt) e.style.setProperty('margin-top',o.mt,o.mtp); if(o.mb) e.style.setProperty('margin-bottom',o.mb,o.mbp); if(o.pt) e.style.setProperty('padding-top',o.pt,o.ptp); delete e._vbOrig; }catch(x){} }); MESA_ladosMex=[]; }
-function MESA_ladosGuarda(e){ if(MESA_ladosMex.indexOf(e)>=0) return; var st=e.style; e._vbOrig={mt:st.getPropertyValue('margin-top'),mtp:st.getPropertyPriority('margin-top'),mb:st.getPropertyValue('margin-bottom'),mbp:st.getPropertyPriority('margin-bottom'),pt:st.getPropertyValue('padding-top'),ptp:st.getPropertyPriority('padding-top')}; MESA_ladosMex.push(e); }
-function MESA_lados(){
-  if(!MESA_on) return;
-  var d=document.getElementById('vb-mesa-dir'); if(!d) return;
-  var t=VB_telaAtual;
-  if(t==='ren' || t==='home'){ if(d.style.paddingTop){ d.style.paddingTop=''; } return; }
-  var sc=document.getElementById('screen-'+t); if(!sc) return;
-  var lab=sc.querySelector('.simulacao-label'); if(!lab) return;
-  var lr=lab.getBoundingClientRect(); if(!lr.height) return;
-  var sy=VB_sy(), labC=lr.top+sy+lr.height/2, labB=lr.bottom+sy;
-  var first=null;
-  sc.querySelectorAll('*').forEach(function(e){
-    if(e===lab || e.contains(lab)) return;
-    var r=e.getBoundingClientRect(); if(r.height<=8 || r.width<100) return;
-    var top=r.top+sy; if(top<labB+2) return;
-    if(first===null || top<first) first=top;
-  });
-  var alvos=[d];
-  ['fm-overlay','vbm-hist-op','clip-overlay'].forEach(function(id){ var o=document.getElementById(id); if(o && getComputedStyle(o).display!=='none' && o.getBoundingClientRect().left>100){ var c=Array.prototype.filter.call(o.children,function(k){ return k.offsetHeight>0; })[0]; if(c) alvos.push(c); } });
-  alvos.forEach(function(c){
-    var kids=Array.prototype.filter.call(c.children, function(k){ return k.offsetHeight>0; });
-    if(!kids.length) return;
-    var cTop=c.getBoundingClientRect().top+(c===d?0:0), k0=kids[0];
-    if(c!==d){ var st0=c.scrollTop||0; cTop=c.getBoundingClientRect().top+st0; }
-    MESA_ladosGuarda(k0); MESA_ladosGuarda(c); if(k0.style.marginTop!=='0px') k0.style.marginTop='0px';
-    var h0=k0.offsetHeight;
-    var pad=Math.max(8, Math.round(labC-h0/2-cTop));
-    if(c.style.paddingTop!==pad+'px') c.style.setProperty('padding-top', pad+'px', c===d?'':'important');
-    if(kids[1] && first!==null){
-      var mb=Math.max(4, Math.round(first-(cTop+pad+h0)));
-      if(t==='soc' && c===d) mb=Math.min(mb, 23);   /* 1.402.0 (VB 21/11 "tira"): em Socios o 1o bloco da esquerda e mais baixo e sobrava um vao de ~14 entre o titulo e o card preto; fica o de Contratos */
-      MESA_ladosGuarda(kids[1]); if(kids[1].style.marginTop!=='0px') kids[1].style.marginTop='0px';
-      if(k0.style.marginBottom!==mb+'px') k0.style.marginBottom=mb+'px';
-    }
-  });
-}
-function MESA_alLiga(){
-  var d=document.getElementById('vb-mesa-dir'); if(!d || MESA_alObs || !window.MutationObserver) return;
-  MESA_alObs=new MutationObserver(function(){ try{ MESA_lados(); }catch(e){} });
-  MESA_alObs.observe(d,{childList:true});
-}
+/* 1.418.0: MESA_lados (media e escrevia margens a cada troca/tique) saiu: o alinhamento e a grade do CSS (--glc/--gfb). */
 /* 1.354.2: o VB da barra comeca na borda dos cards da tela aberta (mesma linha do VB da Home).
    A margem fixa de 16 deixava o VB uns 5 pt para fora: os cards comecam a 20-24 conforme o aparelho. */
 function MESA_railAlinha(){
@@ -25779,7 +25737,6 @@ function MESA_tick(){
   try{ MESA_xFechar(); }catch(e){}
   try{ MESA_lsFit(); }catch(e){}
   try{ MESA_railAlinha(); }catch(e){}
-  try{ MESA_alLiga(); }catch(e){}
   try{ MESA_dobra(); }catch(e){}   /* 1.346.0: a divisao confere a dobra sempre (o iOS muda a largura por um instante no ajuste da altura) */
   var s=document.getElementById('vb-mesa-escudo');
   if(s) s.style.display=MESA_editando()?'block':'none';
@@ -25796,7 +25753,6 @@ function MESA_tick(){
   try{ if(MESA_socAtivo()) MESA_socPinta(false); else MESA_socSig=null; }catch(e){}
   try{ if(MESA_gesAtivo()) MESA_gesPinta(false); else MESA_gesSig=null; }catch(e){}
   try{ VB_folhaTrava(); }catch(e){}
-  try{ MESA_lados(); }catch(e){}
   if(MESA_sel && (MESA_sel.charAt(0)==='h' ? !MESA_vis('vbm-hist-op') : (MESA_sel.charAt(0)==='m' ? !MESA_vis('mer-view-overlay') : MESA_sel.charAt(0)==='k' ? (!MESA_vis('clip-overlay') && !document.getElementById('vb-clif-sheet')) : (!MESA_vis('ren-ficha-ov') && !MESA_vis('ren-cp-ov'))))){ MESA_sel=null; MESA_marca(); }
 }
 /* app do atalho (standalone) no Duo aberto recebe 867 pt: a tela tem 951 e a faixa da hora (84 pt) fica
@@ -25817,7 +25773,6 @@ function MESA_liga(on){
   var _yAnt=0; try{ _yAnt=on?VB_sy():(VB_ROL2?VB_rolY:VB_sy()); }catch(e){}   /* 1.369.0: onde a tela estava, no jeito de rolar que esta saindo */
   if(!on){ try{ VB_travaSolta(); }catch(e){} }
   MESA_on=on;
-  if(!on){ try{ MESA_ladosLimpa(); }catch(e){} }
   if(on){
     MESA_monta();
     try{ MESA_fichasMuda(true); }catch(e){}   /* 1.371.0: as folhas de ENTRADAS/SAIDAS entram na coluna da direita */
