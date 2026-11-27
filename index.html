@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.416.1</title>
+<title>VB - v1.417.0</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -2001,40 +2001,52 @@ function HIST_carregarVen(r){
 }
 /* 1.415.0: PAGAMENTO da antecipacao. Lancamento novo em PAGAMENTOS: NOME = nome da operacao, VALOR TOTAL = liquido.
    O que estava aberto em PAGAMENTOS e salvo antes (sem pergunta; 1.415.1). */
-function HIST_pagDaAnt(idx){ var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(r) VB_pagDeAnt(r); }
-function VB_pagDeAnt(r){
-  var liq=Number(r&&r.valor_liquido)||0; if(!(liq>0)){ VB_toast('Operação sem valor líquido.'); return; }
-  /* 1.415.7 (VB 26/11: "cliquei em pagamento ... nao achou"): a operacao que ja tem pagamento abre o
-     dela em vez de criar outro vazio. Ja aberto em PAGAMENTOS com o mesmo nome -> so mostra. Salvo no
-     Historico com o mesmo nome -> salva o que esta aberto (se precisar) e carrega o salvo. Senao, novo. */
-  var _nomeOp=String(r.nome||r.cliente||'').toUpperCase().trim();
-  var _pnA=document.getElementById('pag-nome');
-  if(_nomeOp && _pnA && String(_pnA.value||'').toUpperCase().trim()===_nomeOp){ VB_telaAnterior=VB_telaAtual||'hist'; showScreen('pag'); return; }
-  var _telaVolta=VB_telaAtual||'hist';
-  var _novo=function(){ VB_pagSalvaE(vai); };
-  if(_nomeOp){
-    sb.from('pagamentos').select('*').ilike('nome', _nomeOp.replace(/[\\%_]/g,'\\$&')).order('created_at',{ascending:false}).limit(1).then(function(res){
-      var ex=(res && !res.error && res.data && res.data[0]) || null;
-      if(!ex){ _novo(); return; }
-      VB_pagSalvaE(function(){ HIST_carregarPag(ex); VB_telaAnterior=_telaVolta; });
-    }).catch(function(){ _novo(); });
-    /* vai() e definida abaixo (hoisting de var: atribuida antes do then rodar) */
-  }
-  var vai=function(){
-    try{ PAG_limpar(); }catch(e){}
-    document.getElementById('pag-total').value=PAG_formatBR(liq);
-    var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value=String(r.nome||r.cliente||'').toUpperCase();
-    PAG_render(); PAG_update(); PAG_saveSession(); PAG_updateConfirmarBtnLabel();
-    try{ VB_dirtyPaintTela('pag'); }catch(e){}
-    VB_telaAnterior=VB_telaAtual||'hist';
-    showScreen('pag');
-  };
-  /* 1.415.1 (VB 26/11: "como eu sei se substituo? salva o anterior e abre o novo, nem me pergunta"):
-     sem pergunta. Ja salvo e sem mudanca -> so abre o novo. Com valor e mudanca nao salva -> SALVA (o mesmo
-     PAG_confirmarOperacao do botao, que tambem loga) e abre o novo. Sem nenhum valor (so nome ou descricao) -> descarta. */
-  if(!_nomeOp) VB_pagSalvaE(vai);
+function HIST_pagDaAnt(idx, tab){ var r=HIST_rowsCache&&HIST_rowsCache[idx]; if(r) VB_pagDeOp(tab||'ant', r); }
+function VB_pagDeAnt(r){ VB_pagDeOp('ant', r); }
+/* 1.417.0 (pedido do VB 27/11, para o Fernandes achar a folha pela operacao): PAGAMENTO de antecipacao e financiamento
+   SALVA a folha na hora em pagamentos, ligada a operacao (origem_tab/origem_id, como em contas_pagar), nome = nome da operacao,
+   created_at = VB_carimbo (hora de Fortaleza). Ja existe folha ligada -> abre a mesma (a aberta; senao a mais nova). Folha antiga
+   sem ligacao com o mesmo nome -> liga e abre. O que estava aberto em PAGAMENTOS e salvo antes (VB_pagSalvaE), como na 1.415.1. */
+var VB_PAG_ORIG={ant:'antecipacoes', fin:'financiamentos_hist'};   /* venda nao tem (VB 27/11: venda ja esta feita; pagamento e para liberar dinheiro) */
+function VB_pagValorOp(tab, r){
+  if(tab==='fin') return Number(r.valor_financiado)||0;
+  return Number(r.valor_liquido)||0;
 }
-/* 1.415.5: salva o que esta aberto em PAGAMENTOS (se tem valor e mudou) e so depois roda vai(). Sem pergunta. */
+function VB_pagDeOp(tab, r){
+  if(!r || !r.id) return;
+  if(r.simulacao){ VB_toast('Simulação não tem pagamento.'); return; }
+  var ot=VB_PAG_ORIG[tab]; if(!ot) return;
+  var oid=String(r.id), val=VB_pagValorOp(tab, r);
+  var nome=String(r.nome||r.descricao||r.cliente||'').toUpperCase().trim();
+  var volta=VB_telaAtual||'hist';
+  if(PAG_currentOperationId && PAG_origemAtual===ot+'|'+oid){ VB_telaAnterior=volta; showScreen('pag'); return; }
+  var abre=function(ex){ VB_pagSalvaE(function(){ HIST_carregarPag(ex); VB_telaAnterior=volta; }); };
+  var cria=function(){
+    VB_pagSalvaE(function(){
+      if(!VB_gravando('VB_pagDeOp|'+ot+'|'+oid)) return;   /* trava so o toque duplo na MESMA operacao */
+      var row={nome:(nome||null), valor_total:(val>0?val:0), pagamentos:[], origem_tab:ot, origem_id:oid, created_at:VB_carimbo()};
+      sb.from('pagamentos').insert(row).select().then(function(res){
+        var ex=res && !res.error && res.data && res.data[0];
+        if(!ex){ VB_toast('Não consegui criar o pagamento.'); return; }
+        try{ VB_log('PAGAMENTO','criou', ex.nome||'(sem nome)', VB_logDet(row)); }catch(e){}
+        HIST_carregarPag(ex); VB_telaAnterior=volta;
+      }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
+    });
+  };
+  sb.from('pagamentos').select('*').eq('origem_tab', ot).eq('origem_id', oid).order('created_at',{ascending:false}).then(function(res){
+    if(res && res.error){ VB_toast('Não consegui abrir o pagamento.'); return; }
+    var arr=(res && res.data)||[];
+    var ex=arr.filter(function(x){ return !x.encerrado_em; })[0] || arr[0];
+    if(ex){ abre(ex); return; }
+    if(!nome){ cria(); return; }
+    sb.from('pagamentos').select('*').is('origem_id', null).ilike('nome', nome.replace(/[\\%_]/g,'\\$&')).order('created_at',{ascending:false}).limit(1).then(function(r2){
+      var velho=r2 && !r2.error && r2.data && r2.data[0];
+      if(!velho){ cria(); return; }
+      sb.from('pagamentos').update({origem_tab:ot, origem_id:oid}).eq('id', velho.id).then(function(){}, function(){});
+      velho.origem_tab=ot; velho.origem_id=oid; abre(velho);
+    }).catch(cria);
+  }).catch(function(){ VB_toast('Sem conexão — nada gravado.'); });
+}
 function VB_pagSalvaE(vai){
   var temValor=(PAG_parseBR(String((document.getElementById('pag-total')||{}).value||''))>0)
     || (PAG_pagamentos||[]).some(function(p){ return (PAG_parseBR(p.valor)||0)>0; });
@@ -2051,6 +2063,7 @@ function VB_pagSalvaE(vai){
 function HIST_carregarPag(r){
   try{ VB_logPrev=JSON.parse(JSON.stringify(r||{})); }catch(e){ VB_logPrev=null; }
   PAG_currentOperationId = r.id;
+  PAG_origemAtual = r.origem_tab ? (r.origem_tab+'|'+r.origem_id) : null;   /* 1.417.0 */
   VB_carimboTS = r.created_at||null;
   document.getElementById('pag-total').value = (r.valor_total!=null && r.valor_total!=='') ? PAG_formatBR(Number(r.valor_total)) : '';
   var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value = r.nome||'';
@@ -2265,7 +2278,7 @@ function HIST_buildRow(tab, idx, titulo, valor, dataStr, horaStr, resumoExtra, c
       + '<button onclick="event.stopPropagation();FIN_quitarAbrir('+idx+')" style="'+_btnCss+'">QUITAR</button>'; }
     h += '</div>';
     /* 1.415.0 (VB 26/11): PAGAMENTO embaixo, na antecipacao -- abre PAGAMENTOS ja com o liquido como VALOR TOTAL */
-    if(tab==='ant' && !(HIST_rowsCache&&HIST_rowsCache[idx]&&HIST_rowsCache[idx].simulacao)){ h += '<div style="margin-top:6px;margin-left:-23px;"><button onclick="event.stopPropagation();HIST_pagDaAnt('+idx+')" style="'+_btnCss+';width:100%;">PAGAMENTO</button></div>'; }
+    if((tab==='ant'||tab==='fin') && !(HIST_rowsCache&&HIST_rowsCache[idx]&&HIST_rowsCache[idx].simulacao)){ h += '<div style="margin-top:6px;margin-left:-23px;"><button onclick="event.stopPropagation();HIST_pagDaAnt('+idx+',\''+tab+'\')" style="'+_btnCss+';width:100%;">PAGAMENTO</button></div>'; }
 
     h += '</div>';
   }
@@ -9962,7 +9975,7 @@ function PAG_setLinhasIniciais(){
   PAG_pagamentos=[]; PAG_counter=0;
   for(var i=0;i<4;i++){ PAG_counter++; PAG_pagamentos.push({id:PAG_counter,desc:'',valor:''}); }
 }
-var PAG_currentOperationId = null;
+var PAG_currentOperationId = null, PAG_origemAtual = null;
 function PAG_updateConfirmarBtnLabel(){
   var b=document.getElementById('pag-btnConfirmar');
   if(!b) return;
@@ -9992,9 +10005,31 @@ function PAG_confirmarOperacao(btn){
   row.created_at = VB_carimbo(); // carimbo do histórico = momento do salvamento (não altera a data da operação)
   if(btn){ btn.textContent=ehAtualizacao?'ATUALIZANDO...':'CONFIRMANDO...'; btn.disabled=true; }
 
-  var query = ehAtualizacao
+  /* 1.417.0: o Fernandes pode lancar PIX direto no banco. Antes de ATUALIZAR, rele a folha gravada e junta as linhas que
+     entraram por fora (estao no banco e nao estavam quando a folha foi aberta aqui), para o salvar do app nao apaga-las. */
+  var _chave=function(p){ return String(p.desc||'')+'|'+String(p.valor||'')+'|'+(p.cr?1:0); };
+  var _junta = ehAtualizacao
+    ? sb.from('pagamentos').select('pagamentos').eq('id', PAG_currentOperationId).then(function(r0){
+        try{
+          var noBanco=(r0 && !r0.error && r0.data && r0.data[0] && r0.data[0].pagamentos) || [];
+          var base={}; ((VB_logPrev&&VB_logPrev.pagamentos)||[]).forEach(function(p){ var k=_chave(p); base[k]=(base[k]||0)+1; });
+          var novas=[];
+          noBanco.forEach(function(p){ var k=_chave(p); if(base[k]>0){ base[k]--; return; } novas.push(p); });
+          var aqui={}; itens.forEach(function(p){ var k=_chave(p); aqui[k]=(aqui[k]||0)+1; });
+          novas=novas.filter(function(p){ var k=_chave(p); if(aqui[k]>0){ aqui[k]--; return false; } return true; });
+          if(novas.length){
+            novas.forEach(function(p){ var o={desc:(p.desc||''), valor:(p.valor||'')}; if(p.cr) o.cr=true; itens.push(o);
+              PAG_counter++; PAG_pagamentos=PAG_pagamentos.filter(function(x){ return x.desc||x.valor; }); PAG_pagamentos.push({id:PAG_counter,desc:o.desc,valor:o.valor,cr:!!o.cr}); });
+            row.pagamentos=itens; PAG_render(); PAG_update();
+            setTimeout(function(){ VB_toast(novas.length+' lançamento(s) de fora entraram na folha.'); }, 1200);
+          }
+        }catch(e){}
+      }, function(){})
+    : Promise.resolve();
+
+  var query = _junta.then(function(){ return ehAtualizacao
     ? sb.from('pagamentos').update(row).eq('id', PAG_currentOperationId).select()
-    : sb.from('pagamentos').insert(row).select();
+    : sb.from('pagamentos').insert(row).select(); });
 
   query.then(function(res){
     if(btn) btn.disabled=false;
@@ -10023,6 +10058,9 @@ function PAG_confirmarOperacao(btn){
       var _reg=_lr.nome||_lr.descricao||_lr.investidor_nome||(_pv&&(_pv.nome||_pv.descricao||_pv.investidor_nome))||'(sem nome)';
       var _det=ehAtualizacao ? (VB_logDiff(_pv,_lr)||'sem mudanças de valores') : VB_logDet(_lr);
       if(!(ehAtualizacao && VB_logIgual(_pv,_lr))) VB_log('PAGAMENTO', ehAtualizacao?'editou':'criou', _reg, _det);
+      /* 1.417.0: saldo zerado (com VALOR TOTAL) marca encerrado_em; o ja encerrado nao muda de data */
+      var _sz=total-itens.reduce(function(a,p){ return a+(p.cr?-1:1)*(PAG_parseBR(p.valor)||0); },0);
+      if(total>0 && Math.abs(_sz)<0.005 && PAG_currentOperationId){ sb.from('pagamentos').update({encerrado_em:VB_carimbo()}).eq('id',PAG_currentOperationId).is('encerrado_em',null).then(function(){}, function(){}); }
       if(ehAtualizacao&&VB_logPrev){ for(var _k in _lr){ VB_logPrev[_k]=_lr[_k]; } }
     }catch(e){}
     VB_toast(ehAtualizacao ? 'Operação atualizada.' : 'Operação confirmada e registrada.');
@@ -10036,7 +10074,7 @@ function PAG_confirmarOperacao(btn){
 }
 
 function PAG_limpar(){
-  PAG_snapshot = null;
+  PAG_snapshot = null; PAG_origemAtual = null;
   document.getElementById('pag-total').value='';
   var _pn=document.getElementById('pag-nome'); if(_pn) _pn.value='';
   document.getElementById('pag-saldo').textContent='R$ —';
@@ -24733,7 +24771,9 @@ function MESA_finOp(el, r){
     +'<button onclick="MESA_finCtr()" style="'+B+'">CONTRATO</button>'
     +'<button onclick="MESA_finPrice()" style="'+B+'">PRICE</button>'
     +'<button onclick="MESA_finQuit()" style="'+B+'">QUITAR</button>'
-    +'</div></div>'
+    +'</div>'
+    +((r&&r.simulacao)?'':('<button onclick="if(MESA_finVer) VB_pagDeOp(\'fin\',MESA_finVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'))   /* 1.417.0 */
+    +'</div>'
     +'<div id="vbm-fin-foto" style="margin-top:12px;text-align:center;color:var(--mu);font-size:11px;">Gerando a foto...</div>'
     +'<button onclick="MESA_finFecha()" style="display:block;width:100%;margin-top:12px;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';
   el.innerHTML=h;
@@ -24876,7 +24916,7 @@ function MESA_antOp(el, r){
     +'<button onclick="MESA_antAbreVer()" style="'+B+'">ABRIR OPERAÇÃO</button>'
     +'<button onclick="MESA_antNP()" style="'+B+'">NP</button>'
     +'</div>'
-    +((r&&r.simulacao)?'':('<button onclick="if(MESA_antVer) VB_pagDeAnt(MESA_antVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'))   /* 1.415.0; 1.415.6: simulacao nao tem */
+    +((r&&r.simulacao)?'':('<button onclick="if(MESA_antVer) VB_pagDeOp(\'ant\',MESA_antVer)" style="'+B+';width:100%;margin-top:6px;">PAGAMENTO</button>'))   /* 1.415.0; 1.415.6: simulacao nao tem */
     +'</div>'
     +'<div id="vbm-ant-foto" style="margin-top:12px;text-align:center;color:var(--mu);font-size:11px;">Gerando a foto...</div>'
     +'<button onclick="MESA_antFecha()" style="display:block;width:100%;margin-top:12px;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);font-size:11px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;font-family:-apple-system,sans-serif;">FECHAR</button>';

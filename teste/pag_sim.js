@@ -10,8 +10,8 @@ const r=await pg.evaluate(()=>{const o={};
   o.sim=HIST_buildRow('ant',0,'T','V','01/01/2026','',null,[{l:'Bruto',v:'1'}],null,'',false,false).indexOf('HIST_pagDaAnt')>=0;
   o.real=HIST_buildRow('ant',1,'T','V','01/01/2026','',null,[{l:'Bruto',v:'1'}],null,'',false,false).indexOf('HIST_pagDaAnt')>=0;
   const el=document.createElement('div');
-  try{ MESA_antOp(el,{id:'A',simulacao:true,valor_liquido:10,valor_bruto:12,nome:'X'}); o.mSim=el.innerHTML.indexOf('VB_pagDeAnt')>=0;
-       MESA_antOp(el,{id:'B',valor_liquido:10,valor_bruto:12,nome:'X'}); o.mReal=el.innerHTML.indexOf('VB_pagDeAnt')>=0; }catch(x){ o.erro=String(x); }
+  try{ MESA_antOp(el,{id:'A',simulacao:true,valor_liquido:10,valor_bruto:12,nome:'X'}); o.mSim=el.innerHTML.indexOf('VB_pagDeOp')>=0;
+       MESA_antOp(el,{id:'B',valor_liquido:10,valor_bruto:12,nome:'X'}); o.mReal=el.innerHTML.indexOf('VB_pagDeOp')>=0; }catch(x){ o.erro=String(x); }
   return o;});
 console.log(JSON.stringify(r));const ok=!r.sim&&r.real&&!r.mSim&&r.mReal;
 await b.close();console.log(e?'ERROS '+e:'sem erro de JS',ok?'tudo ok':'FALHAS');process.exit(e||!ok?1:0);})();

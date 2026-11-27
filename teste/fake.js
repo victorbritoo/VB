@@ -1,4 +1,4 @@
-(function(){
+(function(){ var __FKID=0;
   window.__DB = window.__DB || {};
   window.__W = [];
   function Q(t){ this.t=t; this.f=[]; this.op='select'; this.opts={}; }
@@ -8,7 +8,10 @@
   Q.prototype.order=function(k,o){ this.ord=[k,o&&o.ascending===false]; return this; };
   Q.prototype.range=function(a,b){ this.rg=[a,b]; return this; };
   Q.prototype.limit=function(n){ this.lim=n; return this; };
-  ['in','is','neq','gte','lt','gt','or','ilike','not','filter','match','contains'].forEach(function(m){ Q.prototype[m]=function(){ return this; }; });
+  ['in','neq','gte','lt','gt','or','not','filter','match','contains'].forEach(function(m){ Q.prototype[m]=function(){ return this; }; });
+  /* 1.417.0: is(k,null) e ilike (sem curinga = igual, sem caixa) filtram de verdade */
+  Q.prototype.is=function(k,v){ this.f.push(function(r){ return v===null ? (r[k]==null) : r[k]===v; }); return this; };
+  Q.prototype.ilike=function(k,v){ var re=new RegExp('^'+String(v).replace(/\\([%_\\])/g,'$1').replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*')+'$','i'); this.f.push(function(r){ return re.test(String(r[k]==null?'':r[k])); }); return this; };
   Q.prototype.maybeSingle=function(){ this._one=true; return this; };
   Q.prototype.single=function(){ this._one=true; return this; };
   Q.prototype.upsert=function(rows){ this.op='upsert'; this.rows=[].concat(rows); return this; };
@@ -19,6 +22,7 @@
     var self=this, tb=(__DB[self.t]=__DB[self.t]||[]), res;
     if(self.op==='upsert'||self.op==='insert'){
       __W.push([self.op,self.t,self.rows.length]);
+      self.rows.forEach(function(r){ if(self.op==='insert' && r.id==null) r.id='fk'+(++__FKID); });   /* 1.417.0: o banco gera id */
       self.rows.forEach(function(r){ var i=tb.findIndex(function(x){ return r.id!=null && x.id===r.id; }); if(i>=0) tb[i]=r; else tb.push(r); });
       res={data:self.rows,error:null};
     } else if(self.op==='update'||self.op==='delete'){ __W.push([self.op,self.t]); res={data:[],error:null}; }
