@@ -80,7 +80,7 @@
 <meta name="apple-mobile-web-app-title" content="VB">
 <meta name="theme-color" content="#f5f5f3">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>VB - v1.418.0</title>
+<title>VB - v1.418.1</title>
 <style>
 /* 1.357.12: card A PAGAR da Home mais baixo e CENTRALIZADO (1.357.11 com texto a esquerda e valor a direita
    destoou do app; VB escolheu a B): rotulo pequeno em cima, valor embaixo; a linha "N CONTAS" sai. */
@@ -1184,7 +1184,7 @@ button{ text-transform:inherit; }
         <span></span>
       </div>
       <div id="ven-listaParcelas"></div>
-      <button data-fast="1" onpointerdown="event.preventDefault();VEN_repetirParcela(this)" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
+      <button data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){VEN_repetirParcela(this)}" style="width:100%;padding:7px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:500;cursor:pointer;margin-top:6px;">+ REPETIR ÚLTIMA</button>
     </div>
   </div>
 
@@ -2754,6 +2754,8 @@ function VB_logDiff(prev, row){
     var tp=Array.isArray(cfg)?cfg[1]:'';
     p.push(nomeC+': '+VB_logFmtV(antes,tp)+' → '+VB_logFmtV(depois,tp));
   }
+  /* 1.418.1: quantidade_parcelas e a lista de parcelas davam a mesma linha ("Parcelas: 3 → 4" duas vezes) */
+  p=p.filter(function(x,i){ return p.indexOf(x)===i; });
   return p.join(' · ');
 }
 function VB_logDet(r){
@@ -7393,6 +7395,15 @@ function VEN_autoLista(){
    das listas de Entradas, Saidas e do cronograma da peca). Aqui NAO se forca o foco na parcela
    nova: os campos desta linha nao tem id e a funcao ja compensa a rolagem por conta propria --
    um focus() puxaria a tela e brigaria com essa compensacao. */
+/* 1.418.1 (VB 28/11: "o repetir parcela da venda ta muito sensivel, ja repeti outras vezes sem perceber"): os botoes de
+   acrescentar/repetir linha disparavam no pointerdown -- encostar o dedo para ROLAR a lista ja acrescentava uma parcela.
+   Agora so valem no soltar, se o dedo nao andou (10) e o toque foi curto (700 ms); rolagem cancela. O preventDefault do
+   pointerdown fica: o teclado continua aberto. */
+var VB_tq=null;
+function VB_tqIni(e){ VB_tq={x:e.clientX, y:e.clientY, t:Date.now(), el:e.currentTarget}; }
+function VB_tqOk(e){ var q=VB_tq; VB_tq=null; if(!q || q.el!==e.currentTarget) return false;
+  if(Math.abs(e.clientX-q.x)>10 || Math.abs(e.clientY-q.y)>10) return false; return (Date.now()-q.t)<=700; }
+document.addEventListener('pointercancel', function(){ VB_tq=null; }, true);
 function VEN_repetirParcela(btn){
   var _ry0=(btn&&btn.getBoundingClientRect)?btn.getBoundingClientRect().top:null;
   var last=VEN_parcelas[VEN_parcelas.length-1];
@@ -8070,8 +8081,10 @@ function VEN_confirmarOperacao(btn){
       var vendaId=VEN_currentOperationId; if(!vendaId) return;
       var dv=row.data_venda;
       if(VEN_merVinculo){
-        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv, baixa_em:VB_carimbo()}).eq('id', VEN_merVinculo)
-          .then(function(r2){ if(!r2.error){ VB_toast('Item baixado no estoque.'); } });
+        sb.from('mercadorias').update({status:'vendida', venda_id:vendaId, data_venda:dv, baixa_em:VB_carimbo()}).eq('id', VEN_merVinculo).select()
+          .then(function(r2){ if(!r2.error){ VB_toast('Item baixado no estoque.');
+            /* 1.418.1: ligar a peca a venda entra no log (antes a peca virava vendida sem linha nenhuma) */
+            try{ var _m=(r2.data&&r2.data[0])||{}; VB_log('ESTOQUE','vendido', _m.descricao||row.descricao||'', 'Estoque → vendida · Venda: '+String(dv||'').split('-').reverse().join('/')+' · '+(row.descricao||'')); }catch(e){} } });
         VEN_merVinculo=null;
       } else {
         // sincronia venda -> estoque: custo/sócio acompanham (descrição fica: no estoque ela nasce de MODELO/ANO/SN)
@@ -13044,8 +13057,8 @@ function REN_crParcHTML(){
     if(pp._nAb || _tn) s+='<div style="padding:2px 24px 4px 32px;"><input id="rencr-pn-'+i+'" oninput="REN_crDirty();REN_crNotaIco('+i+',this)" placeholder="NOTA DESTA PARCELA" value="'+CLIP_esc(String(pp.nota||'')).replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid var(--ln3);border-radius:8px;background:var(--sf2);color:var(--tx);font-size:11px;text-align:center;text-transform:uppercase;outline:none;font-family:-apple-system,sans-serif;"></div>';
   });
   s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
-    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddVazio()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
-    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_crAddParc()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
+    +'<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){REN_crAddVazio()}" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
+    +'<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){REN_crAddParc()}" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
   s+='<div id="rencr-ptot" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:8px 4px 0;border-top:0.5px solid var(--ln3);"></div>';
   return s+'</div>';
 }
@@ -13859,8 +13872,8 @@ function REN_cpParcHTML(){
       +'</div>';
   });
   s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
-    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddVazio()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
-    +'<div data-fast="1" onpointerdown="event.preventDefault();REN_cpAddParc()" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
+    +'<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){REN_cpAddVazio()}" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ ADICIONAR</div>'
+    +'<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){REN_cpAddParc()}" style="'+'padding:8px;border:0.5px dashed var(--ln);border-radius:10px;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;'+'">+ REPETIR ÚLTIMA</div></div>';
   s+='<div id="rencp-ptot" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding:8px 4px 0;border-top:0.5px solid var(--ln3);"></div>';
   return s+'</div>';
 }
@@ -18070,8 +18083,8 @@ function MER_cpRender(r){
   MER_cpLinhas.forEach(function(l, i){ hh+=MER_cpLinhaHTML(l, i); });
   hh+='</div>';
   hh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">'
-    +'<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAddVazio()" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ ADICIONAR</div>'
-    +'<div data-fast="1" role="button" onpointerdown="event.preventDefault();MER_cpAdd()" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR ÚLTIMA</div></div>';
+    +'<div data-fast="1" role="button" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){MER_cpAddVazio()}" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ ADICIONAR</div>'
+    +'<div data-fast="1" role="button" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){MER_cpAdd()}" style="box-sizing:border-box;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;text-align:center;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR ÚLTIMA</div></div>';
   /* CUSTO x LANCADO x FALTA e a pergunta que a folha responde: ja cobri tudo o que devo? */
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
@@ -19514,7 +19527,7 @@ function VEN_cronoRender(){
   hh+='<div id="ven-crono-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:2px;align-items:end;">';
   VEN_crono.forEach(function(l, i){ hh+=VEN_cronoLinhaHTML(l, i); });
   hh+='</div>';
-  hh+='<div data-fast="1" role="button" onpointerdown="event.preventDefault();VEN_cronoAdd()" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</div>';
+  hh+='<div data-fast="1" role="button" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){VEN_cronoAdd()}" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px;border:0.5px dashed var(--ln);border-radius:10px;background:transparent;font-size:10px;letter-spacing:2px;color:var(--mu2);font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif;">+ REPETIR \u00daLTIMA</div>';
   var _L='display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;';
   var _R='font-size:9px;letter-spacing:2px;color:var(--so);font-weight:700;';
   hh+='<div style="border:0.5px solid var(--ln3);border-radius:12px;padding:10px 12px;margin-top:10px;">'
@@ -21671,14 +21684,14 @@ function NP_render(){
     s.reps.forEach(function(p,i){
       h+='<div style="'+G2+'">'+inp('np-rn'+i,p.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'r\','+i+')"')+inp('np-rc'+i,p.cpf,'CPF',cpfX)+'<span onclick="NP_delRep('+i+')">'+X+'</span></div>';
     });
-    if(s.reps.length<2) h+='<div data-fast="1" onpointerdown="event.preventDefault();NP_addRep()" style="'+ADD+'">+ REPRESENTANTE</div>';
+    if(s.reps.length<2) h+='<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){NP_addRep()}" style="'+ADD+'">+ REPRESENTANTE</div>';
   }
   h+='<div style="'+SEC+'">'+(s.tipo==='pj'?'OUTROS AVALISTAS':'AVALISTAS')+'</div>';
   s.avs.forEach(function(a,i){
     h+='<div style="'+G2+(i?'margin-top:4px;':'')+'">'+inp('np-an'+i,a.nome,'NOME','autocomplete="off" onchange="NP_puxa(\'a\','+i+')"')+inp('np-ac'+i,a.cpf,'CPF',cpfX)+'<span onclick="NP_delAv('+i+')">'+X+'</span></div>'
       +'<div style="display:grid;grid-template-columns:minmax(0,1fr) 18px;gap:6px;">'+inp('np-ae'+i,a.ec,'ESTADO CIVIL')+'<span></span></div>';
   });
-  if(s.avs.length<4) h+='<div data-fast="1" onpointerdown="event.preventDefault();NP_addAv()" style="'+ADD+'">+ AVALISTA</div>';
+  if(s.avs.length<4) h+='<div data-fast="1" data-keepkb onpointerdown="event.preventDefault();VB_tqIni(event)" onpointerup="if(VB_tqOk(event)){NP_addAv()}" style="'+ADD+'">+ AVALISTA</div>';
   h+='<div id="np-falta" style="font-size:10px;letter-spacing:1px;color:var(--red);font-weight:700;text-align:center;margin-top:12px;min-height:12px;margin-top:4px;"></div>'
     +'<button id="np-gerar" onclick="NP_gerar()" style="width:100%;padding:9px;border:none;border-radius:14px;background:var(--acc);color:var(--acc-tx);font-size:12px;letter-spacing:2px;font-weight:600;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">GERAR NP</button>'
     +'<button onclick="NP_fechar()" style="width:100%;padding:9px;border:0.5px solid var(--ln3);border-radius:14px;background:var(--sf2);color:var(--mu2);font-size:11px;letter-spacing:2px;font-weight:500;cursor:pointer;margin-top:8px;font-family:-apple-system,sans-serif;">CANCELAR</button>'
